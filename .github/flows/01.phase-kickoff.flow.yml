@@ -48,7 +48,6 @@ skills:
 specialists:
   - 'Plan Scout'
   - 'planning-risk-coordinator'
-  - 'planning-test-strategy-coordinator'
   - 'Plan Registration Auditor'
 
 timeout-minutes: 25

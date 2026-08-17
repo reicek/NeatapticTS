@@ -8,8 +8,9 @@
  *
  * The gate accepts an optional `coverageSummaryPath` and explicit file lists for
  * unit testing. When no file list is supplied, changed files are derived from
- * `git status --porcelain` and filtered to the two coverage-relevant directories
- * and source-file extensions.
+ * `git status --porcelain` and filtered to the coverage-relevant directories
+ * (`src/`, `scripts/agent-customization/`, `scripts/mcp-semantic/`) and
+ * source-file extensions.
  *
  * Gate contract: `{ pass: boolean, evidence: object, fixHint: string|null, owner: string }`
  *
@@ -134,9 +135,9 @@ export async function runCodeCoverageGate(options = {}) {
   const fileReports = [];
   const missingFiles = [];
   const failedFiles = [];
-  const exemptFiles = Object.entries(exemptions).map(([file, exemption]) => ({
+  const exemptFiles = Object.entries(exemptions).map(([file, kind]) => ({
     file,
-    kind: typeof exemption === 'string' ? exemption : exemption.kind,
+    kind,
   }));
 
   for (const targetFile of targetFiles) {
@@ -466,18 +467,20 @@ async function deriveChangedSourceFiles() {
     .map((line) => line.slice(3).trim())
     .filter(Boolean)
     .map((entry) => entry.replace(/\\/g, '/'))
-    .filter((entry) => COVERAGE_DIRS.some((dir) => entry.startsWith(dir)))
-    .filter(isSourceFile);
+    .filter(isCoverageRelevantSourceFile);
 }
 
 /**
- * Filters an explicit file list to source files only, preserving the input order.
+ * Filters an explicit file list to coverage-relevant source files only,
+ * preserving the input order.
  *
  * @param {string[]} files - Repo-relative paths.
- * @returns {string[]} Source files with normalized slashes.
+ * @returns {string[]} Coverage-relevant source files with normalized slashes.
  */
 function filterTargetFiles(files) {
-  return files.map((entry) => entry.replace(/\\/g, '/')).filter(isSourceFile);
+  return files
+    .map((entry) => entry.replace(/\\/g, '/'))
+    .filter(isCoverageRelevantSourceFile);
 }
 
 /**
@@ -495,6 +498,26 @@ function isSourceFile(filePath) {
     SOURCE_EXTENSIONS.has(path.extname(filePath)) &&
     !TEST_FILE_RE.test(filePath) &&
     !TEST_DIR_RE.test(filePath)
+  );
+}
+
+/**
+ * Determines whether a repo-relative path is both a source file and within a
+ * coverage-relevant directory.
+ *
+ * Changed files outside `src/`, `scripts/agent-customization/`, and
+ * `scripts/mcp-semantic/` are ignored by the gate even when they are explicit
+ * source files. This keeps the gate aligned with the directories that are
+ * actually instrumented for coverage.
+ *
+ * @param {string} filePath - Repo-relative path.
+ * @returns {boolean} True when the path is a source file under a coverage-relevant
+ *   directory.
+ */
+function isCoverageRelevantSourceFile(filePath) {
+  return (
+    isSourceFile(filePath) &&
+    COVERAGE_DIRS.some((dir) => filePath.startsWith(dir))
   );
 }
 
@@ -539,7 +562,6 @@ export async function main(argv = process.argv.slice(2)) {
     if (!report.pass) console.log('fixHint:', report.fixHint);
   }
 
-  process.exitCode = report.pass ? 0 : 1;
   return report;
 }
 
@@ -548,5 +570,7 @@ if (
   process.argv[1] &&
   import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href
 ) {
-  main();
+  main().then((report) => {
+    process.exitCode = report.pass ? 0 : 1;
+  });
 }

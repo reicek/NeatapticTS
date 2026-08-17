@@ -40,6 +40,7 @@ import {
  * @param network - Network being evolved.
  * @param dataSet - Supervised dataset.
  * @returns Nothing.
+ * @throws {NetworkEvolveDatasetCompatibilityError} When the dataset is empty or sample shapes mismatch the network arity.
  */
 export function assertEvolutionDatasetCompatibility(
   network: Network,
@@ -103,6 +104,7 @@ export function resolveEvolutionSettings(
  * @param evolveOptions - Evolve options object.
  * @param initialTargetError - Target error resolved from options.
  * @returns Final stop conditions.
+ * @throws {NetworkEvolveStoppingConditionRequiredError} When neither iterations nor error is provided.
  */
 export function resolveStopConditions(
   evolveOptions: EvolveOptions,

@@ -10,23 +10,15 @@
  * @module
  */
 
-import type { DeathContext } from './types';
+import type { DeathContext, ReplayBuffer } from './types';
 
 /**
  * Replay buffer instance returned by {@link createReplayBuffer}.
  *
- * The buffer exposes `push`, `entries`, and `size` so it satisfies both the
- * harness replay interface (which uses `entries`) and the arms-race human-mode
- * interface (which uses `size`).
+ * @deprecated Import from `./types` instead. This re-export preserves the
+ *   public API for existing consumers.
  */
-export interface ReplayBuffer {
-  /** Append a death context to the buffer, evicting the oldest entry when full. */
-  push: (ctx: DeathContext) => void;
-  /** Return all stored death contexts in insertion order. */
-  entries: () => DeathContext[];
-  /** Return the current number of stored death contexts. */
-  size: () => number;
-}
+export type { ReplayBuffer } from './types';
 
 /**
  * Create a fixed-capacity FIFO replay buffer for death contexts.

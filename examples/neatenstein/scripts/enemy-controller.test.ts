@@ -27,7 +27,7 @@ import {
   ENEMY_CONTROLLER_WALL_COLLISION_RADIUS_CELLS,
   updateEnemyController,
 } from './enemy-controller';
-import type { ControlledEnemy } from './enemy-controller';
+import type { ControlledEnemy, EnemyControllerState } from './enemy-controller';
 import { NEATENSTEIN_FIXED_TIMESTEP_MS } from '../browser-entry/host/game/constants';
 
 /**
@@ -2875,5 +2875,286 @@ describe('AC-11b-006: stun timer determinism (fixed-timestep decrement)', () => 
     const updated = updateEnemyController(controller, state, emptyMap, 0);
     // dtMs=0 is a zero-timestep sync pass � stunTimerMs should not change.
     expect(updated.enemies[0].stunTimerMs).toBe(100);
+  });
+});
+
+/**
+ * Regression: Enemy respawn must return to the initial spawn position
+ * (initialPosition), NOT the death position.
+ *
+ * EnemyState now carries an optional `initialPosition` field set at spawn
+ * time. The respawn logic in enemy-controller.ts uses
+ * `enemyState.initialPosition ?? enemyState.position`, so an enemy that died
+ * near the player should respawn at its original map-edge spawn point.
+ */
+describe('respawn uses initialPosition (regression)', () => {
+  it('respawns at initialPosition, not the death position', () => {
+    const base = createGameState({ seed: 1 });
+    const emptyMap = createEmptyCollisionMap();
+
+    // Map-edge spawn position where the enemy originally entered the world.
+    const initialPosition: Vector2 = { x: 2, y: 2 };
+    // Death position near the player where the enemy was killed.
+    const deathPosition: Vector2 = {
+      x: base.player.position.x + 3,
+      y: base.player.position.y,
+    };
+
+    // Kill the enemy at the death position (health 0) so it fully de-rezzes.
+    const deadState: GameState = {
+      ...base,
+      enemies: [
+        {
+          position: { ...deathPosition },
+          health: 0,
+          initialPosition: { ...initialPosition },
+        },
+      ],
+    };
+
+    let controller = createEnemyControllerState(deadState);
+
+    // Advance through the full de-rez window so the enemy becomes inactive.
+    controller = updateEnemyController(
+      controller,
+      deadState,
+      emptyMap,
+      ENEMY_CONTROLLER_DE_REZ_DURATION_MS,
+    );
+    expect(controller.enemies[0].active).toBe(false);
+
+    // Respawn: the enemy state still carries initialPosition but its
+    // position is at the death spot. The respawned controller enemy should
+    // appear at initialPosition, NOT at the death position.
+    const respawnedState: GameState = {
+      ...base,
+      enemies: [
+        {
+          position: { ...deathPosition },
+          health: 100,
+          initialPosition: { ...initialPosition },
+        },
+      ],
+    };
+    controller = updateEnemyController(controller, respawnedState, emptyMap, 0);
+
+    expect(controller.enemies[0].active).toBe(true);
+    expect(controller.enemies[0].position.x).toBe(initialPosition.x);
+    expect(controller.enemies[0].position.y).toBe(initialPosition.y);
+  });
+
+  it('falls back to position when initialPosition is undefined (backward-compatible)', () => {
+    const base = createGameState({ seed: 1 });
+    const emptyMap = createEmptyCollisionMap();
+
+    // No initialPosition; existing behavior must be preserved.
+    const deathPosition: Vector2 = {
+      x: base.player.position.x - ENEMY_CONTROLLER_FIRE_RANGE_CELLS - 2,
+      y: base.player.position.y,
+    };
+
+    const deadState: GameState = {
+      ...base,
+      enemies: [
+        {
+          position: { ...deathPosition },
+          health: 0,
+        },
+      ],
+    };
+
+    let controller = createEnemyControllerState(deadState);
+
+    controller = updateEnemyController(
+      controller,
+      deadState,
+      emptyMap,
+      ENEMY_CONTROLLER_DE_REZ_DURATION_MS,
+    );
+    expect(controller.enemies[0].active).toBe(false);
+
+    // Respawn without initialPosition; should fall back to position.
+    const respawnedState: GameState = {
+      ...base,
+      enemies: [
+        {
+          position: { ...deathPosition },
+          health: 100,
+        },
+      ],
+    };
+    controller = updateEnemyController(controller, respawnedState, emptyMap, 0);
+
+    expect(controller.enemies[0].active).toBe(true);
+    expect(controller.enemies[0].position.x).toBe(deathPosition.x);
+    expect(controller.enemies[0].position.y).toBe(deathPosition.y);
+  });
+});
+
+/**
+ * Regression tests for the enemy respawn-position bug caused by stale
+ * ControlledEnemy.index values after de-rez compaction in the display worker.
+ *
+ * After completed-de-rez enemies are filtered out of the controller roster
+ * (display.worker.ts ~line 2035) AND removed from gameState.enemies (compacting
+ * the array), the surviving ControlledEnemy.index values must be renumbered to
+ * their new array positions. If they are left stale, previousByIndex.get(i)
+ * inside updateEnemyController returns the wrong enemy, causing respawned
+ * enemies to collapse onto clustered in-arena positions instead of spawning at
+ * the map edge.
+ */
+describe('enemy controller (index renumbering after de-rez compaction)', () => {
+  /**
+   * Build a ControlledEnemy at the given index and position with full health
+   * and default values, matching createEnemyControllerState output.
+   */
+  function makeControlledEnemy(
+    index: number,
+    position: Vector2,
+  ): ControlledEnemy {
+    return {
+      index,
+      position: { ...position },
+      health: 100,
+      yawRad: 0,
+      animationState: 'idle',
+      ammo: ENEMY_CONTROLLER_STARTING_AMMO,
+      fireCooldownMs: 0,
+      deRezElapsedMs: 0,
+      active: true,
+      walkTick: 0,
+      shootBlinkTicks: 0,
+      flankStallTicks: 0,
+      bfsStallTicks: 0,
+      weights: undefined,
+      variantId: 0,
+      previousStepDistance: -1,
+      stunTimerMs: 0,
+    };
+  }
+
+  it('renumbered roster keeps surviving enemies at own positions and spawns new enemy at map edge', () => {
+    const base = createGameState({ seed: 1 });
+    const emptyMap = createEmptyCollisionMap();
+
+    // Two surviving enemies at distinct positions, well outside fire range.
+    const pos0: Vector2 = {
+      x: base.player.position.x - ENEMY_CONTROLLER_FIRE_RANGE_CELLS - 2,
+      y: base.player.position.y,
+    };
+    const pos2: Vector2 = {
+      x: base.player.position.x + 5,
+      y: base.player.position.y + ENEMY_CONTROLLER_FIRE_RANGE_CELLS + 2,
+    };
+
+    // gameState.enemies after compaction: enemy at index 1 removed, plus a
+    // freshly spawned map-edge enemy appended at the end.
+    const mapEdgePos: Vector2 = {
+      x: base.player.position.x,
+      y: base.player.position.y - ENEMY_CONTROLLER_FIRE_RANGE_CELLS - 5,
+    };
+    const compactedState: GameState = {
+      ...base,
+      enemies: [
+        { position: { ...pos0 }, health: 100, initialPosition: { ...pos0 } },
+        { position: { ...pos2 }, health: 100, initialPosition: { ...pos2 } },
+        {
+          position: { ...mapEdgePos },
+          health: 100,
+          initialPosition: { ...mapEdgePos },
+        },
+      ],
+    };
+
+    // Post-fix controller roster: indices renumbered to array positions
+    // (0, 1) after filtering out the completed-de-rez middle enemy.
+    const renumberedController: EnemyControllerState = {
+      enemies: [makeControlledEnemy(0, pos0), makeControlledEnemy(1, pos2)],
+      hitscanEvents: [],
+    };
+
+    const result = updateEnemyController(
+      renumberedController,
+      compactedState,
+      emptyMap,
+      0,
+    );
+
+    // Surviving enemy 0 keeps its own position.
+    expect(result.enemies[0].position.x).toBe(pos0.x);
+    expect(result.enemies[0].position.y).toBe(pos0.y);
+
+    // Surviving enemy 1 (was enemy 2 pre-compaction) keeps its own position.
+    expect(result.enemies[1].position.x).toBe(pos2.x);
+    expect(result.enemies[1].position.y).toBe(pos2.y);
+
+    // Freshly spawned enemy at index 2 materializes at the map edge, not at
+    // a clustered in-arena position.
+    expect(result.enemies[2].position.x).toBe(mapEdgePos.x);
+    expect(result.enemies[2].position.y).toBe(mapEdgePos.y);
+  });
+
+  it('stale-index roster causes new enemy to collapse onto a surviving enemy position (documents the bug)', () => {
+    const base = createGameState({ seed: 1 });
+    const emptyMap = createEmptyCollisionMap();
+
+    // Two surviving enemies at distinct positions, well outside fire range.
+    const pos0: Vector2 = {
+      x: base.player.position.x - ENEMY_CONTROLLER_FIRE_RANGE_CELLS - 2,
+      y: base.player.position.y,
+    };
+    const pos2: Vector2 = {
+      x: base.player.position.x + 5,
+      y: base.player.position.y + ENEMY_CONTROLLER_FIRE_RANGE_CELLS + 2,
+    };
+
+    // gameState.enemies after compaction: enemy at index 1 removed, plus a
+    // freshly spawned map-edge enemy appended at the end.
+    const mapEdgePos: Vector2 = {
+      x: base.player.position.x,
+      y: base.player.position.y - ENEMY_CONTROLLER_FIRE_RANGE_CELLS - 5,
+    };
+    const compactedState: GameState = {
+      ...base,
+      enemies: [
+        { position: { ...pos0 }, health: 100, initialPosition: { ...pos0 } },
+        { position: { ...pos2 }, health: 100, initialPosition: { ...pos2 } },
+        {
+          position: { ...mapEdgePos },
+          health: 100,
+          initialPosition: { ...mapEdgePos },
+        },
+      ],
+    };
+
+    // Pre-fix controller roster: indices are STALE (not renumbered after
+    // filtering out the completed-de-rez middle enemy). The surviving enemy
+    // that was at index 2 still has index=2, which matches the new enemy's
+    // array position.
+    const staleController: EnemyControllerState = {
+      enemies: [makeControlledEnemy(0, pos0), makeControlledEnemy(2, pos2)],
+      hitscanEvents: [],
+    };
+
+    const result = updateEnemyController(
+      staleController,
+      compactedState,
+      emptyMap,
+      0,
+    );
+
+    // Surviving enemy 0 still keeps its own position (index 0 is unaffected).
+    expect(result.enemies[0].position.x).toBe(pos0.x);
+    expect(result.enemies[0].position.y).toBe(pos0.y);
+
+    // The new enemy at array index 2 gets previousByIndex.get(2) which is the
+    // stale enemy that was at index 2 — so it takes THAT enemy's position
+    // instead of its own map-edge spawn position.
+    expect(result.enemies[2].position.x).toBe(pos2.x);
+    expect(result.enemies[2].position.y).toBe(pos2.y);
+
+    // The new enemy does NOT get its map-edge position — this is the bug.
+    expect(result.enemies[2].position.x).not.toBe(mapEdgePos.x);
+    expect(result.enemies[2].position.y).not.toBe(mapEdgePos.y);
   });
 });

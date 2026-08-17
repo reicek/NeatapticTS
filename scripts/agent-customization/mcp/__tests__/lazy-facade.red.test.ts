@@ -6,6 +6,7 @@ import {
   unlinkSync,
   writeFileSync,
 } from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import type { Readable, Writable } from 'node:stream';
 import { PassThrough } from 'node:stream';
@@ -45,11 +46,11 @@ interface FakeChildOptions {
 const REPO_ROOT = path.resolve(__dirname, '../../../../');
 const CORTEX_SNAPSHOT_PATH = path.join(
   REPO_ROOT,
-  'files/mcp-facade/cortex-tool-snapshot.json',
+  'scripts/agent-customization/mcp/cortex-tool-snapshot.json',
 );
 const DEVTOOLS_SNAPSHOT_PATH = path.join(
   REPO_ROOT,
-  'files/mcp-facade/devtools-tool-snapshot.json',
+  'scripts/agent-customization/mcp/devtools-tool-snapshot.json',
 );
 
 const CORTEX_SNAPSHOT = JSON.parse(readFileSync(CORTEX_SNAPSHOT_PATH, 'utf8'));
@@ -1578,7 +1579,10 @@ describe('lazy-facade-core internals', () => {
   });
 
   it('reports a failing self-check when the snapshot tools field is not an array', async () => {
-    const tempPath = path.resolve(REPO_ROOT, 'tmp/invalid-tools-snapshot.json');
+    const tempPath = path.join(
+      os.tmpdir(),
+      'neatapicts-invalid-tools-snapshot.json',
+    );
     mkdirSync(path.dirname(tempPath), { recursive: true });
     writeFileSync(tempPath, JSON.stringify({ tools: 'not-an-array' }));
     const { runFacadeMain } = await importLazyFacadeCore();
@@ -1823,7 +1827,10 @@ describe('lazy-facade-core internals', () => {
 
   it('resolves a Windows wrapper to an absolute path with shell:true', async () => {
     const { resolveSpawnCommand } = await importLazyFacadeCore();
-    const tempDir = path.join(REPO_ROOT, 'tmp', `spawn-test-${Date.now()}`);
+    const tempDir = path.join(
+      os.tmpdir(),
+      `neatapicts-spawn-test-${Date.now()}`,
+    );
     const wrapperDir = path.join(tempDir, 'bin');
     mkdirSync(wrapperDir, { recursive: true });
     const wrapperPath = path.join(wrapperDir, 'npx.cmd');
@@ -1902,7 +1909,10 @@ describe('lazy-facade-core internals', () => {
 
   it('resolves a Windows .exe binary with shell:false', async () => {
     const { resolveSpawnCommand } = await importLazyFacadeCore();
-    const tempDir = path.join(REPO_ROOT, 'tmp', `spawn-exe-test-${Date.now()}`);
+    const tempDir = path.join(
+      os.tmpdir(),
+      `neatapicts-spawn-exe-test-${Date.now()}`,
+    );
     const exeDir = path.join(tempDir, 'bin');
     mkdirSync(exeDir, { recursive: true });
     const exePath = path.join(exeDir, 'npx.exe');

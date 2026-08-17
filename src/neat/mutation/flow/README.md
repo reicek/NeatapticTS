@@ -374,6 +374,50 @@ Parameters:
 
 Returns: True when the genome should be mutated.
 
+### syncInnovationCounterForGenome
+
+```ts
+syncInnovationCounterForGenome(
+  genome: GenomeWithMetadata,
+): void
+```
+
+Sync the Connection innovation counter above any innovations in the genome.
+
+Collects all connection innovation IDs (including self-connections) and
+raises the static counter so that `Connection.acquire()` never reuses an ID
+already occupied by an existing edge.
+
+Parameters:
+- `genome` - Genome whose connections are inspected.
+
+### tryStructuralMutationOperator
+
+```ts
+tryStructuralMutationOperator(
+  genome: GenomeWithMetadata,
+  mutationName: string | undefined,
+  mutationMethods: Record<string, MutationMethod>,
+  internal: NeatControllerForMutation,
+  methods: { mutation: unknown; },
+): Promise<boolean>
+```
+
+Dispatch structural mutation operators that require innovation reuse.
+
+Returns `true` when the operator was a structural `ADD_NODE` or `ADD_CONN`
+mutation that has already been applied, signaling the caller that no further
+processing is needed.
+
+Parameters:
+- `genome` - Genome to mutate.
+- `mutationName` - Name of the resolved mutation method.
+- `mutationMethods` - Record of available mutation methods.
+- `internal` - NEAT controller context.
+- `methods` - Mutation methods module.
+
+Returns: Promise resolving to `true` when a structural operator was applied.
+
 ### updateOperatorStatsIfNeeded
 
 ```ts

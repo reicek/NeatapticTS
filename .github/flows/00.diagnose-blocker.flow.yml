@@ -31,10 +31,8 @@ skills:
   - 'model-routing-and-budget'
 
 specialists:
-  - 'helping-gap-resolution-coordinator'
   - 'helping-agent-maintenance-coordinator'
   - 'Plan Scout'
-  - 'failure-triage-specialist'
 
 timeout-minutes: 20
 

@@ -59,6 +59,8 @@ type StochasticDepthSchedule = (step: number, current: number[]) => number[];
  * @param this Target network instance.
  * @param configuration Pruning schedule and ranking configuration.
  * @returns Nothing.
+ * @throws {NetworkRuntimePruningScheduleWindowError} When the pruning schedule window start/end range is invalid.
+ * @throws {NetworkRuntimeTargetSparsityRangeError} When targetSparsity is outside the open interval (0, 1).
  */
 export function configurePruning(
   this: Network,
@@ -101,6 +103,7 @@ export function configurePruning(
  * @param this Target network instance.
  * @param configuration Global standard deviation or one value per hidden layer.
  * @returns Nothing.
+ * @throws {NetworkRuntimeWeightNoiseStdDevRangeError} When a numeric stdDev is negative.
  */
 export function enableWeightNoise(
   this: Network,
@@ -287,6 +290,9 @@ export function getRuntimeRegularizationStats(this: Network) {
  * @param this Target network instance.
  * @param survivalProbabilities Survival probabilities for each hidden layer.
  * @returns Nothing.
+ * @throws {NetworkRuntimeStochasticDepthSurvivalArrayError} When survivalProbabilities is not an array.
+ * @throws {NetworkRuntimeStochasticDepthSurvivalRangeError} When any survival probability is outside (0, 1].
+ * @throws {NetworkRuntimeStochasticDepthLayeredNetworkRequiredError} When the network has no layers.
  */
 export function setStochasticDepth(
   this: Network,

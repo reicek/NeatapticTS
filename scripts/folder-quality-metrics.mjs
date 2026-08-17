@@ -37,6 +37,8 @@ const SOURCE_FILE_SUFFIX = '.ts';
 const DECLARATION_FILE_SUFFIX = '.d.ts';
 const TEST_FILE_SUFFIX = '.test.ts';
 const NON_MODULE_FILE_SUFFIXES = ['.types.ts', '.constants.ts'];
+/** Suffix for pure-leaf util files that are tested through their parent module. */
+const UTIL_FILE_SUFFIX = '.utils.ts';
 const EXPORTED_SYMBOL_PATTERN =
   /^\s*export\s+(?:async\s+)?(?:(function|class|const)\s+([A-Za-z0-9_$]+))/u;
 const IGNORED_DIRECTORY_NAMES = new Set([
@@ -496,6 +498,17 @@ async function collectMissingTestFileSmells(
   let checkedCount = 0;
 
   for (const moduleFilePath of moduleFilePaths) {
+    // Pure-leaf util files are tested through their parent module's test file,
+    // not a dedicated sibling test, so skip the sibling-test check for them.
+    // Pure constant/type definition files (`.constants.ts`, `.types.ts`) are
+    // also exempt: they contain no testable logic and are verified through the
+    // modules that consume them.
+    if (
+      moduleFilePath.endsWith(UTIL_FILE_SUFFIX) ||
+      NON_MODULE_FILE_SUFFIXES.some((suffix) => moduleFilePath.endsWith(suffix))
+    ) {
+      continue;
+    }
     const relativeFilePath = normalizePath(
       path.relative(REPO_ROOT, moduleFilePath),
     );

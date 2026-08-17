@@ -45,6 +45,17 @@ describe('docs-quality-metrics.gate.mjs', () => {
         }),
       );
     });
+
+    it('reports the bumped docs-quality contract versions', () => {
+      const result = runGateContractCheck();
+
+      expect(result.report?.evidence).toEqual(
+        expect.objectContaining({
+          metric_version: 2,
+          scanner_version: '2.0.0',
+        }),
+      );
+    });
   });
 });
 

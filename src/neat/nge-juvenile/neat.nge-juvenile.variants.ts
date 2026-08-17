@@ -15,7 +15,10 @@
 
 import { DEFAULT_ACCELERATION_GPU_NODE_THRESHOLD } from '../../acceleration/acceleration.constants';
 import { autoEnableAcceleration } from '../../acceleration/acceleration.orchestrator';
-import type { AccelerationConfig } from '../../acceleration/acceleration.types';
+import type {
+  AccelerationConfig,
+  AccelerationStatus,
+} from '../../acceleration/acceleration.types';
 import {
   DEFAULT_VARIANT_SCORER,
   type VariantEvaluationNetwork,
@@ -41,7 +44,7 @@ import {
 } from './neat.nge-juvenile.constants';
 import type { NgeLifecycleStage } from './neat.nge-juvenile.lifecycle-stages';
 
-/** Options forwarded to {@link evaluateNgeWeightVariants}. */
+/** Options forwarded to the {@link evaluateNgeWeightVariants} weight variant evaluator, controlling acceleration backend selection and stage specific variant count overrides. */
 export interface EvaluateNgeWeightVariantsOptions {
   /** Optional acceleration configuration forwarded to the variant evaluator. */
   accelerationConfig?: AccelerationConfig;
@@ -70,6 +73,70 @@ export interface NgeWeightVariantPatch {
   representative: WeightVariant;
   /** All perturbations applied together when scoring this patch. */
   perturbations: readonly WeightVariant[];
+}
+
+/**
+ * Resolve the GPU device from acceleration status when the network meets the
+ * GPU node threshold. Returns `undefined` when GPU is not eligible.
+ */
+function resolveGpuDevice(
+  status: AccelerationStatus,
+  nodeCount: number,
+): GPUDevice | undefined {
+  if (status.mode !== 'gpu') return undefined;
+  const device = status.gpu.device;
+  if (!device) return undefined;
+  if (nodeCount < DEFAULT_ACCELERATION_GPU_NODE_THRESHOLD) return undefined;
+  return device;
+}
+
+/**
+ * Compute the largest absolute weight delta across all patch perturbations.
+ */
+function computeMaxDelta(patches: readonly NgeWeightVariantPatch[]): number {
+  let maxDelta = 0;
+  for (const patch of patches) {
+    for (const { delta } of patch.perturbations) {
+      maxDelta = Math.max(maxDelta, Math.abs(delta));
+    }
+  }
+  return maxDelta;
+}
+
+/**
+ * Find the index and score of the highest-scoring variant.
+ */
+function findBestVariantScore(scores: readonly number[]): {
+  bestIndex: number;
+  bestScore: number;
+} {
+  let bestIndex = 0;
+  let bestScore = scores[0] ?? Number.NEGATIVE_INFINITY;
+  for (let index = 1; index < scores.length; index++) {
+    const score = scores[index]!;
+    if (score > bestScore) {
+      bestScore = score;
+      bestIndex = index;
+    }
+  }
+  return { bestIndex, bestScore };
+}
+
+/**
+ * Build the metadata block for the variant evaluation result.
+ */
+function buildVariantMetadata(
+  status: AccelerationStatus,
+  variantCount: number,
+  maxDelta: number,
+  scoreFn: VariantScorer | undefined,
+): WeightVariantResult['metadata'] {
+  return {
+    backend: status.mode,
+    variantCount,
+    scaleDivisor: maxDelta > 0 ? maxDelta : 1,
+    scorer: scoreFn === undefined ? 'default' : 'custom',
+  };
 }
 
 /**
@@ -163,23 +230,11 @@ export async function evaluateNgeWeightVariants(
     config: options?.accelerationConfig,
   });
 
-  const gpuEligible =
-    network.nodes.length >= DEFAULT_ACCELERATION_GPU_NODE_THRESHOLD;
-  const device =
-    status.mode === 'gpu' && status.gpu.device && gpuEligible
-      ? status.gpu.device
-      : undefined;
+  const device = resolveGpuDevice(status, network.nodes.length);
   const useGPU = device !== undefined;
   const previousDevice = network.gpuDevice;
   if (device !== undefined) {
     network.gpuDevice = device;
-  }
-
-  let maxDelta = 0;
-  for (const patch of patches) {
-    for (const { delta } of patch.perturbations) {
-      maxDelta = Math.max(maxDelta, Math.abs(delta));
-    }
   }
 
   const scores: number[] = [];
@@ -203,26 +258,19 @@ export async function evaluateNgeWeightVariants(
     network.gpuDevice = previousDevice;
   }
 
-  let bestIndex = 0;
-  let bestScore = scores[0] ?? Number.NEGATIVE_INFINITY;
-  for (let index = 1; index < scores.length; index++) {
-    const score = scores[index]!;
-    if (score > bestScore) {
-      bestScore = score;
-      bestIndex = index;
-    }
-  }
+  const { bestIndex, bestScore } = findBestVariantScore(scores);
+  const maxDelta = computeMaxDelta(patches);
 
   return {
     bestIndex,
     bestScore,
     scores,
-    metadata: {
-      backend: status.mode,
-      variantCount: patches.length,
-      scaleDivisor: maxDelta > 0 ? maxDelta : 1,
-      scorer: options?.scoreFn === undefined ? 'default' : 'custom',
-    },
+    metadata: buildVariantMetadata(
+      status,
+      patches.length,
+      maxDelta,
+      options?.scoreFn,
+    ),
   };
 }
 
@@ -250,6 +298,40 @@ export async function evaluateNgeWeightVariants(
  * const tiny = resolveVariantCountForStage('adult', { adult: 2 });
  * ```
  */
+const STAGE_CONFIG_KEY: Record<
+  NgeLifecycleStage,
+  'baby' | 'juvenile' | 'adult'
+> = {
+  embryo: 'baby',
+  baby: 'baby',
+  juvenile: 'juvenile',
+  adult: 'adult',
+  equilibrium: 'adult',
+};
+
+const DEFAULT_STAGE_VARIANT_COUNTS: Record<NgeLifecycleStage, number> = {
+  embryo: NGE_LIFECYCLE_DEFAULT_BABY_VARIANT_COUNT,
+  baby: NGE_LIFECYCLE_DEFAULT_BABY_VARIANT_COUNT,
+  juvenile: NGE_LIFECYCLE_DEFAULT_JUVENILE_VARIANT_COUNT,
+  adult: NGE_LIFECYCLE_DEFAULT_ADULT_VARIANT_COUNT,
+  equilibrium: NGE_LIFECYCLE_DEFAULT_ADULT_VARIANT_COUNT,
+};
+
+function sanitizeVariantCount(count: number): number {
+  return Math.max(1, Math.floor(count));
+}
+
+/**
+ * Resolve the variant count for a given NGE lifecycle stage. Explicit
+ * overrides take precedence, followed by acceleration config stage counts,
+ * and finally built-in default values for each stage. The returned count
+ * is always a positive integer.
+ *
+ * @param stage - The lifecycle stage to resolve a variant count for.
+ * @param overrides - Optional per-stage variant count overrides.
+ * @param accelerationConfig - Optional acceleration config with stage counts.
+ * @returns The resolved, sanitized variant count for the stage.
+ */
 export function resolveVariantCountForStage(
   stage: NgeLifecycleStage,
   overrides?: Partial<Record<NgeLifecycleStage, number>>,
@@ -257,31 +339,19 @@ export function resolveVariantCountForStage(
 ): number {
   const override = overrides?.[stage];
   if (override !== undefined) {
-    return Math.max(1, Math.floor(override));
+    return sanitizeVariantCount(override);
   }
 
-  const stageCounts = accelerationConfig?.stageVariantCounts;
   const configCount =
-    stage === 'embryo'
-      ? stageCounts?.baby
-      : stage === 'equilibrium'
-        ? stageCounts?.adult
-        : stageCounts?.[stage];
+    accelerationConfig?.stageVariantCounts?.[STAGE_CONFIG_KEY[stage]];
   if (configCount !== undefined) {
-    return Math.max(1, Math.floor(configCount));
+    return sanitizeVariantCount(configCount);
   }
 
-  switch (stage) {
-    case 'embryo':
-    case 'baby':
-      return NGE_LIFECYCLE_DEFAULT_BABY_VARIANT_COUNT;
-    case 'juvenile':
-      return NGE_LIFECYCLE_DEFAULT_JUVENILE_VARIANT_COUNT;
-    case 'adult':
-    case 'equilibrium':
-    default:
-      return NGE_LIFECYCLE_DEFAULT_ADULT_VARIANT_COUNT;
-  }
+  return (
+    DEFAULT_STAGE_VARIANT_COUNTS[stage] ??
+    NGE_LIFECYCLE_DEFAULT_ADULT_VARIANT_COUNT
+  );
 }
 
 /**

@@ -18,6 +18,12 @@
  */
 
 import { ROBOT_SPRITE_SCALE } from '../../robot-sprite-data.js';
+import {
+  DEREZ_HASH_MODULUS,
+  DEREZ_HASH_PRIME_1,
+  DEREZ_HASH_PRIME_2,
+  DEREZ_HASH_PRIME_3,
+} from './renderer.rng.constants';
 
 /**
  * Prime-mixing integer hash producing a deterministic `[0, 1)` value for
@@ -35,8 +41,10 @@ import { ROBOT_SPRITE_SCALE } from '../../robot-sprite-data.js';
  */
 export function derezHash(x: number, y: number, seed: number): number {
   return (
-    (((x * 374761393 + y * 668265263) ^ (seed * 2246822519)) >>> 0) /
-    0x100000000
+    (((x * DEREZ_HASH_PRIME_1 + y * DEREZ_HASH_PRIME_2) ^
+      (seed * DEREZ_HASH_PRIME_3)) >>>
+      0) /
+    DEREZ_HASH_MODULUS
   );
 }
 

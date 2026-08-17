@@ -148,6 +148,7 @@ export type { NeatControllerForEval } from './shared/evaluate.types';
  * - `speciation/` explains the lightweight maintenance that can happen after scores land,
  * - `objectives/` explains why entropy objective registration lives in evaluation instead of evolve.
  *
+ * @param this - NEAT controller instance bound by method call.
  * @returns Promise that resolves after evaluation and adaptive follow-up steps.
  *
  * @example

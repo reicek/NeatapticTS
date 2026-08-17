@@ -1,0 +1,8 @@
+{
+  "introFile": "index.html",
+  "hiddenFiles": [
+    "webgpu-inference-smoke.html",
+    "scenarios"
+  ],
+  "folderOrder": []
+}

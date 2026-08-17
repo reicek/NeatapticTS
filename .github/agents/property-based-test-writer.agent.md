@@ -15,6 +15,8 @@ tools:
     neataptic-workflow-mcp/*,
   ]
 user-invocable: false
+disable-model-invocation: false
+target: vscode
 agents: []
 skills: ['property-based-testing', 'red-test-contracts', 'creating-unit-tests']
 ---
@@ -130,7 +132,7 @@ Run the focused property test with a seeded RNG and confirm it fails for the rig
 
 If an invariant cannot be expressed as a property (too broad, non-deterministic by design), record the gap and return PARTIAL; fall back to example-based tests via `unit-test-writer`. Only escalate to the parent Tier 1 agent when a genuine technical limit blocks progress. No concessions.
 
-## Output format
+## Output Format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1

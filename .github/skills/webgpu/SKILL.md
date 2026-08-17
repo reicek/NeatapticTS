@@ -2,7 +2,7 @@
 name: webgpu
 description: 'Use when: designing, implementing, debugging, or validating WebGPU compute acceleration for neural-network inference in NeatapticTS.'
 argument-hint: 'Specify the WebGPU topic (lifecycle, WGSL kernel, buffer layout, pipeline, error handling, testing, CPU parity), the target files, the network/demos in scope, and the acceptance criteria (fallback behavior, f32 tolerance, browser support).'
-user-invocable: false
+user-invocable: true
 disable-model-invocation: false
 skills:
   - implementation-standards
@@ -281,8 +281,8 @@ be routed back to implementation through the orchestrator.
 
 ## References
 
-- `WebGPU_architecture/webgpu.docs.md` — synthesized WebGPU master reference.
-- `WebGPU_architecture/webgpu.architecture.md` — NeatapticTS GPU target architecture and risk register.
+- `docs/architecture/webgpu/webgpu.docs.md` — synthesized WebGPU master reference.
+- `docs/architecture/webgpu/webgpu.architecture.md` — NeatapticTS GPU target architecture and risk register.
 - `src/architecture/network/slab/network.slab.utils.ts` — CPU slab layout.
 - `src/architecture/network/slab/network.slab.fast-path.helpers.utils.ts` — CPU fast-path eligibility and helpers.
 - `src/multithreading/multi.utils.ts` — worker activation registry.

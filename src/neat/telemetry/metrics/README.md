@@ -68,6 +68,7 @@ Attach complexity statistics for mono-objective runs using the same aggregation 
 Parameters:
 - `telemetryContext` - Neat-like context with population state.
 - `telemetryOptions` - Options controlling complexity telemetry.
+- `populationSnapshot` - Snapshot of the current population used for complexity stats.
 - `entry` - Telemetry entry to update.
 
 ### applyComplexityStatsMultiObjective
@@ -135,7 +136,7 @@ Apply lineage stats for mono-objective mode using sampled ancestors so single-sc
 
 Parameters:
 - `telemetryContext` - Neat-like context with lineage settings.
-- `population` - Population snapshot.
+- `populationSnapshot` - Snapshot of the current population used for lineage stats.
 - `entry` - Telemetry entry to update.
 
 ### applyLineageStatsMultiObjective
@@ -989,7 +990,7 @@ Apply lineage stats for mono-objective mode using sampled ancestors so single-sc
 
 Parameters:
 - `telemetryContext` - Neat-like context with lineage settings.
-- `population` - Population snapshot.
+- `populationSnapshot` - Snapshot of the current population used for lineage stats.
 - `entry` - Telemetry entry to update.
 
 ### applyLineageStatsMultiObjective
@@ -1450,6 +1451,7 @@ Attach complexity statistics for mono-objective runs using the same aggregation 
 Parameters:
 - `telemetryContext` - Neat-like context with population state.
 - `telemetryOptions` - Options controlling complexity telemetry.
+- `populationSnapshot` - Snapshot of the current population used for complexity stats.
 - `entry` - Telemetry entry to update.
 
 ### applyComplexityStatsMultiObjective

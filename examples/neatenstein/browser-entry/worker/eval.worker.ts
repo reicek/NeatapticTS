@@ -23,7 +23,11 @@
 /// <reference lib="webworker" />
 
 import { buildNeatensteinMap, createCollisionMap } from '../renderer/map';
-import { NEATENSTEIN_MAP_SIZE } from '../constants';
+import {
+  NEATENSTEIN_MAP_SIZE,
+  EVAL_MSG_EVALUATE,
+  EVAL_MSG_EVAL_COMPLETE,
+} from '../constants';
 import { gameTick } from '../host/game/tick';
 import { NEATENSTEIN_FIXED_TIMESTEP_MS } from '../host/game/constants';
 import type { EpisodeTelemetry } from '../host/game/types';
@@ -42,16 +46,15 @@ import {
   extractCombatQualitySignal,
 } from '../harness/fitness';
 import { NEATENSTEIN_FITNESS_MAX_EPISODE_TICKS } from '../harness/constants';
-import type { CombatQualitySignal, Snapshot } from '../harness/types';
+import type { CombatQualitySignal } from '../harness/types';
 import { runArmsRaceGeneration } from '../harness/arms-race';
 import { hashSeed } from '../harness/hash-seed';
-
-/**
- * Population size for the hoisted Neat evaluation.
- *
- * @see AC-039
- */
-const NEATENSTEIN_MAIN_NEAT_POPSIZE = 4;
+import {
+  MAX_NODES,
+  MAX_CONNECTIONS,
+  NEAT_POPSIZE,
+} from './display.worker.constants';
+import type { EvalRequestPayload } from './display.worker.types';
 
 /**
  * Run a deterministic fitness evaluation episode for a NEAT network.
@@ -132,17 +135,6 @@ export function runFitnessEpisode(
 }
 
 /**
- * Inbound evaluation request payload received from the display worker.
- */
-interface EvalRequestPayload {
-  type: 'evaluate';
-  seed: number;
-  generation: number;
-  enemySnapshot: Snapshot;
-  humanMode: boolean;
-}
-
-/**
  * Lazy-load the Neat constructor from the neataptic entry point.
  *
  * Kept as a mutable getter so tests can inject a lightweight mock Neat
@@ -182,7 +174,7 @@ export function __testOnlyGetNeatConstructor(): () => Promise<
 
 self.onmessage = async (event: MessageEvent) => {
   const data = event.data as EvalRequestPayload | null;
-  if (!data || typeof data !== 'object' || data.type !== 'evaluate') {
+  if (!data || typeof data !== 'object' || data.type !== EVAL_MSG_EVALUATE) {
     return;
   }
 
@@ -207,10 +199,10 @@ self.onmessage = async (event: MessageEvent) => {
     NEATENSTEIN_MAIN_NEAT_OUTPUTS,
     fitnessFn,
     {
-      popsize: NEATENSTEIN_MAIN_NEAT_POPSIZE,
+      popsize: NEAT_POPSIZE,
       seed: popSeed,
-      maxNodes: 64,
-      maxConns: 256,
+      maxNodes: MAX_NODES,
+      maxConns: MAX_CONNECTIONS,
     },
   );
 
@@ -238,7 +230,7 @@ self.onmessage = async (event: MessageEvent) => {
   const championNetworkJSON = championNetwork.toJSON();
 
   self.postMessage({
-    type: 'evalComplete',
+    type: EVAL_MSG_EVAL_COMPLETE,
     generation: result.generation,
     championNetworkJSON,
   });

@@ -85,7 +85,8 @@ export function rebuildConnectionsLocal(networkLike: Network): void {
  * Map an internal activation function (squash) to an ONNX op_type.
  * Mapping flows through the exporter activation resolver so opset-gated operators and identity fallbacks stay centralized in one compatibility decision path.
  *
- * @param squash Activation function reference.
+ * @param squash - Activation function reference.
+ * @param opset - Target ONNX opset version.
  * @returns ONNX activation operator name.
  */
 export function mapActivationToOnnx(

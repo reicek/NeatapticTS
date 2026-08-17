@@ -249,6 +249,7 @@ export function disconnectOriginalConnection(
  * @param splitDescriptor - metadata for the split
  * @param splitRecord - existing innovation record
  * @param NodeClass - node constructor
+ * @param randomValue - RNG callback for deterministic bias initialization.
  * @returns void
  */
 export function applySplitWithExistingRecord(

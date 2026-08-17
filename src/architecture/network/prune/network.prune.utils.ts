@@ -63,6 +63,7 @@ import { PRUNING_METHOD_MAGNITUDE } from './network.prune.utils.types';
  * this iteration should prune, then removes low-ranked connections and can
  * optionally regrow a bounded subset.
  *
+ * @param this - Network instance bound by method call.
  * @param iteration Current (0-based or 1-based) training iteration counter used for scheduling.
  * @returns Nothing.
  */
@@ -120,6 +121,7 @@ export function maybePrune(this: Network, iteration: number): void {
  * Unlike maybePrune this operates immediately relative to the first invocation's connection count
  * (stored separately as _evoInitialConnCount) and does not implement scheduling or regrowth.
  *
+ * @param this - Network instance bound by method call.
  * @param targetSparsity - Requested target sparsity.
  * @param method - Connection ranking heuristic.
  * @returns Nothing.
@@ -161,6 +163,7 @@ export function pruneToSparsity(
 /**
  * Return current sparsity relative to the captured pruning baseline connection count.
  *
+ * @param this - Network instance whose pruning baseline is inspected.
  * @returns Current sparsity in the [0,1] range when baseline is available.
  */
 export function getCurrentSparsity(this: Network): number {

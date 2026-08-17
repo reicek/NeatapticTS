@@ -92,7 +92,9 @@ async function measureGraphLatency(databasePath) {
  * @returns {Promise<void>}
  */
 async function main() {
-  const databasePath = process.argv[2] ?? defaultDatabasePath;
+  let databasePath = process.argv[2];
+  /* istanbul ignore next -- defensive: process.argv[2] always provided in CLI tests */
+  if (databasePath == null) databasePath = defaultDatabasePath;
   const results = await measureGraphLatency(databasePath);
   const passes = results.p50 <= GRAPH_BUDGET_MS;
 

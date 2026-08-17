@@ -128,6 +128,7 @@ identity paths so repair work cannot drift from the innovation tracker or
 the explicit topology-policy bridge.
 
 Parameters:
+- `this` - Neat controller instance with mutation and innovation tracking state.
 - `network` - Genome whose hidden-node budget and connectivity should be repaired.
 - `multiplierOverride` - Optional override for the configured hidden-node multiplier.
 
@@ -153,6 +154,7 @@ reconnecting edges so maintenance work still respects the innovation tracker
 and the explicit topology-policy bridge.
 
 Parameters:
+- `this` - Neat controller instance with mutation and innovation tracking state.
 - `network` - Genome whose endpoint and hidden-node connectivity should be repaired.
 
 Returns: Nothing. The network may gain repair connections in place.
@@ -186,6 +188,9 @@ Educational notes:
   helper routines that preserve innovation ids across the population.
 - Cache invalidation and operator statistics also live downstream of this
   pass, so `mutate()` is about consistency as much as randomness.
+
+Parameters:
+- `this` - Neat controller instance with population and mutation options.
 
 Returns: Promise that resolves after every genome has gone through the mutation flow for this pass.
 
@@ -237,6 +242,7 @@ edit comparable for later crossover and speciation rather than treating it
 as a completely unrelated event.
 
 Parameters:
+- `this` - Neat controller instance that holds innovation tables.
 - `genome` - Genome to modify in place.
 
 Returns: Nothing. The genome may gain one new connection and the controller innovation map may be consulted or extended.
@@ -277,6 +283,7 @@ Method steps (high-level):
   deterministic position to preserve ordering for downstream algorithms.
 
 Parameters:
+- `this` - Neat controller instance that holds innovation tables.
 - `genome` - Genome to modify in place.
 
 Returns: Promise that resolves after the split has either reused an existing innovation record or created a new one.
@@ -333,6 +340,7 @@ Mirrors legacy implementation from `neat.ts` to preserve test expectations.
 returned for identity checks in tests.
 
 Parameters:
+- `this` - Neat controller instance with mutation policy and operator statistics.
 - `genome` - Genome whose current structure constrains which operators are legal.
 - `rawReturnForTest` - Preserves legacy array-return behavior for test-only FFW checks.
 

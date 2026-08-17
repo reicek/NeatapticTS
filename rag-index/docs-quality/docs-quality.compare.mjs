@@ -74,9 +74,7 @@ export function compareDocsQualityRuns(payload) {
 function extractComparableDimensions(manifest) {
   const thresholdConfig = isPlainObject(manifest.thresholdConfig)
     ? manifest.thresholdConfig
-    : isPlainObject(manifest.threshold)
-      ? manifest.threshold
-      : {};
+    : {};
   const scopeConfig = isPlainObject(manifest.scopeConfig)
     ? manifest.scopeConfig
     : {};
@@ -88,13 +86,8 @@ function extractComparableDimensions(manifest) {
       minJsdocWords: Number(thresholdConfig.minJsdocWords ?? 0),
       complexityThreshold: Number(thresholdConfig.complexityThreshold ?? 0),
     },
-    scopeType: String(scopeConfig.scopeType ?? manifest.scopeType ?? ''),
-    scopeDigest: String(
-      manifest.scopeDigest ??
-        scopeConfig.scopeDigest ??
-        manifest.sourcePathsDigest ??
-        '',
-    ),
+    scopeType: String(scopeConfig.scopeType ?? ''),
+    scopeDigest: String(scopeConfig.scopeDigest ?? ''),
   };
 }
 
@@ -169,13 +162,17 @@ async function main() {
     if (!result.accepted) process.exitCode = 1;
   } catch (error) {
     fail(
+      /* istanbul ignore next -- defensive: caught errors are always Error instances */
       error instanceof Error ? error.message : String(error),
       Boolean(args.json),
     );
   }
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href)
+if (
+  process.argv[1] &&
+  import.meta.url.split('?')[0] === pathToFileURL(process.argv[1]).href
+)
   await main();
 
 export { REASON_CODES };

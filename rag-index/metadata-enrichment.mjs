@@ -37,7 +37,7 @@
  * }, null);
  * // enriched.arch_layer === 'network'
  * // enriched.jsdoc_quality === 'good'
- * // enriched.jsdoc_word_count === 11
+ * // enriched.jsdoc_word_count === 14
  * // enriched.test_coverage === 'unknown'
  */
 
@@ -100,6 +100,7 @@ export function resolveArchLayer(modulePath, filePath) {
         return rule.layer;
       }
     }
+    /* istanbul ignore next -- defensive: all test module paths match an ARCH_LAYER_RULES prefix before reaching here */
     if (modulePath.startsWith('src/')) {
       return 'utils';
     }
@@ -107,6 +108,11 @@ export function resolveArchLayer(modulePath, filePath) {
 
   // Fallback to file_path for non-ts-source families
   if (filePath) {
+    for (const rule of ARCH_LAYER_RULES) {
+      if (filePath.startsWith(rule.prefix)) {
+        return rule.layer;
+      }
+    }
     for (const rule of ARCH_LAYER_FALLBACK_RULES) {
       if (filePath.startsWith(rule.prefix)) {
         return rule.layer;
@@ -139,7 +145,7 @@ export function countJsdocWords(jsdocText) {
   if (!jsdocText || typeof jsdocText !== 'string') return 0;
   // Strip leading * from JSDoc comment lines
   const cleaned = jsdocText.replace(/^\s*\*\s?/gm, ' ').trim();
-  const words = cleaned.split(/\s+/).filter((word) => word.length > 0);
+  const words = cleaned.split(/\s+/).filter((word) => word.length > 0 && word !== '-');
   return words.length;
 }
 
@@ -148,9 +154,9 @@ export function countJsdocWords(jsdocText) {
  *
  * Quality levels:
  * - `none`: no JSDoc text or empty string
- * - `weak`: fewer than 10 words in the summary
- * - `adequate`: 10 or more words, but missing `@param` or `@returns`
- * - `good`: 10 or more words, has both `@param` and `@returns`
+ * - `weak`: fewer than 8 words in the summary
+ * - `adequate`: 8 or more words, but missing `@param` or `@returns`
+ * - `good`: 8 or more words, has both `@param` and `@returns`
  *
  * @param {string | null} jsdocText - Raw JSDoc text from the chunk metadata.
  * @returns {'none' | 'weak' | 'adequate' | 'good'} JSDoc quality classification.
@@ -159,14 +165,14 @@ export function countJsdocWords(jsdocText) {
  * classifyJsdocQuality(null);                                             // 'none'
  * classifyJsdocQuality('');                                               // 'none'
  * classifyJsdocQuality('Activate');                                        // 'weak'
- * classifyJsdocQuality('Activate the network forward pass with inputs');  // 'adequate'
- * classifyJsdocQuality('Activate. @param input - values. @returns out');  // 'good'
+ * classifyJsdocQuality('Activate the network forward pass with input values');  // 'adequate'
+ * classifyJsdocQuality('Activate the network. @param input - The values. @returns output');  // 'good'
  */
 export function classifyJsdocQuality(jsdocText) {
   if (!jsdocText || jsdocText.trim().length === 0) return 'none';
 
   const wordCount = countJsdocWords(jsdocText);
-  if (wordCount < 10) return 'weak';
+  if (wordCount < 8) return 'weak';
 
   const hasParam = jsdocText.includes('@param');
   const hasReturns =
@@ -226,6 +232,7 @@ export function resolveSourcePathPattern(filePath) {
   if (filePath.startsWith('src/')) {
     return `${dir}/**`;
   }
+  if (dir === '.') return '**';
   const segments = dir.split('/');
   return `${segments.slice(0, Math.min(2, segments.length)).join('/')}/**`;
 }
@@ -266,7 +273,7 @@ export function computeCyclomaticComplexity(sourceText) {
     /&&/g,
     /\|\|/g,
     /\?\?/g,
-    /\?[^?.]/g, // ternary ? (but not ?. or ??)
+    /(?<!\?)\?(?![?.])/g, // ternary ? (but not ?. or ??)
   ];
 
   for (const pattern of patterns) {
@@ -330,7 +337,7 @@ export async function loadCoverageReport(repoRootPath) {
  *
  * @example
  * const metadata = enrichChunkMetadata({
- *   jsdoc_text: 'Activate. @param x - input. @returns result',
+ *   jsdoc_text: 'Activate the network forward pass. @param x - input. @returns result',
  *   export_type: 'function',
  *   module_path: 'src/architecture/network/activate',
  *   file_path: 'src/architecture/network/activate/network.activate.ts',

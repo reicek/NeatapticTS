@@ -269,7 +269,7 @@ Contract: NGE_EXHAUSTION_NOISE_MULTIPLIER_CAP=2.0
 
 ### NGE_EXHAUSTION_NOISE_SIGMA_FRACTION_ADULT
 
-Noise-sigma fraction for the adult lifecycle stage.
+Noise-sigma fraction for the adult lifecycle stage during exhaustion noise.
 
 Contract: NGE_EXHAUSTION_NOISE_SIGMA_FRACTION_ADULT=0.001
 
@@ -282,7 +282,7 @@ Contract: NGE_EXHAUSTION_NOISE_SIGMA_FRACTION_BABY=0.003
 
 ### NGE_EXHAUSTION_NOISE_SIGMA_FRACTION_JUVENILE
 
-Noise-sigma fraction for the juvenile lifecycle stage.
+Noise-sigma fraction for the juvenile lifecycle stage during exhaustion noise.
 
 Contract: NGE_EXHAUSTION_NOISE_SIGMA_FRACTION_JUVENILE=0.002
 
@@ -320,7 +320,7 @@ Contract: NGE_EXHAUSTION_SCORE_EPSILON=1e-6
 
 ### NGE_EXHAUSTION_STAGE_FRACTION_ADULT
 
-Stage fraction for the adult lifecycle stage.
+Stage fraction for the adult lifecycle stage during exhaustion scoring.
 
 Contract: NGE_EXHAUSTION_STAGE_FRACTION_ADULT=0.006
 
@@ -333,7 +333,7 @@ Contract: NGE_EXHAUSTION_STAGE_FRACTION_BABY=0.02
 
 ### NGE_EXHAUSTION_STAGE_FRACTION_JUVENILE
 
-Stage fraction for the juvenile lifecycle stage.
+Stage fraction for the juvenile lifecycle stage during exhaustion scoring.
 
 Contract: NGE_EXHAUSTION_STAGE_FRACTION_JUVENILE=0.01
 
@@ -774,23 +774,23 @@ Ensures Istanbul instruments this file so it appears in coverage reports.
 
 ### NgeAdaptConfig
 
-Optional override values for a single `adapt()` call.
+Optional override values for a single `adapt()` call in the juvenile lifecycle.
 
 ### NgeAdaptOptions
 
-Inputs for one score-gated adaptation window.
+Inputs for one score-gated adaptation window in the juvenile lifecycle phase.
 
 ### NgeAdaptResult
 
-Result of one score-gated adaptation window.
+Result of one score-gated adaptation window in the juvenile lifecycle phase.
 
 ### NgeAdaptTelemetry
 
-Telemetry recorded for one score-gated adaptation window.
+Telemetry recorded for one score-gated adaptation window during the lifecycle.
 
 ### NgeCadencePolicy
 
-Pluggable cadence policy called when supplied to `adapt()`.
+Pluggable cadence policy called when supplied to the `adapt()` entry point.
 
 ### NgeCandidateEvaluator
 
@@ -801,7 +801,7 @@ scoring so `adapt()` can stay domain-agnostic and testable.
 
 ### NgeCandidateScoringConfig
 
-Configuration for candidate score-window and sample-index resolution.
+Configuration for candidate score-window and sample-index resolution in the juvenile phase.
 
 ### NgeFocusScore
 
@@ -837,7 +837,7 @@ capacity before further growth).
 
 ### NgeGrowStabilizeResult
 
-Result of one grow-stabilize cycle call.
+Result of one grow-stabilize cycle call in the juvenile lifecycle phase.
 
 ### NgeGrowthBudget
 
@@ -986,25 +986,15 @@ resolveFocusConfig(
 ): NgeJuvenilePhaseConfig
 ```
 
-Resolve a partial juvenile focus config against the seeded plan defaults.
-
-Any omitted field falls back to a conservative default, so callers can tune
-one knob at a time without re-declaring the whole packet.
+Resolve the NGE juvenile phase configuration by merging the supplied
+partial overrides with built-in default values. Nested `focusWeights`
+are deep-merged so that individual weight keys can be overridden
+without discarding the remaining defaults.
 
 Parameters:
-- `partial` - Partial config whose omitted fields should resolve conservatively.
+- `partial` - Partial configuration overrides to merge over defaults.
 
-Returns: A fully resolved config packet ready for deterministic focus scoring.
-
-Example:
-
-```ts
-const config = resolveFocusConfig({
-  hysteresisWindowCount: 5,
-  focusWeights: { w_u: 0.5, w_r: 0.3, w_n: 0.1, w_s: 0.1, w_c: 0.2 },
-});
-console.log(config.cooldownWindowCount); // 5 (mirrors hysteresisWindowCount)
-```
+Returns: The fully resolved juvenile phase configuration.
 
 ## neat/nge-juvenile/neat.nge-juvenile.grow.ts
 
@@ -1168,6 +1158,7 @@ Parameters:
 - `moduleId` - Module receiving the planned densification.
 - `budget` - DNA-configured growth caps and current live counts.
 - `focusScore` - Focus score for the target module.
+- `config` - Resolved juvenile-phase configuration.
 
 Returns: One dry-run edge densification delta.
 
@@ -1565,6 +1556,14 @@ const { shouldThrottle } = computeGrowthThrottle(network, 42);
 console.log(shouldThrottle); // false for small networks
 ```
 
+### CycleContext
+
+Shared context resolved once per cycle for both phases.
+
+### FirstGrowthResult
+
+Result of the first-growth guarantee check.
+
 ### isPlateauReached
 
 ```ts
@@ -1604,6 +1603,10 @@ Example:
 const plateaued = isPlateauReached([0.5, 0.51, 0.49, 0.5, 0.5], true, 10);
 console.log(plateaued); // true (low variance after min ticks)
 ```
+
+### PostGrowthCheck
+
+Result of checking and consuming the pre-growth baseline.
 
 ### resolveAdaptiveHysteresis
 
@@ -1896,6 +1899,14 @@ const result = await runNgeGrowStabilizeCycle({
 });
 console.log(result.committed); // true (first growth)
 ```
+
+### StabilizationSubResult
+
+Sub-result from the stabilization phase variant/fallback paths.
+
+### VariantCommitResult
+
+Result of attempting to commit a weight variant.
 
 ## neat/nge-juvenile/neat.nge-juvenile.probe.ts
 
@@ -2550,6 +2561,17 @@ flowchart TD
   GS -->|calls applyPlasticity| Plasticity
 ```
 
+### createDefaultGrowStabilizeConfig
+
+```ts
+createDefaultGrowStabilizeConfig(): NgeGrowStabilizeConfig
+```
+
+Build a fully defaulted grow-stabilize config, including the computed
+`bufferPoolMaxPooledBytes` field.
+
+Returns: A config with every field set to its canonical default.
+
 ### resolveGrowStabilizeConfig
 
 ```ts
@@ -2558,7 +2580,7 @@ resolveGrowStabilizeConfig(
 ): NgeGrowStabilizeConfig
 ```
 
-Resolve a partial grow-stabilize config with sensible defaults.
+Resolve a partial grow-stabilize config with sensible canonical default values.
 
 Parameters:
 - `partial` - Caller-supplied config overrides.
@@ -2587,6 +2609,19 @@ edited.
 
 Stage-specific variant counts are resolved from explicit overrides, the
 supplied acceleration configuration, or built-in lifecycle defaults.
+
+### buildVariantMetadata
+
+```ts
+buildVariantMetadata(
+  status: AccelerationStatus,
+  variantCount: number,
+  maxDelta: number,
+  scoreFn: VariantScorer | undefined,
+): { backend: string; variantCount: number; scaleDivisor: number; scorer: string; }
+```
+
+Build the metadata block for the variant evaluation result.
 
 ### buildVariants
 
@@ -2623,6 +2658,16 @@ const patches = buildVariants(network, 'baby', 16, 12345);
 // patches[0].representative uses connection 0 and the smallest negative delta.
 // The same seed reproduces identical patches on every run.
 ```
+
+### computeMaxDelta
+
+```ts
+computeMaxDelta(
+  patches: readonly NgeWeightVariantPatch[],
+): number
+```
+
+Compute the largest absolute weight delta across all patch perturbations.
 
 ### evaluateNgeWeightVariants
 
@@ -2710,7 +2755,17 @@ console.log(result.metadata.variantCount); // 256
 
 ### EvaluateNgeWeightVariantsOptions
 
-Options forwarded to {@link evaluateNgeWeightVariants}.
+Options forwarded to the {@link evaluateNgeWeightVariants} weight variant evaluator, controlling acceleration backend selection and stage specific variant count overrides.
+
+### findBestVariantScore
+
+```ts
+findBestVariantScore(
+  scores: readonly number[],
+): { bestIndex: number; bestScore: number; }
+```
+
+Find the index and score of the highest-scoring variant.
 
 ### NgeWeightVariantPatch
 
@@ -2753,6 +2808,18 @@ Example:
 const magnitude = resolveEffectiveMagnitude('baby', 16, 5); // 0.15
 ```
 
+### resolveGpuDevice
+
+```ts
+resolveGpuDevice(
+  status: AccelerationStatus,
+  nodeCount: number,
+): any
+```
+
+Resolve the GPU device from acceleration status when the network meets the
+GPU node threshold. Returns `undefined` when GPU is not eligible.
+
 ### resolveRepresentativeDelta
 
 ```ts
@@ -2794,31 +2861,17 @@ resolveVariantCountForStage(
 ): number
 ```
 
-Resolve the variant count for a lifecycle stage.
-
-Resolution order: explicit `overrides` for the stage, then
-`accelerationConfig.stageVariantCounts` for the stage, then built-in
-lifecycle defaults. Baby-stage networks get many variants (default 16),
-adult/equilibrium networks get few (default 4), and juvenile gets the
-midpoint (default 8). Embryo mirrors baby because the network is still tiny.
+Resolve the variant count for a given NGE lifecycle stage. Explicit
+overrides take precedence, followed by acceleration config stage counts,
+and finally built-in default values for each stage. The returned count
+is always a positive integer.
 
 Parameters:
-- `stage` - Current NGE lifecycle stage.
+- `stage` - The lifecycle stage to resolve a variant count for.
 - `overrides` - Optional per-stage variant count overrides.
-- `accelerationConfig` - Optional acceleration configuration carrying
-per-stage variant counts.
+- `accelerationConfig` - Optional acceleration config with stage counts.
 
-Returns: Number of variants to evaluate.
-
-Example:
-
-```ts
-// Built-in juvenile default: 8 variants.
-const count = resolveVariantCountForStage('juvenile');
-
-// Override for a single stage without touching acceleration config.
-const tiny = resolveVariantCountForStage('adult', { adult: 2 });
-```
+Returns: The resolved, sanitized variant count for the stage.
 
 ## neat/nge-juvenile/neat.nge-juvenile.candidate.ts
 
@@ -2869,7 +2922,7 @@ Returns: Array of output vectors, one per observation.
 
 ### NgeCandidateScoringConfig
 
-Configuration for candidate score-window and sample-index resolution.
+Configuration for candidate score-window and sample-index resolution in the juvenile phase.
 
 ### NgeObservationEncoder
 
@@ -2965,7 +3018,7 @@ console.log(adjusted); // e.g. 5
 
 ### NgePlasticityInput
 
-Inputs driving one plasticity pass.
+Inputs driving one plasticity pass for the activity-aware weight and bias adjustment.
 
 ## neat/nge-juvenile/neat.nge-juvenile.lifecycle-policy.ts
 

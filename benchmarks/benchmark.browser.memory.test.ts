@@ -2,7 +2,7 @@ import {
   collectBrowserPerformanceMemorySnapshot,
   runBrowserBenchPayload,
   type BrowserBenchPerformanceApi,
-} from '../bench-browser/harness';
+} from '../testing/browser-benchmarks/harness';
 
 describe('browser memory benchmark harness', () => {
   describe('given Chromium-style heap and UA memory readings are available', () => {

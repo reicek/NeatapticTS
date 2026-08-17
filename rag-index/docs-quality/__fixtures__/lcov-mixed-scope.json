@@ -1,0 +1,20 @@
+{
+  "lcov": "TN:\nSF:src/docs-quality/scope.ts\nFN:1,activate\nFNDA:0,activate\nFNF:1\nFNH:0\nDA:1,0\nDA:2,1\nLF:2\nLH:1\nBRDA:1,0,0,0\nBRF:1\nBRH:0\nend_of_record\nTN:\nSF:examples/out-of-scope.ts\nFN:1,helper\nFNDA:1,helper\nFNF:1\nFNH:1\nDA:1,1\nLF:1\nLH:1\nBRDA:1,0,0,1\nBRF:1\nBRH:1\nend_of_record\n",
+  "summary": {
+    "total": {
+      "statements": {
+        "pct": 100
+      }
+    },
+    "src/docs-quality/scope.ts": {
+      "statements": {
+        "pct": 50
+      }
+    },
+    "examples/out-of-scope.ts": {
+      "statements": {
+        "pct": 100
+      }
+    }
+  }
+}

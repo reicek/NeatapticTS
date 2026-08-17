@@ -77,7 +77,12 @@ const buildBundles = async (): Promise<{
   prodPath: string;
 }> => {
   const esbuild = await import('esbuild');
-  const benchDir = path.resolve(__dirname, '..', 'bench-browser');
+  const benchDir = path.resolve(
+    __dirname,
+    '..',
+    'testing',
+    'browser-benchmarks',
+  );
   const entry = path.join(benchDir, 'bench-entry.ts');
   if (!fs.existsSync(entry)) throw new Error('bench-entry.ts missing');
   const ts = Date.now();
@@ -135,7 +140,12 @@ const runHeadless = async (paths: {
     return { runs: [], cleanupPaths: [] };
   }
   const puppeteer = puppeteerModule.default ?? puppeteerModule;
-  const benchDir = path.resolve(__dirname, '..', 'bench-browser');
+  const benchDir = path.resolve(
+    __dirname,
+    '..',
+    'testing',
+    'browser-benchmarks',
+  );
   const templatePath = path.join(benchDir, 'index.html');
   if (!fs.existsSync(templatePath)) return { runs: [], cleanupPaths: [] };
   const template = fs.readFileSync(templatePath, 'utf-8');

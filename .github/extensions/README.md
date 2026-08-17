@@ -67,7 +67,7 @@ requires:
 provides:
   commands:
     - name: 'bug.assess'
-      agent: 'failure-triage-specialist'
+      agent: '05-green-testing'
       description: 'Assess a bug report and write evidence without editing source.'
     - name: 'bug.fix'
       agent: 'test-fix-workflow'

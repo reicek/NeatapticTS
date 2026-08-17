@@ -14,6 +14,8 @@ tools:
     neataptic-workflow-mcp/*,
   ]
 user-invocable: false
+disable-model-invocation: false
+target: vscode
 agents: []
 skills: ['implementation-standards']
 ---
@@ -101,7 +103,7 @@ This is the only gate a read-only scout runs. Do not run `slice-advancement`, `c
 - **ES2023 usage:** Check for immutable array methods (`toSorted`, `toReversed`, `at(-1)`), `structuredClone`, nullish coalescing, optional chaining, numeric separators. Flag legacy patterns (`sort()`, `JSON.parse(JSON.stringify())`, index math).
 - **JSDoc presence:** Verify all exported symbols have JSDoc with `@param`, `@returns`, `@throws`, `@example`. Flag missing or shallow JSDoc.
 - **Fixed mappings:** Check for single-table or enum patterns instead of if/else chains. Flag `if (name === 'x')` chains that should be lookup tables.
-- **Cognitive complexity:** Identify functions with high cyclomatic complexity. Flag nested control flow that should be declarative pipelines.
+- **Cognitive complexity:** Identify functions with high cyclomatic complexity. Flag nested control flow that should be declarative pipelines. When complexity exceeds the scanner threshold (10), recommend the SOLID-Aligned Complexity Reduction pattern from `implementation-standards`: extract executors into `{category}.utils.ts` files, keep orchestrators declarative.
 
 ## Pattern-Map Template
 
@@ -139,7 +141,7 @@ PATTERN_MAP:
 - Set `TASK_STATUS: PARTIAL` when the required evidence cannot be gathered.
 - Record the smallest blocker, suggest the next agent, and stop without broadening scope.
 
-## Output format
+## Output Format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1

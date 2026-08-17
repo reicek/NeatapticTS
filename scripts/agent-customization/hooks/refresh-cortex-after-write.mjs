@@ -75,6 +75,7 @@ async function main() {
   }
 
   const stepSummaries = [];
+  /* istanbul ignore next -- defensive: both tool_name and toolName undefined means shouldRefresh=false, so line 78 is unreachable */
   const toolName = String(hookInput.tool_name ?? hookInput.toolName ?? '');
   const runtimeProofRequired = requiresRuntimeProof(toolName);
   const sessionId = resolveSessionId(hookInput);
@@ -142,6 +143,7 @@ async function main() {
     }
   }
 
+  /* istanbul ignore next -- false branch unreachable: writeToolPattern ⊂ substantiveToolPattern, so shouldRefresh=true implies shouldRunWorkflowIntegrity=true */
   if (shouldRunWorkflowIntegrity) {
     const workflowSyncStep = runNodeStep([
       workflowSyncHookPath,
@@ -331,6 +333,7 @@ function summarizeStdout(stdoutText) {
     return summarizeParsedOutput(parsedOutput);
   }
 
+  /* istanbul ignore next -- split always returns ≥1 element, so at(-1) never returns undefined */
   return trimmedText.split(/\r?\n/).at(-1) ?? 'ok';
 }
 

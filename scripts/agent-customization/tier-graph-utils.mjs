@@ -57,10 +57,10 @@ export const TIER_1_AGENT_NAMES = new Set([
  * Must set `user-invocable: false` and may only delegate to Tiers 3 or 4.
  */
 export const TIER_2_AGENT_NAMES = new Set([
-  'research-codebase-coordinator',
   'implementation-executor',
   'solid-split',
   'agent-maintenance-coordinator',
+  'review-coordinator',
 ]);
 
 /**

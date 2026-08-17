@@ -1,0 +1,26 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>WebGPU Batched Queue Smoke Test</title>
+  </head>
+  <body>
+    <h1>WebGPU Batched Queue Smoke Test</h1>
+    <pre id="result">Running...</pre>
+
+    <!--
+      Load the public IIFE bundle first so the scenario can delegate to
+      Neataptic.methods.Activation.logistic for the worker-compatible wrapper.
+    -->
+    <script src="../../dist/neataptic.browser.iife.js"></script>
+
+    <!--
+      Hidden browser-test fixture for slice 02-05a-batched.
+      Bundled from TypeScript source so it can import createBatchInferenceQueue,
+      which is not exported by the public IIFE bundle.
+    -->
+    <script src="./scenarios/webgpu-batched-queue-smoke.bundle.js"></script>
+  </body>
+</html>
+

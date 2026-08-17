@@ -126,8 +126,8 @@ export async function runDocsQualityMetricsGate() {
     deterministicCompare.delta?.weakJsdoc === 0 &&
     baselineRun.manifest.normalizedEvidenceDigest ===
       deterministicRun.manifest.normalizedEvidenceDigest &&
-    baselineRun.manifest.scopeDigest ===
-      deterministicRun.manifest.scopeDigest &&
+    baselineRun.manifest.scopeConfig?.scopeDigest ===
+      deterministicRun.manifest.scopeConfig?.scopeDigest &&
     mismatchCompare.accepted === false &&
     mismatchCompare.reasonCode === REASON_CODES.THRESHOLD_MISMATCH &&
     parityMatch &&
@@ -141,7 +141,7 @@ export async function runDocsQualityMetricsGate() {
     pass,
     gateType: 'mechanism-only',
     probeScope:
-      'docs-quality gate mechanism checks only: schema validity, deterministic ordering, comparator guards, CLI/MCP parity, and invalid contract rejection.',
+      'docs-quality gate mechanism checks: schema validity, deterministic ordering, comparator guards, CLI/MCP parity, invalid contract rejection.',
     repoWideDebtCommand: 'npm run docs:quality:metrics',
     evidence: {
       schema_valid: baselineSchema.valid && deterministicSchema.valid,
@@ -156,21 +156,28 @@ export async function runDocsQualityMetricsGate() {
       metric_version: baselineRun.manifest.metricVersion,
       scanner_version: baselineRun.manifest.scannerVersion,
     },
-    fixHint: pass
-      ? null
-      : 'Re-run docs-quality unit tests and ensure contract/compare/parity modules remain aligned with docs-quality-metrics.gate checks.',
+    fixHint: buildFixHint(pass),
     owner: OWNER,
   };
 }
 
-async function main() {
-  const options = parseArgs(process.argv.slice(2));
+export function buildFixHint(pass) {
+  return pass
+    ? null
+    : 'Re-run docs-quality unit tests and ensure contract/compare/parity modules remain aligned with docs-quality-metrics.gate checks.';
+}
+
+export async function main(
+  argv = process.argv.slice(2),
+  runGate = runDocsQualityMetricsGate,
+) {
+  const options = parseArgs(argv);
   if (options.help) {
     printUsage();
     return;
   }
 
-  const report = await runDocsQualityMetricsGate();
+  const report = await runGate();
   if (options.json) {
     console.log(JSON.stringify(report, null, 2));
   } else {
@@ -187,14 +194,17 @@ async function main() {
   process.exitCode = report.pass ? 0 : 1;
 }
 
+/* istanbul ignore next */
 if (
   process.argv[1] &&
   import.meta.url === pathToFileURL(process.argv[1]).href
 ) {
-  await main();
+  (async () => {
+    await main();
+  })();
 }
 
-function hasMatchingManifestContractFields(leftManifest, rightManifest) {
+export function hasMatchingManifestContractFields(leftManifest, rightManifest) {
   if (!rightManifest || typeof rightManifest !== 'object') {
     return false;
   }
@@ -206,7 +216,6 @@ function hasMatchingManifestContractFields(leftManifest, rightManifest) {
       String(rightManifest.scannerVersion) &&
     String(leftManifest.sourcePathsDigest) ===
       String(rightManifest.sourcePathsDigest) &&
-    String(leftManifest.scopeDigest) === String(rightManifest.scopeDigest) &&
     String(leftManifest.normalizedEvidenceDigest) ===
       String(rightManifest.normalizedEvidenceDigest) &&
     Number(leftManifest.thresholdConfig?.minJsdocWords) ===
@@ -215,6 +224,8 @@ function hasMatchingManifestContractFields(leftManifest, rightManifest) {
       Number(rightManifest.thresholdConfig?.complexityThreshold) &&
     String(leftManifest.scopeConfig?.scopeType) ===
       String(rightManifest.scopeConfig?.scopeType) &&
+    String(leftManifest.scopeConfig?.scopeDigest) ===
+      String(rightManifest.scopeConfig?.scopeDigest) &&
     JSON.stringify(leftManifest.scopeConfig?.scopeValue ?? []) ===
       JSON.stringify(rightManifest.scopeConfig?.scopeValue ?? [])
   );

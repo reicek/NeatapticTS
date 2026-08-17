@@ -21,7 +21,9 @@ interface MetricsContractReport {
   firstKey?: string;
   isSchemaValid: boolean;
   lastKey?: string;
+  manifest?: Record<string, unknown>;
   missingFields: string[];
+  pass?: boolean;
   summary?: {
     coverage?: {
       available: boolean;
@@ -111,13 +113,23 @@ const PARTIAL_COVERAGE_FIXTURE_SUMMARY = {
     },
   },
 };
+const MIXED_SCOPE_FIXTURE_PATH = path.join(
+  FIXTURES_ROOT,
+  'lcov-mixed-scope.json',
+);
+const MIXED_SCOPE_FIXTURE = JSON.parse(
+  readFileSync(MIXED_SCOPE_FIXTURE_PATH, 'utf8'),
+) as {
+  lcov: string;
+  summary: Record<string, unknown>;
+};
 
 interface CoverageDirectorySwapState {
   backupDirectoryPath: string | null;
 }
 
 describe('docs-quality metrics red contracts', () => {
-  it('requires the v1 manifest schema fields and rejects missing scannerVersion', () => {
+  it('requires the cleaned manifest schema fields and rejects missing scannerVersion', () => {
     const manifest = JSON.parse(
       readFileSync(path.join(FIXTURES_ROOT, 'manifest.v1.base.json'), 'utf8'),
     ) as Record<string, unknown>;
@@ -179,10 +191,22 @@ describe('docs-quality metrics red contracts', () => {
               symbol: 'buildDenseLayer',
             },
             {
+              file: 'src/architecture/network.ts',
+              issue: 'high complexity',
+              numericValue: 9,
+              symbol: 'es2023Heavy',
+            },
+            {
               file: 'src/neat.ts',
               issue: 'missing JSDoc',
               numericValue: 0,
               symbol: 'undocumentedMutation',
+            },
+            {
+              file: 'src/neat.ts',
+              issue: 'incomplete JSDoc tags',
+              numericValue: 0,
+              symbol: 'incompleteTags',
             },
             {
               file: 'src/architecture/network.ts',
@@ -198,6 +222,42 @@ describe('docs-quality metrics red contracts', () => {
           isSchemaValid: true,
           missingFields: [],
         },
+        status: 0,
+      }),
+    );
+  });
+
+  it('collapses re-exported symbol duplicates across files into one canonical evidence row', () => {
+    const evidence = JSON.parse(
+      readFileSync(
+        path.join(FIXTURES_ROOT, 're-export-duplicate.evidence.json'),
+        'utf8',
+      ),
+    ) as Array<Record<string, unknown>>;
+
+    const result = runModuleEvaluation<MetricsContractReport>(`
+      import { normalizeDocsQualityEvidence } from './rag-index/docs-quality/docs-quality.normalize.mjs';
+      console.log(JSON.stringify({
+        canonicalEvidence: normalizeDocsQualityEvidence(${JSON.stringify(evidence)}),
+        digestA: '',
+        digestB: '',
+        isSchemaValid: true,
+        missingFields: [],
+      }));
+    `);
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        report: expect.objectContaining({
+          canonicalEvidence: [
+            {
+              file: 'src/architecture/re-exports.ts',
+              issue: 'missing JSDoc',
+              numericValue: 0,
+              symbol: 'sharedUtility',
+            },
+          ],
+        }),
         status: 0,
       }),
     );
@@ -301,6 +361,64 @@ describe('docs-quality metrics red contracts', () => {
             coverage: expect.objectContaining({
               available: true,
               isPartial: true,
+            }),
+          }),
+        }),
+        status: 0,
+      }),
+    );
+  });
+
+  it('filters coverage records to the resolved scan scope', () => {
+    const result = runMetricsCliEvaluationWithMixedScopeFixture([
+      '--json',
+      '--scope',
+      'paths',
+      '--source',
+      'src/docs-quality/scope.ts',
+      '--run-id',
+      'red-contract-scope-filter',
+    ]);
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        report: expect.objectContaining({
+          summary: expect.objectContaining({
+            coverage: expect.objectContaining({
+              available: true,
+              totalFiles: 1,
+              filesBelow100: 1,
+              filesBelow100Detail: [
+                expect.objectContaining({
+                  file: 'src/docs-quality/scope.ts',
+                }),
+              ],
+            }),
+          }),
+        }),
+        status: 0,
+      }),
+    );
+  });
+
+  it('reports coverage separately from the docs-quality pass which requires zero evidence', () => {
+    const result = runMetricsCliEvaluationWithMixedScopeFixture([
+      '--json',
+      '--scope',
+      'paths',
+      '--source',
+      'src/docs-quality/scope.ts',
+      '--run-id',
+      'red-contract-coverage-gate',
+    ]);
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        report: expect.objectContaining({
+          pass: true,
+          summary: expect.objectContaining({
+            coverage: expect.objectContaining({
+              coveragePass: false,
             }),
           }),
         }),
@@ -418,10 +536,139 @@ describe('docs-quality metrics red contracts', () => {
       }),
     );
   });
+
+  it('manifest generatedAt is a fresh ISO timestamp, not the frozen canonical value', () => {
+    const beforeMs = Date.now();
+    const result = runMetricsCliEvaluationWithCoverageFixture([
+      '--json',
+      '--scope',
+      'paths',
+      '--source',
+      'src/neat.ts',
+      '--run-id',
+      'red-contract-generated-at-freshness',
+    ]);
+    const afterMs = Date.now();
+
+    expect(result.status).toBe(0);
+    const generatedAt = (
+      result.report?.manifest as Record<string, unknown> | undefined
+    )?.generatedAt;
+    expect(generatedAt).not.toBe('1970-01-01T00:00:00.000Z');
+    expect(generatedAt).toBeTruthy();
+    const generatedAtMs = Date.parse(String(generatedAt));
+    expect(generatedAtMs).toBeGreaterThanOrEqual(beforeMs - 1000);
+    expect(generatedAtMs).toBeLessThanOrEqual(afterMs + 1000);
+  });
+
+  it('manifest gitCommit falls back to unknown without spawning git when GIT_COMMIT is absent', () => {
+    const result = runMetricsCliEvaluationWithCoverageFixtureAndEnv(
+      [
+        '--json',
+        '--scope',
+        'paths',
+        '--source',
+        'src/neat.ts',
+        '--run-id',
+        'red-contract-git-free-fallback',
+      ],
+      Object.fromEntries(
+        Object.entries(process.env).filter(([key]) => key !== 'GIT_COMMIT'),
+      ),
+    );
+
+    expect(result.status).toBe(0);
+    const gitCommit = (
+      result.report?.manifest as Record<string, unknown> | undefined
+    )?.gitCommit;
+    expect(gitCommit).toBe('unknown');
+  });
+
+  it('rejects manifests that include legacy top-level fields after schema cleanup', () => {
+    const cleanManifest = JSON.parse(
+      readFileSync(path.join(FIXTURES_ROOT, 'manifest.v1.base.json'), 'utf8'),
+    ) as Record<string, unknown>;
+    const scopeConfig = cleanManifest.scopeConfig as
+      Record<string, unknown> | undefined;
+    const legacyManifest = {
+      ...cleanManifest,
+      scopeDigest: scopeConfig?.scopeDigest,
+      scopeType: scopeConfig?.scopeType,
+      threshold: cleanManifest.thresholdConfig,
+    };
+
+    const result = runModuleEvaluation<{
+      errors: Array<{ field: string; message: string }>;
+      isSchemaValid: boolean;
+    }>(`
+      import { validateDocsQualityManifestV1 } from './rag-index/docs-quality/docs-quality.contract.mjs';
+      const validation = validateDocsQualityManifestV1(${JSON.stringify(legacyManifest)});
+      console.log(JSON.stringify({
+        isSchemaValid: validation.valid,
+        errors: validation.errors,
+      }));
+    `);
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        report: expect.objectContaining({
+          isSchemaValid: false,
+          errors: expect.arrayContaining([
+            expect.objectContaining({ field: 'scopeDigest' }),
+            expect.objectContaining({ field: 'scopeType' }),
+            expect.objectContaining({ field: 'threshold' }),
+          ]),
+        }),
+        status: 0,
+      }),
+    );
+  });
+
+  it('manifest uses bumped metric and scanner versions after schema cleanup', () => {
+    const result = runMetricsCliEvaluationWithCoverageFixture([
+      '--json',
+      '--scope',
+      'paths',
+      '--source',
+      'src/neat.ts',
+      '--source',
+      'src/architecture/network.ts',
+      '--run-id',
+      'red-contract-schema-version-bump',
+    ]);
+
+    expect(result.status).toBe(0);
+    const manifest = result.report?.manifest as
+      Record<string, unknown> | undefined;
+    expect(manifest?.metricVersion).toBe(2);
+    expect(manifest?.scannerVersion).toBe('2.0.0');
+  });
+
+  it('generated manifest excludes legacy top-level fields after schema cleanup', () => {
+    const result = runMetricsCliEvaluationWithCoverageFixture([
+      '--json',
+      '--scope',
+      'paths',
+      '--source',
+      'src/neat.ts',
+      '--source',
+      'src/architecture/network.ts',
+      '--run-id',
+      'red-contract-legacy-fields-absent',
+    ]);
+
+    expect(result.status).toBe(0);
+    const manifest = result.report?.manifest as
+      Record<string, unknown> | undefined;
+    expect(manifest).not.toHaveProperty('threshold');
+    expect(manifest).not.toHaveProperty('scopeType');
+    expect(manifest).not.toHaveProperty('scopeDigest');
+  });
 });
 
 function runMetricsCliEvaluation(
   argumentsVector: string[],
+  environment: NodeJS.ProcessEnv = process.env,
 ): SpawnedJsonResult<MetricsContractReport> {
   const spawned = spawnSync(
     process.execPath,
@@ -429,6 +676,7 @@ function runMetricsCliEvaluation(
     {
       cwd: REPO_ROOT,
       encoding: 'utf8',
+      env: environment,
     },
   );
 
@@ -459,12 +707,29 @@ function runMetricsCliEvaluationWithCoverageFixture(
   );
 }
 
+function runMetricsCliEvaluationWithCoverageFixtureAndEnv(
+  argumentsVector: string[],
+  environment: NodeJS.ProcessEnv,
+): SpawnedJsonResult<MetricsContractReport> {
+  return withTemporaryCoverageFixture(() =>
+    runMetricsCliEvaluation(argumentsVector, environment),
+  );
+}
+
 function runMetricsCliEvaluationWithPartialCoverageFixture(
   argumentsVector: string[],
 ): SpawnedJsonResult<MetricsContractReport> {
   return withTemporaryCoverageFixture(
     () => runMetricsCliEvaluation(argumentsVector),
     PARTIAL_COVERAGE_FIXTURE_SUMMARY,
+  );
+}
+
+function runMetricsCliEvaluationWithMixedScopeFixture(
+  argumentsVector: string[],
+): SpawnedJsonResult<MetricsContractReport> {
+  return withTemporaryLcovFixture(() =>
+    runMetricsCliEvaluation(argumentsVector),
   );
 }
 
@@ -506,6 +771,28 @@ function withTemporaryCoverageFixture<ResultType>(
 ): ResultType {
   const coverageDirectorySwapState =
     installTemporaryCoverageFixture(coverageSummary);
+
+  try {
+    return callback();
+  } finally {
+    restoreCoverageDirectory(coverageDirectorySwapState);
+  }
+}
+
+function withTemporaryLcovFixture<ResultType>(
+  callback: () => ResultType,
+): ResultType {
+  const coverageDirectorySwapState = hideCoverageDirectory();
+
+  mkdirSync(COVERAGE_DIRECTORY_PATH, { recursive: true });
+  writeFileSync(
+    path.join(COVERAGE_DIRECTORY_PATH, 'lcov.info'),
+    MIXED_SCOPE_FIXTURE.lcov,
+  );
+  writeFileSync(
+    path.join(COVERAGE_DIRECTORY_PATH, 'coverage-summary.json'),
+    JSON.stringify(MIXED_SCOPE_FIXTURE.summary, null, 2),
+  );
 
   try {
     return callback();

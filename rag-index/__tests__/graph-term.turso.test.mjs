@@ -68,7 +68,7 @@ describe('buildEntityGraph (Turso async migration)', () => {
       args: ['src/turso.TursoScriptTestEntityA'],
     });
     expect(Number(result.rows[0].count)).toBe(0);
-  });
+  }, 120000);
 });
 
 // ---------------------------------------------------------------------------

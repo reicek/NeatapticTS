@@ -82,6 +82,7 @@ async function evaluateEscalation(args) {
 }
 
 async function deriveFailureCountFromLearningLog(sessionId) {
+  /* istanbul ignore next -- sessionId always comes from parseCounterArgs as a string */
   const normalizedSessionId =
     typeof sessionId === 'string' ? sessionId.trim() : '';
   if (!normalizedSessionId) {

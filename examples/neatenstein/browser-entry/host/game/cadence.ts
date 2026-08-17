@@ -10,6 +10,10 @@
  */
 
 import { NEATENSTEIN_MIN_GENERATIONS_PER_MINUTE } from './constants';
+import type { EstimateCadenceOptions } from '../types';
+
+// Re-export consolidated types so existing imports from this module remain valid.
+export type { EstimateCadenceOptions } from '../types';
 
 /**
  * Milliseconds in one minute.
@@ -37,24 +41,7 @@ export const NEATENSTEIN_TARGET_MIN_GENERATIONS_PER_MINUTE =
   NEATENSTEIN_MIN_GENERATIONS_PER_MINUTE;
 
 /** Inputs accepted by {@link estimateGenerationsPerMinute}. */
-export interface EstimateCadenceOptions {
-  /**
-   * Average episode duration in milliseconds.
-   *
-   * Invalid, infinite, or negative values make the estimate invalid and return
-   * a cadence of `0`.
-   */
-  episodeDurationMs: number;
-
-  /**
-   * Per-episode evaluator overhead in milliseconds.
-   *
-   * This includes inference, fitness calculation, bookkeeping, and any other
-   * fixed per-generation work. Invalid, infinite, or negative values make the
-   * estimate invalid and return a cadence of `0`.
-   */
-  evaluationOverheadMs: number;
-}
+// Type is defined in ../types and re-exported above.
 
 /**
  * Return whether a duration can be used in cadence calculations.

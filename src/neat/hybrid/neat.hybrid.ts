@@ -145,6 +145,7 @@ import type {
  * @param dataset - Ordered training samples passed to `fineTuneVector(...)` when training runs.
  * @param options - Explicit policy, training settings, and scoring callback.
  * @returns Fitness plus the detached trained network when fine-tuning runs.
+ * @throws {Error} When fineTune policy is "conditional" (blocked until deterministic ranking surface exists).
  */
 export async function evaluateCandidate(
   network: Network,

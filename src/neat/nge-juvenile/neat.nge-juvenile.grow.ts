@@ -101,7 +101,9 @@ export function commitGrowth(
  * @param moduleId - Module receiving the planned densification.
  * @param budget - DNA-configured growth caps and current live counts.
  * @param focusScore - Focus score for the target module.
+ * @param config - Resolved juvenile-phase configuration.
  * @returns One dry-run edge densification delta.
+ * @throws {NgeJuvenile_BudgetError} When the proposed additions would exceed the edge budget.
  */
 export function planEdgeDensification(
   moduleId: string,
@@ -141,6 +143,8 @@ export function planEdgeDensification(
  * @param focusScore - Focus score for the target module.
  * @param config - Resolved juvenile-phase configuration.
  * @returns One dry-run slot expansion delta.
+ * @throws {NgeJuvenile_MorphError} When the hit rate or focus score is below threshold.
+ * @throws {NgeJuvenile_BudgetError} When the expansion would exceed the episodic slot budget.
  */
 export function planSlotExpansion(
   moduleId: string,
@@ -220,6 +224,8 @@ function computeNodeGrowthSignal(
  * @param score - Focus score carrying normalized metrics and the growth flag.
  * @param config - Resolved juvenile configuration.
  * @returns One dry-run node-addition delta.
+ * @throws {NgeJuvenile_MorphError} When the focus score does not support growth or the signal is too low.
+ * @throws {NgeJuvenile_BudgetError} When the addition would exceed the node budget.
  */
 export function planNodeAddition(
   moduleId: string,
@@ -390,6 +396,7 @@ export function validateMorphDelta(
  * @param config - Resolved juvenile-phase configuration.
  * @param hysteresis - Current growth-side hysteresis state.
  * @returns Zero or more validated dry-run morph deltas in edge-first priority order.
+ * @throws {Error} When an unexpected non-budget, non-morph error is raised by a sub-step.
  *
  * @example
  * ```ts

@@ -173,6 +173,7 @@ export function createTelemetryEntryBase(
  * applyTelemetrySelect.call(neat, entry);
  * ```
  *
+ * @param this - Telemetry context bound by method call.
  * @param entry - Raw telemetry object to be filtered in-place.
  * @returns The filtered telemetry object (same reference as input).
  */
@@ -212,6 +213,7 @@ export function applyTelemetrySelect(
  * console.log(`Structure entropy: ${H.toFixed(3)}`);
  * ```
  *
+ * @param this - NEAT host instance bound by method call.
  * @param graph - A genome-like object with `nodes` and `connections` arrays.
  * @returns A non-negative number approximating structural entropy.
  */
@@ -261,6 +263,7 @@ export function structuralEntropy(
  * enabled it tunes sampling defaults downward so telemetry stays informative
  * without turning every generation into a quadratic metrics pass.
  *
+ * @param this - NEAT host instance bound by method call.
  * @remarks
  * - Uses random sampling of pairs and 3-node subgraphs (graphlets) to approximate diversity metrics.
  * @example
@@ -363,6 +366,7 @@ export function computeDiversityStats(this: NeatLike) {
  * neat.recordTelemetryEntry({ gen: neat.generation, best: neat.population[0].score });
  * ```
  *
+ * @param this - NEAT host instance bound by method call.
  * @param entry - Telemetry entry to record.
  * @returns Nothing. The entry is persisted by side effect on the host.
  */
@@ -406,6 +410,7 @@ export function recordTelemetryEntry(this: NeatLike, entry: TelemetryEntry) {
  * - multi-objective mode adds Pareto-front and hypervolume-oriented signals
  * - mono-objective mode keeps the payload smaller while preserving the same core fields
  *
+ * @param this - NEAT host instance bound by method call.
  * @param fittest - The currently fittest genome (used to report `best` score).
  * @returns A TelemetryEntry object suitable for recording/streaming.
  */

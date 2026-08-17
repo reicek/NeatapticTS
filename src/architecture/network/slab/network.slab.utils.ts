@@ -101,6 +101,7 @@ export function getSlabAllocationStats() {
  * -----------
  * O(C) over active connections with amortized allocation cost due to geometric growth.
  *
+ * @param this - Network instance bound by method call.
  * @param force When true forces rebuild even if network not marked dirty (useful for timing tests).
  */
 export function rebuildConnectionSlab(this: Network, force = false): void {
@@ -144,6 +145,7 @@ export function rebuildConnectionSlab(this: Network, force = false): void {
  * Metrics: Increments `_slabAsyncBuilds` for observability.
  * Fallback: On Node (no `window`) defers to synchronous rebuild for simplicity.
  *
+ * @param this - Network instance bound by method call.
  * @param chunkSize Initial maximum connections per slice (may be reduced adaptively for huge graphs).
  * @returns Promise resolving once rebuild completes.
  */
@@ -196,6 +198,7 @@ export async function rebuildConnectionSlabAsync(
  * neutral array is created and returned (NOT retained) to keep external educational
  * tooling branch‑free while preserving omission memory savings internally.
  *
+ * @param this - Network instance bound by method call.
  * @returns Read‑only style view (do not mutate) containing typed arrays + metadata.
  */
 export function getConnectionSlab(this: Network): ConnectionSlabView {
@@ -219,6 +222,7 @@ export function getConnectionSlab(this: Network): ConnectionSlabView {
  *  - Applies gain multiplication if optional gain slab exists.
  *  - Assumes acyclic graph; topological order recomputed on demand if marked dirty.
  *
+ * @param this - Network instance bound by method call.
  * @param input Input vector (length must equal `network.input`).
  * @returns Output activations (detached plain array) of length `network.output`.
  */
@@ -239,6 +243,7 @@ export function fastSlabActivate(this: Network, input: number[]): number[] {
 /**
  * Report whether current network state can use slab fast activation without fallback.
  * Mirrors `_canUseFastSlab` while exposing eligibility to callers and diagnostics.
+ * @param this - Network instance bound by method call.
  * @param training Whether caller is performing training (disables fast path if true).
  * @returns True when slab fast path predicates hold.
  */
@@ -249,6 +254,7 @@ export function canUseFastSlab(this: Network, training: boolean): boolean {
 
 /**
  * Return the monotonic slab rebuild version used to detect stale packed views.
+ * @param this - Network instance bound by method call.
  * @returns Non‑negative integer (0 if slab never built yet).
  */
 export function getSlabVersion(this: Network): number {

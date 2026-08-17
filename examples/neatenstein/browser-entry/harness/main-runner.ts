@@ -42,65 +42,40 @@ import {
 } from './constants';
 import { extractCombatQualitySignal } from './fitness';
 import { buildNeatensteinMap, createCollisionMap } from '../renderer/map';
-import { NEATENSTEIN_MAP_SIZE } from '../constants';
+import {
+  NEATENSTEIN_MAP_SIZE,
+  SNAPSHOT_KIND_MLP,
+  SNAPSHOT_KIND_SWARM,
+} from '../constants';
 import { extractSensors } from '../../scripts/enemy-navigation';
 
 import type {
   CombatQualitySignal,
+  EvaluatedMainVariant,
   FitnessScore,
   Genome,
-  Individual,
   MainVariant,
+  MainGenerationResult,
+  RunMainGenerationOptions,
   SeedPack,
   Snapshot,
 } from './types';
 
 /**
- * An evaluated main-agent variant, extending {@link Individual} with the raw
- * combat-quality signal produced by its episode.
- */
-interface EvaluatedMainVariant extends Individual<MainVariant> {
-  /** Raw combat-quality signal for the variant's episode. */
-  signal: CombatQualitySignal;
-}
-
-/**
  * Configuration accepted by {@link runMainGeneration}.
+ *
+ * @deprecated Import from `./types` instead. This re-export preserves the
+ *   public API for existing consumers.
  */
-export interface RunMainGenerationOptions {
-  /** Deterministic seed for the generation. */
-  seed: number;
-  /** Current co-evolution generation (non-negative integer). */
-  generation: number;
-  /**
-   * Frozen enemy snapshot to evaluate against.
-   *
-   * Takes precedence over {@link enemy} when both are supplied.
-   */
-  enemySnapshot?: Snapshot;
-  /**
-   * Enemy backend selector.
-   *
-   * When `enemySnapshot` is omitted, the runner resolves a fresh frozen
-   * snapshot from the requested enemy backend. Defaults to `'mlp'` to
-   * preserve the original harness behavior.
-   */
-  enemy?: { kind: 'swarm' | 'mlp' };
-}
+export type { RunMainGenerationOptions } from './types';
 
 /**
  * Result emitted by one main-agent generation.
  *
- * Extends the raw {@link CombatQualitySignal} with the champion genome produced
- * by the NGE main-agent pipeline and the enemy snapshot the generation was
- * evaluated against.
+ * @deprecated Import from `./types` instead. This re-export preserves the
+ *   public API for existing consumers.
  */
-export interface MainGenerationResult extends CombatQualitySignal {
-  /** Champion main-agent genome built by the NGE pipeline. */
-  championGenome: NgeMainAgentEmbryo;
-  /** Frozen enemy snapshot the champion was evaluated against. */
-  evaluatedEnemySnapshot: Snapshot;
-}
+export type { MainGenerationResult } from './types';
 
 /**
  * Run a single main-agent generation and return the champion's combat-quality
@@ -172,8 +147,8 @@ function resolveEnemySnapshot(options: RunMainGenerationOptions): Snapshot {
     return options.enemySnapshot;
   }
 
-  const kind = options.enemy?.kind ?? 'mlp';
-  if (kind === 'swarm') {
+  const kind = options.enemy?.kind ?? SNAPSHOT_KIND_MLP;
+  if (kind === SNAPSHOT_KIND_SWARM) {
     return createSwarmEnemyPopulation({ seed: options.seed }).update({
       generation: options.generation,
     });

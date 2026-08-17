@@ -226,8 +226,9 @@ export function getPhase9RuntimeParityInventory(): readonly OnnxRuntimeParityFix
 /**
  * Resolve one named Phase 9 runtime-parity fixture from the frozen inventory.
  *
- * @param fixtureId Named fixture identifier from the frozen Phase 9A inventory.
+ * @param fixtureId - Named fixture identifier from the frozen Phase 9A inventory.
  * @returns The matching deterministic fixture descriptor.
+ * @throws {Error} When the fixture id is not found in the frozen inventory.
  */
 export function findPhase9RuntimeParityFixture(
   fixtureId: OnnxRuntimeParityFixtureDescriptor['id'],
@@ -303,9 +304,10 @@ export async function runOnnxRuntimeParityFixture(
  * evidence from one named golden sample into several seeded randomized cases.
  * The runner keeps the subset narrow by generating only lane-approved shapes.
  *
- * @param fixtureDescriptor Approved Phase 9 runtime-parity fixture descriptor.
- * @param randomizedRunOptions Seed and sample-count packet for this randomized pass.
+ * @param fixtureDescriptor - Approved Phase 9 runtime-parity fixture descriptor.
+ * @param randomizedRunOptions - Seed and sample-count packet for this randomized pass.
  * @returns Flattened executed results for each seeded randomized sample.
+ * @throws {Error} When the fixture is not in execute mode.
  */
 export async function runSeededOnnxRuntimeParitySamples(
   fixtureDescriptor: OnnxRuntimeParityFixtureDescriptor,
@@ -832,8 +834,7 @@ function createConvGroundworkScenario(): {
 /**
  * Resolve runtime feed dimensions from the fixture packet or session metadata.
  *
- * @param runtimeInputValues Numeric runtime feed values.
- * @param inputShape Runtime metadata shape reported by ONNX Runtime.
+ * @param tensorShape - Runtime tensor shape dimensions (numeric or symbolic).
  * @returns Numeric input dimensions suitable for the feed tensor constructor.
  */
 export function resolveRuntimeTensorDimensions(

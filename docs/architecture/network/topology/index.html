@@ -1,0 +1,1127 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>architecture/network/topology – NeatapticTS Docs</title><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;600;700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../../assets/theme.css"><script defer src="../../../assets/theme-tooltips.js"></script></head><body class="">
+<header class="topbar"><div class="inner topbar-inner-connected"><div class="brand"><a class="brand-link" href="../../../index.html"><span class="brand-title-lockup" aria-hidden="true"><span class="brand-title-row brand-title-row-top"><span class="brand-title-corner">╔══</span><span class="brand-label">NeatapticTS</span><span class="brand-title-corner">══╗</span></span></span><span class="brand-title-accessible">NeatapticTS</span></a></div><nav class="main-nav"><a href="../../../index.html">Home</a><a href="../../../index.html" class="active">Docs</a><a href="../../../examples/index.html">Examples</a><a href="https://github.com/reicek/NeatapticTS" target="_blank" rel="noopener">GitHub</a></nav></div></header>
+<div class="layout"><aside class="sidebar docs-panel docs-panel-left"><ul class="sidebar-sections"><li class="group group-priority"><div class="g-head">Start With Examples</div><p class="group-copy">The demos are the fastest way to learn the library in the order a first-time reader can actually absorb.</p><div class="nav-priority-links"><ul class="pipe-nav-list pipe-nav-list-priority"><li class="pipe-nav-item nav-priority-link"><a href="../../../examples/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Examples overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul><ul class="pipe-nav-list pipe-nav-list-compact"><li class="pipe-nav-item"><a href="../../../examples/flappy_bird/docs/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Flappy Bird</span></a></li><li class="pipe-nav-item"><a href="../../../examples/asciiMaze/docs/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">ASCII Maze</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></div></li><ul class="pipe-nav-list pipe-nav-list-root"><li class="pipe-nav-item"><a href="../../../index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul><li class="group"><div class="g-head">Architecture</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-item"><a href="../../activationArrayPool/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">ActivationArrayPool</span></a></li><li class="pipe-nav-item"><a href="../../architect/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Architect</span></a></li><li class="pipe-nav-item"><a href="../../connection/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Connection</span></a></li><li class="pipe-nav-item"><a href="../../group/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Group</span></a></li><li class="pipe-nav-item"><a href="../../layer/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Layer</span></a></li><li class="pipe-nav-item"><a href="../index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network</span></a></li><li class="pipe-nav-item"><a href="../activate/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Activate</span></a></li><li class="pipe-nav-item"><a href="../bootstrap/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Bootstrap</span></a></li><li class="pipe-nav-item"><a href="../connect/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Connect</span></a></li><li class="pipe-nav-item"><a href="../construct/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Construct</span></a></li><li class="pipe-nav-item"><a href="../deterministic/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Deterministic</span></a></li><li class="pipe-nav-item"><a href="../evaluation-pack/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Evaluation Pack</span></a></li><li class="pipe-nav-item"><a href="../evolve/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Evolve</span></a></li><li class="pipe-nav-item"><a href="../gating/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Gating</span></a></li><li class="pipe-nav-item"><a href="../genetic/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Genetic</span></a></li><li class="pipe-nav-item"><a href="../gpu/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Gpu</span></a></li><li class="pipe-nav-item"><a href="../gpu/__mocks__/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Gpu / Mocks</span></a></li><li class="pipe-nav-item"><a href="../mutate/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Mutate</span></a></li><li class="pipe-nav-item"><a href="../onnx/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Onnx</span></a></li><li class="pipe-nav-item"><a href="../onnx/export/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Onnx / Export</span></a></li><li class="pipe-nav-item"><a href="../onnx/export/layers/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Export / Layers</span></a></li><li class="pipe-nav-item"><a href="../onnx/import/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Onnx / Import</span></a></li><li class="pipe-nav-item"><a href="../onnx/parity/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Onnx / Parity</span></a></li><li class="pipe-nav-item"><a href="../onnx/schema/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Onnx / Schema</span></a></li><li class="pipe-nav-item"><a href="../onnx/validate/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Onnx / Validate</span></a></li><li class="pipe-nav-item"><a href="../prune/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Prune</span></a></li><li class="pipe-nav-item"><a href="../remove/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Remove</span></a></li><li class="pipe-nav-item"><a href="../runtime/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Runtime</span></a></li><li class="pipe-nav-item"><a href="../serialize/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Serialize</span></a></li><li class="pipe-nav-item"><a href="../slab/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Slab</span></a></li><li class="pipe-nav-item"><a href="../standalone/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Standalone</span></a></li><li class="pipe-nav-item"><a href="../stats/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Stats</span></a></li><li class="pipe-nav-item current"><a href="./index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Topology</span></a></li><li class="pipe-nav-item"><a href="../training/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Training</span></a></li><li class="pipe-nav-item"><a href="../visualization/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Visualization</span></a></li><li class="pipe-nav-item"><a href="../window/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Window</span></a></li><li class="pipe-nav-item"><a href="../worker-payload/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Worker Payload</span></a></li><li class="pipe-nav-item"><a href="../../node/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Node</span></a></li><li class="pipe-nav-item"><a href="../../nodePool/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">NodePool</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Methods</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../methods/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-item"><a href="../../../methods/activation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Activation</span></a></li><li class="pipe-nav-item"><a href="../../../methods/connection/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Connection</span></a></li><li class="pipe-nav-item"><a href="../../../methods/cost/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Cost</span></a></li><li class="pipe-nav-item"><a href="../../../methods/crossover/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Crossover</span></a></li><li class="pipe-nav-item"><a href="../../../methods/gating/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Gating</span></a></li><li class="pipe-nav-item"><a href="../../../methods/mutation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation</span></a></li><li class="pipe-nav-item"><a href="../../../methods/rate/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Rate</span></a></li><li class="pipe-nav-item"><a href="../../../methods/selection/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Selection</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Neat</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../neat/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-item"><a href="../../../neat/adaptive/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Adaptive</span></a></li><li class="pipe-nav-item"><a href="../../../neat/adaptive/acceptance/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Adaptive / Acceptance</span></a></li><li class="pipe-nav-item"><a href="../../../neat/adaptive/complexity/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Adaptive / Complexity</span></a></li><li class="pipe-nav-item"><a href="../../../neat/adaptive/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Adaptive / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/adaptive/lineage/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Adaptive / Lineage</span></a></li><li class="pipe-nav-item"><a href="../../../neat/adaptive/mutation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Adaptive / Mutation</span></a></li><li class="pipe-nav-item"><a href="../../../neat/cache/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Cache</span></a></li><li class="pipe-nav-item"><a href="../../../neat/cache/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Cache / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/compat/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Compat</span></a></li><li class="pipe-nav-item"><a href="../../../neat/compat/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Compat / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/diversity/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Diversity</span></a></li><li class="pipe-nav-item"><a href="../../../neat/diversity/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Diversity / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/auto-distance/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Auto Distance</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/entropy-compat/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Entropy Compat</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/entropy-sharing/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Entropy Sharing</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/fitness/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Fitness</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/novelty/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Novelty</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/objectives/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Objectives</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/shared/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Shared</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/speciation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Speciation</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/adaptive/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Adaptive</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/objectives/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Objectives</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/offspring/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Offspring</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/population/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Population</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/runtime/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Runtime</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/speciation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Speciation</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/telemetry/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Telemetry</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/warnings/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Warnings</span></a></li><li class="pipe-nav-item"><a href="../../../neat/export/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Export</span></a></li><li class="pipe-nav-item"><a href="../../../neat/genome/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Genome</span></a></li><li class="pipe-nav-item"><a href="../../../neat/genome/heredity/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Genome / Heredity</span></a></li><li class="pipe-nav-item"><a href="../../../neat/harness/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Harness</span></a></li><li class="pipe-nav-item"><a href="../../../neat/helpers/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Helpers</span></a></li><li class="pipe-nav-item"><a href="../../../neat/hybrid/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Hybrid</span></a></li><li class="pipe-nav-item"><a href="../../../neat/init/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Init</span></a></li><li class="pipe-nav-item"><a href="../../../neat/innovation-tracker/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Innovation Tracker</span></a></li><li class="pipe-nav-item"><a href="../../../neat/lineage/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Lineage</span></a></li><li class="pipe-nav-item"><a href="../../../neat/lineage/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Lineage / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/maintenance/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Maintenance</span></a></li><li class="pipe-nav-item"><a href="../../../neat/maintenance/facade/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Maintenance / Facade</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/archive/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Archive</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/category/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Category</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/crowding/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Crowding</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/dominance/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Dominance</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/fronts/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Fronts</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/metrics/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Metrics</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/objectives/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Objectives</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/shared/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Shared</span></a></li><li class="pipe-nav-item"><a href="../../../neat/mutation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation</span></a></li><li class="pipe-nav-item"><a href="../../../neat/mutation/add-conn/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation / Add Conn</span></a></li><li class="pipe-nav-item"><a href="../../../neat/mutation/add-node/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation / Add Node</span></a></li><li class="pipe-nav-item"><a href="../../../neat/mutation/flow/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation / Flow</span></a></li><li class="pipe-nav-item"><a href="../../../neat/mutation/repair/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation / Repair</span></a></li><li class="pipe-nav-item"><a href="../../../neat/mutation/select/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation / Select</span></a></li><li class="pipe-nav-item"><a href="../../../neat/mutation/shared/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation / Shared</span></a></li><li class="pipe-nav-item"><a href="../../../neat/nge-adult/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Adult</span></a></li><li class="pipe-nav-item"><a href="../../../neat/nge-assimilation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Assimilation</span></a></li><li class="pipe-nav-item"><a href="../../../neat/nge-collective/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Collective</span></a></li><li class="pipe-nav-item"><a href="../../../neat/nge-dna/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Dna</span></a></li><li class="pipe-nav-item"><a href="../../../neat/nge-evolution/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Evolution</span></a></li><li class="pipe-nav-item"><a href="../../../neat/nge-juvenile/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Juvenile</span></a></li><li class="pipe-nav-item"><a href="../../../neat/nge-main-agent/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Main Agent</span></a></li><li class="pipe-nav-item"><a href="../../../neat/objectives/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Objectives</span></a></li><li class="pipe-nav-item"><a href="../../../neat/objectives/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Objectives / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/pruning/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Pruning</span></a></li><li class="pipe-nav-item"><a href="../../../neat/pruning/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Pruning / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/pruning/facade/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Pruning / Facade</span></a></li><li class="pipe-nav-item"><a href="../../../neat/rng/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Rng</span></a></li><li class="pipe-nav-item"><a href="../../../neat/rng/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Rng / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/rng/facade/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Rng / Facade</span></a></li><li class="pipe-nav-item"><a href="../../../neat/selection/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Selection</span></a></li><li class="pipe-nav-item"><a href="../../../neat/selection/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Selection / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/selection/facade/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Selection / Facade</span></a></li><li class="pipe-nav-item"><a href="../../../neat/shared/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Shared</span></a></li><li class="pipe-nav-item"><a href="../../../neat/speciation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Speciation</span></a></li><li class="pipe-nav-item"><a href="../../../neat/speciation/assignment/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Speciation / Assignment</span></a></li><li class="pipe-nav-item"><a href="../../../neat/speciation/history/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Speciation / History</span></a></li><li class="pipe-nav-item"><a href="../../../neat/speciation/shared/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Speciation / Shared</span></a></li><li class="pipe-nav-item"><a href="../../../neat/speciation/sharing/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Speciation / Sharing</span></a></li><li class="pipe-nav-item"><a href="../../../neat/speciation/threshold/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Speciation / Threshold</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Species</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Species / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/core/augmentation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Core / Augmentation</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/core/shared/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Core / Shared</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/history/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Species / History</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/history/context/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">History / Context</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/history/read/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">History / Read</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/stats/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Species / Stats</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/accessors/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Accessors</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/exports/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Exports</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Facade</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/archive/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Archive</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/buffer/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Buffer</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/lineage/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Lineage</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/novelty/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Novelty</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/objectives/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Objectives</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/operator-stats/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Operator Stats</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/runtime/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Runtime</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/species/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Species</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/metrics/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Metrics</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/recorder/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Recorder</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/runtime/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Runtime</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/types/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Types</span></a></li><li class="pipe-nav-item"><a href="../../../neat/topology-intent/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Topology Intent</span></a></li><li class="pipe-nav-item"><a href="../../../neat/validate/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Validate</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Multithreading</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../multithreading/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-item"><a href="../../../multithreading/workers/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Workers</span></a></li><li class="pipe-nav-item"><a href="../../../multithreading/workers/browser/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Workers / Browser</span></a></li><li class="pipe-nav-item"><a href="../../../multithreading/workers/node/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Workers / Node</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-footer"></span><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Acceleration</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../acceleration/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Browser Tests</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../browser-tests/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Env</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../env/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-item"><a href="../../../env/browser/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Browser</span></a></li><li class="pipe-nav-item"><a href="../../../env/node/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Node</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Memory</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../memory/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Performance</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../performance/nge/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Research</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../research/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Src</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../src/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Utils</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../utils/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Visualization</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../visualization/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-item"><a href="../../../visualization/network-view/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network View</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li></ul></aside><main class="content docs-panel docs-panel-center"><h1 id="architecture-network-topology">architecture/network/topology</h1><p>Topology utilities.</p>
+<p>Provides:</p>
+<ul>
+<li>computeTopoOrder: Kahn-style topological sorting with graceful fallback when cycles detected.</li>
+<li>hasPath: depth-first reachability query (used to prevent cycle introduction when acyclicity enforced).</li>
+<li>topology contract helpers: public intent accessors that keep semantic API state aligned with low-level runtime flags.</li>
+</ul>
+<p>Design Notes:</p>
+<ul>
+<li>We deliberately tolerate cycles by falling back to raw node ordering instead of throwing; this
+allows callers performing interim structural mutations to proceed (e.g. during evolve phases)
+while signaling that the fast acyclic optimizations should not be used.</li>
+<li>Input nodes are seeded into the queue immediately regardless of in-degree to keep them early in
+the ordering even if an unusual inbound edge was added (defensive redundancy).</li>
+<li>Self loops are ignored for in-degree accounting and queue progression (they neither unlock new
+nodes nor should they block ordering completion).</li>
+</ul>
+<h2 id="architecture-network-topology-network-topology-utils-types-ts">architecture/network/topology/network.topology.utils.types.ts</h2><h3 id="activationschedule">ActivationSchedule</h3><p>Deterministic activation schedule type produced by topology helpers and consumed by the activation chapter.</p>
+<h3 id="activationschedulestep">ActivationScheduleStep</h3><p>One ordered step in the deterministic activation schedule produced by the topology sort and consumed at inference time.</p>
+<h3 id="activationschedulingdiagnostics">ActivationSchedulingDiagnostics</h3><p>Human-readable activation scheduling diagnostics type carrying node counts, depth, and coverage metadata for inspection.</p>
+<h3 id="in-degree-decrement">IN_DEGREE_DECREMENT</h3><p>Unit step value applied when decrementing or incrementing in-degree tally entries during Kahn queue processing.</p>
+<h3 id="input-node-type">INPUT_NODE_TYPE</h3><p>Input node-type discriminator used to seed the Kahn topological sort with source nodes that have no predecessors.</p>
+<h3 id="pathsearchcontext">PathSearchContext</h3><p>Mutable scratch context allocated and carried while running iterative depth-first reachability checks across the graph.</p>
+<h3 id="topologybuildcontext">TopologyBuildContext</h3><p>Mutable scratch context allocated and carried while building the Kahn-algorithm topological activation order.</p>
+<h3 id="topologynetwork">TopologyNetwork</h3><p>Network instance type alias used by topology helpers to avoid direct runtime imports at the utility boundary.</p>
+<h3 id="topologynetworkprops">TopologyNetworkProps</h3><p>Internal topology state view carrying network node and connection lists across all topology helper groups consistently.</p>
+<h3 id="topologynode">TopologyNode</h3><p>Node instance type alias used by topology helpers to avoid direct runtime imports at the utility boundary.</p>
+<h3 id="zero-count">ZERO_COUNT</h3><p>Zero baseline value used to initialize degree counters and empty-size comparisons during topological scheduling.</p>
+<h2 id="architecture-network-topology-network-topology-utils-ts">architecture/network/topology/network.topology.utils.ts</h2><h3 id="computetopoorder">computeTopoOrder</h3><pre><code class="language-ts">computeTopoOrder(): void
+</code></pre>
+<p>Compute a deterministic activation schedule for the current topology mode.</p>
+<p>Acyclic mode uses Kahn traversal with stable waves and still flattens those
+waves back into the legacy <code>_topoOrder</code> cache for callers that depend on one
+ordered list. Recurrent mode uses the SCC condensation graph to emit
+deterministic recurrent-component boundaries while leaving the legacy acyclic
+cache empty until the activation path adopts the richer schedule directly.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>this</code> - Network instance bound by method call.</li>
+</ul>
+<h3 id="createmlp">createMLP</h3><pre><code class="language-ts">createMLP(
+  inputCount: number,
+  hiddenCounts: number[],
+  outputCount: number,
+): default
+</code></pre>
+<p>Contract for createMLP.</p>
+<h3 id="gettopologyintent">getTopologyIntent</h3><pre><code class="language-ts">getTopologyIntent(): NetworkTopologyIntent
+</code></pre>
+<p>Read the public topology intent preserved on a network instance.</p>
+<p>This accessor keeps the semantic contract visible to callers even though the
+lower-level runtime ultimately enforces acyclicity through booleans and cache
+invalidation.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>this</code> - Target network instance.</li>
+</ul>
+<p>Returns: Current topology intent.</p>
+<h3 id="hasfeedforwardtopologycontract">hasFeedForwardTopologyContract</h3><pre><code class="language-ts">hasFeedForwardTopologyContract(
+  carrier: FeedForwardTopologyContractCarrier,
+): boolean
+</code></pre>
+<p>Check whether a runtime shape currently carries the feed-forward contract.</p>
+<p>The helper is intentionally conservative when callers are in a mismatched
+transitional state: either an explicit <code>feed-forward</code> intent or a truthy
+<code>_enforceAcyclic</code> flag is treated as a feed-forward contract. That keeps
+mutation and crossover helpers from introducing recurrent structure into a
+genome that still advertises acyclic semantics anywhere on its runtime seam.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>carrier</code> - Narrow runtime shape or full network instance.</li>
+</ul>
+<p>Returns: True when feed-forward semantics are currently enforced.</p>
+<h3 id="haspath">hasPath</h3><pre><code class="language-ts">hasPath(
+  from: default,
+  to: default,
+): boolean
+</code></pre>
+<p>Depth-first reachability test that avoids infinite loops using a visited set.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>this</code> - Network instance bound by method call.</li>
+<li><code>from</code> - Source node from which reachability is tested.</li>
+<li><code>to</code> - Target node to which reachability is tested.</li>
+</ul>
+<p>Returns: True when a path exists from <code>from</code> to <code>to</code>, false otherwise.</p>
+<h3 id="networktopologyutils">networkTopologyUtils</h3><p>Default export bundle for the topology utilities chapter.</p>
+<p>Bundles the core topology helpers so the network facade can bind them as methods
+without importing each function individually.</p>
+<h3 id="rebuildconnections">rebuildConnections</h3><pre><code class="language-ts">rebuildConnections(
+  networkInstance: default,
+): void
+</code></pre>
+<p>Rebuild the canonical connection array from all per-node outgoing lists.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>networkInstance</code> - Target network.</li>
+</ul>
+<h3 id="setenforceacyclic">setEnforceAcyclic</h3><pre><code class="language-ts">setEnforceAcyclic(
+  flag: boolean,
+): void
+</code></pre>
+<p>Toggle low-level acyclic enforcement while preserving a coherent public contract.</p>
+<p>This exists for backward compatibility with callers that still use the legacy
+boolean API instead of the semantic <code>topologyIntent</code> field.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>this</code> - Target network instance.</li>
+<li><code>flag</code> - Whether to enforce acyclic connectivity.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="settopologyintent">setTopologyIntent</h3><pre><code class="language-ts">setTopologyIntent(
+  topologyIntent: NetworkTopologyIntent,
+): void
+</code></pre>
+<p>Set the public topology intent and synchronize low-level runtime flags.</p>
+<p>Updating the semantic contract also updates acyclic enforcement and marks the
+topological cache dirty so later activation paths rebuild consistent state.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>this</code> - Target network instance.</li>
+<li><code>topologyIntent</code> - Desired topology intent.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h2 id="architecture-network-topology-network-topology-loop-utils-ts">architecture/network/topology/network.topology.loop.utils.ts</h2><h3 id="appendactivationstep">appendActivationStep</h3><pre><code class="language-ts">appendActivationStep(
+  activationSteps: number[][],
+  activationStep: number[],
+): void
+</code></pre>
+<p>Append one completed activation wave to the cached schedule.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>activationSteps</code> - Accumulated activation waves.</li>
+<li><code>activationStep</code> - Current activation wave.</li>
+</ul>
+<p>Returns: Void.</p>
+<h3 id="appendactivationstepnode">appendActivationStepNode</h3><pre><code class="language-ts">appendActivationStepNode(
+  activationStep: number[],
+  node: default,
+): void
+</code></pre>
+<p>Append one stable node id to the current activation wave.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>activationStep</code> - Current activation wave.</li>
+<li><code>node</code> - Node to append.</li>
+</ul>
+<p>Returns: Void.</p>
+<h3 id="appendtoponode">appendTopoNode</h3><pre><code class="language-ts">appendTopoNode(
+  topoOrder: default[],
+  node: default,
+): void
+</code></pre>
+<p>Append one node to topological order output.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>topoOrder</code> - Accumulated topological order.</li>
+<li><code>node</code> - Node to append.</li>
+</ul>
+<p>Returns: Void.</p>
+<h3 id="comparenodesbystabletiebreak">compareNodesByStableTieBreak</h3><pre><code class="language-ts">compareNodesByStableTieBreak(
+  leftNode: default,
+  rightNode: default,
+): number
+</code></pre>
+<p>Compare two nodes using a stable deterministic activation tie-break order.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>leftNode</code> - First node.</li>
+<li><code>rightNode</code> - Second node.</li>
+</ul>
+<p>Returns: Negative when left should run first, positive when right should run first.</p>
+<h3 id="decrementnodeindegree">decrementNodeInDegree</h3><pre><code class="language-ts">decrementNodeInDegree(
+  buildContext: TopologyBuildContext,
+  node: default,
+): number
+</code></pre>
+<p>Decrement node in-degree and return remaining value.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>buildContext</code> - Mutable build context.</li>
+<li><code>node</code> - Target node.</li>
+</ul>
+<p>Returns: Remaining in-degree after decrement.</p>
+<h3 id="getindegree">getInDegree</h3><pre><code class="language-ts">getInDegree(
+  buildContext: TopologyBuildContext,
+  node: default,
+): number
+</code></pre>
+<p>Read in-degree for a node with zero fallback.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>buildContext</code> - Mutable build context.</li>
+<li><code>node</code> - Candidate node.</li>
+</ul>
+<p>Returns: In-degree value.</p>
+<h3 id="isinputnode">isInputNode</h3><pre><code class="language-ts">isInputNode(
+  node: default,
+): boolean
+</code></pre>
+<p>Test whether a node is an input node.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>node</code> - Candidate node.</li>
+</ul>
+<p>Returns: True when node type is input.</p>
+<h3 id="isqueueseednode">isQueueSeedNode</h3><pre><code class="language-ts">isQueueSeedNode(
+  node: default,
+  buildContext: TopologyBuildContext,
+): boolean
+</code></pre>
+<p>Determine whether a node belongs in the initial queue.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>node</code> - Candidate node.</li>
+<li><code>buildContext</code> - Mutable build context.</li>
+</ul>
+<p>Returns: True when node is input-type or has zero in-degree.</p>
+<h3 id="isselfconnection">isSelfConnection</h3><pre><code class="language-ts">isSelfConnection(
+  from: default,
+  to: default,
+): boolean
+</code></pre>
+<p>Test whether a connection is a self-loop.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>from</code> - Source node.</li>
+<li><code>to</code> - Target node.</li>
+</ul>
+<p>Returns: True when source and target are the same node.</p>
+<h3 id="processkahnqueue">processKahnQueue</h3><pre><code class="language-ts">processKahnQueue(
+  buildContext: TopologyBuildContext,
+): void
+</code></pre>
+<p>Process the Kahn queue until all available topology nodes are emitted.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>buildContext</code> - Mutable build context.</li>
+</ul>
+<p>Returns: Void.</p>
+<h3 id="relaxoutgoingedges">relaxOutgoingEdges</h3><pre><code class="language-ts">relaxOutgoingEdges(
+  buildContext: TopologyBuildContext,
+  currentNode: default,
+  nextProcessingQueue: default[],
+): void
+</code></pre>
+<p>Relax outgoing edges for one processed node.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>buildContext</code> - Mutable build context.</li>
+<li><code>currentNode</code> - Processed node.</li>
+</ul>
+<p>Returns: Void.</p>
+<h3 id="resolvestablenodetiebreakvalue">resolveStableNodeTieBreakValue</h3><pre><code class="language-ts">resolveStableNodeTieBreakValue(
+  node: default,
+): number
+</code></pre>
+<p>Resolve the deterministic activation tie-break scalar for one node.</p>
+<p>Stable gene ids are preferred. Node index remains a conservative fallback for
+unusual fixtures that bypass ordinary node construction.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>node</code> - Candidate node.</li>
+</ul>
+<p>Returns: Deterministic scalar used for sorting and schedule emission.</p>
+<h3 id="seedprocessingqueue">seedProcessingQueue</h3><pre><code class="language-ts">seedProcessingQueue(
+  buildContext: TopologyBuildContext,
+): void
+</code></pre>
+<p>Seed Kahn queue with input nodes and zero in-degree nodes.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>buildContext</code> - Mutable build context.</li>
+</ul>
+<p>Returns: Void.</p>
+<h3 id="sortnodesbystabletiebreak">sortNodesByStableTieBreak</h3><pre><code class="language-ts">sortNodesByStableTieBreak(
+  nodes: default[],
+): default[]
+</code></pre>
+<p>Sort one node collection by the deterministic activation wave tie-break order.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>nodes</code> - Candidate nodes.</li>
+</ul>
+<p>Returns: Sorted node collection.</p>
+<h3 id="takenextqueuestep">takeNextQueueStep</h3><pre><code class="language-ts">takeNextQueueStep(
+  processingQueue: default[],
+): default[]
+</code></pre>
+<p>Take the full current Kahn wave from the processing queue.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>processingQueue</code> - Queue of pending nodes.</li>
+</ul>
+<p>Returns: Current zero-in-degree wave in deterministic order.</p>
+<h2 id="architecture-network-topology-network-topology-path-utils-ts">architecture/network/topology/network.topology.path.utils.ts</h2><h3 id="createpathsearchcontext">createPathSearchContext</h3><pre><code class="language-ts">createPathSearchContext(
+  from: default,
+  to: default,
+): PathSearchContext
+</code></pre>
+<p>Create a depth-first search context for reachability testing between two topology nodes.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>from</code> - Origin node.</li>
+<li><code>to</code> - Target node.</li>
+</ul>
+<p>Returns: Initialized path-search context.</p>
+<h3 id="hasvisitednode">hasVisitedNode</h3><pre><code class="language-ts">hasVisitedNode(
+  visitedNodes: Set&lt;default&gt;,
+  node: default,
+): boolean
+</code></pre>
+<p>Test whether a node has already been visited.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>visitedNodes</code> - Visited-node set.</li>
+<li><code>node</code> - Candidate node.</li>
+</ul>
+<p>Returns: True when node is already visited.</p>
+<h3 id="issamenode">isSameNode</h3><pre><code class="language-ts">isSameNode(
+  leftNode: default,
+  rightNode: default,
+): boolean
+</code></pre>
+<p>Compare two node references by strict identity and return true when they refer to the same node.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>leftNode</code> - Left node.</li>
+<li><code>rightNode</code> - Right node.</li>
+</ul>
+<p>Returns: True when references are identical.</p>
+<h3 id="isselfconnection">isSelfConnection</h3><pre><code class="language-ts">isSelfConnection(
+  from: default,
+  to: default,
+): boolean
+</code></pre>
+<p>Test whether a connection is a self-loop.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>from</code> - Source node.</li>
+<li><code>to</code> - Target node.</li>
+</ul>
+<p>Returns: True when source and target are the same node.</p>
+<h3 id="markvisited">markVisited</h3><pre><code class="language-ts">markVisited(
+  visitedNodes: Set&lt;default&gt;,
+  node: default,
+): void
+</code></pre>
+<p>Mark a node as visited.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>visitedNodes</code> - Visited-node set.</li>
+<li><code>node</code> - Node to mark.</li>
+</ul>
+<p>Returns: Void.</p>
+<h3 id="pushoutgoingtargets">pushOutgoingTargets</h3><pre><code class="language-ts">pushOutgoingTargets(
+  nodesToVisitStack: default[],
+  currentNode: default,
+): void
+</code></pre>
+<p>Push non-self outgoing targets to DFS stack.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>nodesToVisitStack</code> - DFS stack.</li>
+<li><code>currentNode</code> - Current expanded node.</li>
+</ul>
+<p>Returns: Void.</p>
+<h3 id="takenextstacknode">takeNextStackNode</h3><pre><code class="language-ts">takeNextStackNode(
+  nodesToVisitStack: default[],
+): default
+</code></pre>
+<p>Pop and return next DFS stack node.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>nodesToVisitStack</code> - DFS stack.</li>
+</ul>
+<p>Returns: Next node to process.</p>
+<h3 id="traversepathsearch">traversePathSearch</h3><pre><code class="language-ts">traversePathSearch(
+  searchContext: PathSearchContext,
+): boolean
+</code></pre>
+<p>Traverse the DFS search stack and test whether the target node is reachable.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>searchContext</code> - Mutable search context.</li>
+</ul>
+<p>Returns: True when target node is reachable.</p>
+<h2 id="architecture-network-topology-network-topology-setup-utils-ts">architecture/network/topology/network.topology.setup.utils.ts</h2><h3 id="applyincomingedgecounts">applyIncomingEdgeCounts</h3><pre><code class="language-ts">applyIncomingEdgeCounts(
+  buildContext: TopologyBuildContext,
+): void
+</code></pre>
+<p>Apply in-degree increments from non-self connections so topological scheduling reflects only true inter-node dependencies.
+Self loops are excluded because they do not participate in feed-forward ordering.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>buildContext</code> - Mutable build context.</li>
+</ul>
+<p>Returns: Void.</p>
+<h3 id="astopologyprops">asTopologyProps</h3><pre><code class="language-ts">asTopologyProps(
+  network: default,
+): TopologyNetworkProps
+</code></pre>
+<p>Cast a network instance to the internal topology props view for flag access.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Network instance.</li>
+</ul>
+<p>Returns: Internal topology props view.</p>
+<h3 id="buildrecurrentschedulesteps">buildRecurrentScheduleSteps</h3><pre><code class="language-ts">buildRecurrentScheduleSteps(
+  stronglyConnectedComponents: readonly default[][],
+  condensationContext: CondensationContext,
+): ActivationScheduleStep[]
+</code></pre>
+<p>Build deterministic recurrent schedule steps from the condensation graph.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>stronglyConnectedComponents</code> - Stable SCC list.</li>
+<li><code>condensationContext</code> - Condensation graph context.</li>
+</ul>
+<p>Returns: Structured recurrent schedule steps.</p>
+<h3 id="clearcachedtopoorder">clearCachedTopoOrder</h3><pre><code class="language-ts">clearCachedTopoOrder(
+  internalTopologyProps: TopologyNetworkProps,
+): void
+</code></pre>
+<p>Clear cached topological order state and reset compiled scheduling diagnostics when topology changes invalidate previous results.
+This keeps later activation passes from reusing stale ordering data.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>internalTopologyProps</code> - Internal topology props view.</li>
+</ul>
+<p>Returns: Void.</p>
+<h3 id="collectstronglyconnectedcomponents">collectStronglyConnectedComponents</h3><pre><code class="language-ts">collectStronglyConnectedComponents(
+  nodes: readonly default[],
+): default[][]
+</code></pre>
+<p>Collect strongly-connected components using Tarjan traversal.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>nodes</code> - Candidate graph nodes.</li>
+</ul>
+<p>Returns: Stable SCC list.</p>
+<h3 id="createcomponentindexbynode">createComponentIndexByNode</h3><pre><code class="language-ts">createComponentIndexByNode(
+  stronglyConnectedComponents: readonly default[][],
+): Map&lt;default, number&gt;
+</code></pre>
+<p>Build a reverse lookup from node to SCC index.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>stronglyConnectedComponents</code> - Stable SCC list.</li>
+</ul>
+<p>Returns: Node-to-component lookup map.</p>
+<h3 id="createcondensationcontext">createCondensationContext</h3><pre><code class="language-ts">createCondensationContext(
+  network: default,
+  stronglyConnectedComponents: readonly default[][],
+  componentIndexByNode: ReadonlyMap&lt;default, number&gt;,
+): CondensationContext
+</code></pre>
+<p>Build the SCC condensation graph.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Network instance.</li>
+<li><code>stronglyConnectedComponents</code> - Stable SCC list.</li>
+<li><code>componentIndexByNode</code> - Node-to-component lookup.</li>
+</ul>
+<p>Returns: Condensation graph context.</p>
+<h3 id="createtopologybuildcontext">createTopologyBuildContext</h3><pre><code class="language-ts">createTopologyBuildContext(
+  network: default,
+  internalTopologyProps: TopologyNetworkProps,
+): TopologyBuildContext
+</code></pre>
+<p>Create mutable build context for Kahn traversal so in-degree maps, queues, and output buffers share one typed state object.
+Centralizing this context keeps scheduling helpers composable and deterministic.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Network instance.</li>
+<li><code>internalTopologyProps</code> - Internal topology props view.</li>
+</ul>
+<p>Returns: Initialized build context.</p>
+<h3 id="finalizerecurrentschedule">finalizeRecurrentSchedule</h3><pre><code class="language-ts">finalizeRecurrentSchedule(
+  network: default,
+  internalTopologyProps: TopologyNetworkProps,
+): void
+</code></pre>
+<p>Build and cache the deterministic recurrent activation schedule for the network.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Network instance.</li>
+<li><code>internalTopologyProps</code> - Internal topology props view.</li>
+</ul>
+<p>Returns: Void.</p>
+<h3 id="finalizetopoorder">finalizeTopoOrder</h3><pre><code class="language-ts">finalizeTopoOrder(
+  buildContext: TopologyBuildContext,
+): void
+</code></pre>
+<p>Finalize cached order, falling back to raw node order on cycle detection.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>buildContext</code> - Mutable build context.</li>
+</ul>
+<p>Returns: Void.</p>
+<h3 id="incrementnodeindegree">incrementNodeInDegree</h3><pre><code class="language-ts">incrementNodeInDegree(
+  buildContext: TopologyBuildContext,
+  node: default,
+): void
+</code></pre>
+<p>Increment in-degree for a node in the tally map.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>buildContext</code> - Mutable build context.</li>
+<li><code>node</code> - Target node.</li>
+</ul>
+<p>Returns: Void.</p>
+<h3 id="initializeallnodeindegreecounts">initializeAllNodeInDegreeCounts</h3><pre><code class="language-ts">initializeAllNodeInDegreeCounts(
+  buildContext: TopologyBuildContext,
+): void
+</code></pre>
+<p>Initialize all nodes with zero in-degree before incoming-edge counting populates the mutable Kahn traversal state.
+This explicit reset prevents stale counts when contexts are reused across rebuilds.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>buildContext</code> - Mutable build context.</li>
+</ul>
+<p>Returns: Void.</p>
+<h3 id="isrecurrentcomponent">isRecurrentComponent</h3><pre><code class="language-ts">isRecurrentComponent(
+  componentNodes: readonly default[],
+): boolean
+</code></pre>
+<p>Check whether one SCC should be treated as a recurrent execution boundary.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>componentNodes</code> - Stable SCC node list.</li>
+</ul>
+<p>Returns: True when the component is cyclic or carries a self-loop.</p>
+<h3 id="isselfconnection">isSelfConnection</h3><pre><code class="language-ts">isSelfConnection(
+  from: default,
+  to: default,
+): boolean
+</code></pre>
+<p>Test whether a connection is a self-loop.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>from</code> - Source node.</li>
+<li><code>to</code> - Target node.</li>
+</ul>
+<p>Returns: True when source and target are the same node.</p>
+<h3 id="resolvecompiledschedulingdiagnostics">resolveCompiledSchedulingDiagnostics</h3><pre><code class="language-ts">resolveCompiledSchedulingDiagnostics(
+  network: default,
+  activationSchedule: ActivationSchedule,
+): ActivationSchedulingDiagnostics
+</code></pre>
+<p>Resolve the standard diagnostics payload for a compiled schedule.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Network instance.</li>
+<li><code>activationSchedule</code> - Compiled activation schedule.</li>
+</ul>
+<p>Returns: Scheduling diagnostics snapshot.</p>
+<h3 id="resolvecomponenttiebreakvalue">resolveComponentTieBreakValue</h3><pre><code class="language-ts">resolveComponentTieBreakValue(
+  componentNodes: readonly default[],
+): number
+</code></pre>
+<p>Resolve one SCC tie-break value from its first stable node.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>componentNodes</code> - Stable SCC node list.</li>
+</ul>
+<p>Returns: Deterministic component sort scalar.</p>
+<h3 id="resolvecyclenodeids">resolveCycleNodeIds</h3><pre><code class="language-ts">resolveCycleNodeIds(
+  buildContext: TopologyBuildContext,
+): number[]
+</code></pre>
+<p>Resolve stable node ids that remained unscheduled after acyclic traversal.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>buildContext</code> - Mutable build context.</li>
+</ul>
+<p>Returns: Stable node ids implicated in the cycle fallback.</p>
+<h3 id="resolvefinalactivationschedule">resolveFinalActivationSchedule</h3><pre><code class="language-ts">resolveFinalActivationSchedule(
+  buildContext: TopologyBuildContext,
+): ActivationSchedule | null
+</code></pre>
+<p>Resolve the final deterministic activation schedule when the graph is acyclic.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>buildContext</code> - Mutable build context.</li>
+</ul>
+<p>Returns: Cached activation schedule or null when a complete acyclic order was not found.</p>
+<h3 id="resolvefinalorder">resolveFinalOrder</h3><pre><code class="language-ts">resolveFinalOrder(
+  buildContext: TopologyBuildContext,
+): default[]
+</code></pre>
+<p>Resolve final topological order with cycle fallback.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>buildContext</code> - Mutable build context.</li>
+</ul>
+<p>Returns: Fully valid topological order or raw node order fallback.</p>
+<h3 id="resolvefinalschedulingdiagnostics">resolveFinalSchedulingDiagnostics</h3><pre><code class="language-ts">resolveFinalSchedulingDiagnostics(
+  buildContext: TopologyBuildContext,
+): ActivationSchedulingDiagnostics
+</code></pre>
+<p>Resolve final human-friendly scheduling diagnostics for acyclic mode.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>buildContext</code> - Mutable build context.</li>
+</ul>
+<p>Returns: Scheduling diagnostics snapshot.</p>
+<h3 id="resolveoutgoingneighbors">resolveOutgoingNeighbors</h3><pre><code class="language-ts">resolveOutgoingNeighbors(
+  node: default,
+): default[]
+</code></pre>
+<p>Resolve one node&#39;s outgoing neighbors for SCC traversal.</p>
+<p>Self-loops are excluded from traversal because they do not change SCC
+membership, but singleton self-loops are still classified as recurrent later.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>node</code> - Candidate node.</li>
+</ul>
+<p>Returns: Deterministic outgoing neighbors.</p>
+<h3 id="resolverecurrentactivationschedule">resolveRecurrentActivationSchedule</h3><pre><code class="language-ts">resolveRecurrentActivationSchedule(
+  network: default,
+): ActivationSchedule
+</code></pre>
+<p>Resolve the deterministic recurrent activation schedule.</p>
+<p>The schedule is based on the SCC condensation graph so recurrent structure is
+explicit before activation-path integration consumes it.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Network instance.</li>
+</ul>
+<p>Returns: Deterministic recurrent activation schedule.</p>
+<h3 id="seedcondensationqueue">seedCondensationQueue</h3><pre><code class="language-ts">seedCondensationQueue(
+  stronglyConnectedComponents: readonly default[][],
+  componentInDegree: readonly number[],
+  queuedComponentIndexes: Set&lt;number&gt;,
+): number[]
+</code></pre>
+<p>Seed the condensation queue with zero-indegree or input-owning components.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>stronglyConnectedComponents</code> - Stable SCC list.</li>
+<li><code>componentInDegree</code> - Component indegree counts.</li>
+<li><code>queuedComponentIndexes</code> - Mutable set of already queued components.</li>
+</ul>
+<p>Returns: Initial deterministic queue.</p>
+<h3 id="shouldbuildrecurrentschedule">shouldBuildRecurrentSchedule</h3><pre><code class="language-ts">shouldBuildRecurrentSchedule(
+  internalTopologyProps: TopologyNetworkProps,
+): boolean
+</code></pre>
+<p>Determine whether recurrent scheduling should be used based on topology enforcement flags stored on internal runtime props.
+This gate decides whether Kahn-style acyclic ordering or recurrent schedule compilation is executed.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>internalTopologyProps</code> - Internal topology props view.</li>
+</ul>
+<p>Returns: True when acyclic mode is disabled.</p>
+<h3 id="sortcomponentindexesbytiebreak">sortComponentIndexesByTieBreak</h3><pre><code class="language-ts">sortComponentIndexesByTieBreak(
+  componentIndexes: readonly number[],
+  stronglyConnectedComponents: readonly default[][],
+): number[]
+</code></pre>
+<p>Sort component indexes by the deterministic node tie-break of each SCC root.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>componentIndexes</code> - Candidate component indexes.</li>
+<li><code>stronglyConnectedComponents</code> - Stable SCC list.</li>
+</ul>
+<p>Returns: Sorted component indexes.</p>
+<h2 id="architecture-network-topology-network-topology-factory-utils-ts">architecture/network/topology/network.topology.factory.utils.ts</h2><p>Build a strictly layered, fully connected MLP network from layer sizes.</p>
+<h3 id="addoutgoingconnectionstoset">addOutgoingConnectionsToSet</h3><pre><code class="language-ts">addOutgoingConnectionsToSet(
+  outgoingConnections: default[],
+  allConnections: Set&lt;default&gt;,
+): void
+</code></pre>
+<p>Add all outgoing connections to a deduplication set.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>outgoingConnections</code> - Outgoing connections from one node.</li>
+<li><code>allConnections</code> - Deduplication set for network connections.</li>
+</ul>
+<h3 id="assignnetworknodes">assignNetworkNodes</h3><pre><code class="language-ts">assignNetworkNodes(
+  networkInstance: default,
+  mlpNodeLayers: MlpNodeLayers,
+): void
+</code></pre>
+<p>Assign ordered nodes to the network instance.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>networkInstance</code> - Target network.</li>
+<li><code>mlpNodeLayers</code> - Grouped node layers for this MLP.</li>
+</ul>
+<h3 id="collectuniqueoutgoingconnections">collectUniqueOutgoingConnections</h3><pre><code class="language-ts">collectUniqueOutgoingConnections(
+  networkInstance: default,
+): Set&lt;default&gt;
+</code></pre>
+<p>Collect unique outgoing connections across all network nodes.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>networkInstance</code> - Target network.</li>
+</ul>
+<p>Returns: Set of unique outgoing connections.</p>
+<h3 id="connectlayerpair">connectLayerPair</h3><pre><code class="language-ts">connectLayerPair(
+  sourceLayer: default[],
+  targetLayer: default[],
+): void
+</code></pre>
+<p>Fully connect every source node to every target node.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>sourceLayer</code> - Source layer.</li>
+<li><code>targetLayer</code> - Target layer.</li>
+</ul>
+<h3 id="connectmlplayers">connectMlpLayers</h3><pre><code class="language-ts">connectMlpLayers(
+  mlpNodeLayers: MlpNodeLayers,
+): void
+</code></pre>
+<p>Fully connect each adjacent layer in MLP order.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>mlpNodeLayers</code> - Grouped node layers for this MLP.</li>
+</ul>
+<h3 id="convertconnectionsettoarray">convertConnectionSetToArray</h3><pre><code class="language-ts">convertConnectionSetToArray(
+  uniqueConnections: Set&lt;default&gt;,
+): default[]
+</code></pre>
+<p>Convert a connection set into the canonical array format.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>uniqueConnections</code> - Unique network connections.</li>
+</ul>
+<p>Returns: Array of network connections.</p>
+<h3 id="createhiddenlayers">createHiddenLayers</h3><pre><code class="language-ts">createHiddenLayers(
+  hiddenCounts: number[],
+): default[][]
+</code></pre>
+<p>Create all hidden layers for an MLP topology.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>hiddenCounts</code> - Hidden-layer node counts.</li>
+</ul>
+<p>Returns: Hidden layers in forward order.</p>
+<h3 id="createmlp">createMLP</h3><pre><code class="language-ts">createMLP(
+  inputCount: number,
+  hiddenCounts: number[],
+  outputCount: number,
+): default
+</code></pre>
+<p>Contract for createMLP.</p>
+<h3 id="createmlpnodelayers">createMlpNodeLayers</h3><pre><code class="language-ts">createMlpNodeLayers(
+  inputCount: number,
+  hiddenCounts: number[],
+  outputCount: number,
+): MlpNodeLayers
+</code></pre>
+<p>Build input, hidden, and output node layers for an MLP topology.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>inputCount</code> - Number of input nodes.</li>
+<li><code>hiddenCounts</code> - Hidden-layer node counts.</li>
+<li><code>outputCount</code> - Number of output nodes.</li>
+</ul>
+<p>Returns: Grouped node layers for MLP assembly.</p>
+<h3 id="createnodesoftype">createNodesOfType</h3><pre><code class="language-ts">createNodesOfType(
+  nodeCount: number,
+  nodeType: &quot;hidden&quot; | &quot;input&quot; | &quot;output&quot;,
+): default[]
+</code></pre>
+<p>Create all nodes for a single fixed node type.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>nodeCount</code> - Number of nodes to create.</li>
+<li><code>nodeType</code> - Node type identifier.</li>
+</ul>
+<p>Returns: Node list of the requested type.</p>
+<h3 id="createorderednodelist">createOrderedNodeList</h3><pre><code class="language-ts">createOrderedNodeList(
+  mlpNodeLayers: MlpNodeLayers,
+): default[]
+</code></pre>
+<p>Build the canonical ordered node list used by the network.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>mlpNodeLayers</code> - Grouped node layers for this MLP.</li>
+</ul>
+<p>Returns: Ordered node list: input, hidden, then output.</p>
+<h3 id="flattennodelayers">flattenNodeLayers</h3><pre><code class="language-ts">flattenNodeLayers(
+  nodeLayers: default[][],
+): default[]
+</code></pre>
+<p>Flatten layered node collections into a single ordered list.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>nodeLayers</code> - Layered node collections.</li>
+</ul>
+<p>Returns: Flattened node list.</p>
+<h3 id="instantiatenetwork">instantiateNetwork</h3><pre><code class="language-ts">instantiateNetwork(
+  networkFactory: NetworkConstructor,
+  inputCount: number,
+  outputCount: number,
+): default
+</code></pre>
+<p>Instantiate a new network using the runtime constructor.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>networkFactory</code> - Network constructor function.</li>
+<li><code>inputCount</code> - Number of input nodes.</li>
+<li><code>outputCount</code> - Number of output nodes.</li>
+</ul>
+<p>Returns: Newly instantiated network.</p>
+<h3 id="marktopologydirty">markTopologyDirty</h3><pre><code class="language-ts">markTopologyDirty(
+  networkInstance: default,
+): void
+</code></pre>
+<p>Mark a network topology as dirty after structural edits.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>networkInstance</code> - Network instance to mark.</li>
+</ul>
+<h3 id="rebuildconnections">rebuildConnections</h3><pre><code class="language-ts">rebuildConnections(
+  networkInstance: default,
+): void
+</code></pre>
+<p>Rebuild the canonical connection array from all per-node outgoing lists.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>networkInstance</code> - Target network.</li>
+</ul>
+<h2 id="architecture-network-topology-network-topology-contract-utils-ts">architecture/network/topology/network.topology.contract.utils.ts</h2><h3 id="feedforwardtopologycontractcarrier">FeedForwardTopologyContractCarrier</h3><p>Minimal runtime surface needed to read the active feed-forward contract.</p>
+<p>Some callers have a full <code>Network</code> instance with <code>getTopologyIntent()</code>, while
+others only hold a narrow runtime genome shape with the low-level acyclic flag.
+This contract keeps both shapes usable from one small helper.</p>
+<h3 id="gettopologyintent">getTopologyIntent</h3><pre><code class="language-ts">getTopologyIntent(): NetworkTopologyIntent
+</code></pre>
+<p>Read the public topology intent preserved on a network instance.</p>
+<p>This accessor keeps the semantic contract visible to callers even though the
+lower-level runtime ultimately enforces acyclicity through booleans and cache
+invalidation.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>this</code> - Target network instance.</li>
+</ul>
+<p>Returns: Current topology intent.</p>
+<h3 id="hasfeedforwardtopologycontract">hasFeedForwardTopologyContract</h3><pre><code class="language-ts">hasFeedForwardTopologyContract(
+  carrier: FeedForwardTopologyContractCarrier,
+): boolean
+</code></pre>
+<p>Check whether a runtime shape currently carries the feed-forward contract.</p>
+<p>The helper is intentionally conservative when callers are in a mismatched
+transitional state: either an explicit <code>feed-forward</code> intent or a truthy
+<code>_enforceAcyclic</code> flag is treated as a feed-forward contract. That keeps
+mutation and crossover helpers from introducing recurrent structure into a
+genome that still advertises acyclic semantics anywhere on its runtime seam.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>carrier</code> - Narrow runtime shape or full network instance.</li>
+</ul>
+<p>Returns: True when feed-forward semantics are currently enforced.</p>
+<h3 id="setenforceacyclic">setEnforceAcyclic</h3><pre><code class="language-ts">setEnforceAcyclic(
+  flag: boolean,
+): void
+</code></pre>
+<p>Toggle low-level acyclic enforcement while preserving a coherent public contract.</p>
+<p>This exists for backward compatibility with callers that still use the legacy
+boolean API instead of the semantic <code>topologyIntent</code> field.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>this</code> - Target network instance.</li>
+<li><code>flag</code> - Whether to enforce acyclic connectivity.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="settopologyintent">setTopologyIntent</h3><pre><code class="language-ts">setTopologyIntent(
+  topologyIntent: NetworkTopologyIntent,
+): void
+</code></pre>
+<p>Set the public topology intent and synchronize low-level runtime flags.</p>
+<p>Updating the semantic contract also updates acyclic enforcement and marks the
+topological cache dirty so later activation paths rebuild consistent state.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>this</code> - Target network instance.</li>
+<li><code>topologyIntent</code> - Desired topology intent.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h2 id="architecture-network-topology-network-topology-architecture-utils-ts">architecture/network/topology/network.topology.architecture.utils.ts</h2><h3 id="createarchitecturedescriptor">createArchitectureDescriptor</h3><pre><code class="language-ts">createArchitectureDescriptor(
+  hiddenLayerSizes: number[],
+  hasCycles: boolean,
+  source: NetworkArchitectureSource,
+  totalNodes: number,
+  totalConnections: number,
+): NetworkArchitectureDescriptor
+</code></pre>
+<p>Creates the final immutable descriptor shape used by telemetry and UI code.</p>
+<p>Keeping descriptor assembly in one place ensures every resolution strategy
+returns the same payload contract and avoids accidental field drift.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>hiddenLayerSizes</code> - Hidden-layer widths.</li>
+<li><code>hasCycles</code> - Whether cycles were detected.</li>
+<li><code>source</code> - Descriptor provenance.</li>
+<li><code>totalNodes</code> - Node count.</li>
+<li><code>totalConnections</code> - Connection count.</li>
+</ul>
+<p>Returns: Descriptor object.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const descriptor = createArchitectureDescriptor([6, 3], false, &#39;graph-topology&#39;, 14, 25);
+// descriptor.totalNodes === 14
+</code></pre>
+<h3 id="createdirectededgelist">createDirectedEdgeList</h3><pre><code class="language-ts">createDirectedEdgeList(
+  runtimeConnections: RuntimeConnectionLike[],
+  nodeByIndex: Map&lt;number, RuntimeNodeLike&gt;,
+): { fromIndex: number; toIndex: number; }[]
+</code></pre>
+<p>Produces a validated list of enabled directed edges.</p>
+<p>Invalid references, disabled connections, and self-loops are removed so the
+remaining edge list can be consumed safely by cycle and depth algorithms.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>runtimeConnections</code> - Runtime connections.</li>
+<li><code>nodeByIndex</code> - Indexed nodes.</li>
+</ul>
+<p>Returns: Valid directed edges.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const edges = createDirectedEdgeList(runtimeConnections, nodeByIndex);
+// edges -&gt; [{ fromIndex: 0, toIndex: 3 }, ...]
+</code></pre>
+<h3 id="createnodeindexmap">createNodeIndexMap</h3><pre><code class="language-ts">createNodeIndexMap(
+  runtimeNodes: RuntimeNodeLike[],
+): Map&lt;number, RuntimeNodeLike&gt;
+</code></pre>
+<p>Builds a node lookup table keyed by stable index.</p>
+<p>Runtime objects may omit <code>index</code>; in that case the current array position is
+used as a deterministic fallback to keep downstream graph logic total.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>runtimeNodes</code> - Runtime nodes.</li>
+</ul>
+<p>Returns: Node map keyed by stable node index.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const nodeByIndex = createNodeIndexMap(nodes);
+// nodeByIndex.get(0) -&gt; first node or node with explicit index 0
+</code></pre>
+<h3 id="describearchitecture">describeArchitecture</h3><pre><code class="language-ts">describeArchitecture(
+  network: default,
+): NetworkArchitectureDescriptor
+</code></pre>
+<p>Describes network architecture for diagnostics, telemetry, and UI rendering.</p>
+<p>This function prefers factual sources over heuristics so downstream tooling
+can rely on the descriptor while still receiving useful output for partially
+specified runtime graphs.</p>
+<p>Resolution priority is intentionally explicit:</p>
+<ol>
+<li>node <code>layer</code> metadata (factual when present)</li>
+<li>graph-derived feed-forward depth layering (factual for acyclic graphs)</li>
+<li>hidden-node count fallback (heuristic inference)</li>
+</ol>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Runtime network instance.</li>
+</ul>
+<p>Returns: Stable architecture descriptor.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const descriptor = describeArchitecture(network);
+// descriptor.hiddenLayerSizes -&gt; [8, 4]
+// descriptor.source -&gt; &#39;layer-metadata&#39; | &#39;graph-topology&#39; | &#39;inferred&#39;
+</code></pre>
+<h3 id="ishiddennode">isHiddenNode</h3><pre><code class="language-ts">isHiddenNode(
+  runtimeNode: RuntimeNodeLike,
+): boolean
+</code></pre>
+<p>Identifies whether a runtime node should be treated as hidden for topology
+reconstruction and fallback inference.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>runtimeNode</code> - Candidate node.</li>
+</ul>
+<p>Returns: True when node type is hidden.</p>
+<p>Example:</p>
+<pre><code class="language-ts">if (isHiddenNode(node)) {
+  // Include in hidden-layer counting
+}
+</code></pre>
+<h3 id="ishydrateddescriptorcompatible">isHydratedDescriptorCompatible</h3><pre><code class="language-ts">isHydratedDescriptorCompatible(
+  network: default,
+  hydratedDescriptor: NetworkArchitectureDescriptor | undefined,
+): boolean
+</code></pre>
+<p>Check whether hydrated descriptor metadata still matches the current graph shape.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Runtime network instance.</li>
+<li><code>hydratedDescriptor</code> - Optional hydrated descriptor candidate.</li>
+</ul>
+<p>Returns: True when hydrated descriptor can safely stand in for the inferred result.</p>
+<h3 id="resolvearchitecturedescriptor">resolveArchitectureDescriptor</h3><pre><code class="language-ts">resolveArchitectureDescriptor(
+  network: default,
+): NetworkArchitectureDescriptor
+</code></pre>
+<p>Resolve the public architecture descriptor, preferring live graph facts and
+falling back to hydrated serialization metadata only when the live result is
+still purely inferred.</p>
+<p>This helper keeps the descriptor ownership story in one chapter: topology
+owns the live analysis while serialization can optionally hydrate a cached
+descriptor that remains safe to reuse when the runtime graph shape matches.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Runtime network instance.</li>
+</ul>
+<p>Returns: Public architecture descriptor for telemetry and UI consumers.</p>
+<h3 id="resolvecyclestateandtopoorder">resolveCycleStateAndTopoOrder</h3><pre><code class="language-ts">resolveCycleStateAndTopoOrder(
+  nodeByIndex: Map&lt;number, RuntimeNodeLike&gt;,
+  directedEdges: { fromIndex: number; toIndex: number; }[],
+): { topologicalOrder: number[]; hasCycles: boolean; }
+</code></pre>
+<p>Resolves cycle presence and, when possible, returns a topological order
+using Kahn&#39;s algorithm.</p>
+<p>A complete topological ordering implies an acyclic graph. If some nodes
+remain unprocessed, at least one cycle exists.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>nodeByIndex</code> - Indexed nodes.</li>
+<li><code>directedEdges</code> - Directed edges.</li>
+</ul>
+<p>Returns: Topological order and cycle status.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const { topologicalOrder, hasCycles } = resolveCycleStateAndTopoOrder(nodeByIndex, edges);
+</code></pre>
+<h3 id="resolvehiddencountsbydepth">resolveHiddenCountsByDepth</h3><pre><code class="language-ts">resolveHiddenCountsByDepth(
+  nodeByIndex: Map&lt;number, RuntimeNodeLike&gt;,
+  depthByNodeIndex: Map&lt;number, number&gt;,
+): Map&lt;number, number&gt;
+</code></pre>
+<p>Aggregates hidden-node counts per derived depth.</p>
+<p>This is the final transformation before emitting architecture widths:
+hidden nodes are grouped by depth and counted in insertion-safe maps.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>nodeByIndex</code> - Indexed nodes.</li>
+<li><code>depthByNodeIndex</code> - Derived depths.</li>
+</ul>
+<p>Returns: Hidden-node counts by depth.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const hiddenCountsByDepth = resolveHiddenCountsByDepth(nodeByIndex, depthByNodeIndex);
+</code></pre>
+<h3 id="resolvehiddenlayersizesfromgraphtopology">resolveHiddenLayerSizesFromGraphTopology</h3><pre><code class="language-ts">resolveHiddenLayerSizesFromGraphTopology(
+  runtimeNodes: RuntimeNodeLike[],
+  runtimeConnections: RuntimeConnectionLike[],
+): { hiddenLayerSizes: number[]; hasCycles: boolean; }
+</code></pre>
+<p>Derives hidden-layer widths from graph topology when no explicit layer
+metadata is available.</p>
+<p>The method computes a topological depth model for acyclic graphs; cyclic
+graphs are flagged and intentionally return no width inference because depth
+is not well-defined in recurrent loops.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>runtimeNodes</code> - Runtime nodes.</li>
+<li><code>runtimeConnections</code> - Runtime connections.</li>
+</ul>
+<p>Returns: Hidden-layer widths derived from acyclic topology and cycle flag.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const { hiddenLayerSizes, hasCycles } = resolveHiddenLayerSizesFromGraphTopology(nodes, edges);
+</code></pre>
+<h3 id="resolvehiddenlayersizesfromlayermetadata">resolveHiddenLayerSizesFromLayerMetadata</h3><pre><code class="language-ts">resolveHiddenLayerSizesFromLayerMetadata(
+  runtimeNodes: RuntimeNodeLike[],
+): number[]
+</code></pre>
+<p>Resolves hidden-layer widths from explicit <code>node.layer</code> metadata.</p>
+<p>This is treated as the most trustworthy source because layer assignment is
+usually produced by architecture-aware builders and does not depend on
+topological reconstruction.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>runtimeNodes</code> - Runtime nodes.</li>
+</ul>
+<p>Returns: Hidden-layer widths from explicit node.layer metadata.</p>
+<p>Example:</p>
+<pre><code class="language-ts">// Hidden nodes in layers 1, 1, and 2 -&gt; [2, 1]
+const sizes = resolveHiddenLayerSizesFromLayerMetadata(nodes);
+</code></pre>
+<h3 id="resolvenodedepthbyindex">resolveNodeDepthByIndex</h3><pre><code class="language-ts">resolveNodeDepthByIndex(
+  nodeByIndex: Map&lt;number, RuntimeNodeLike&gt;,
+  directedEdges: { fromIndex: number; toIndex: number; }[],
+  topologicalOrder: number[],
+): Map&lt;number, number&gt;
+</code></pre>
+<p>Computes node depth (feed-forward distance from inputs) for an acyclic graph.</p>
+<p>Depth assignment is parent-driven: each node depth is one plus the maximum
+resolved parent depth. Nodes with no resolved parents are skipped.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>nodeByIndex</code> - Indexed nodes.</li>
+<li><code>directedEdges</code> - Directed edges.</li>
+<li><code>topologicalOrder</code> - Acyclic topological order.</li>
+</ul>
+<p>Returns: Derived depth by node index.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const depthByNodeIndex = resolveNodeDepthByIndex(nodeByIndex, edges, topologicalOrder);
+</code></pre>
+<footer class="site-footer">Generated from source JSDoc • <a href="https://github.com/reicek/NeatapticTS">GitHub</a></footer></main><aside class="toc docs-panel docs-panel-right"><div class="page-toc"><h2>Files</h2><div class="toc-file"><a href="#architecture-network-topology-network-topology-utils-types-ts">architecture/network/topology/network.topology.utils.types.ts</a><ul><li><a href="#activationschedule">ActivationSchedule</a></li><li><a href="#activationschedulestep">ActivationScheduleStep</a></li><li><a href="#activationschedulingdiagnostics">ActivationSchedulingDiagnostics</a></li><li><a href="#in-degree-decrement">IN_DEGREE_DECREMENT</a></li><li><a href="#input-node-type">INPUT_NODE_TYPE</a></li><li><a href="#pathsearchcontext">PathSearchContext</a></li><li><a href="#topologybuildcontext">TopologyBuildContext</a></li><li><a href="#topologynetwork">TopologyNetwork</a></li><li><a href="#topologynetworkprops">TopologyNetworkProps</a></li><li><a href="#topologynode">TopologyNode</a></li><li><a href="#zero-count">ZERO_COUNT</a></li></ul></div><div class="toc-file"><a href="#architecture-network-topology-network-topology-utils-ts">architecture/network/topology/network.topology.utils.ts</a><ul><li><a href="#computetopoorder">computeTopoOrder</a></li><li><a href="#createmlp">createMLP</a></li><li><a href="#gettopologyintent">getTopologyIntent</a></li><li><a href="#hasfeedforwardtopologycontract">hasFeedForwardTopologyContract</a></li><li><a href="#haspath">hasPath</a></li><li><a href="#networktopologyutils">networkTopologyUtils</a></li><li><a href="#rebuildconnections">rebuildConnections</a></li><li><a href="#setenforceacyclic">setEnforceAcyclic</a></li><li><a href="#settopologyintent">setTopologyIntent</a></li></ul></div><div class="toc-file"><a href="#architecture-network-topology-network-topology-loop-utils-ts">architecture/network/topology/network.topology.loop.utils.ts</a><ul><li><a href="#appendactivationstep">appendActivationStep</a></li><li><a href="#appendactivationstepnode">appendActivationStepNode</a></li><li><a href="#appendtoponode">appendTopoNode</a></li><li><a href="#comparenodesbystabletiebreak">compareNodesByStableTieBreak</a></li><li><a href="#decrementnodeindegree">decrementNodeInDegree</a></li><li><a href="#getindegree">getInDegree</a></li><li><a href="#isinputnode">isInputNode</a></li><li><a href="#isqueueseednode">isQueueSeedNode</a></li><li><a href="#isselfconnection">isSelfConnection</a></li><li><a href="#processkahnqueue">processKahnQueue</a></li><li><a href="#relaxoutgoingedges">relaxOutgoingEdges</a></li><li><a href="#resolvestablenodetiebreakvalue">resolveStableNodeTieBreakValue</a></li><li><a href="#seedprocessingqueue">seedProcessingQueue</a></li><li><a href="#sortnodesbystabletiebreak">sortNodesByStableTieBreak</a></li><li><a href="#takenextqueuestep">takeNextQueueStep</a></li></ul></div><div class="toc-file"><a href="#architecture-network-topology-network-topology-path-utils-ts">architecture/network/topology/network.topology.path.utils.ts</a><ul><li><a href="#createpathsearchcontext">createPathSearchContext</a></li><li><a href="#hasvisitednode">hasVisitedNode</a></li><li><a href="#issamenode">isSameNode</a></li><li><a href="#isselfconnection">isSelfConnection</a></li><li><a href="#markvisited">markVisited</a></li><li><a href="#pushoutgoingtargets">pushOutgoingTargets</a></li><li><a href="#takenextstacknode">takeNextStackNode</a></li><li><a href="#traversepathsearch">traversePathSearch</a></li></ul></div><div class="toc-file"><a href="#architecture-network-topology-network-topology-setup-utils-ts">architecture/network/topology/network.topology.setup.utils.ts</a><ul><li><a href="#applyincomingedgecounts">applyIncomingEdgeCounts</a></li><li><a href="#astopologyprops">asTopologyProps</a></li><li><a href="#buildrecurrentschedulesteps">buildRecurrentScheduleSteps</a></li><li><a href="#clearcachedtopoorder">clearCachedTopoOrder</a></li><li><a href="#collectstronglyconnectedcomponents">collectStronglyConnectedComponents</a></li><li><a href="#createcomponentindexbynode">createComponentIndexByNode</a></li><li><a href="#createcondensationcontext">createCondensationContext</a></li><li><a href="#createtopologybuildcontext">createTopologyBuildContext</a></li><li><a href="#finalizerecurrentschedule">finalizeRecurrentSchedule</a></li><li><a href="#finalizetopoorder">finalizeTopoOrder</a></li><li><a href="#incrementnodeindegree">incrementNodeInDegree</a></li><li><a href="#initializeallnodeindegreecounts">initializeAllNodeInDegreeCounts</a></li><li><a href="#isrecurrentcomponent">isRecurrentComponent</a></li><li><a href="#isselfconnection">isSelfConnection</a></li><li><a href="#resolvecompiledschedulingdiagnostics">resolveCompiledSchedulingDiagnostics</a></li><li><a href="#resolvecomponenttiebreakvalue">resolveComponentTieBreakValue</a></li><li><a href="#resolvecyclenodeids">resolveCycleNodeIds</a></li><li><a href="#resolvefinalactivationschedule">resolveFinalActivationSchedule</a></li><li><a href="#resolvefinalorder">resolveFinalOrder</a></li><li><a href="#resolvefinalschedulingdiagnostics">resolveFinalSchedulingDiagnostics</a></li><li><a href="#resolveoutgoingneighbors">resolveOutgoingNeighbors</a></li><li><a href="#resolverecurrentactivationschedule">resolveRecurrentActivationSchedule</a></li><li><a href="#seedcondensationqueue">seedCondensationQueue</a></li><li><a href="#shouldbuildrecurrentschedule">shouldBuildRecurrentSchedule</a></li><li><a href="#sortcomponentindexesbytiebreak">sortComponentIndexesByTieBreak</a></li></ul></div><div class="toc-file"><a href="#architecture-network-topology-network-topology-factory-utils-ts">architecture/network/topology/network.topology.factory.utils.ts</a><ul><li><a href="#addoutgoingconnectionstoset">addOutgoingConnectionsToSet</a></li><li><a href="#assignnetworknodes">assignNetworkNodes</a></li><li><a href="#collectuniqueoutgoingconnections">collectUniqueOutgoingConnections</a></li><li><a href="#connectlayerpair">connectLayerPair</a></li><li><a href="#connectmlplayers">connectMlpLayers</a></li><li><a href="#convertconnectionsettoarray">convertConnectionSetToArray</a></li><li><a href="#createhiddenlayers">createHiddenLayers</a></li><li><a href="#createmlp">createMLP</a></li><li><a href="#createmlpnodelayers">createMlpNodeLayers</a></li><li><a href="#createnodesoftype">createNodesOfType</a></li><li><a href="#createorderednodelist">createOrderedNodeList</a></li><li><a href="#flattennodelayers">flattenNodeLayers</a></li><li><a href="#instantiatenetwork">instantiateNetwork</a></li><li><a href="#marktopologydirty">markTopologyDirty</a></li><li><a href="#rebuildconnections">rebuildConnections</a></li></ul></div><div class="toc-file"><a href="#architecture-network-topology-network-topology-contract-utils-ts">architecture/network/topology/network.topology.contract.utils.ts</a><ul><li><a href="#feedforwardtopologycontractcarrier">FeedForwardTopologyContractCarrier</a></li><li><a href="#gettopologyintent">getTopologyIntent</a></li><li><a href="#hasfeedforwardtopologycontract">hasFeedForwardTopologyContract</a></li><li><a href="#setenforceacyclic">setEnforceAcyclic</a></li><li><a href="#settopologyintent">setTopologyIntent</a></li></ul></div><div class="toc-file"><a href="#architecture-network-topology-network-topology-architecture-utils-ts">architecture/network/topology/network.topology.architecture.utils.ts</a><ul><li><a href="#createarchitecturedescriptor">createArchitectureDescriptor</a></li><li><a href="#createdirectededgelist">createDirectedEdgeList</a></li><li><a href="#createnodeindexmap">createNodeIndexMap</a></li><li><a href="#describearchitecture">describeArchitecture</a></li><li><a href="#ishiddennode">isHiddenNode</a></li><li><a href="#ishydrateddescriptorcompatible">isHydratedDescriptorCompatible</a></li><li><a href="#resolvearchitecturedescriptor">resolveArchitectureDescriptor</a></li><li><a href="#resolvecyclestateandtopoorder">resolveCycleStateAndTopoOrder</a></li><li><a href="#resolvehiddencountsbydepth">resolveHiddenCountsByDepth</a></li><li><a href="#resolvehiddenlayersizesfromgraphtopology">resolveHiddenLayerSizesFromGraphTopology</a></li><li><a href="#resolvehiddenlayersizesfromlayermetadata">resolveHiddenLayerSizesFromLayerMetadata</a></li><li><a href="#resolvenodedepthbyindex">resolveNodeDepthByIndex</a></li></ul></div></div></aside></div><script>
+const docsPanels = Array.from(document.querySelectorAll('.docs-panel'));
+
+function setActiveDocsPanel(nextPanel) {
+  docsPanels.forEach((panel) => {
+    panel.classList.toggle('is-active', panel === nextPanel);
+  });
+}
+
+document.addEventListener('click', (event) => {
+  const target = event.target;
+  if (!(target instanceof Element)) {
+    setActiveDocsPanel(null);
+    return;
+  }
+
+  const activePanel = target.closest('.docs-panel');
+  setActiveDocsPanel(activePanel instanceof HTMLElement ? activePanel : null);
+});
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') {
+    setActiveDocsPanel(null);
+  }
+});
+</script></body></html>

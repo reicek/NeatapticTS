@@ -144,7 +144,6 @@ Select this flow when:
 
 | Tier | Specialist                           |
 | ---- | ------------------------------------ |
-| 2    | `helping-gap-resolution-coordinator` |
 | 3    | `Skill Inventory Auditor`            |
 | 3    | `Plan Scout`                         |
 
@@ -191,10 +190,8 @@ Select this flow when:
 
 | Tier | Specialist                              |
 | ---- | --------------------------------------- |
-| 2    | `helping-gap-resolution-coordinator`    |
 | 2    | `helping-agent-maintenance-coordinator` |
 | 3    | `Plan Scout`                            |
-| 3    | `failure-triage-specialist`             |
 
 #### Gate Contracts
 
@@ -238,9 +235,7 @@ Select this flow when:
 
 | Tier | Specialist                              |
 | ---- | --------------------------------------- |
-| 2    | `helping-gap-resolution-coordinator`    |
 | 2    | `helping-agent-maintenance-coordinator` |
-| 3    | `failure-triage-specialist`             |
 
 #### Gate Contracts
 
@@ -288,7 +283,6 @@ Select this flow when:
 | Tier | Specialist                           |
 | ---- | ------------------------------------ |
 | 2    | `planning-risk-coordinator`          |
-| 2    | `planning-test-strategy-coordinator` |
 | 4    | `acceptance-criteria-writer`         |
 | 3    | `Plan Scout`                         |
 
@@ -335,8 +329,6 @@ Select this flow when:
 | ---- | ------------------------------------ |
 | 3    | `Plan Scout`                         |
 | 2    | `planning-risk-coordinator`          |
-| 2    | `helping-gap-resolution-coordinator` |
-| 3    | `research-synthesis-specialist`      |
 
 #### Gate Contracts
 
@@ -381,7 +373,6 @@ Select this flow when:
 | ---- | ------------------------------------ |
 | 3    | `Plan Scout`                         |
 | 2    | `planning-risk-coordinator`          |
-| 2    | `planning-test-strategy-coordinator` |
 | 3    | `Plan Registration Auditor`          |
 
 #### Gate Contracts
@@ -471,7 +462,6 @@ Select this flow when:
 | Tier | Specialist                           |
 | ---- | ------------------------------------ |
 | 3    | `Plan Scout`                         |
-| 2    | `helping-gap-resolution-coordinator` |
 
 #### Gate Contracts
 
@@ -701,7 +691,6 @@ Select this flow when:
 | ---- | ------------------------------------ |
 | 4    | `unit-test-writer`                   |
 | 4    | `acceptance-criteria-writer`         |
-| 2    | `planning-test-strategy-coordinator` |
 
 #### Gate Contracts
 
@@ -830,7 +819,6 @@ Select this flow when:
 | Tier | Specialist                  |
 | ---- | --------------------------- |
 | 4    | `unit-test-writer`          |
-| 3    | `failure-triage-specialist` |
 
 #### Gate Contracts
 
@@ -1017,7 +1005,6 @@ Select this flow when:
 | Tier | Specialist                     |
 | ---- | ------------------------------ |
 | 3    | `Coverage Guard`               |
-| 3    | `failure-triage-specialist`    |
 | 3    | `implementation-pattern-scout` |
 | 2    | `implementation-executor`      |
 
@@ -1067,7 +1054,6 @@ Select this flow when:
 
 | Tier | Specialist                              |
 | ---- | --------------------------------------- |
-| 4    | `unit-test-runner`                      |
 | 2    | `green-test-failure-triage-coordinator` |
 
 #### Gate Contracts
@@ -1153,10 +1139,11 @@ Select this flow when:
 
 #### Specialist Delegations
 
-| Tier | Specialist                  |
-| ---- | --------------------------- |
-| 4    | `unit-test-runner`          |
-| 3    | `failure-triage-specialist` |
+| Tier | Specialist                      |
+| ---- | ------------------------------- |
+| 3    | `performance-trace-specialist`  |
+| 3    | `browser-ui-specialist`         |
+| 3    | `browser-memory-specialist`     |
 
 #### Gate Contracts
 
@@ -1198,9 +1185,7 @@ Select this flow when:
 
 | Tier | Specialist                              |
 | ---- | --------------------------------------- |
-| 3    | `failure-triage-specialist`             |
 | 2    | `green-test-failure-triage-coordinator` |
-| 3    | `code-quality-auditor`                  |
 | 3    | `test-coverage-analyst`                 |
 
 #### Gate Contracts
@@ -1482,7 +1467,6 @@ Select this flow when:
 | Tier | Specialist                           |
 | ---- | ------------------------------------ |
 | 4    | `learning-event-capturer`            |
-| 2    | `helping-gap-resolution-coordinator` |
 
 #### Gate Contracts
 

@@ -163,7 +163,7 @@ High certainty (≥0.85): act. Medium (0.5–0.85): delegate to a specialist. Lo
 
 ### §5 Skill & Companion Routing (Summary)
 
-Use the canonical routing table. For new or unassigned skills, call `helping-gap-resolution-coordinator`. Full table and gap resolution live in `routing-optimization-policy` and `agent-frontmatter-standards` skills.
+Use the canonical routing table. For new or unassigned skills, call `00-helping`. Full table and gap resolution live in `routing-optimization-policy` and `agent-frontmatter-standards` skills.
 
 ### §6 Workflow Protocols (Summary)
 
@@ -174,7 +174,7 @@ Use the canonical routing table. For new or unassigned skills, call `helping-gap
 
 ### §7 Code Standards (Summary)
 
-ES2023-first syntax, folder-based module architecture, JSDoc on exports, named constants, single-expect tests. Full standards and validation checklist live in the `implementation-standards` skill.
+ES2023-first syntax, folder-based module architecture, JSDoc on exports, named constants, single-expect tests. Complexity reduction follows the SOLID-Aligned pattern: orchestrators (complexity ≤ 10) call executor helpers (complexity ≤ 5) in `{category}.utils.ts` files (split if > 800 lines). Full standards and validation checklist live in the `implementation-standards` skill.
 
 ### §8 Documentation Standards (Summary)
 

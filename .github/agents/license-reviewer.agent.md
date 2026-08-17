@@ -13,6 +13,8 @@ tools:
     neataptic-workflow-mcp/*,
   ]
 user-invocable: false
+disable-model-invocation: false
+target: vscode
 agents: []
 skills: ['license-attribution-audit']
 ---
@@ -84,7 +86,7 @@ Run `neataptic-gate-mcp:run_gate_check --gate=cortex-index` before any codebase 
 
 If a source has an unknown license, record it as a blocker and return PARTIAL. Do not approve a change relying on an unverified license. Only escalate to the parent Tier 1 agent when a genuine technical limit blocks progress. No concessions.
 
-## Output format
+## Output Format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1
@@ -102,9 +104,6 @@ ACTIONS_TAKEN:
 - <action or NONE>
 VALIDATION_EVIDENCE:
 - <command/result or NOT RUN>
-VERDICT: APPROVE | REQUEST_CHANGES
-OBSERVATIONS:
-- source: <name>, license: <spdx or UNKNOWN>, severity: <high|medium|low>, confidence: <0-1>, detail: <concise finding>
 HANDOFF: <next step, reroute, or NONE>
 BLOCKERS:
 - <blocker or NONE>

@@ -208,6 +208,136 @@ interface NeatControllerForHelpers {
  * neat.addGenome(child, [parent._id]);
  * ```
  */
+/**
+ * Deep-clone a parent genome, preferring a direct `clone()` call and falling
+ * back to a JSON round-trip when no `clone()` method is available.
+ *
+ * @param parentGenome - Parent genome to clone.
+ * @returns A deep copy of the parent genome.
+ */
+async function cloneParentGenome(
+  parentGenome: GenomeWithMetadata,
+): Promise<GenomeWithMetadata> {
+  if (parentGenome.clone) {
+    return parentGenome.clone();
+  }
+  const { default: NetworkClass } =
+    await import('../../architecture/network/network');
+  return NetworkClass.fromJSON(
+    parentGenome.toJSON?.() ?? {},
+  ) as unknown as GenomeWithMetadata;
+}
+
+/**
+ * Reset evaluation state and assign controller-owned identity metadata to a
+ * freshly cloned offspring.
+ *
+ * @param clone - The cloned genome to normalize.
+ * @param internal - NEAT controller internals providing identity and options.
+ * @param parentGenome - The parent genome for lineage depth tracking.
+ */
+function assignChildMetadata(
+  clone: GenomeWithMetadata,
+  internal: NeatControllerForHelpers,
+  parentGenome: GenomeWithMetadata,
+): void {
+  clone.score = undefined;
+  clone._reenableProb = internal.options.reenableProb;
+  clone._id = internal._nextGenomeId++;
+  clone._parents = [parentGenome._id ?? 0];
+  clone._depth = (parentGenome._depth ?? 0) + 1;
+}
+
+/**
+ * Enforce structural invariants (minimum hidden nodes, no dead ends) on a
+ * cloned offspring before mutation passes begin.
+ *
+ * @param internal - NEAT controller internals exposing repair hooks.
+ * @param clone - The cloned genome to repair.
+ */
+function applyStructuralInvariants(
+  internal: NeatControllerForHelpers,
+  clone: GenomeWithMetadata,
+): void {
+  internal.ensureMinHiddenNodes?.(clone);
+  internal.ensureNoDeadEnds?.(clone);
+}
+
+/**
+ * Select a single mutation method for a cloned offspring, resolving array
+ * candidates to one via the controller's RNG.
+ *
+ * @param internal - NEAT controller internals providing mutation selection and RNG.
+ * @param clone - The genome being mutated.
+ * @returns A single mutation method, or `undefined` when none is available.
+ */
+async function selectSingleMutationMethod(
+  internal: NeatControllerForHelpers,
+  clone: GenomeWithMetadata,
+): Promise<MutationMethod | undefined> {
+  const selected = await internal.selectMutationMethod?.(clone, false);
+  if (Array.isArray(selected)) {
+    const candidateMutations = selected;
+    return candidateMutations[
+      Math.floor(internal._getRNG()() * candidateMutations.length)
+    ];
+  }
+  return selected;
+}
+
+/**
+ * Execute a single mutation operator on a clone when the operator carries a
+ * valid name (convention).
+ *
+ * @param clone - The genome to mutate.
+ * @param selectedMutationMethod - The mutation operator to apply (if valid).
+ */
+function executeMutation(
+  clone: GenomeWithMetadata,
+  selectedMutationMethod: MutationMethod | undefined,
+): void {
+  if (selectedMutationMethod && selectedMutationMethod.name) {
+    clone.mutate?.(selectedMutationMethod);
+  }
+}
+
+/**
+ * Apply the requested number of mutation passes to a cloned offspring,
+ * silently ignoring individual mutation failures to keep evolution moving.
+ *
+ * @param internal - NEAT controller internals providing mutation selection and RNG.
+ * @param clone - The genome to mutate.
+ * @param mutateCount - Number of sequential mutation passes to attempt.
+ */
+async function applyMutationPasses(
+  internal: NeatControllerForHelpers,
+  clone: GenomeWithMetadata,
+  mutateCount: number,
+): Promise<void> {
+  for (let mutationIndex = 0; mutationIndex < mutateCount; mutationIndex++) {
+    try {
+      const selectedMutationMethod = await selectSingleMutationMethod(
+        internal,
+        clone,
+      );
+      executeMutation(clone, selectedMutationMethod);
+    } catch {
+      // Intentionally ignore individual mutation failures to keep evolution moving.
+    }
+  }
+}
+
+/**
+ * Spawn a child genome from a parent by deep-cloning the parent, assigning
+ * fresh metadata and lineage, applying structural invariants, and running
+ * the configured number of mutation passes. Individual mutation failures
+ * are silently ignored to keep the evolutionary process moving.
+ *
+ * @param this - Neat-like controller with internal mutation and innovation state.
+ * @param parentGenome - The parent genome to clone and mutate.
+ * @param mutateCount - Number of mutation passes to apply (default 1).
+ * @returns A promise resolving to the spawned child genome.
+ */
 export async function spawnFromParent(
   this: NeatLike,
   parentGenome: GenomeWithMetadata,
@@ -216,54 +346,16 @@ export async function spawnFromParent(
   const internal = this as unknown as NeatControllerForHelpers;
 
   // Step 1: Deep clone the parent (prefer direct clone() for performance).
-  let clone: GenomeWithMetadata;
-  if (parentGenome.clone) {
-    clone = parentGenome.clone();
-  } else {
-    const { default: NetworkClass } =
-      await import('../../architecture/network/network');
-    clone = NetworkClass.fromJSON(
-      parentGenome.toJSON?.() ?? {},
-    ) as unknown as GenomeWithMetadata;
-  }
+  const clone = await cloneParentGenome(parentGenome);
 
-  // Step 2: Reset evaluation state for the fresh offspring.
-  clone.score = undefined;
-  clone._reenableProb = internal.options.reenableProb;
-  clone._id = internal._nextGenomeId++;
-
-  // Step 3: Record minimal lineage (single direct parent) and generation depth.
-  clone._parents = [parentGenome._id ?? 0];
-  clone._depth = (parentGenome._depth ?? 0) + 1;
+  // Step 2-3: Reset evaluation state, assign identity, and record lineage.
+  assignChildMetadata(clone, internal, parentGenome);
 
   // Step 4: Enforce structural invariants (minimum hidden nodes, no dead ends).
-  internal.ensureMinHiddenNodes?.(clone);
-  internal.ensureNoDeadEnds?.(clone);
+  applyStructuralInvariants(internal, clone);
 
   // Step 5: Apply the requested number of mutation passes.
-  for (let mutationIndex = 0; mutationIndex < mutateCount; mutationIndex++) {
-    try {
-      // Select a mutation operator; may return a single method or an array of candidates.
-      let selectedMutationMethod = await internal.selectMutationMethod?.(
-        clone,
-        false,
-      );
-      if (Array.isArray(selectedMutationMethod)) {
-        const candidateMutations = selectedMutationMethod;
-        selectedMutationMethod =
-          candidateMutations[
-            Math.floor(internal._getRNG()() * candidateMutations.length)
-          ];
-      }
-
-      // Execute mutation if a valid operator with a name (convention) is present.
-      if (selectedMutationMethod && selectedMutationMethod.name) {
-        clone.mutate?.(selectedMutationMethod);
-      }
-    } catch {
-      // Intentionally ignore individual mutation failures to keep evolution moving.
-    }
-  }
+  await applyMutationPasses(internal, clone, mutateCount);
 
   // Step 6: Invalidate cached compatibility / distance metrics tied to the genome.
   internal._invalidateGenomeCaches?.(clone);

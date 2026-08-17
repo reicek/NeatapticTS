@@ -1,0 +1,546 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>architecture/network/training – NeatapticTS Docs</title><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;600;700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../../assets/theme.css"><script defer src="../../../assets/theme-tooltips.js"></script></head><body class="">
+<header class="topbar"><div class="inner topbar-inner-connected"><div class="brand"><a class="brand-link" href="../../../index.html"><span class="brand-title-lockup" aria-hidden="true"><span class="brand-title-row brand-title-row-top"><span class="brand-title-corner">╔══</span><span class="brand-label">NeatapticTS</span><span class="brand-title-corner">══╗</span></span></span><span class="brand-title-accessible">NeatapticTS</span></a></div><nav class="main-nav"><a href="../../../index.html">Home</a><a href="../../../index.html" class="active">Docs</a><a href="../../../examples/index.html">Examples</a><a href="https://github.com/reicek/NeatapticTS" target="_blank" rel="noopener">GitHub</a></nav></div></header>
+<div class="layout"><aside class="sidebar docs-panel docs-panel-left"><ul class="sidebar-sections"><li class="group group-priority"><div class="g-head">Start With Examples</div><p class="group-copy">The demos are the fastest way to learn the library in the order a first-time reader can actually absorb.</p><div class="nav-priority-links"><ul class="pipe-nav-list pipe-nav-list-priority"><li class="pipe-nav-item nav-priority-link"><a href="../../../examples/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Examples overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul><ul class="pipe-nav-list pipe-nav-list-compact"><li class="pipe-nav-item"><a href="../../../examples/flappy_bird/docs/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Flappy Bird</span></a></li><li class="pipe-nav-item"><a href="../../../examples/asciiMaze/docs/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">ASCII Maze</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></div></li><ul class="pipe-nav-list pipe-nav-list-root"><li class="pipe-nav-item"><a href="../../../index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul><li class="group"><div class="g-head">Architecture</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-item"><a href="../../activationArrayPool/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">ActivationArrayPool</span></a></li><li class="pipe-nav-item"><a href="../../architect/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Architect</span></a></li><li class="pipe-nav-item"><a href="../../connection/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Connection</span></a></li><li class="pipe-nav-item"><a href="../../group/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Group</span></a></li><li class="pipe-nav-item"><a href="../../layer/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Layer</span></a></li><li class="pipe-nav-item"><a href="../index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network</span></a></li><li class="pipe-nav-item"><a href="../activate/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Activate</span></a></li><li class="pipe-nav-item"><a href="../bootstrap/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Bootstrap</span></a></li><li class="pipe-nav-item"><a href="../connect/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Connect</span></a></li><li class="pipe-nav-item"><a href="../construct/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Construct</span></a></li><li class="pipe-nav-item"><a href="../deterministic/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Deterministic</span></a></li><li class="pipe-nav-item"><a href="../evaluation-pack/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Evaluation Pack</span></a></li><li class="pipe-nav-item"><a href="../evolve/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Evolve</span></a></li><li class="pipe-nav-item"><a href="../gating/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Gating</span></a></li><li class="pipe-nav-item"><a href="../genetic/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Genetic</span></a></li><li class="pipe-nav-item"><a href="../gpu/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Gpu</span></a></li><li class="pipe-nav-item"><a href="../gpu/__mocks__/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Gpu / Mocks</span></a></li><li class="pipe-nav-item"><a href="../mutate/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Mutate</span></a></li><li class="pipe-nav-item"><a href="../onnx/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Onnx</span></a></li><li class="pipe-nav-item"><a href="../onnx/export/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Onnx / Export</span></a></li><li class="pipe-nav-item"><a href="../onnx/export/layers/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Export / Layers</span></a></li><li class="pipe-nav-item"><a href="../onnx/import/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Onnx / Import</span></a></li><li class="pipe-nav-item"><a href="../onnx/parity/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Onnx / Parity</span></a></li><li class="pipe-nav-item"><a href="../onnx/schema/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Onnx / Schema</span></a></li><li class="pipe-nav-item"><a href="../onnx/validate/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Onnx / Validate</span></a></li><li class="pipe-nav-item"><a href="../prune/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Prune</span></a></li><li class="pipe-nav-item"><a href="../remove/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Remove</span></a></li><li class="pipe-nav-item"><a href="../runtime/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Runtime</span></a></li><li class="pipe-nav-item"><a href="../serialize/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Serialize</span></a></li><li class="pipe-nav-item"><a href="../slab/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Slab</span></a></li><li class="pipe-nav-item"><a href="../standalone/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Standalone</span></a></li><li class="pipe-nav-item"><a href="../stats/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Stats</span></a></li><li class="pipe-nav-item"><a href="../topology/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Topology</span></a></li><li class="pipe-nav-item current"><a href="./index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Training</span></a></li><li class="pipe-nav-item"><a href="../visualization/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Visualization</span></a></li><li class="pipe-nav-item"><a href="../window/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Window</span></a></li><li class="pipe-nav-item"><a href="../worker-payload/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Worker Payload</span></a></li><li class="pipe-nav-item"><a href="../../node/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Node</span></a></li><li class="pipe-nav-item"><a href="../../nodePool/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">NodePool</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Methods</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../methods/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-item"><a href="../../../methods/activation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Activation</span></a></li><li class="pipe-nav-item"><a href="../../../methods/connection/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Connection</span></a></li><li class="pipe-nav-item"><a href="../../../methods/cost/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Cost</span></a></li><li class="pipe-nav-item"><a href="../../../methods/crossover/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Crossover</span></a></li><li class="pipe-nav-item"><a href="../../../methods/gating/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Gating</span></a></li><li class="pipe-nav-item"><a href="../../../methods/mutation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation</span></a></li><li class="pipe-nav-item"><a href="../../../methods/rate/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Rate</span></a></li><li class="pipe-nav-item"><a href="../../../methods/selection/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Selection</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Neat</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../neat/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-item"><a href="../../../neat/adaptive/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Adaptive</span></a></li><li class="pipe-nav-item"><a href="../../../neat/adaptive/acceptance/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Adaptive / Acceptance</span></a></li><li class="pipe-nav-item"><a href="../../../neat/adaptive/complexity/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Adaptive / Complexity</span></a></li><li class="pipe-nav-item"><a href="../../../neat/adaptive/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Adaptive / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/adaptive/lineage/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Adaptive / Lineage</span></a></li><li class="pipe-nav-item"><a href="../../../neat/adaptive/mutation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Adaptive / Mutation</span></a></li><li class="pipe-nav-item"><a href="../../../neat/cache/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Cache</span></a></li><li class="pipe-nav-item"><a href="../../../neat/cache/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Cache / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/compat/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Compat</span></a></li><li class="pipe-nav-item"><a href="../../../neat/compat/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Compat / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/diversity/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Diversity</span></a></li><li class="pipe-nav-item"><a href="../../../neat/diversity/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Diversity / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/auto-distance/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Auto Distance</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/entropy-compat/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Entropy Compat</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/entropy-sharing/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Entropy Sharing</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/fitness/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Fitness</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/novelty/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Novelty</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/objectives/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Objectives</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/shared/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Shared</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/speciation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Speciation</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/adaptive/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Adaptive</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/objectives/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Objectives</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/offspring/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Offspring</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/population/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Population</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/runtime/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Runtime</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/speciation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Speciation</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/telemetry/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Telemetry</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/warnings/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Warnings</span></a></li><li class="pipe-nav-item"><a href="../../../neat/export/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Export</span></a></li><li class="pipe-nav-item"><a href="../../../neat/genome/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Genome</span></a></li><li class="pipe-nav-item"><a href="../../../neat/genome/heredity/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Genome / Heredity</span></a></li><li class="pipe-nav-item"><a href="../../../neat/harness/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Harness</span></a></li><li class="pipe-nav-item"><a href="../../../neat/helpers/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Helpers</span></a></li><li class="pipe-nav-item"><a href="../../../neat/hybrid/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Hybrid</span></a></li><li class="pipe-nav-item"><a href="../../../neat/init/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Init</span></a></li><li class="pipe-nav-item"><a href="../../../neat/innovation-tracker/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Innovation Tracker</span></a></li><li class="pipe-nav-item"><a href="../../../neat/lineage/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Lineage</span></a></li><li class="pipe-nav-item"><a href="../../../neat/lineage/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Lineage / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/maintenance/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Maintenance</span></a></li><li class="pipe-nav-item"><a href="../../../neat/maintenance/facade/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Maintenance / Facade</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/archive/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Archive</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/category/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Category</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/crowding/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Crowding</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/dominance/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Dominance</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/fronts/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Fronts</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/metrics/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Metrics</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/objectives/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Objectives</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/shared/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Shared</span></a></li><li class="pipe-nav-item"><a href="../../../neat/mutation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation</span></a></li><li class="pipe-nav-item"><a href="../../../neat/mutation/add-conn/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation / Add Conn</span></a></li><li class="pipe-nav-item"><a href="../../../neat/mutation/add-node/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation / Add Node</span></a></li><li class="pipe-nav-item"><a href="../../../neat/mutation/flow/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation / Flow</span></a></li><li class="pipe-nav-item"><a href="../../../neat/mutation/repair/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation / Repair</span></a></li><li class="pipe-nav-item"><a href="../../../neat/mutation/select/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation / Select</span></a></li><li class="pipe-nav-item"><a href="../../../neat/mutation/shared/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation / Shared</span></a></li><li class="pipe-nav-item"><a href="../../../neat/nge-adult/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Adult</span></a></li><li class="pipe-nav-item"><a href="../../../neat/nge-assimilation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Assimilation</span></a></li><li class="pipe-nav-item"><a href="../../../neat/nge-collective/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Collective</span></a></li><li class="pipe-nav-item"><a href="../../../neat/nge-dna/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Dna</span></a></li><li class="pipe-nav-item"><a href="../../../neat/nge-evolution/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Evolution</span></a></li><li class="pipe-nav-item"><a href="../../../neat/nge-juvenile/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Juvenile</span></a></li><li class="pipe-nav-item"><a href="../../../neat/nge-main-agent/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Main Agent</span></a></li><li class="pipe-nav-item"><a href="../../../neat/objectives/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Objectives</span></a></li><li class="pipe-nav-item"><a href="../../../neat/objectives/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Objectives / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/pruning/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Pruning</span></a></li><li class="pipe-nav-item"><a href="../../../neat/pruning/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Pruning / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/pruning/facade/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Pruning / Facade</span></a></li><li class="pipe-nav-item"><a href="../../../neat/rng/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Rng</span></a></li><li class="pipe-nav-item"><a href="../../../neat/rng/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Rng / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/rng/facade/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Rng / Facade</span></a></li><li class="pipe-nav-item"><a href="../../../neat/selection/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Selection</span></a></li><li class="pipe-nav-item"><a href="../../../neat/selection/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Selection / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/selection/facade/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Selection / Facade</span></a></li><li class="pipe-nav-item"><a href="../../../neat/shared/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Shared</span></a></li><li class="pipe-nav-item"><a href="../../../neat/speciation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Speciation</span></a></li><li class="pipe-nav-item"><a href="../../../neat/speciation/assignment/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Speciation / Assignment</span></a></li><li class="pipe-nav-item"><a href="../../../neat/speciation/history/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Speciation / History</span></a></li><li class="pipe-nav-item"><a href="../../../neat/speciation/shared/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Speciation / Shared</span></a></li><li class="pipe-nav-item"><a href="../../../neat/speciation/sharing/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Speciation / Sharing</span></a></li><li class="pipe-nav-item"><a href="../../../neat/speciation/threshold/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Speciation / Threshold</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Species</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Species / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/core/augmentation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Core / Augmentation</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/core/shared/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Core / Shared</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/history/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Species / History</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/history/context/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">History / Context</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/history/read/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">History / Read</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/stats/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Species / Stats</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/accessors/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Accessors</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/exports/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Exports</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Facade</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/archive/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Archive</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/buffer/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Buffer</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/lineage/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Lineage</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/novelty/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Novelty</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/objectives/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Objectives</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/operator-stats/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Operator Stats</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/runtime/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Runtime</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/species/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Species</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/metrics/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Metrics</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/recorder/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Recorder</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/runtime/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Runtime</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/types/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Types</span></a></li><li class="pipe-nav-item"><a href="../../../neat/topology-intent/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Topology Intent</span></a></li><li class="pipe-nav-item"><a href="../../../neat/validate/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Validate</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Multithreading</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../multithreading/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-item"><a href="../../../multithreading/workers/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Workers</span></a></li><li class="pipe-nav-item"><a href="../../../multithreading/workers/browser/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Workers / Browser</span></a></li><li class="pipe-nav-item"><a href="../../../multithreading/workers/node/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Workers / Node</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-footer"></span><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Acceleration</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../acceleration/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Browser Tests</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../browser-tests/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Env</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../env/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-item"><a href="../../../env/browser/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Browser</span></a></li><li class="pipe-nav-item"><a href="../../../env/node/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Node</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Memory</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../memory/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Performance</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../performance/nge/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Research</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../research/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Src</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../src/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Utils</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../utils/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Visualization</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../visualization/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-item"><a href="../../../visualization/network-view/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network View</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li></ul></aside><main class="content docs-panel docs-panel-center"><h1 id="architecture-network-training">architecture/network/training</h1><p>Training pipeline utilities (migrated from legacy architecture/network.train.ts).</p>
+<p>Provides:</p>
+<ul>
+<li>Gradient clipping (global / layerwise; norm / percentile variants).</li>
+<li>Mini &amp; micro-batch gradient accumulation.</li>
+<li>Optimizer step dispatch (SGD + adaptive optimizers + lookahead wrapper).</li>
+<li>Simple mixed precision dynamic loss scaling (overflow detection heuristic).</li>
+<li>Multiple moving-average smoothing strategies for error monitoring (SMA, EMA, adaptive EMA,
+median, gaussian, trimmed mean, WMA) plus separate plateau averaging.</li>
+<li>Early stopping, schedule hooks, pruning hooks, and checkpoint callbacks.</li>
+</ul>
+<p>Notes:</p>
+<ul>
+<li>This module intentionally keeps imperative style for clarity/perf (avoids heap churn in hot loops).</li>
+<li>Refactor changes here are documentation &amp; naming only; numerical behavior preserved.</li>
+</ul>
+<h2 id="architecture-network-training-network-training-utils-ts">architecture/network/training/network.training.utils.ts</h2><h3 id="traininginternals">__trainingInternals</h3><p>Test-only internal helper bundle.</p>
+<p>This is exported so unit tests can cover edge-cases in the smoothing logic without
+running full end-to-end training loops.</p>
+<p>Important: this is <strong>not</strong> considered stable public API. It may change between releases.</p>
+<h3 id="applygradientclippingimpl">applyGradientClippingImpl</h3><pre><code class="language-ts">applyGradientClippingImpl(
+  net: default,
+  cfg: GradientClipRuntimeConfig,
+): void
+</code></pre>
+<p>Apply gradient clipping to a network using a normalized runtime configuration.</p>
+<p>This is a small wrapper that forwards to the concrete implementation used by training.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>net</code> - Network instance to update.</li>
+<li><code>cfg</code> - Normalized clipping settings.</li>
+</ul>
+<h3 id="checkpointconfig">CheckpointConfig</h3><p>Checkpoint callback configuration.</p>
+<p>Training can periodically call <code>save(...)</code> with a serialized network snapshot.
+You can persist these snapshots to disk, upload them, or keep them in-memory.</p>
+<h3 id="clearstate">clearState</h3><pre><code class="language-ts">clearState(): void
+</code></pre>
+<p>Clear all accumulated per-node runtime traces and saved activation states.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>this</code> - Bound network instance.</li>
+</ul>
+<h3 id="costfunction">CostFunction</h3><pre><code class="language-ts">CostFunction(
+  target: number[],
+  output: number[],
+): number
+</code></pre>
+<p>Cost / loss function used during supervised training.</p>
+<p>A cost function compares an expected <code>target</code> vector with the network&#39;s produced <code>output</code>
+vector, returning a scalar error where <strong>lower is better</strong>.</p>
+<p>Design notes:</p>
+<ul>
+<li>This is called frequently (often once per training sample), so implementations should be
+<strong>pure</strong> and <strong>allocation-light</strong>.</li>
+<li>Most built-in training loops assume the returned value is non-negative.</li>
+</ul>
+<p>Example (mean squared error):</p>
+<pre><code class="language-ts">export const mse: CostFunction = (target, output) =&gt; {
+  const sum = target.reduce((acc, targetValue, index) =&gt; {
+    const diff = targetValue - (output[index] ?? 0);
+    return acc + diff * diff;
+  }, 0);
+  return sum / Math.max(1, target.length);
+};
+</code></pre>
+<h3 id="gradientclipconfig">GradientClipConfig</h3><p>Gradient clipping configuration.</p>
+<p>Clipping prevents rare large gradients from causing unstable weight updates.
+It is most useful for recurrent networks and noisy datasets.</p>
+<p>Conceptual modes:</p>
+<ul>
+<li><code>norm</code>: clip by a global $L_2$ norm threshold.</li>
+<li><code>percentile</code>: clip using a running percentile estimate (robust to outliers).</li>
+<li><code>layerwise*</code>: apply the same idea per-layer (useful when layers have very different scales).</li>
+</ul>
+<h3 id="metricshook">MetricsHook</h3><pre><code class="language-ts">MetricsHook(
+  m: { iteration: number; error: number; plateauError?: number | undefined; gradNorm: number; },
+): void
+</code></pre>
+<p>Metrics hook signature.</p>
+<p>If provided, this callback receives summarized metrics after each iteration.
+It is designed for lightweight telemetry, not heavy data export.</p>
+<h3 id="mixedprecisionconfig">MixedPrecisionConfig</h3><p>Mixed-precision configuration.</p>
+<p>Mixed precision can improve throughput by running some math in lower precision while
+keeping a stable FP32 master copy of parameters when needed.</p>
+<h3 id="mixedprecisiondynamicconfig">MixedPrecisionDynamicConfig</h3><p>Dynamic mixed-precision configuration.</p>
+<p>When enabled, training uses a loss-scaling heuristic that attempts to keep gradients
+in a numerically stable range. Overflow pressure scales the loss down, while
+persistent tiny gradients can scale it back up.</p>
+<h3 id="movingaveragetype">MovingAverageType</h3><p>Moving-average strategy identifier.</p>
+<p>These strategies are used to smooth the monitored error curve during training.
+Smoothing can make early stopping and progress logging less noisy.</p>
+<h3 id="optimizerconfigbase">OptimizerConfigBase</h3><p>Base optimizer configuration.</p>
+<p>Training accepts either an optimizer name (<code>&quot;adam&quot;</code>, <code>&quot;sgd&quot;</code>, ...) or an object.
+This object form is useful when you want to pin numeric hyperparameters or wrap a base
+optimizer (e.g. lookahead).</p>
+<p>Example:</p>
+<pre><code class="language-ts">net.train(set, {
+  iterations: 1_000,
+  rate: 0.001,
+  optimizer: { type: &#39;adamw&#39;, beta1: 0.9, beta2: 0.999, eps: 1e-8, weightDecay: 0.01 },
+});
+</code></pre>
+<p>Notes:</p>
+<ul>
+<li>Exact supported <code>type</code> values are validated by training utilities.</li>
+<li>Unspecified fields fall back to sensible defaults per optimizer.</li>
+</ul>
+<h3 id="propagate">propagate</h3><pre><code class="language-ts">propagate(
+  rate: number,
+  momentum: number,
+  update: boolean,
+  target: number[],
+  regularization: number,
+  costDerivative: CostDerivative | undefined,
+): void
+</code></pre>
+<p>Contract for propagate.</p>
+<h3 id="scheduleconfig">ScheduleConfig</h3><p>Schedule callback configuration.</p>
+<p>A schedule callback is a simple &quot;tick hook&quot; that runs every N iterations.
+Typical uses include logging, custom learning-rate schedules, or diagnostics.</p>
+<h3 id="serializednetwork">SerializedNetwork</h3><p>Serialized network payload used in checkpoint callbacks.</p>
+<p>This is intentionally loose: serialization formats evolve and may include nested
+structures. Treat this as an opaque snapshot blob.</p>
+<h3 id="trainimpl">trainImpl</h3><pre><code class="language-ts">trainImpl(
+  net: default,
+  set: TrainingSample[],
+  options: TrainingOptions,
+): { error: number; iterations: number; time: number; }
+</code></pre>
+<p>Contract for trainImpl.</p>
+<h3 id="trainingoptions">TrainingOptions</h3><p>Public training options accepted by the high-level training orchestration.</p>
+<p>Training in this codebase is conceptually:</p>
+<ol>
+<li>forward activation</li>
+<li>backward propagation</li>
+<li>optimizer update
+repeated until a stopping condition is met.</li>
+</ol>
+<p>Minimal example:</p>
+<pre><code class="language-ts">net.train(set, {
+  iterations: 500,
+  rate: 0.3,
+  batchSize: 16,
+  gradientClip: { mode: &#39;norm&#39;, maxNorm: 1 },
+});
+</code></pre>
+<p>Stopping conditions:</p>
+<ul>
+<li>Provide at least one of <code>iterations</code> or <code>error</code>.</li>
+<li><code>earlyStopPatience</code> adds an additional &quot;stop when no improvement&quot; guard.</li>
+</ul>
+<h3 id="trainsetimpl">trainSetImpl</h3><pre><code class="language-ts">trainSetImpl(
+  net: default,
+  set: TrainingSample[],
+  batchSize: number,
+  accumulationSteps: number,
+  currentRate: number,
+  momentum: number,
+  regularization: RegularizationConfig,
+  costFunction: CostFunction | CostFunctionOrObject,
+  optimizer: OptimizerConfigBase | undefined,
+): number
+</code></pre>
+<p>Execute one full pass over dataset (epoch) with optional accumulation &amp; adaptive optimizer.
+Returns mean cost across processed samples.</p>
+<p>This is the core &quot;one epoch&quot; primitive used by higher-level training orchestration.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>net</code> - Network instance receiving training updates.</li>
+<li><code>set</code> - Training samples.</li>
+<li><code>batchSize</code> - Mini-batch size (use 1 for pure SGD).</li>
+<li><code>accumulationSteps</code> - Micro-batch accumulation steps.</li>
+<li><code>currentRate</code> - Current learning rate (may be scheduled by caller).</li>
+<li><code>momentum</code> - Momentum used by some optimizers (when applicable).</li>
+<li><code>regularization</code> - Regularization configuration passed down to nodes.</li>
+<li><code>costFunction</code> - Cost function selector (function or compatible object).</li>
+<li><code>optimizer</code> - Optional optimizer configuration.</li>
+</ul>
+<p>Returns: Mean cost across the processed samples.</p>
+<h2 id="architecture-network-training-network-training-utils-types-ts">architecture/network/training/network.training.utils.types.ts</h2><h3 id="allowed-optimizers">ALLOWED_OPTIMIZERS</h3><p>Allow-list of optimizer identifiers accepted by training options before
+optimizer-specific runtime state is initialized.</p>
+<h3 id="buildmonitoredsmoothingconfig">buildMonitoredSmoothingConfig</h3><pre><code class="language-ts">buildMonitoredSmoothingConfig(
+  type: MovingAverageType,
+  window: number,
+  emaAlpha: number | undefined,
+  trimmedRatio: number | undefined,
+): MonitoredSmoothingConfig
+</code></pre>
+<p>Build monitored smoothing configuration from options and defaults.</p>
+<p>This keeps call sites declarative by normalizing all monitored-smoothing
+fields into one explicit configuration object.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>type</code> - Selected monitored smoothing mode.</li>
+<li><code>window</code> - Monitored smoothing window length.</li>
+<li><code>emaAlpha</code> - Optional monitored EMA alpha.</li>
+<li><code>trimmedRatio</code> - Optional trimmed-mean ratio.</li>
+</ul>
+<p>Returns: Normalized monitored smoothing configuration.</p>
+<h3 id="costderivative">CostDerivative</h3><pre><code class="language-ts">CostDerivative(
+  target: number,
+  output: number,
+): number
+</code></pre>
+<p>Derivative callback used by output-node backpropagation.</p>
+<p>Inputs are <code>(target, output)</code> so custom objectives can match the built-in
+training loop without changing node internals.</p>
+<h3 id="gradientclipruntimeconfig">GradientClipRuntimeConfig</h3><p>Normalized runtime gradient clipping configuration.</p>
+<p>Optional fields are mode-dependent (<code>maxNorm</code> for norm modes, <code>percentile</code>
+for percentile modes).</p>
+<h3 id="networknode">NetworkNode</h3><p>Node instance type used by training helpers.</p>
+<p>This alias keeps helper signatures short while preserving the exact node
+contract exposed by the owning <code>Network</code> instance.</p>
+<h3 id="outputnodewithcostderivative">OutputNodeWithCostDerivative</h3><p>Output-node contract for propagation paths that provide a custom derivative.</p>
+<h3 id="propagationcontext">PropagationContext</h3><p>Immutable context shared by propagation helpers.</p>
+<p>Keeping these values in a single object avoids argument drift across helper
+boundaries and keeps orchestration code declarative.</p>
+<h3 id="regularizationargument">RegularizationArgument</h3><p>Regularization payload accepted by <code>Node.propagate</code>.</p>
+<p>Helpers pass this through unchanged so callers can centralize L1/L2
+configuration at the training entrypoint.</p>
+<h3 id="resolveemaalpha">resolveEmaAlpha</h3><pre><code class="language-ts">resolveEmaAlpha(
+  smoothingWindow: number,
+  explicitAlpha: number | undefined,
+): number
+</code></pre>
+<p>Resolve default EMA alpha using a window length.</p>
+<p>When the caller omits a valid explicit alpha, this helper applies the
+standard EMA conversion <code>2 / (window + 1)</code>.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>smoothingWindow</code> - Window length for moving average operations.</li>
+<li><code>explicitAlpha</code> - Optional user-provided alpha override.</li>
+</ul>
+<p>Returns: A valid EMA alpha in the range (0, 1].</p>
+<h3 id="trainingsample">TrainingSample</h3><p>Input/output pair consumed by dataset training loops for one supervision
+step during iterative optimization.</p>
+<h2 id="architecture-network-training-network-training-finalize-utils-ts">architecture/network/training/network.training.finalize.utils.ts</h2><h3 id="trainfinalizecore">trainFinalizeCore</h3><pre><code class="language-ts">trainFinalizeCore(
+  net: default,
+  set: { input: number[]; output: number[]; }[],
+  options: TrainingOptions,
+): { error: number; iterations: number; time: number; }
+</code></pre>
+<p>Run the full training orchestration loop with smoothing, callbacks, and early stopping.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>net</code> - Network instance to train.</li>
+<li><code>set</code> - Training dataset.</li>
+<li><code>options</code> - Training options.</li>
+</ul>
+<p>Returns: Final training summary including error, iteration count, and elapsed time.</p>
+<h2 id="architecture-network-training-network-training-backprop-utils-ts">architecture/network/training/network.training.backprop.utils.ts</h2><p>Propagate output and hidden error signals backward through the network graph.</p>
+<h3 id="clearnodestate">clearNodeState</h3><pre><code class="language-ts">clearNodeState(
+  node: default,
+): void
+</code></pre>
+<p>Clear runtime state for a single node.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>node</code> - Node to clear.</li>
+</ul>
+<h3 id="clearstate">clearState</h3><pre><code class="language-ts">clearState(): void
+</code></pre>
+<p>Clear all accumulated per-node runtime traces and saved activation states.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>this</code> - Bound network instance.</li>
+</ul>
+<h3 id="createpropagationcontext">createPropagationContext</h3><pre><code class="language-ts">createPropagationContext(
+  network: default,
+  rate: number,
+  momentum: number,
+  update: boolean,
+  regularization: number | { type: &quot;L1&quot; | &quot;L2&quot;; lambda: number; } | ((weight: number) =&gt; number) | undefined,
+  costDerivative: CostDerivative | undefined,
+): PropagationContext
+</code></pre>
+<p>Build the shared propagation context consumed by layer helpers.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Network instance receiving backpropagation.</li>
+<li><code>rate</code> - Learning rate.</li>
+<li><code>momentum</code> - Momentum factor.</li>
+<li><code>update</code> - Whether updates are applied immediately.</li>
+<li><code>regularization</code> - Regularization setting used by node propagation.</li>
+<li><code>costDerivative</code> - Optional cost-derivative override for output nodes.</li>
+</ul>
+<p>Returns: Immutable context consumed by propagation helpers.</p>
+<h3 id="getlastnodeindex">getLastNodeIndex</h3><pre><code class="language-ts">getLastNodeIndex(
+  network: default,
+): number
+</code></pre>
+<p>Resolve the last node index in the network.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Network instance.</li>
+</ul>
+<p>Returns: Last valid node index.</p>
+<h3 id="getoutputlayerstartindex">getOutputLayerStartIndex</h3><pre><code class="language-ts">getOutputLayerStartIndex(
+  network: default,
+): number
+</code></pre>
+<p>Resolve the first index of the output layer.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Network instance.</li>
+</ul>
+<p>Returns: Index at which output nodes begin.</p>
+<h3 id="propagate">propagate</h3><pre><code class="language-ts">propagate(
+  rate: number,
+  momentum: number,
+  update: boolean,
+  target: number[],
+  regularization: number,
+  costDerivative: CostDerivative | undefined,
+): void
+</code></pre>
+<p>Contract for propagate.</p>
+<h3 id="propagatehiddenlayer">propagateHiddenLayer</h3><pre><code class="language-ts">propagateHiddenLayer(
+  context: PropagationContext,
+): void
+</code></pre>
+<p>Propagate all hidden nodes in reverse topological order.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Shared propagation context.</li>
+</ul>
+<h3 id="propagateoutputlayer">propagateOutputLayer</h3><pre><code class="language-ts">propagateOutputLayer(
+  context: PropagationContext,
+  target: number[],
+): void
+</code></pre>
+<p>Propagate all output nodes with explicit targets.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Shared propagation context.</li>
+<li><code>target</code> - Output target vector.</li>
+</ul>
+<h3 id="propagateoutputnodewithcostderivative">propagateOutputNodeWithCostDerivative</h3><pre><code class="language-ts">propagateOutputNodeWithCostDerivative(
+  node: default,
+  context: PropagationContext,
+  targetValue: number,
+  costDerivative: CostDerivative,
+): void
+</code></pre>
+<p>Propagate one output node using a custom cost derivative override.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>node</code> - Output node to propagate.</li>
+<li><code>context</code> - Shared propagation context.</li>
+<li><code>targetValue</code> - Expected output value for this node.</li>
+<li><code>costDerivative</code> - Cost derivative callback.</li>
+</ul>
+<h3 id="propagatesinglehiddennode">propagateSingleHiddenNode</h3><pre><code class="language-ts">propagateSingleHiddenNode(
+  context: PropagationContext,
+  node: default,
+): void
+</code></pre>
+<p>Propagate a single hidden node without a target value.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Shared propagation context.</li>
+<li><code>node</code> - Hidden node to propagate.</li>
+</ul>
+<h3 id="propagatesingleoutputnode">propagateSingleOutputNode</h3><pre><code class="language-ts">propagateSingleOutputNode(
+  context: PropagationContext,
+  node: default,
+  targetValue: number,
+): void
+</code></pre>
+<p>Propagate a single output node with a target value.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Shared propagation context.</li>
+<li><code>node</code> - Output node to propagate.</li>
+<li><code>targetValue</code> - Expected output value for this node.</li>
+</ul>
+<h3 id="validatetargetlength">validateTargetLength</h3><pre><code class="language-ts">validateTargetLength(
+  network: default,
+  target: number[],
+): void
+</code></pre>
+<p>Validate that target output count matches the network output width.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Network instance receiving backpropagation.</li>
+<li><code>target</code> - Output target vector.</li>
+</ul>
+<h2 id="architecture-network-training-network-training-loop-utils-ts">architecture/network/training/network.training.loop.utils.ts</h2><p>Execute one dataset pass with mini-batching, accumulation, clipping, and optimizer updates.</p>
+<h3 id="trainsetcore">trainSetCore</h3><pre><code class="language-ts">trainSetCore(
+  net: default,
+  set: TrainingSample[],
+  batchSize: number,
+  accumulationSteps: number,
+  currentRate: number,
+  momentum: number,
+  regularization: RegularizationConfig,
+  costFunction: CostFunction | CostFunctionOrObject,
+  optimizer: OptimizerConfigBase | undefined,
+): number
+</code></pre>
+<p>Contract for trainSetCore.</p>
+<h2 id="architecture-network-training-network-training-smoothing-utils-ts">architecture/network/training/network.training.smoothing.utils.ts</h2><h3 id="computemonitorederror">computeMonitoredError</h3><pre><code class="language-ts">computeMonitoredError(
+  trainError: number,
+  recentErrors: number[],
+  cfg: MonitoredSmoothingConfig,
+  state: PrimarySmoothingState,
+): number
+</code></pre>
+<p>Compute monitored training error using the configured smoothing strategy.</p>
+<p>The helper returns the raw error when smoothing is effectively disabled.
+For stateful modes (<code>ema</code>, <code>adaptive-ema</code>), the provided state object is
+updated in place so callers can keep continuity across iterations.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>trainError</code> - Raw training error for the current iteration.</li>
+<li><code>recentErrors</code> - Chronological recent error window (oldest to newest).</li>
+<li><code>cfg</code> - Monitored smoothing configuration.</li>
+<li><code>state</code> - Mutable smoothing state for EMA-based modes.</li>
+</ul>
+<p>Returns: Smoothed monitored error.</p>
+<h3 id="computeplateaumetric">computePlateauMetric</h3><pre><code class="language-ts">computePlateauMetric(
+  trainError: number,
+  plateauErrors: number[],
+  cfg: PlateauSmoothingConfig,
+  state: PlateauSmoothingState,
+): number
+</code></pre>
+<p>Compute plateau metric using the configured plateau smoothing strategy.</p>
+<p>This metric is intentionally independent from the primary monitored metric so
+plateau detection can use a different noise profile.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>trainError</code> - Raw training error for the current iteration.</li>
+<li><code>plateauErrors</code> - Plateau window of recent raw errors.</li>
+<li><code>cfg</code> - Plateau smoothing configuration.</li>
+<li><code>state</code> - Mutable state for plateau EMA.</li>
+</ul>
+<p>Returns: Smoothed plateau metric.</p>
+<h2 id="architecture-network-training-network-training-gradient-clip-utils-ts">architecture/network/training/network.training.gradient-clip.utils.ts</h2><h3 id="applygradientclippingcore">applyGradientClippingCore</h3><pre><code class="language-ts">applyGradientClippingCore(
+  net: default,
+  cfg: GradientClipRuntimeConfig,
+): void
+</code></pre>
+<p>Apply gradient clipping to accumulated connection and bias delta buffers.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>net</code> - Network instance whose accumulated gradients are clipped.</li>
+<li><code>cfg</code> - Runtime clipping configuration.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h2 id="architecture-network-training-network-training-errors-ts">architecture/network/training/network.training.errors.ts</h2><p>Raised when the training dataset is missing or does not match network IO dimensions.</p>
+<h3 id="networktrainingaccumulationstepserror">NetworkTrainingAccumulationStepsError</h3><p>Raised when accumulation step count is zero, negative, or not a whole number as required for valid gradient accumulation.</p>
+<h3 id="networktrainingbatchsizeerror">NetworkTrainingBatchSizeError</h3><p>Raised when the configured batch size exceeds the total dataset size, making mini-batch gradient accumulation impossible.</p>
+<h3 id="networktrainingdatasetcompatibilityerror">NetworkTrainingDatasetCompatibilityError</h3><p>Raised when the training dataset is missing or does not match network IO dimensions.</p>
+<h3 id="networktrainingdropoutrangeerror">NetworkTrainingDropoutRangeError</h3><p>Raised when the dropout probability falls outside the required half-open interval [0, 1) accepted by the training configuration validator.</p>
+<h3 id="networktraininginvalidcostfunctionerror">NetworkTrainingInvalidCostFunctionError</h3><p>Raised when the provided cost function is not callable or does not match any recognized cost-function identifier in the registry.</p>
+<h3 id="networktraininginvalidoptimizeroptionerror">NetworkTrainingInvalidOptimizerOptionError</h3><p>Raised when an optimizer configuration option carries a type that the selected optimizer does not recognize or accept.</p>
+<h3 id="networktrainingnestedlookaheaderror">NetworkTrainingNestedLookaheadError</h3><p>Raised when lookahead is configured with another lookahead optimizer as its base, which is not a supported inner optimizer combination.</p>
+<h3 id="networktrainingoutputtargetlengtherror">NetworkTrainingOutputTargetLengthError</h3><p>Raised when output target length does not match the network output width.</p>
+<h3 id="networktrainingstoppingconditionrequirederror">NetworkTrainingStoppingConditionRequiredError</h3><p>Raised when training is started without a stopping condition such as a maximum error target or iteration limit.</p>
+<h3 id="networktrainingunknownlookaheadbasetypeerror">NetworkTrainingUnknownLookaheadBaseTypeError</h3><p>Raised when the lookahead base optimizer type does not match any supported inner optimizer in the current training stack configuration.</p>
+<h3 id="networktrainingunknownoptimizertypeerror">NetworkTrainingUnknownOptimizerTypeError</h3><p>Raised when the optimizer type string does not match any registered optimizer in the network training configuration registry.</p>
+<h2 id="architecture-network-training-network-training-isolate-utils-ts">architecture/network/training/network.training.isolate.utils.ts</h2><h3 id="finetuneoptions">FineTuneOptions</h3><p>Explicit settings for one isolated fine-tune pass.</p>
+<p><code>steps</code> maps to the training loop iteration count and <code>learningRate</code> maps to
+the training rate. <code>seed</code> is optional because same-runtime ordered
+determinism only becomes a strong claim when the caller supplies both a
+stable dataset order and an explicit deterministic seed.</p>
+<p>Without an explicit <code>seed</code>, the helper still guarantees isolation: the
+original network and vector are never mutated, but repeated calls may
+produce different trained vectors when the underlying training loop contains
+stochastic behaviour such as dropout.</p>
+<h3 id="finetuneresult">FineTuneResult</h3><p>Detached result from one isolated fine-tune pass.</p>
+<p>The helper returns a trained parameter vector rather than a mutated network
+so shared candidate state stays outside the training-owned boundary. Metrics
+are numeric summaries from the existing training loop, not persisted
+optimizer or runtime state.</p>
+<p>The returned <code>trainedVector</code> can be compared against the original vector,
+forwarded to a worker for scoring, persisted as a checkpoint delta, or
+discarded when only the fitness score matters.</p>
+<h3 id="finetunevector">fineTuneVector</h3><pre><code class="language-ts">fineTuneVector(
+  baseNetwork: default,
+  vector: ParameterVector,
+  dataset: TrainingSample[],
+  options: FineTuneOptions,
+): FineTuneResult
+</code></pre>
+<p>Fine-tune one parameter vector against an ordered dataset without mutating shared state.</p>
+<p>The helper clones <code>baseNetwork</code>, applies <code>vector</code> to that working copy,
+optionally installs an explicit deterministic seed via <code>Network.setSeed(...)</code>,
+runs the existing training loop in the caller-provided dataset order, and
+returns a new <code>ParameterVector</code> exported from the trained working copy. The
+supplied <code>baseNetwork</code> and <code>vector</code> are read-only inputs to this helper.</p>
+<p>Determinism is intentionally scoped. On the same runtime, repeated calls can
+return the same trained vector when topology, dataset order, training
+settings, and explicit <code>seed</code> all match. This helper does not claim
+cross-runtime exact replay, and it does not return transient optimizer,
+activation, or recurrent runtime state.</p>
+<pre><code class="language-ts">// Export the current parameter vector, fine-tune a working copy, and
+// inspect fitness metrics without modifying the shared candidate network.
+const vector = toParameterVector(candidate);
+const { trainedVector, metrics } = fineTuneVector(candidate, vector, dataset, {
+  steps: 50,
+  learningRate: 0.01,
+  seed: 42,
+});
+console.log(&#39;training error:&#39;, metrics?.error);
+// `candidate` and `vector` are unchanged after this call.
+</code></pre>
+<p>Parameters:</p>
+<ul>
+<li><code>baseNetwork</code> - Topology source cloned for the isolated working copy.</li>
+<li><code>vector</code> - Ordered parameter payload applied to the working copy only.</li>
+<li><code>dataset</code> - Ordered training samples consumed without shuffling.</li>
+<li><code>options</code> - Explicit training settings and optional deterministic seed.</li>
+</ul>
+<p>Returns: Detached trained vector plus numeric training metrics.</p>
+<footer class="site-footer">Generated from source JSDoc • <a href="https://github.com/reicek/NeatapticTS">GitHub</a></footer></main><aside class="toc docs-panel docs-panel-right"><div class="page-toc"><h2>Files</h2><div class="toc-file"><a href="#architecture-network-training-network-training-utils-ts">architecture/network/training/network.training.utils.ts</a><ul><li><a href="#traininginternals">__trainingInternals</a></li><li><a href="#applygradientclippingimpl">applyGradientClippingImpl</a></li><li><a href="#checkpointconfig">CheckpointConfig</a></li><li><a href="#clearstate">clearState</a></li><li><a href="#costfunction">CostFunction</a></li><li><a href="#gradientclipconfig">GradientClipConfig</a></li><li><a href="#metricshook">MetricsHook</a></li><li><a href="#mixedprecisionconfig">MixedPrecisionConfig</a></li><li><a href="#mixedprecisiondynamicconfig">MixedPrecisionDynamicConfig</a></li><li><a href="#movingaveragetype">MovingAverageType</a></li><li><a href="#optimizerconfigbase">OptimizerConfigBase</a></li><li><a href="#propagate">propagate</a></li><li><a href="#scheduleconfig">ScheduleConfig</a></li><li><a href="#serializednetwork">SerializedNetwork</a></li><li><a href="#trainimpl">trainImpl</a></li><li><a href="#trainingoptions">TrainingOptions</a></li><li><a href="#trainsetimpl">trainSetImpl</a></li></ul></div><div class="toc-file"><a href="#architecture-network-training-network-training-utils-types-ts">architecture/network/training/network.training.utils.types.ts</a><ul><li><a href="#allowed-optimizers">ALLOWED_OPTIMIZERS</a></li><li><a href="#buildmonitoredsmoothingconfig">buildMonitoredSmoothingConfig</a></li><li><a href="#costderivative">CostDerivative</a></li><li><a href="#gradientclipruntimeconfig">GradientClipRuntimeConfig</a></li><li><a href="#networknode">NetworkNode</a></li><li><a href="#outputnodewithcostderivative">OutputNodeWithCostDerivative</a></li><li><a href="#propagationcontext">PropagationContext</a></li><li><a href="#regularizationargument">RegularizationArgument</a></li><li><a href="#resolveemaalpha">resolveEmaAlpha</a></li><li><a href="#trainingsample">TrainingSample</a></li></ul></div><div class="toc-file"><a href="#architecture-network-training-network-training-finalize-utils-ts">architecture/network/training/network.training.finalize.utils.ts</a><ul><li><a href="#trainfinalizecore">trainFinalizeCore</a></li></ul></div><div class="toc-file"><a href="#architecture-network-training-network-training-backprop-utils-ts">architecture/network/training/network.training.backprop.utils.ts</a><ul><li><a href="#clearnodestate">clearNodeState</a></li><li><a href="#clearstate">clearState</a></li><li><a href="#createpropagationcontext">createPropagationContext</a></li><li><a href="#getlastnodeindex">getLastNodeIndex</a></li><li><a href="#getoutputlayerstartindex">getOutputLayerStartIndex</a></li><li><a href="#propagate">propagate</a></li><li><a href="#propagatehiddenlayer">propagateHiddenLayer</a></li><li><a href="#propagateoutputlayer">propagateOutputLayer</a></li><li><a href="#propagateoutputnodewithcostderivative">propagateOutputNodeWithCostDerivative</a></li><li><a href="#propagatesinglehiddennode">propagateSingleHiddenNode</a></li><li><a href="#propagatesingleoutputnode">propagateSingleOutputNode</a></li><li><a href="#validatetargetlength">validateTargetLength</a></li></ul></div><div class="toc-file"><a href="#architecture-network-training-network-training-loop-utils-ts">architecture/network/training/network.training.loop.utils.ts</a><ul><li><a href="#trainsetcore">trainSetCore</a></li></ul></div><div class="toc-file"><a href="#architecture-network-training-network-training-smoothing-utils-ts">architecture/network/training/network.training.smoothing.utils.ts</a><ul><li><a href="#computemonitorederror">computeMonitoredError</a></li><li><a href="#computeplateaumetric">computePlateauMetric</a></li></ul></div><div class="toc-file"><a href="#architecture-network-training-network-training-gradient-clip-utils-ts">architecture/network/training/network.training.gradient-clip.utils.ts</a><ul><li><a href="#applygradientclippingcore">applyGradientClippingCore</a></li></ul></div><div class="toc-file"><a href="#architecture-network-training-network-training-errors-ts">architecture/network/training/network.training.errors.ts</a><ul><li><a href="#networktrainingaccumulationstepserror">NetworkTrainingAccumulationStepsError</a></li><li><a href="#networktrainingbatchsizeerror">NetworkTrainingBatchSizeError</a></li><li><a href="#networktrainingdatasetcompatibilityerror">NetworkTrainingDatasetCompatibilityError</a></li><li><a href="#networktrainingdropoutrangeerror">NetworkTrainingDropoutRangeError</a></li><li><a href="#networktraininginvalidcostfunctionerror">NetworkTrainingInvalidCostFunctionError</a></li><li><a href="#networktraininginvalidoptimizeroptionerror">NetworkTrainingInvalidOptimizerOptionError</a></li><li><a href="#networktrainingnestedlookaheaderror">NetworkTrainingNestedLookaheadError</a></li><li><a href="#networktrainingoutputtargetlengtherror">NetworkTrainingOutputTargetLengthError</a></li><li><a href="#networktrainingstoppingconditionrequirederror">NetworkTrainingStoppingConditionRequiredError</a></li><li><a href="#networktrainingunknownlookaheadbasetypeerror">NetworkTrainingUnknownLookaheadBaseTypeError</a></li><li><a href="#networktrainingunknownoptimizertypeerror">NetworkTrainingUnknownOptimizerTypeError</a></li></ul></div><div class="toc-file"><a href="#architecture-network-training-network-training-isolate-utils-ts">architecture/network/training/network.training.isolate.utils.ts</a><ul><li><a href="#finetuneoptions">FineTuneOptions</a></li><li><a href="#finetuneresult">FineTuneResult</a></li><li><a href="#finetunevector">fineTuneVector</a></li></ul></div></div></aside></div><script>
+const docsPanels = Array.from(document.querySelectorAll('.docs-panel'));
+
+function setActiveDocsPanel(nextPanel) {
+  docsPanels.forEach((panel) => {
+    panel.classList.toggle('is-active', panel === nextPanel);
+  });
+}
+
+document.addEventListener('click', (event) => {
+  const target = event.target;
+  if (!(target instanceof Element)) {
+    setActiveDocsPanel(null);
+    return;
+  }
+
+  const activePanel = target.closest('.docs-panel');
+  setActiveDocsPanel(activePanel instanceof HTMLElement ? activePanel : null);
+});
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') {
+    setActiveDocsPanel(null);
+  }
+});
+</script></body></html>

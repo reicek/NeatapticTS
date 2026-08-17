@@ -12,6 +12,7 @@
  */
 
 import {
+  FALLBACK_SEED,
   NEATENSTEIN_EPISODE_DEFAULT_DURATION_MS,
   NEATENSTEIN_FIXED_TIMESTEP_MS,
   NEATENSTEIN_MAP_SIZE,
@@ -22,6 +23,10 @@ import type { CollisionMap } from '../../renderer/map';
 import { createGameState } from './state';
 import { spawnWaveTick } from './waves';
 import type { GameState } from './types';
+import type { CreateEpisodeOptions, Episode } from '../types';
+
+// Re-export consolidated types so existing imports from this module remain valid.
+export type { CreateEpisodeOptions, Episode } from '../types';
 
 /**
  * Minimum valid episode duration in milliseconds.
@@ -42,22 +47,7 @@ const MIN_TIMESTEP_MS = 1;
 const EPISODE_STEP_GUARD_MARGIN = 2;
 
 /** Options accepted by {@link createEpisode}. */
-export interface CreateEpisodeOptions {
-  /** Deterministic seed used to initialize the episode. */
-  seed?: number;
-
-  /** Target episode duration in milliseconds. */
-  durationMs?: number;
-}
-
-/** In-memory handle for a single episode run. */
-export interface Episode {
-  /** Mutable snapshot of the running episode state. */
-  state: GameState;
-
-  /** Target duration in milliseconds used to decide episode completion. */
-  durationMs: number;
-}
+// Type is defined in ../types and re-exported above.
 
 /**
  * Return whether a value is a finite number.
@@ -78,7 +68,9 @@ function isFiniteNumber(value: number): boolean {
  * @returns Finite episode seed.
  */
 function resolveEpisodeSeed(seed: number | undefined): number {
-  return typeof seed === 'number' && isFiniteNumber(seed) ? seed : 1;
+  return typeof seed === 'number' && isFiniteNumber(seed)
+    ? seed
+    : FALLBACK_SEED;
 }
 
 /**

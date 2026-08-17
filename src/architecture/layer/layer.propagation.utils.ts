@@ -24,6 +24,7 @@ const PROPAGATE_PROJECTED_ERROR = 0;
  *
  * @param nodeCount Number of nodes in the layer.
  * @param inputTargets Optional target values provided by the caller.
+ * @throws {LayerSizeMismatchError} When `inputTargets.length !== nodeCount`.
  */
 export function assertTargetInputSize(
   nodeCount: number,

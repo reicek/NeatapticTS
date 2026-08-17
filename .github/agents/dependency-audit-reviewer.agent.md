@@ -14,6 +14,8 @@ tools:
     neataptic-workflow-mcp/*,
   ]
 user-invocable: false
+disable-model-invocation: false
+target: vscode
 agents: []
 skills: ['dependency-audit']
 ---
@@ -84,7 +86,7 @@ Run `neataptic-gate-mcp:run_gate_check --gate=cortex-index` before any codebase 
 
 If an advisory database is unreachable, record it as a tooling gap and report PARTIAL; do not approve a risky dependency without verification. Only escalate to the parent Tier 1 agent when a genuine technical limit blocks progress. No concessions.
 
-## Output format
+## Output Format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1
@@ -102,9 +104,6 @@ ACTIONS_TAKEN:
 - <action or NONE>
 VALIDATION_EVIDENCE:
 - <command/result or NOT RUN>
-VERDICT: APPROVE | REQUEST_CHANGES
-OBSERVATIONS:
-- package: <name@version>, severity: <high|medium|low>, confidence: <0-1>, detail: <concise finding>
 HANDOFF: <next step, reroute, or NONE>
 BLOCKERS:
 - <blocker or NONE>

@@ -66,6 +66,9 @@ Behavior summary:
   that fall below the final threshold — effectively rejecting them from
   selection.
 
+Parameters:
+- `this` - NeatEngine instance whose minimal-criterion threshold is adapted.
+
 Returns: Updates `_mcThreshold` over time and may zero out scores for currently rejected genomes.
 
 Example:

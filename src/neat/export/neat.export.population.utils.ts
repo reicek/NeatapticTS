@@ -38,6 +38,7 @@ type NumericGenomeMetaAssignment = {
  * worth preserving beside the network JSON.
  *
  * @param genome - Live genome from the controller population.
+ * @param networkPayload - Pre-serialized network JSON; defaults to `genome.toJSON()`.
  * @returns Serialized genome payload with optional controller metadata.
  */
 export function serializeGenomeCheckpoint(

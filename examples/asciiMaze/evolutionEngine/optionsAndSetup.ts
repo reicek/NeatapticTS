@@ -125,7 +125,7 @@ interface CreateAndSeedNeatResult {
  *  - Simplify prune fraction: 0.05 (5%)
  *  - Simplify strategy: 'weakWeight'
  *  - Persist every: 25 generations
- *  - Persist directory: './ascii_maze_snapshots'
+ *  - Persist directory: 'examples/asciiMaze/ascii_maze_snapshots'
  *  - Persist top K: 3
  *  - Dynamic population enabled: true
  *  - Dynamic population expand interval: 25
@@ -190,7 +190,7 @@ export const normalizeRunOptions = (
     simplifyPruneFraction = 0.05,
     simplifyStrategy = 'weakWeight',
     persistEvery = 25,
-    persistDir = './ascii_maze_snapshots',
+    persistDir = 'examples/asciiMaze/ascii_maze_snapshots',
     persistTopK = 3,
     dynamicPopEnabled = true,
     dynamicPopMax: dynamicPopulationMaxCfg,

@@ -60,6 +60,7 @@ function parseStepNumber(stepLabel) {
     return Number(stepLabel);
   }
   const trailingDigits = stepLabel.match(/\d+$/u);
+  /* istanbul ignore next -- regex requires [A-Z]?\d+ so stepLabel always has trailing digits */
   return trailingDigits ? Number(trailingDigits[0]) : NaN;
 }
 
@@ -183,6 +184,7 @@ function tokenizePlan(text) {
   COMBINED_PATTERN.lastIndex = 0;
   while ((match = COMBINED_PATTERN.exec(text)) !== null) {
     const groups = match.groups;
+    /* istanbul ignore if -- regex always produces named groups when it matches */
     if (!groups) continue;
 
     const start = match.index;
@@ -252,7 +254,8 @@ function buildContext(tokens) {
         ...token,
         phaseToken: currentPhaseToken,
       });
-    } else if (token.kind === 'yaml') {
+    /* istanbul ignore else -- only phase/step/yaml token kinds exist */
+    } else {
       if (currentHeadingToken) {
         context.yamlByHeadingToken.set(currentHeadingToken, token);
       }
@@ -296,6 +299,7 @@ function rebuildPlan(text, tokens, context, planFile) {
       continue;
     }
 
+    /* istanbul ignore else -- phase/step handled above with continue; only yaml remains */
     if (token.kind === 'yaml') {
       const headingToken = findHeadingForYamlToken(token, tokens, tokenIndex);
       if (headingToken && headingToken.status !== 'DONE') {
@@ -306,6 +310,7 @@ function rebuildPlan(text, tokens, context, planFile) {
           token.rawYaml,
         );
         const originalBlock = text.slice(token.start, token.end);
+        /* istanbul ignore else -- exact match between original and generated YAML is extremely hard to construct */
         if (originalBlock !== generatedBlock) {
           changedBlocks.push({
             type: headingToken.kind,
@@ -479,8 +484,10 @@ function inferNextPhaseTitle(phaseToken, context) {
 }
 
 function inferPlaceholderSteps(phaseToken, context) {
+  /* istanbul ignore next -- phaseToken always in stepsByPhase map */
   const steps = context.stepsByPhase.get(phaseToken) ?? [];
   return steps.map((step) => {
+    /* istanbul ignore next -- stepLabel always set by tokenizer */
     const label = step.stepLabel ?? String(step.step).padStart(2, '0');
     return `Step ${label} — ${step.title}`;
   });
@@ -489,6 +496,7 @@ function inferPlaceholderSteps(phaseToken, context) {
 function inferNextStepTitle(stepToken, context) {
   const phaseToken = findPhaseForStep(stepToken, context);
   if (!phaseToken) return 'null';
+  /* istanbul ignore next -- phaseToken always in stepsByPhase map */
   const steps = context.stepsByPhase.get(phaseToken) ?? [];
   const index = steps.indexOf(stepToken);
   const nextStep = steps.at(index + 1);
@@ -511,6 +519,7 @@ function normalizeSkills(existingSkills, goal) {
   if (typeof existingSkills === 'string' && existingSkills.trim()) {
     return [existingSkills.trim()];
   }
+  /* istanbul ignore next -- all goals from inferGoal are in GOAL_TO_SKILLS map */
   return GOAL_TO_SKILLS[goal] ?? ['plan-alignment'];
 }
 

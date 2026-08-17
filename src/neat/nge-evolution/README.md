@@ -130,11 +130,11 @@ Context bag controlling one NGE compatibility-distance computation and normaliza
 
 ### NgeEvolutionCompatibilityDistanceResult
 
-Composite compatibility-distance result returned by the NGE speciation helper.
+Composite compatibility-distance result returned by the NGE speciation scoring helper.
 
 ### NgeEvolutionCompatibilityDistanceTerm
 
-One weighted compatibility-distance term captured during NGE speciation scoring.
+One weighted compatibility-distance term captured during NGE speciation scoring rounds.
 
 ### NgeEvolutionCompatibilityDistanceTermName
 
@@ -146,7 +146,7 @@ Fully expanded term shelf returned by the NGE compatibility-distance calculator.
 
 ### NgeEvolutionCompatibilityDistanceWeights
 
-Alpha weights applied to the four NGE compatibility-distance terms.
+Alpha weights applied to the four NGE compatibility-distance scoring terms.
 
 ### NgeEvolutionCompatibilityGenomeInput
 
@@ -157,7 +157,7 @@ knobs, so the calculator accepts those traits as an owner-local sidecar.
 
 ### NgeEvolutionCompatibilityWiringCostWeights
 
-Wiring-cost preference knobs compared by the NGE lifecycle-distance term.
+Wiring-cost preference knobs compared by the NGE lifecycle-distance scoring term.
 
 ### NgeEvolutionContributionKind
 
@@ -177,7 +177,7 @@ Two-parent weak reference captured for one birth-time epigenetic prior update.
 
 ### NgeEvolutionParentContribution
 
-One parent contribution reported by a NGE reproduction operator.
+One parent contribution reported by a NGE reproduction operator during offspring assembly.
 
 ### NgeEvolutionParentRole
 
@@ -584,11 +584,11 @@ Context bag controlling one NGE compatibility-distance computation and normaliza
 
 ### NgeEvolutionCompatibilityDistanceResult
 
-Composite compatibility-distance result returned by the NGE speciation helper.
+Composite compatibility-distance result returned by the NGE speciation scoring helper.
 
 ### NgeEvolutionCompatibilityDistanceTerm
 
-One weighted compatibility-distance term captured during NGE speciation scoring.
+One weighted compatibility-distance term captured during NGE speciation scoring rounds.
 
 ### NgeEvolutionCompatibilityDistanceTermName
 
@@ -600,7 +600,7 @@ Fully expanded term shelf returned by the NGE compatibility-distance calculator.
 
 ### NgeEvolutionCompatibilityDistanceWeights
 
-Alpha weights applied to the four NGE compatibility-distance terms.
+Alpha weights applied to the four NGE compatibility-distance scoring terms.
 
 ### NgeEvolutionCompatibilityGenomeInput
 
@@ -611,7 +611,7 @@ knobs, so the calculator accepts those traits as an owner-local sidecar.
 
 ### NgeEvolutionCompatibilityWiringCostWeights
 
-Wiring-cost preference knobs compared by the NGE lifecycle-distance term.
+Wiring-cost preference knobs compared by the NGE lifecycle-distance scoring term.
 
 ### NgeEvolutionContributionKind
 
@@ -631,7 +631,7 @@ Two-parent weak reference captured for one birth-time epigenetic prior update.
 
 ### NgeEvolutionParentContribution
 
-One parent contribution reported by a NGE reproduction operator.
+One parent contribution reported by a NGE reproduction operator during offspring assembly.
 
 ### NgeEvolutionParentRole
 
@@ -1164,7 +1164,7 @@ Mutation kinds permitted under the fixed-topology MLP enemy policy.
 
 ### MlpEnemySelectionPolicy
 
-Fixed-topology selection-pressure policy used for the MLP enemy.
+Fixed-topology selection-pressure policy used for the MLP enemy in evolution.
 
 ## neat/nge-evolution/neat.nge-evolution.reproduction-mode.ts
 
@@ -1225,11 +1225,11 @@ console.log(result.mode); // 'polyandric'
 
 ### ReproductionModeHysteresisInput
 
-Input consumed by {@link reproductionModeHysteresis}.
+Input consumed by the {@link reproductionModeHysteresis} overlay for mode selection.
 
 ### ReproductionModeHysteresisResult
 
-Result returned by {@link reproductionModeHysteresis}.
+Result returned by the {@link reproductionModeHysteresis} overlay for mode updates.
 
 ### ReproductionModePressureSignal
 
@@ -1266,7 +1266,7 @@ NGE compatibility-distance helpers grouped under one stable owner-local namespac
 
 ### ngeEvolutionConstants
 
-Default NGE constants grouped under one stable owner-local namespace.
+Default NGE constants grouped under one stable owner-local namespace object bundle.
 
 ### ngeEvolutionEpigeneticUtils
 

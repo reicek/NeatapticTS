@@ -17,13 +17,17 @@
 import {
   NEATENSTEIN_CPU_COLUMN_COUNT,
   NEATENSTEIN_GPU_COLUMN_COUNT,
+  RENDER_TIER_WORKER,
   type NeatensteinTier,
 } from '../constants';
 import {
   buildNeatensteinRenderFrame,
-  type NeatensteinRenderFrame,
   type NeatensteinRenderState,
 } from '../renderer/frame';
+import type { NeatensteinResizeResult } from './types';
+
+// Re-export consolidated types so existing imports from this module remain valid.
+export type { NeatensteinResizeResult } from './types';
 
 /**
  * Fixed mapping from packed-frame renderer tier to column count.
@@ -36,22 +40,6 @@ const PACKED_TIER_COLUMN_COUNTS: Partial<Record<NeatensteinTier, number>> = {
   gpu: NEATENSTEIN_GPU_COLUMN_COUNT,
   cpu: NEATENSTEIN_CPU_COLUMN_COUNT,
 };
-
-/**
- * Result of a host resize operation.
- */
-export interface NeatensteinResizeResult {
-  /**
-   * Number of backing-store pixels per renderer column.
-   *
-   * For the direct worker tier this should normally be `1`, because the worker
-   * renders one ray column per backing-store pixel.
-   */
-  columnStride: number;
-
-  /** Fresh render frame sized to the resolved column count. */
-  frame: NeatensteinRenderFrame;
-}
 
 /**
  * Validate the canvas dimensions carried by a render state.
@@ -94,7 +82,7 @@ function resolveColumnCount(
   tier: NeatensteinTier,
   canvasWidth: number,
 ): number {
-  if (tier === 'worker') {
+  if (tier === RENDER_TIER_WORKER) {
     // Match the direct worker ray density to the backing-store width.
     return Math.max(1, Math.floor(canvasWidth));
   }

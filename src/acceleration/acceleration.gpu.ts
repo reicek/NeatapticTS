@@ -58,7 +58,7 @@ export interface GpuAutoEnableResult {
 }
 
 /**
- * Parameters accepted by {@link autoEnableGpu}.
+ * Parameters accepted by the {@link autoEnableGpu} helper for GPU acceleration probing.
  */
 export interface AutoEnableGpuOptions {
   /** Current network node count for a single evaluation. */

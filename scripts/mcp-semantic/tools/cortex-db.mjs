@@ -97,7 +97,7 @@ export async function getTursoClient(databasePath) {
     /^(libsql|wss|ws|https|http|file):/i.test(url) || url === ':memory:';
   const resolvedUrl = isUrl ? url : pathToFileURL(url).href;
 
-  const clientConfig = { url: resolvedUrl };
+  const clientConfig = { url: resolvedUrl, timeout: 5000 };
   clientConfig.authToken = process.env.TURSO_AUTH_TOKEN;
   clientConfig.syncUrl = process.env.TURSO_SYNC_URL;
 

@@ -15,6 +15,8 @@ tools:
     devtools/devtools,
   ]
 user-invocable: false
+disable-model-invocation: false
+target: vscode
 agents: []
 skills:
   ['chrome-devtools-mcp', 'trace-audit-reporting', 'trace-analyzer-extension']
@@ -222,7 +224,7 @@ Example summary produced by `scripts/trace-summarize.mjs --json`:
 
 If blocked, return PARTIAL status with blocker description. Continue retrying until the issue is resolved or a true technical limit is reached. Only escalate to `00-helping` via `00.cross-tier-helper` when a genuine, documented technical limit blocks further progress. No concessions.
 
-## Output format
+## Output Format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1

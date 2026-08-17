@@ -20,7 +20,7 @@ export const SUPPORTED_ACTIVATION_INDICES = [
 ] as const;
 
 /**
- * Description of one supported activation function in WGSL form.
+ * Description of one supported activation function compiled into WGSL shader form.
  */
 export interface ActivationFunctionEntry {
   /** Worker-registry activation index used in the WGSL switch. */
@@ -82,7 +82,7 @@ function buildActivationFunctionBody(
 }
 
 /**
- * Build the canonical registry of WGSL activation functions.
+ * Build the canonical registry of WGSL activation functions for shader emission.
  *
  * @returns A read-only array of supported activation entries. The order matches
  *   `SUPPORTED_ACTIVATION_INDICES` so callers can emit a deterministic switch.

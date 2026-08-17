@@ -105,7 +105,7 @@ const DEFAULT_ANN_DIMENSION = 384;
  * @param {'diskann' | undefined} options.force - Strategy override.
  * @returns {Promise<{ strategy: string, build_status: string, [key: string]: unknown }>} Build result.
  */
-async function buildAnnIndexHandler(options = {}) {
+async function buildAnnIndexHandler(options) {
   const databasePath = options.databasePath;
 
   return buildAnnIndex({

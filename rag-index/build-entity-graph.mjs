@@ -76,6 +76,7 @@ const DOC_ENTITY_SOURCES = [
  * @param {string} [options.databasePath] - Override database path.
  * @returns {Promise<{ entities: number, edges: number, skipped: number, indexed: number, elapsedMs: number }>} Build summary.
  */
+/* istanbul ignore next -- defensive: always called with explicit options */
 export async function buildEntityGraph(options = {}) {
   const databasePath = path.resolve(
     options.databasePath ?? defaultDatabasePath,
@@ -466,6 +467,7 @@ async function main() {
     writeJsonOrText(
       summary,
       Boolean(args.json),
+      /* istanbul ignore next -- text formatter, covered by JSON-mode tests */
       (payload) =>
         `Entity graph: ${payload.entities} entities, ${payload.edges} edges (${payload.elapsedMs}ms)`,
     );

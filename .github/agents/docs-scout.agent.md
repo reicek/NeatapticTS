@@ -14,6 +14,8 @@ tools:
     neataptic-workflow-mcp/*,
   ]
 user-invocable: false
+disable-model-invocation: false
+target: vscode
 agents: []
 skills: ['educational-docs', 'auditing-js-docs']
 ---
@@ -209,7 +211,7 @@ JSDOC_GAP:
 - Set `TASK_STATUS: PARTIAL` when the required evidence cannot be gathered.
 - Record the smallest blocker, suggest the next agent, and stop without broadening scope.
 
-## Output format
+## Output Format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1
@@ -221,8 +223,6 @@ FILES_READ:
 - <path or NONE>
 FILES_CHANGED:
 - <path or NONE — this scout is read-only>
-DRIFT_MAP:
-- <DRIFT_FINDING or JSDOC_GAP block, or NONE>
 KEY_FINDINGS:
 - <finding or NONE>
 ACTIONS_TAKEN:

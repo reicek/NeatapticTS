@@ -51,7 +51,36 @@
  * @experimental
  * @module neat/nge-experimental
  */
+/**
+ * Adult-stage NGE lifecycle staging and equilibrium transitions.
+ *
+ * This namespace is experimental and unstable; it is not covered by the stable
+ * public API contract and may change without a major version bump.
+ */
 export * as adult from './nge-adult/neat.nge-adult';
+
+/**
+ * Juvenile growth and development namespace for NGE.
+ *
+ * This namespace is experimental and unstable; it is not covered by the stable
+ * public API contract and may change without a major version bump.
+ */
 export * as juvenile from './nge-juvenile/neat.nge-juvenile';
+
+/**
+ * NGE lifecycle runner that sequences juvenile growth, adult staging, and
+ * assimilation write-back.
+ *
+ * This namespace is experimental and unstable; it is not covered by the stable
+ * public API contract and may change without a major version bump.
+ */
 export * as lifecycle from './neat.nge-lifecycle';
+
+/**
+ * Deterministic assimilation write-back of an equilibrium candidate into a
+ * realized NGE phenotype.
+ *
+ * This namespace is experimental and unstable; it is not covered by the stable
+ * public API contract and may change without a major version bump.
+ */
 export * as assimilation from './nge-assimilation/neat.nge-assimilation';

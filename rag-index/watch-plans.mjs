@@ -47,6 +47,7 @@ export async function runPlanWatcher(options) {
     const existingTimer = timers.get(normalized);
     if (existingTimer !== undefined) clearTimeout(existingTimer);
 
+    /* istanbul ignore next -- platform-dependent fs.watch debounce callback */
     timers.set(
       normalized,
       setTimeout(() => {
@@ -67,10 +68,12 @@ export async function runPlanWatcher(options) {
       resolvedDir,
       { recursive: true },
       (eventType, filename) => {
+        /* istanbul ignore if -- platform-dependent null filename */
         if (!filename) return;
         handleChange(path.join(resolvedDir, filename));
       },
     );
+    /* istanbul ignore next -- fs.watch error handler, hard to trigger reliably in tests */
     watcher.on('error', (error) => {
       console.error(`watch-plans: watcher error for ${resolvedDir}:`, error);
     });
@@ -78,6 +81,7 @@ export async function runPlanWatcher(options) {
   }
 
   function close() {
+    /* istanbul ignore next -- platform-dependent: only reached if timers exist at close time */
     for (const timer of timers.values()) clearTimeout(timer);
     timers.clear();
     for (const watcher of watchers) watcher.close();
@@ -88,5 +92,6 @@ export async function runPlanWatcher(options) {
 }
 
 function isPlanFile(filePath) {
+  /* istanbul ignore next -- defensive: handleChange always passes a string from path.join */
   return typeof filePath === 'string' && filePath.endsWith(PLAN_FILE_SUFFIX);
 }

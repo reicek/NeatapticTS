@@ -23,81 +23,35 @@ import {
   NEATENSTEIN_INPUT_MESSAGE_TYPE,
   NEATENSTEIN_RENDER_FRAME_FORMAT_VERSION,
   NEATENSTEIN_WORKER_BUNDLE_FILENAME,
-  type NeatensteinTier,
+  RENDER_TIER_WORKER,
 } from '../constants';
 import type {
   NeatensteinRenderFrame,
   NeatensteinRenderState,
 } from '../renderer/frame';
-import type { InputSnapshot } from './input';
+import type {
+  InputSnapshot,
+  NeatensteinRendererBridge,
+  NeatensteinRendererBridgeOptions,
+} from './types';
+import {
+  WORKER_MSG_FRAME,
+  WORKER_MSG_INIT,
+  WORKER_MSG_INITIALIZED,
+  WORKER_MSG_RESIZE,
+  WORKER_MSG_SIM_STATE,
+} from './worker-protocol.constants';
+
+// Re-export consolidated types so existing imports from this module remain valid.
+export type {
+  NeatensteinRendererBridge,
+  NeatensteinRendererBridgeOptions,
+} from './types';
 
 /**
  * Default worker bundle URL used when the caller does not supply one.
  */
 const DEFAULT_WORKER_URL = `/assets/${NEATENSTEIN_WORKER_BUNDLE_FILENAME}`;
-
-/**
- * Configuration needed to create a host side renderer bridge that spawns the
- * display worker and transfers the OffscreenCanvas to the selected tier.
- */
-export interface NeatensteinRendererBridgeOptions {
-  /** The visible canvas element on the host page. */
-  canvas: HTMLCanvasElement;
-  /** Absolute or relative URL to the worker bundle. */
-  workerUrl?: string;
-  /** Selected renderer tier. */
-  tier: NeatensteinTier;
-  /** Deterministic seed used to build the wall grid on the worker. */
-  mapSeed: number;
-}
-
-/**
- * Public surface of the host renderer bridge that callers use to forward
- * state, send input, and consume rendered frames from the display worker.
- */
-export interface NeatensteinRendererBridge {
-  /** The spawned display worker. */
-  worker: Worker;
-  /** Latest frame request id received from the worker. */
-  requestId: number;
-  /** Forward a simulation state snapshot to the worker. The bridge applies
-   * worker-busy backpressure so only one snapshot is in flight at a time;
-   * additional calls defer the latest state until the worker acknowledges. */
-  postSimState(state: NeatensteinRenderState): void;
-  /** Forward a host-resized CSS-box dimension to the worker. */
-  resize(width: number, height: number): void;
-  /** Forward an input snapshot to the worker so it can advance the sim tick. */
-  forwardWorkerInput(snapshot: InputSnapshot): void;
-  /** Terminate the worker and release the bridge. */
-  destroy(): void;
-  /**
-   * Register a callback that receives every rendered frame produced by the
-   * worker on the `cpu` and `gpu` tiers.
-   *
-   * The consumer is called synchronously when a `frame` message arrives, before
-   * the bridge updates its latest request id. This lets the host overlay or
-   * capture pipeline consume the same frame payload without an extra copy.
-   *
-   * @param consumer - Function invoked with each incoming render frame.
-   */
-  setFrameConsumer(consumer: (frame: NeatensteinRenderFrame) => void): void;
-  /**
-   * Register a callback invoked when the worker finishes rendering a frame
-   * and has no pending state to flush. The host uses this to schedule the
-   * next `requestAnimationFrame`, making the render loop purely worker-paced
-   * instead of running continuously at display refresh rate.
-   *
-   * The callback is NOT called when a deferred `pendingState` is flushed on
-   * the frame ack — the flushed state's own ack will trigger it once the
-   * worker finishes that render.
-   *
-   * Pass `null` to clear the callback.
-   *
-   * @param callback - Function invoked when the worker is idle and ready for
-   *   the next frame, or `null` to clear.
-   */
-  setOnFrameReady(callback: (() => void) | null): void;
-}
 
 /**
  * Return whether a value is usable as a positive render dimension.
@@ -223,7 +177,7 @@ export function createNeatensteinRendererBridge(
   let offscreen: OffscreenCanvas | undefined;
   const transferList: Transferable[] = [];
 
-  if (tier === 'worker') {
+  if (tier === RENDER_TIER_WORKER) {
     if (typeof canvas.transferControlToOffscreen !== 'function') {
       worker.terminate();
 
@@ -243,7 +197,7 @@ export function createNeatensteinRendererBridge(
    * @param state - Render state to send.
    */
   function postSimStateNow(state: NeatensteinRenderState): void {
-    worker.postMessage({ type: 'simState', state });
+    worker.postMessage({ type: WORKER_MSG_SIM_STATE, state });
   }
 
   /**
@@ -253,7 +207,7 @@ export function createNeatensteinRendererBridge(
    * @param height - Host-derived render height in pixels.
    */
   function postResizeMessage(width: number, height: number): void {
-    worker.postMessage({ type: 'resize', width, height });
+    worker.postMessage({ type: WORKER_MSG_RESIZE, width, height });
   }
 
   /**
@@ -370,14 +324,14 @@ export function createNeatensteinRendererBridge(
 
     const data = event.data;
 
-    if (data.type === 'initialized') {
+    if (data.type === WORKER_MSG_INITIALIZED) {
       initialized = true;
       flushPendingMessages();
       return;
     }
 
     if (
-      data.type === 'frame' &&
+      data.type === WORKER_MSG_FRAME &&
       isMessageRecord(data.frame) &&
       typeof data.frame.requestId === 'number'
     ) {
@@ -408,7 +362,7 @@ export function createNeatensteinRendererBridge(
 
   worker.postMessage(
     {
-      type: 'init',
+      type: WORKER_MSG_INIT,
       tier,
       version: NEATENSTEIN_RENDER_FRAME_FORMAT_VERSION,
       mapSeed,

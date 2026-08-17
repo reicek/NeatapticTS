@@ -5,7 +5,7 @@ import { canUseGPU } from './network.gpu.capability';
 import { SUPPORTED_ACTIVATION_INDICES } from './network.gpu.kernel';
 
 /**
- * Options controlling batch evaluation in the worker seam.
+ * Options controlling batch evaluation in the worker seam for the GPU path.
  */
 export interface BatchEvaluationOptions {
   /**
@@ -155,7 +155,7 @@ export async function evaluateBatchGeneration(
 }
 
 /**
- * Single concurrent agent evaluation request.
+ * Single concurrent agent evaluation request submitted to the batch GPU path.
  */
 export interface AgentEvaluationRequest {
   network: Network;

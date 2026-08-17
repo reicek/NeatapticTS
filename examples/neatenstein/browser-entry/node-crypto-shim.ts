@@ -95,11 +95,13 @@ function sha256Hex(bytes: number[]): string {
     padded.push(0x00);
   }
   // Append 64-bit big-endian length.
-  for (let i = 7; i >= 0; i--) {
+  // JavaScript bitwise ops are 32-bit (shift amounts are taken mod 32),
+  // so `>>> 32` is equivalent to `>>> 0`, which would corrupt the high
+  // 32 bits. Push literal zeros for the high word, then shift the low word.
+  padded.push(0x00, 0x00, 0x00, 0x00);
+  for (let i = 3; i >= 0; i--) {
     padded.push((originalBitLength >>> (i * 8)) & 0xff);
   }
-  // JavaScript bitwise ops are 32-bit, so high 32 bits of length are zero
-  // for any practical input (strings under ~512 MB). This matches Node behavior.
 
   let h0 = INITIAL_HASH[0];
   let h1 = INITIAL_HASH[1];
@@ -182,13 +184,16 @@ function sha256Hex(bytes: number[]): string {
   return hex;
 }
 
-/** Interface matching the Node.js Hash object subset used by the codebase. */
-interface ShimHash {
-  /** Feed data into the hash. Returns this for chaining. */
-  update(data: string): ShimHash;
-  /** Produce the final digest in the requested encoding. */
-  digest(encoding: 'hex'): string;
-}
+import { SHA256_ALGORITHM, SHA256_ENCODING } from './constants';
+import type { ShimHash } from './browser-entry.types';
+
+/**
+ * Hash object interface matching the Node.js `crypto.Hash` subset.
+ *
+ * @deprecated Import from `./browser-entry.types` instead. This re-export
+ *   preserves the public API for existing consumers.
+ */
+export type { ShimHash } from './browser-entry.types';
 
 /**
  * Create a SHA-256 hash object compatible with the Node.js `crypto.createHash`
@@ -199,9 +204,9 @@ interface ShimHash {
  * @throws Error if an unsupported algorithm is requested.
  */
 export function createHash(algorithm: string): ShimHash {
-  if (algorithm !== 'sha256') {
+  if (algorithm !== SHA256_ALGORITHM) {
     throw new Error(
-      `node-crypto-shim only supports 'sha256', got '${algorithm}'.`,
+      `node-crypto-shim only supports '${SHA256_ALGORITHM}', got '${algorithm}'.`,
     );
   }
 
@@ -213,9 +218,9 @@ export function createHash(algorithm: string): ShimHash {
       return this;
     },
     digest(encoding: 'hex'): string {
-      if (encoding !== 'hex') {
+      if (encoding !== SHA256_ENCODING) {
         throw new Error(
-          `node-crypto-shim only supports 'hex' encoding, got '${encoding}'.`,
+          `node-crypto-shim only supports '${SHA256_ENCODING}' encoding, got '${encoding}'.`,
         );
       }
       return sha256Hex(bytes);

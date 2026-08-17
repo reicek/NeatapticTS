@@ -54,6 +54,7 @@ type NodeShapeInferenceContext = {
  *
  * @param model - ONNX-like model to validate.
  * @returns Nothing.
+ * @throws {NetworkOnnxShapeValidationError} When a node's inferred output count or shape is incoherent.
  */
 export function validateOnnxModelShapes(model: OnnxModel): void {
   // Step 1: Seed the shape ledger from declared graph inputs and initializers.

@@ -1,5 +1,5 @@
-export const DOCS_QUALITY_METRIC_VERSION = 1;
-export const DOCS_QUALITY_SCANNER_VERSION = '1.0.0';
+export const DOCS_QUALITY_METRIC_VERSION = 2;
+export const DOCS_QUALITY_SCANNER_VERSION = '2.0.0';
 
 const REQUIRED_MANIFEST_FIELDS = [
   'metricVersion',
@@ -38,6 +38,16 @@ export function validateDocsQualityManifestV1(manifest) {
     }
   }
 
+  const LEGACY_TOP_LEVEL_FIELDS = ['threshold', 'scopeType', 'scopeDigest'];
+  for (const legacyField of LEGACY_TOP_LEVEL_FIELDS) {
+    if (Object.hasOwn(manifest, legacyField)) {
+      errors.push({
+        field: legacyField,
+        message: `Legacy top-level field is not allowed: ${legacyField}`,
+      });
+    }
+  }
+
   if (!Number.isInteger(manifest.metricVersion)) {
     errors.push({
       field: 'metricVersion',
@@ -66,6 +76,14 @@ export function validateDocsQualityManifestV1(manifest) {
     errors.push({
       field: 'scopeConfig',
       message: 'scopeConfig must be an object.',
+    });
+  }
+
+  if (manifest.generatedAt === '1970-01-01T00:00:00.000Z') {
+    errors.push({
+      field: 'generatedAt',
+      message:
+        'generatedAt must be a fresh timestamp, not the frozen canonical value.',
     });
   }
 

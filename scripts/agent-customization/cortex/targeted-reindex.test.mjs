@@ -32,6 +32,18 @@ function makeExitingChild(code, stderr = '') {
   return child;
 }
 
+function makeErrorChild(errorMessage) {
+  const child = {
+    stderr: {
+      on() {},
+    },
+    on(event, cb) {
+      if (event === 'error') setImmediate(() => cb(new Error(errorMessage)));
+    },
+  };
+  return child;
+}
+
 describe('isEligibleFile', () => {
   it('accepts .md under plans/', () => {
     assert.strictEqual(isEligibleFile('plans/foo.plans.md'), true);
@@ -169,5 +181,29 @@ describe('reindexFiles', () => {
     const result = await reindexFiles(['src/neat/neat.ts']);
     assert.deepStrictEqual(result.reindexed, []);
     assert.ok(result.errors.length >= 1);
+  });
+
+  it('records errors when the child process emits an error event', async () => {
+    mockSpawn.mockReturnValue(makeErrorChild('child boom'));
+
+    const result = await reindexFiles(['src/neat/neat.ts']);
+    assert.deepStrictEqual(result.reindexed, []);
+    assert.ok(result.errors.length >= 1);
+    assert.match(result.errors[0], /child error/);
+  });
+
+  it('treats a null exit code as -1 (signal kill)', async () => {
+    const child = {
+      stderr: { on() {} },
+      on(event, cb) {
+        if (event === 'exit') setImmediate(() => cb(null));
+      },
+    };
+    mockSpawn.mockReturnValue(child);
+
+    const result = await reindexFiles(['src/neat/neat.ts']);
+    assert.deepStrictEqual(result.reindexed, []);
+    assert.ok(result.errors.length >= 1);
+    assert.match(result.errors[0], /code -1/);
   });
 });

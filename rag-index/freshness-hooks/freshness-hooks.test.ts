@@ -398,7 +398,7 @@ describe('freshness-hooks.mjs', () => {
           await rm(fixture.dir, {
             recursive: true,
             force: true,
-            maxRetries: 5,
+            maxRetries: 10,
             retryDelay: 200,
           });
         }

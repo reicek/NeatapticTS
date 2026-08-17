@@ -199,6 +199,7 @@ import {
 import type {
   AccelerationStatus,
   ActivationBackend,
+  ActivationObserver,
   ActivationSchedule,
   ActivationSchedulingDiagnostics,
   CompactSerializedNetworkTuple,
@@ -1121,47 +1122,106 @@ export default class Network implements NetworkView {
     trainingOrOptions: boolean | NetworkActivationOptions = false,
     _maxActivationDepth = 1000, // eslint-disable-line @typescript-eslint/no-unused-vars
   ): number[] | Promise<Float32Array> {
-    const options =
-      typeof trainingOrOptions === 'object'
-        ? trainingOrOptions
-        : { training: trainingOrOptions };
+    const options = this._normalizeActivationOptions(trainingOrOptions);
     const training = options.training ?? false;
     const backend = this._resolveActivationBackend(options);
     const observer = options.observer;
     const previousBackend = this.lastActivationBackend;
 
     if (backend === 'gpu' || backend === 'auto') {
-      const device = this.gpuDevice;
-      if (isDeviceReady(device) && isGPUEligible(this, device)) {
-        this.lastActivationBackend = 'gpu';
-        if (observer?.onBackendChange) {
-          observer.onBackendChange({
-            backend: 'gpu',
-            previous: previousBackend,
-          });
-        }
-        return activateGPU(device, this, input);
-      }
-
-      this.lastActivationBackend = 'cpu';
-      const eligibility = getGPUEligibilityInfo(this, device);
-      const reason = `GPU unavailable; ${eligibility.reason}`;
-      if (observer?.onFallback) {
-        observer.onFallback({ backend: 'cpu', requested: backend, reason });
-      }
-      if (observer?.onBackendChange) {
-        observer.onBackendChange({
-          backend: 'cpu',
-          previous: previousBackend,
-        });
-      }
-    } else {
-      this.lastActivationBackend = 'cpu';
-      if (observer?.onBackendChange) {
-        observer.onBackendChange({ backend: 'cpu', previous: previousBackend });
-      }
+      return this._tryGPUActivation(
+        input,
+        backend,
+        observer,
+        previousBackend,
+        training,
+      );
     }
 
+    this.lastActivationBackend = 'cpu';
+    this._notifyBackendChange(observer, 'cpu', previousBackend);
+    return _activate.call(this, input as number[], training);
+  }
+
+  /**
+   * Normalize the mixed training-flag / options-bag argument into a
+   * {@link NetworkActivationOptions} object.
+   *
+   * @param trainingOrOptions - Boolean training flag or options bag.
+   * @returns Normalized activation options.
+   */
+  private _normalizeActivationOptions(
+    trainingOrOptions: boolean | NetworkActivationOptions,
+  ): NetworkActivationOptions {
+    return typeof trainingOrOptions === 'object'
+      ? trainingOrOptions
+      : { training: trainingOrOptions };
+  }
+
+  /**
+   * Notify the observer (if any) that the active backend changed.
+   *
+   * @param observer - Optional activation observer.
+   * @param backend - Newly selected backend.
+   * @param previousBackend - Previously used backend, if any.
+   */
+  private _notifyBackendChange(
+    observer: ActivationObserver | undefined,
+    backend: ActivationBackend,
+    previousBackend: ActivationBackend | undefined,
+  ): void {
+    if (observer?.onBackendChange) {
+      observer.onBackendChange({ backend, previous: previousBackend });
+    }
+  }
+
+  /**
+   * Notify the observer (if any) that a GPU request fell back to CPU.
+   *
+   * @param observer - Optional activation observer.
+   * @param requested - Backend originally requested by the caller.
+   * @param reason - Human-readable fallback reason.
+   */
+  private _notifyFallback(
+    observer: ActivationObserver | undefined,
+    requested: 'gpu' | 'auto',
+    reason: string,
+  ): void {
+    if (observer?.onFallback) {
+      observer.onFallback({ backend: 'cpu', requested, reason });
+    }
+  }
+
+  /**
+   * Attempt GPU activation, falling back to CPU when the device is
+   * unavailable or ineligible.
+   *
+   * @param input - Input vector of length `this.input`.
+   * @param backend - Requested backend (`'gpu'` or `'auto'`).
+   * @param observer - Optional activation observer.
+   * @param previousBackend - Previously used backend, if any.
+   * @param training - Whether activation is part of training.
+   * @returns Output values, or a promise when the GPU path succeeds.
+   */
+  private _tryGPUActivation(
+    input: number[] | Float32Array,
+    backend: 'gpu' | 'auto',
+    observer: ActivationObserver | undefined,
+    previousBackend: ActivationBackend | undefined,
+    training: boolean,
+  ): number[] | Promise<Float32Array> {
+    const device = this.gpuDevice;
+    if (isDeviceReady(device) && isGPUEligible(this, device)) {
+      this.lastActivationBackend = 'gpu';
+      this._notifyBackendChange(observer, 'gpu', previousBackend);
+      return activateGPU(device, this, input);
+    }
+
+    this.lastActivationBackend = 'cpu';
+    const eligibility = getGPUEligibilityInfo(this, device);
+    const reason = `GPU unavailable; ${eligibility.reason}`;
+    this._notifyFallback(observer, backend, reason);
+    this._notifyBackendChange(observer, 'cpu', previousBackend);
     return _activate.call(this, input as number[], training);
   }
 

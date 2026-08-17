@@ -14,6 +14,8 @@ tools:
     neataptic-workflow-mcp/*,
   ]
 user-invocable: false
+disable-model-invocation: false
+target: vscode
 agents: []
 skills: [coverage-guard, coverage-tranche]
 ---
@@ -21,8 +23,6 @@ skills: [coverage-guard, coverage-tranche]
 ## CRITICAL RULE — NEVER RUN GIT
 
 **NEVER run ANY git command.** No git checkout, git reset, git revert, git stash, git clean, git add, git commit, git push, or any other git operation. Git is UNINSTALLED. Running git commands has destroyed hours of work by reverting files. All file changes must use the edit or create tools ONLY. If you need to see file contents, use the view tool.
-
-# coverage-analyst
 
 ## Purpose
 
@@ -163,31 +163,24 @@ the next tranche or verify post-change regression. Uses the `coverage-tranche`
 skill for forward discovery and the `coverage-guard` skill for the
 post-change regression check. This agent delegates nothing (`agents: []`).
 
-## Output format
+## Output Format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1
 TASK_STATUS: SUCCESS | PARTIAL | FAILED
 TIER: 3
 ROLE: coverage-analyst
-MODE: recon | regression
 TASK_RECEIVED: <brief restatement>
 FILES_READ:
 - <path or NONE>
 FILES_CHANGED:
 - <path or NONE>
-COVERAGE_SNAPSHOT:
-- file: <path>, statements: <pct>, branches: <pct>, functions: <pct>, lines: <pct>
 KEY_FINDINGS:
-- <gap classification and test target, or NONE>
+- <finding or NONE>
 ACTIONS_TAKEN:
-- <focused coverage command run, or NONE>
+- <action or NONE>
 VALIDATION_EVIDENCE:
 - <command/result or NOT RUN>
-VERDICT: GAP_REPORT | REGRESSION_DETECTED | NO_GAP
-OBSERVATIONS:
-- file: <path>, category: <statements|branches|functions|lines>, location: <line/region>, classification: <reachable-live-path|dead-code>, confidence: <0-1>, action: <add-test|remove-branch>, test_target: <nearest test file>::<it() name>
-NEXT_TRANCHE_TARGET: <next src/ file or NONE>
 HANDOFF: <next step, reroute, or NONE>
 BLOCKERS:
 - <blocker or NONE>

@@ -18,6 +18,11 @@ const STORAGE_FP16_ELIGIBLE_INITIALIZER_PATTERNS = [
 
 /**
  * Rewrites eligible weight and bias initializers from FP32 to FP16 storage and prepends Cast-to-FP32 bridge nodes.
+ *
+ * @param model - ONNX model to mutate with FP16 storage and cast bridges.
+ * @param sourceOptions - Raw export options carrying the precision mode.
+ * @param recurrentLayerIndices - Layer indices that are recurrent; FP16 storage is skipped when present.
+ * @returns Nothing; the model graph is mutated in place.
  */
 export function applyStorageFp16PostProcessing(
   model: OnnxModel,

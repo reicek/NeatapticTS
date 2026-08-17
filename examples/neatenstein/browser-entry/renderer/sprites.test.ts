@@ -559,6 +559,53 @@ describe('neatenstein sprites', () => {
       );
       expect(clip.visibleColumns).toEqual([]);
     });
+
+    it('preserves unclipped projection left/right when sprite extends past screen edges', async () => {
+      const { buildNeatensteinZBuffer } = await import('./zbuffer');
+      const { clipNeatensteinSprite, projectNeatensteinSprite } =
+        await import('./sprites');
+
+      const camera = {
+        posX: 1,
+        posY: 1,
+        dirX: 1,
+        dirY: 0,
+        planeX: 0,
+        planeY: 0.66,
+      };
+
+      // Sprite very close to the camera so its projection extends well past
+      // both screen edges (left < 0, right > 63 on a 64px canvas).
+      const sprite = { worldX: 1.5, worldY: 1 };
+
+      const projection = projectNeatensteinSprite(sprite, camera, 64, 64);
+      expect(projection.visible).toBe(true);
+      // Confirm the projection actually extends past the canvas edges.
+      expect(projection.left).toBeLessThan(0);
+      expect(projection.right).toBeGreaterThan(63);
+
+      // z-buffer: columns 0-10 are occluded by a close wall; the rest are open.
+      const zBuffer = buildNeatensteinZBuffer(64);
+      for (let i = 0; i < 64; i += 1) {
+        zBuffer[i] = i <= 10 ? 0.1 : 5;
+      }
+
+      const clip = clipNeatensteinSprite(sprite, camera, 64, 64, zBuffer);
+
+      // The returned left/right must equal the ORIGINAL unclipped projection
+      // values — clipping narrows visibleColumns but must NOT compress the
+      // texture coordinate span (which would distort the sprite).
+      expect(clip.left).toBe(projection.left);
+      expect(clip.right).toBe(projection.right);
+
+      // visibleColumns must contain only the actually-visible columns
+      // (columns 11-63, since 0-10 are occluded by the close wall).
+      const expectedVisible: number[] = [];
+      for (let i = 11; i < 64; i += 1) {
+        expectedVisible.push(i);
+      }
+      expect(clip.visibleColumns).toEqual(expectedVisible);
+    });
   });
 
   describe('renderNeatensteinSprite voxel frame rendering', () => {

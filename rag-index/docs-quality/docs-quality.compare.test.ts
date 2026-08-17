@@ -32,12 +32,23 @@ describe('docs-quality compare red contracts', () => {
     const result = runModuleEvaluation<{ reasons: string[] }>(`
       import { compareDocsQualityRuns } from './rag-index/docs-quality/docs-quality.compare.mjs';
       const base = ${JSON.stringify(baseManifest)};
+      const baseScopeConfig = base.scopeConfig ?? {};
       const mismatchedCandidates = [
-        { ...base, metricVersion: 2 },
-        { ...base, threshold: { minJsdocWords: 11, complexityThreshold: 10 } },
-        { ...base, scopeType: 'src' },
-        { ...base, scopeDigest: 'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff' },
-        { ...base, scannerVersion: '2.0.0' },
+        { ...base, metricVersion: 99 },
+        {
+          ...base,
+          thresholdConfig: { minJsdocWords: 11, complexityThreshold: 10 },
+        },
+        { ...base, scopeConfig: { ...baseScopeConfig, scopeType: 'src' } },
+        {
+          ...base,
+          scopeConfig: {
+            ...baseScopeConfig,
+            scopeDigest:
+              'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
+          },
+        },
+        { ...base, scannerVersion: '3.0.0' },
       ];
       const reasons = mismatchedCandidates.map((candidate) => {
         const comparison = compareDocsQualityRuns({ leftManifest: base, rightManifest: candidate, leftSummary: {}, rightSummary: {} });

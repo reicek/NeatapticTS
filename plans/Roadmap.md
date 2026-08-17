@@ -13,4 +13,7 @@ Active workstreams and their plan trackers.
 
 ## Standalone Meta-Workflow Lane
 
+- Docs Quality Metrics Gap: `plans/docs-quality-metrics-gap.plans.md` — Phase 1 [DONE] (active tracker in `plans/`) — close the gaps in `npm run docs:quality:metrics` so the pipeline passes clean (coverage scope alignment, expanded scanner dimensions, real timestamp, coverage gating, symbol deduplication, manifest cleanup)
+- Root Folder Cleanup: `plans/Root_Folder_Cleanup.plans.md` — Phase 1 [DONE] (closed tracker in `plans/`) — audit and remove temporal/debug/snapshot files from repo root and relocate root scripts/docs to proper subdirectories
+
 Reserved for agentic workflow infrastructure and cross-cutting tooling plans.

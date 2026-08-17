@@ -84,9 +84,10 @@ const MUTATION_DISPATCH: Record<string, MutationHandler> = {
  * - Throws when no method is provided.
  * - Emits a warning and no-ops when an unknown method key is received.
  *
- * @param this - Network instance.
+ * @param this - Network instance bound by method call.
  * @param method - Mutation enum value or descriptor object.
  * @returns Nothing.
+ * @throws {NetworkMutateMethodRequiredError} When no method is provided.
  *
  * @example
  * ```ts

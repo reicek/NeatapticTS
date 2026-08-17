@@ -160,6 +160,42 @@ export const DEFAULT_BUFFER_POOL_SAFETY_FACTOR = 1.5;
  * console.log(cap); // 262144 (min floor) for a 1k-node workload
  * ```
  */
+const DEFAULT_BUFFER_POOL_OPTIONS: Required<
+  Pick<
+    BufferPoolMaxPooledBytesOptions,
+    'avgDegree' | 'float32Bytes' | 'bufferCount' | 'safetyFactor' | 'minBytes'
+  >
+> = {
+  avgDegree: DEFAULT_BUFFER_POOL_AVG_DEGREE,
+  float32Bytes: DEFAULT_BUFFER_POOL_FLOAT32_BYTES,
+  bufferCount: DEFAULT_BUFFER_POOL_BUFFER_COUNT,
+  safetyFactor: DEFAULT_BUFFER_POOL_SAFETY_FACTOR,
+  minBytes: MIN_BUFFER_POOL_BYTES,
+};
+
+/**
+ * Clamp a computed byte cap to one quarter of the device `maxBufferSize`
+ * when a device limit is supplied.
+ *
+ * @param floored - The computed cap after applying the minimum floor.
+ * @param maxBufferSize - Optional device `maxBufferSize` for clamping.
+ * @returns The clamped cap, or `floored` when no device limit is given.
+ */
+function clampToMaxBufferSize(floored: number, maxBufferSize?: number): number {
+  if (maxBufferSize === undefined) return floored;
+  return Math.min(floored, Math.floor(maxBufferSize / 4));
+}
+
+/**
+ * Resolve the maximum pooled bytes for the buffer pool based on the given
+ * workload and optional overrides. When `maxPooledBytes` is provided it is
+ * returned directly; otherwise the value is estimated from workload metrics
+ * and clamped to the configured maximum buffer size.
+ *
+ * @param workload - Buffer pool workload metrics (node count, connections, etc.).
+ * @param options - Optional overrides for estimated calculation parameters.
+ * @returns The resolved maximum pooled bytes value.
+ */
 export function resolveBufferPoolMaxPooledBytes(
   workload: BufferPoolWorkload,
   options?: BufferPoolMaxPooledBytesOptions,
@@ -168,21 +204,13 @@ export function resolveBufferPoolMaxPooledBytes(
     return options.maxPooledBytes;
   }
 
-  const nodeCount = workload.nodeCount ?? 0;
-  const avgDegree = options?.avgDegree ?? DEFAULT_BUFFER_POOL_AVG_DEGREE;
-  const float32Bytes =
-    options?.float32Bytes ?? DEFAULT_BUFFER_POOL_FLOAT32_BYTES;
-  const bufferCount = options?.bufferCount ?? DEFAULT_BUFFER_POOL_BUFFER_COUNT;
-  const safetyFactor =
-    options?.safetyFactor ?? DEFAULT_BUFFER_POOL_SAFETY_FACTOR;
-  const minBytes = options?.minBytes ?? MIN_BUFFER_POOL_BYTES;
-
+  const resolved = { ...DEFAULT_BUFFER_POOL_OPTIONS, ...options };
   const estimated =
-    nodeCount * avgDegree * float32Bytes * bufferCount * safetyFactor;
-  const floored = Math.max(minBytes, estimated);
-  const maxBufferSize = options?.maxBufferSize;
-  if (maxBufferSize !== undefined) {
-    return Math.min(floored, Math.floor(maxBufferSize / 4));
-  }
-  return floored;
+    (workload.nodeCount ?? 0) *
+    resolved.avgDegree *
+    resolved.float32Bytes *
+    resolved.bufferCount *
+    resolved.safetyFactor;
+  const floored = Math.max(resolved.minBytes, estimated);
+  return clampToMaxBufferSize(floored, options?.maxBufferSize);
 }

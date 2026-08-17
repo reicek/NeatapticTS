@@ -230,6 +230,7 @@ export const NEATENSTEIN_GUN_ACCENT_COLOR = '#00f0ff';
  */
 export const NEATENSTEIN_DYNAMIC_LIGHT_COLOR = '#00f0ff';
 
+// prettier-ignore
 /**
  * RGB tint applied to surviving pixels during the Tron-style derez death
  * animation.
@@ -238,7 +239,6 @@ export const NEATENSTEIN_DYNAMIC_LIGHT_COLOR = '#00f0ff';
  * this cool gray so the crumbling silhouette shifts from the enemy's team
  * color to an icy neutral before the final pixels scatter.
  */
-// prettier-ignore
 export const NEATENSTEIN_ENEMY_DEATH_COLOR: readonly [number, number, number] = [180, 190, 210];
 
 /**
@@ -365,3 +365,180 @@ export const NEATENSTEIN_AMMO_PICKUP_GLOW_BLUR_PX = 8;
 
 /** Base radius in CSS pixels for the ammo pickup square at unit distance. */
 export const NEATENSTEIN_AMMO_PICKUP_RADIUS_PX = 6;
+
+// ---------------------------------------------------------------------------
+// Cross-cutting shared constants (Phase 0 extraction)
+//
+// These constants are shared across multiple layers (scripts, renderer, worker,
+// harness, host). They are extracted here so that no layer hardcodes a magic
+// string or number that another layer also needs.
+// ---------------------------------------------------------------------------
+
+// Animation states — used in scripts + renderer + worker
+
+/** Idle animation state tag. */
+export const ANIM_STATE_IDLE = 'idle';
+
+/** Moving animation state tag. */
+export const ANIM_STATE_MOVE = 'move';
+
+/** Firing animation state tag. */
+export const ANIM_STATE_FIRE = 'fire';
+
+/** Death animation state tag. */
+export const ANIM_STATE_DEATH = 'death';
+
+/** Damage animation state tag. */
+export const ANIM_STATE_DAMAGE = 'damage';
+
+/** Ordered list of all animation state tags. */
+export const ANIMATION_STATES = [
+  'idle',
+  'move',
+  'fire',
+  'death',
+  'damage',
+] as const;
+
+// Snapshot kinds — used in harness + worker + entry
+
+/** Snapshot kind tag for a single MLP network. */
+export const SNAPSHOT_KIND_MLP = 'mlp' as const;
+
+/** Snapshot kind tag for a swarm of networks. */
+export const SNAPSHOT_KIND_SWARM = 'swarm' as const;
+
+// Tick input source — used in worker + host
+
+/** Auto-play tick input source tag. */
+export const TICK_INPUT_SOURCE_AUTO = 'auto';
+
+/** Human-play tick input source tag. */
+export const TICK_INPUT_SOURCE_HUMAN = 'human';
+
+// Canvas context
+
+/** Canvas 2D context identifier used with `getContext`. */
+export const NEATENSTEIN_CANVAS_2D_CONTEXT = '2d';
+
+// Time conversion
+
+/** Milliseconds per second, used for time-unit conversions. */
+export const NEATENSTEIN_MS_PER_SECOND = 1000;
+
+// Math constants
+
+/** Full circle in radians (2π). */
+export const FULL_CIRCLE_RADIANS = Math.PI * 2;
+
+/** Half rotation in radians (π). */
+export const HALF_ROTATION_RADIANS = Math.PI;
+
+// RGBA
+
+/** Number of channels in an RGBA pixel. */
+export const RGBA_CHANNELS = 4;
+
+/** Alpha value for a fully opaque RGBA pixel. */
+export const RGBA_OPAQUE_ALPHA = 255;
+
+// Epsilon
+
+/** Small epsilon for floating-point comparisons. */
+export const NEATENSTEIN_EPSILON_1E9 = 1e-9;
+
+/** Sentinel value indicating an invisible or non-existent entity. */
+export const NEATENSTEIN_INVISIBLE_SENTINEL = -1;
+
+// Render tiers
+
+/** Render tier tag for the OffscreenCanvas worker path. */
+export const RENDER_TIER_WORKER = 'worker';
+
+/** Render tier tag for the CPU fallback path. */
+export const RENDER_TIER_CPU = 'cpu';
+
+/** Render tier tag for the GPU path. */
+export const RENDER_TIER_GPU = 'gpu';
+
+// Worker message types — shared between worker + host/renderer-bridge
+
+/** Worker message type for initialization requests. */
+export const WORKER_MSG_INIT = 'init';
+
+/** Worker message type for resize events. */
+export const WORKER_MSG_RESIZE = 'resize';
+
+/** Worker message type for simulation state updates. */
+export const WORKER_MSG_SIM_STATE = 'simState';
+
+/** Worker message type signaling initialization is complete. */
+export const WORKER_MSG_INITIALIZED = 'initialized';
+
+/** Worker message type for rendered frame data. */
+export const WORKER_MSG_FRAME = 'frame';
+
+// Eval message types — shared between display.worker + eval.worker
+
+/** Eval worker message type for evaluation requests. */
+export const EVAL_MSG_EVALUATE = 'evaluate';
+
+/** Eval worker message type for completed evaluation results. */
+export const EVAL_MSG_EVAL_COMPLETE = 'evalComplete';
+
+// Worker bundle filenames
+
+/** Published display worker bundle filename. */
+export const NEATENSTEIN_WORKER_BUNDLE = 'neatenstein.worker.js';
+
+/** Published eval worker bundle filename. */
+export const NEATENSTEIN_EVAL_WORKER_BUNDLE = 'neatenstein.eval-worker.js';
+
+// Adaptation directions — shared: render-loop.utils + death-feedback.ts
+
+/** Adaptation direction tag for increasing difficulty. */
+export const ADAPTATION_STRONGER = 'stronger';
+
+/** Adaptation direction tag for decreasing difficulty. */
+export const ADAPTATION_WEAKER = 'weaker';
+
+/** Adaptation direction tag for lateral parameter shifts. */
+export const ADAPTATION_SHIFTED = 'shifted';
+
+// DNA prefix
+
+/** Prefix tag identifying a swarm DNA entry. */
+export const SWARM_DNA_PREFIX = 'swarm:';
+
+// Hex prefix and separators
+
+/** Hex color string prefix. */
+export const HEX_PREFIX = '#';
+
+/** Separator used in CSV-style serialized strings. */
+export const CSV_SEPARATOR = ',';
+
+/** Separator used in composite cache key strings. */
+export const CACHE_KEY_SEPARATOR = ':';
+
+// ---------------------------------------------------------------------------
+// Phase 5 — Entry-level constants
+// ---------------------------------------------------------------------------
+
+/** Reference timestep for FPS-scaled simulation stepping in milliseconds. */
+export const REFERENCE_TIMESTEP_MS = 16;
+
+/** Default maximum player health used as a fallback frame value. */
+export const DEFAULT_MAX_HEALTH = 100;
+
+/** Default maximum player ammo used as a fallback frame value. */
+export const DEFAULT_MAX_AMMO = 50;
+
+/** Multiplier for the rAF delta-time upper bound (4 × reference timestep). */
+export const DELTA_MULTIPLIER = 4;
+
+/** SHA-256 algorithm identifier used by the node-crypto shim. */
+export const SHA256_ALGORITHM = 'sha256' as const;
+
+/** Hex encoding identifier used by the node-crypto shim digest. */
+export const SHA256_ENCODING = 'hex' as const;

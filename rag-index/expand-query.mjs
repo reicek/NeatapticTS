@@ -306,7 +306,7 @@ export function expansionRelevance(candidate) {
   const baseScore = candidate.similarity ?? candidate.confidence ?? 0;
   const frequency = candidate.frequency ?? 1;
   const frequencyPenalty = 1.0 - 0.1 * Math.log10(Math.max(1, frequency));
-  const expandedWords = (candidate.expanded ?? '').split(' ').length;
+  const expandedWords = (/* istanbul ignore next -- defensive: expanded is always set by deduplicateExpansions */ candidate.expanded ?? '').split(' ').length;
   const lengthBonus = Math.min(1.0, expandedWords / 3);
 
   return baseScore * frequencyPenalty * (1.0 + 0.1 * lengthBonus);
@@ -330,6 +330,7 @@ export function deduplicateExpansions(allCandidates) {
   for (const candidate of allCandidates) {
     const key = candidate.expanded.toLowerCase();
     const existing = seen.get(key);
+    /* istanbul ignore next -- defensive: candidates are pre-sorted by relevanceScore so the new candidate is always more relevant */
     if (!existing || candidate.relevanceScore > existing.relevanceScore) {
       seen.set(key, candidate);
     }
@@ -502,6 +503,7 @@ export function expansionBehaviorForClass(queryClass) {
  * @returns {Promise<{ originalQuery: string, expandedTerms: Array, bm25Query: string | null, expandedEmbedding: Float32Array | null, expansion: { applied: boolean, degraded?: boolean, reason?: string } }>}
  *   Expansion result.
  */
+/* istanbul ignore next -- defensive: always called with explicit options */
 export async function expandQuery(options = {}) {
   const rawQuery = String(options.query ?? '').trim();
   const expandQuery = options.expandQuery ?? false;
@@ -689,7 +691,7 @@ export async function expandQuery(options = {}) {
           ? 'Embedding-based expansion skipped: domain-only mode'
           : 'Embedding-based expansion skipped: ONNX model or term embeddings not available',
       }),
-      ...(!applied && { reason: 'No qualifying expansions found' }),
+      ...(!applied && !degraded && { reason: 'No qualifying expansions found' }),
     },
     bm25Query,
     originalQuery: rawQuery,

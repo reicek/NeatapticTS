@@ -10,25 +10,12 @@
  * @module
  */
 
-/**
- * Sentinel value meaning "no wall in this column".
- *
- * Any finite positive sprite distance is closer than this value, so sprites are
- * visible wherever the z-buffer remains empty.
- */
-export const NEATENSTEIN_ZBUFFER_EMPTY = Number.POSITIVE_INFINITY;
+import { NEATENSTEIN_ZBUFFER_EMPTY } from './renderer.zbuffer.constants';
+import type { NeatensteinSpriteClip } from './renderer.zbuffer.types';
 
-/**
- * Result of clipping a sprite's screen span against the per-column z-buffer.
- */
-export interface NeatensteinSpriteClip {
-  /** Inclusive first screen column covered by the sprite, clamped to canvas. */
-  left: number;
-  /** Inclusive last screen column covered by the sprite, clamped to canvas. */
-  right: number;
-  /** Screen column indices where the sprite is closer than the stored wall. */
-  visibleColumns: number[];
-}
+// Re-export constants and types for external consumers.
+export { NEATENSTEIN_ZBUFFER_EMPTY } from './renderer.zbuffer.constants';
+export type { NeatensteinSpriteClip } from './renderer.zbuffer.types';
 
 /**
  * Return a canonical empty clip for invisible or invalid spans.

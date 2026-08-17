@@ -265,6 +265,187 @@ function getOrCreateBatchedOutputStagingBuffer(
 }
 
 /**
+ * Per-network GPU state entry used during batched activation.
+ */
+interface BatchNetworkState {
+  bufferSet: GPUBufferSet;
+  levelBindGroups: (GPUBindGroup | undefined)[];
+  levelWorkgroupCounts: number[];
+}
+
+/**
+ * Validate that every network in the batch is eligible for GPU inference.
+ *
+ * @param networks - Networks to evaluate as a batch.
+ * @param device - WebGPU device used to run the forward kernel.
+ * @param supportedActivations - Set of supported activation indices.
+ * @throws Error when a network is not eligible for GPU inference.
+ */
+function validateBatchGpuEligibility(
+  networks: Network[],
+  device: GPUDevice,
+  supportedActivations: Set<number>,
+): void {
+  for (let index = 0; index < networks.length; index += 1) {
+    if (!canUseGPU(networks[index], device, supportedActivations)) {
+      throw new Error(
+        `batchActivate: network at index ${index} is not eligible for GPU inference`,
+      );
+    }
+  }
+}
+
+/**
+ * Ensure each network in the batch has a persistent GPU state entry and pipeline.
+ *
+ * @param device - WebGPU device used to run the forward kernel.
+ * @param networks - Networks to evaluate as a batch.
+ * @returns Per-network states and pipelines.
+ */
+function ensureBatchGpuStates(
+  device: GPUDevice,
+  networks: Network[],
+): { states: BatchNetworkState[]; pipelines: GPUComputePipeline[] } {
+  const states: BatchNetworkState[] = [];
+  const pipelines: GPUComputePipeline[] = [];
+  for (const network of networks) {
+    const { state, pipeline } = ensureNetworkGPUState(device, network);
+    states.push(state);
+    pipelines.push(pipeline);
+  }
+  return { states, pipelines };
+}
+
+/**
+ * Upload dynamic network buffers and seed input values for each network in the batch.
+ *
+ * @param device - WebGPU device used to run the forward kernel.
+ * @param networks - Networks to evaluate as a batch.
+ * @param states - Per-network GPU state entries.
+ * @param inputMatrix - Flattened row-major input matrix.
+ * @param inputCount - Number of input nodes per network.
+ * @param skipUpload - When true, skip the upload entirely.
+ */
+function uploadBatchDynamicBuffers(
+  device: GPUDevice,
+  networks: Network[],
+  states: BatchNetworkState[],
+  inputMatrix: Float32Array,
+  inputCount: number,
+  skipUpload: boolean,
+): void {
+  if (!skipUpload) {
+    for (let index = 0; index < networks.length; index += 1) {
+      const network = networks[index];
+      const { bufferSet } = states[index];
+      uploadDynamicNetworkBuffers(device, bufferSet, network);
+      const inputSlice = inputMatrix.subarray(
+        index * inputCount,
+        (index + 1) * inputCount,
+      );
+      writeInputValuesToNodeStruct(device, bufferSet.nodes, inputSlice);
+    }
+  }
+}
+
+/**
+ * Dispatch all topological levels for a single network in the compute pass.
+ *
+ * @param computePass - Active WebGPU compute pass encoder.
+ * @param bufferSet - GPU buffer set for the network.
+ * @param levelBindGroups - Per-level bind groups.
+ * @param levelWorkgroupCounts - Per-level workgroup dispatch counts.
+ * @throws Error when a required bind group is missing.
+ */
+function dispatchNetworkLevels(
+  computePass: GPUComputePassEncoder,
+  bufferSet: GPUBufferSet,
+  levelBindGroups: (GPUBindGroup | undefined)[],
+  levelWorkgroupCounts: number[],
+): void {
+  for (let level = 1; level < bufferSet.topoLevelCount; level += 1) {
+    const bindGroup = levelBindGroups[level];
+    if (!bindGroup) {
+      throw new Error(`batchActivate: missing bind group for level ${level}`);
+    }
+    computePass.setBindGroup(0, bindGroup);
+    computePass.dispatchWorkgroups(levelWorkgroupCounts[level]);
+  }
+}
+
+/**
+ * Record the full batched compute pass with all iterations and network dispatches.
+ *
+ * @param computePass - Active WebGPU compute pass encoder.
+ * @param networks - Networks to evaluate as a batch.
+ * @param states - Per-network GPU state entries.
+ * @param pipelines - Per-network compiled compute pipelines.
+ * @param iterationCount - Number of forward passes to record.
+ */
+function recordBatchComputePass(
+  computePass: GPUComputePassEncoder,
+  networks: Network[],
+  states: BatchNetworkState[],
+  pipelines: GPUComputePipeline[],
+  iterationCount: number,
+): void {
+  let currentPipeline: GPUComputePipeline | undefined;
+  for (let iteration = 0; iteration < iterationCount; iteration += 1) {
+    for (let index = 0; index < networks.length; index += 1) {
+      const pipeline = pipelines[index];
+      if (pipeline !== currentPipeline) {
+        computePass.setPipeline(pipeline);
+        currentPipeline = pipeline;
+      }
+      const { bufferSet, levelBindGroups, levelWorkgroupCounts } =
+        states[index];
+      dispatchNetworkLevels(
+        computePass,
+        bufferSet,
+        levelBindGroups,
+        levelWorkgroupCounts,
+      );
+    }
+  }
+}
+
+/**
+ * Copy each network's output slice into the shared staging buffer.
+ *
+ * @param commandEncoder - Active WebGPU command encoder.
+ * @param networks - Networks to evaluate as a batch.
+ * @param states - Per-network GPU state entries.
+ * @param stagingBuffer - Reusable mappable staging buffer.
+ * @param outputCount - Number of output nodes per network.
+ */
+function copyBatchOutputs(
+  commandEncoder: GPUCommandEncoder,
+  networks: Network[],
+  states: BatchNetworkState[],
+  stagingBuffer: GPUBuffer,
+  outputCount: number,
+): void {
+  for (let index = 0; index < networks.length; index += 1) {
+    const network = networks[index];
+    const { bufferSet } = states[index];
+    const outputNodeCount = network.output;
+    const outputByteLength = outputNodeCount * Float32Array.BYTES_PER_ELEMENT;
+    const outputStartOffset =
+      (bufferSet.nodeCount - outputNodeCount) * Float32Array.BYTES_PER_ELEMENT;
+    const destinationOffset =
+      index * outputCount * Float32Array.BYTES_PER_ELEMENT;
+    const copyEncoder = commandEncoder as unknown as GPUCommandEncoderCopy;
+    copyEncoder.copyBufferToBuffer(
+      bufferSet.outputs,
+      outputStartOffset,
+      stagingBuffer,
+      destinationOffset,
+      outputByteLength,
+    );
+  }
+}
+
+/**
  * Batched GPU activation for multi-agent evaluation.
  *
  * Reuses the per-network persistent GPU state managed by
@@ -357,47 +538,25 @@ export async function batchActivate(
   const skipUpload = options?.skipUpload ?? false;
   const iterationCount = Math.max(1, options?.iterations ?? 1);
 
-  for (let index = 0; index < networks.length; index += 1) {
-    if (!canUseGPU(networks[index], device, supportedActivations)) {
-      throw new Error(
-        `batchActivate: network at index ${index} is not eligible for GPU inference`,
-      );
-    }
-  }
+  validateBatchGpuEligibility(networks, device, supportedActivations);
 
   // Ensure each network has a persistent GPU state entry. This entry caches the
   // uploaded slab buffers, per-level params buffers, bind groups, per-level
   // dispatch sizes, and the compiled pipeline, so repeated batch evaluations only
   // refresh dynamic data.
-  const states = [] as {
-    bufferSet: GPUBufferSet;
-    levelBindGroups: (GPUBindGroup | undefined)[];
-    levelWorkgroupCounts: number[];
-  }[];
-  const pipelines = [] as GPUComputePipeline[];
-
-  for (const network of networks) {
-    const { state, pipeline } = ensureNetworkGPUState(device, network);
-    states.push(state);
-    pipelines.push(pipeline);
-  }
+  const { states, pipelines } = ensureBatchGpuStates(device, networks);
 
   // Refresh dynamic connection/node data and seed each network's input row
   // unless the caller has already warmed the GPU buffers and asked us to skip
   // the upload. Skipping is an opt-in contract used by static benchmark loops.
-  if (!skipUpload) {
-    for (let index = 0; index < networks.length; index += 1) {
-      const network = networks[index];
-      const { bufferSet } = states[index];
-      uploadDynamicNetworkBuffers(device, bufferSet, network);
-
-      const inputSlice = inputMatrix.subarray(
-        index * inputCount,
-        (index + 1) * inputCount,
-      );
-      writeInputValuesToNodeStruct(device, bufferSet.nodes, inputSlice);
-    }
-  }
+  uploadBatchDynamicBuffers(
+    device,
+    networks,
+    states,
+    inputMatrix,
+    inputCount,
+    skipUpload,
+  );
 
   // One command encoder records every requested pass. A single compute pass
   // contains all iterations and all networks because WebGPU dispatches execute
@@ -412,32 +571,13 @@ export async function batchActivate(
     label: 'network_batched_activation_pass',
   });
 
-  let currentPipeline: GPUComputePipeline | undefined;
-
-  for (let iteration = 0; iteration < iterationCount; iteration += 1) {
-    for (let index = 0; index < networks.length; index += 1) {
-      const pipeline = pipelines[index];
-      if (pipeline !== currentPipeline) {
-        computePass.setPipeline(pipeline);
-        currentPipeline = pipeline;
-      }
-
-      const { bufferSet, levelBindGroups, levelWorkgroupCounts } =
-        states[index];
-
-      for (let level = 1; level < bufferSet.topoLevelCount; level += 1) {
-        const bindGroup = levelBindGroups[level];
-        if (!bindGroup) {
-          throw new Error(
-            `batchActivate: missing bind group for level ${level}`,
-          );
-        }
-
-        computePass.setBindGroup(0, bindGroup);
-        computePass.dispatchWorkgroups(levelWorkgroupCounts[level]);
-      }
-    }
-  }
+  recordBatchComputePass(
+    computePass,
+    networks,
+    states,
+    pipelines,
+    iterationCount,
+  );
 
   computePass.end();
 
@@ -450,25 +590,13 @@ export async function batchActivate(
     totalOutputByteLength,
   );
 
-  for (let index = 0; index < networks.length; index += 1) {
-    const network = networks[index];
-    const { bufferSet } = states[index];
-    const outputNodeCount = network.output;
-    const outputByteLength = outputNodeCount * Float32Array.BYTES_PER_ELEMENT;
-    const outputStartOffset =
-      (bufferSet.nodeCount - outputNodeCount) * Float32Array.BYTES_PER_ELEMENT;
-    const destinationOffset =
-      index * outputCount * Float32Array.BYTES_PER_ELEMENT;
-
-    const copyEncoder = commandEncoder as unknown as GPUCommandEncoderCopy;
-    copyEncoder.copyBufferToBuffer(
-      bufferSet.outputs,
-      outputStartOffset,
-      stagingBuffer,
-      destinationOffset,
-      outputByteLength,
-    );
-  }
+  copyBatchOutputs(
+    commandEncoder,
+    networks,
+    states,
+    stagingBuffer,
+    outputCount,
+  );
 
   device.queue.submit([commandEncoder.finish()]);
 
@@ -485,7 +613,7 @@ export async function batchActivate(
 }
 
 /**
- * Single job queued for deferred batched GPU inference.
+ * Single job queued for deferred batched GPU inference activation dispatch.
  */
 export interface BatchInferenceJob {
   network: Network;

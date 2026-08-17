@@ -225,7 +225,7 @@ browser inference, not a second reference implementation. Expected CPU/GPU
 agreement is an absolute tolerance of `5e-1` per output value and a mean
 absolute error of `≤ 1e-1`.
 
-See the repo-level [WebGPU.md](../../WebGPU.md) guide for the full opt-in
+See the repo-level [docs/webgpu-inference.md](../../docs/webgpu-inference.md) guide for the full opt-in
 contract, fallback rules, and CPU-vs-GPU tolerance contract.
 
 ## Tier 1 / Tier 2 shared racing baseline

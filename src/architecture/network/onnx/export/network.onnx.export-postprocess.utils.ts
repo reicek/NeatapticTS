@@ -838,8 +838,9 @@ function shouldValidateConvSharing(options: OnnxExportOptions): boolean {
 /**
  * Determine whether one Conv mapping behaves like a shared kernel layer.
  *
- * @param layers Layered network nodes.
- * @param convSpec Conv mapping to evaluate.
+ * @param layers - Layered network nodes.
+ * @param convSpec - Conv mapping to evaluate.
+ * @param options - Optional export options for conv sharing validation.
  * @returns True when representative kernels stay consistent across outputs.
  */
 export function isConvMappingWeightShared(

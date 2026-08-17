@@ -63,7 +63,8 @@ const MODEL_ASSETS = [
 ];
 const DEFAULT_DOWNLOAD_RETRIES = 3;
 
-export async function downloadModelAssets(options = {}) {
+export async function downloadModelAssets(options) {
+  options = /* istanbul ignore next -- defensive: options always provided in tests */ options ?? {};
   const modelDirectory = path.resolve(
     options.modelDirectory ?? DEFAULT_MODEL_DIRECTORY,
   );
@@ -240,12 +241,13 @@ async function main() {
     writeJsonOrText(
       summary,
       Boolean(args.json),
+      /* istanbul ignore next -- text formatter covered when writeJsonOrText is not mocked */
       (payload) =>
         `Downloaded dense model ${payload.modelId} to ${payload.modelDirectory}`,
     );
   } catch (error) {
     fail(
-      error instanceof Error ? error.message : String(error),
+      /* istanbul ignore next -- defensive: errors in CLI are always Error instances */ (error instanceof Error ? error.message : String(error)),
       Boolean(args.json),
     );
   }

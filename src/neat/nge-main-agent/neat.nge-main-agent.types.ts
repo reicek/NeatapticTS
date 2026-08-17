@@ -31,7 +31,7 @@ export interface NgeMainAgentLifecycleConfig {
 }
 
 /**
- * Shared state fields across all main-agent lifecycle stages.
+ * Shared state fields across all main-agent lifecycle stages for the NGE extension.
  */
 export interface NgeMainAgentLifecycleState {
   /** Current lifecycle stage. */
@@ -112,7 +112,7 @@ export interface NgeMainAgentJuvenile extends NgeMainAgentLifecycleState {
 }
 
 /**
- * Main agent adult state after maturation.
+ * Main agent adult state after maturation and structural pruning are complete.
  */
 export interface NgeMainAgentAdult extends NgeMainAgentLifecycleState {
   stage: 'adult';
@@ -127,7 +127,7 @@ export interface NgeMainAgentAdult extends NgeMainAgentLifecycleState {
 }
 
 /**
- * Equilibrium candidate produced by adult optimization.
+ * Equilibrium candidate produced by adult optimization when the network stabilizes.
  */
 export interface NgeMainAgentEquilibrium {
   /** Whether the candidate has stabilized. */

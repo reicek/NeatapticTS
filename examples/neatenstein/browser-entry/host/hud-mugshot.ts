@@ -14,50 +14,41 @@ import {
   ROBOT_SPRITE_PALETTE,
   ROBOT_SPRITE_SCALE,
 } from '../../robot-sprite-data.js';
+import { NEATENSTEIN_CANVAS_2D_CONTEXT, RGBA_OPAQUE_ALPHA } from '../constants';
+import {
+  CSS_FLEX_0_0_AUTO,
+  CSS_HEIGHT_AUTO,
+  CSS_IMAGE_PIXELATED,
+  CSS_WIDTH_100PCT,
+} from './hud.constants';
+import {
+  EYE_STRIPE_TINT_INDEX,
+  MUGSHOT_COLOR_CYAN,
+  MUGSHOT_COLOR_GREY,
+  MUGSHOT_CROP_END_COL,
+  MUGSHOT_CROP_END_ROW,
+  MUGSHOT_CROP_START_COL,
+  MUGSHOT_CROP_START_ROW,
+  MUGSHOT_EYE_STRIPE_ROW,
+} from './game/constants';
 import {
   type EncodedRobotSpriteFrame,
   decodeRobotSpriteFrame,
 } from '../renderer/robot-sprite-decode';
+import type {
+  MugshotDirection,
+  MugshotHeadCrop,
+  MugshotLook,
+  MugshotOverlay,
+} from './types';
 
-/** Logical head-crop region: rows 0–14, cols 19–29 of the 48×48 grid. */
-const MUGSHOT_CROP_START_COL = 19;
-const MUGSHOT_CROP_END_COL = 30; // exclusive
-const MUGSHOT_CROP_START_ROW = 0;
-const MUGSHOT_CROP_END_ROW = 15; // exclusive
-const MUGSHOT_EYE_STRIPE_ROW = 7;
-
-/** Extended palette index for the tinted eye-stripe color. */
-const EYE_STRIPE_TINT_INDEX = 9;
-
-/** Neon teal — healthy eye-stripe color at full health. */
-const NEON_TEAL: readonly [number, number, number, number] = [0, 240, 255, 255];
-
-/** Neon gray — dead eye-stripe color at zero health. */
-const NEON_GRAY: readonly [number, number, number, number] = [
-  180, 190, 210, 255,
-];
-
-/** Head-crop result: width, height, and RGBA pixel data. */
-export interface MugshotHeadCrop {
-  width: number;
-  height: number;
-  data: Uint8ClampedArray;
-}
-
-/**
- * Mouse-look state used to select the mugshot direction.
- *
- * `yawDelta` is the per-frame mouse-look yaw delta consumed from
- * `InputSnapshot.look.yawDelta`. A negative delta (turning left) yields the
- * `frontLeft` view; a positive delta (turning right) yields `frontRight`; a
- * zero delta (mouse still) yields the neutral `front` view.
- */
-export interface MugshotLook {
-  yawDelta: number;
-}
-
-/** Supported mugshot directions. */
-export type MugshotDirection = 'front' | 'frontLeft' | 'frontRight';
+// Re-export consolidated types so existing imports from this module remain valid.
+export type {
+  MugshotDirection,
+  MugshotHeadCrop,
+  MugshotLook,
+  MugshotOverlay,
+} from './types';
 
 /**
  * Select the mugshot direction from the current mouse-look yaw delta.
@@ -85,10 +76,13 @@ function computeEyeStripeTint(
   healthRatio: number,
 ): readonly [number, number, number, number] {
   return [
-    NEON_GRAY[0] + (NEON_TEAL[0] - NEON_GRAY[0]) * healthRatio,
-    NEON_GRAY[1] + (NEON_TEAL[1] - NEON_GRAY[1]) * healthRatio,
-    NEON_GRAY[2] + (NEON_TEAL[2] - NEON_GRAY[2]) * healthRatio,
-    255,
+    MUGSHOT_COLOR_GREY[0] +
+      (MUGSHOT_COLOR_CYAN[0] - MUGSHOT_COLOR_GREY[0]) * healthRatio,
+    MUGSHOT_COLOR_GREY[1] +
+      (MUGSHOT_COLOR_CYAN[1] - MUGSHOT_COLOR_GREY[1]) * healthRatio,
+    MUGSHOT_COLOR_GREY[2] +
+      (MUGSHOT_COLOR_CYAN[2] - MUGSHOT_COLOR_GREY[2]) * healthRatio,
+    RGBA_OPAQUE_ALPHA,
   ];
 }
 
@@ -191,12 +185,7 @@ const MUGSHOT_CROP_HEIGHT =
   (MUGSHOT_CROP_END_ROW - MUGSHOT_CROP_START_ROW) * ROBOT_SPRITE_SCALE;
 
 /** Mugshot canvas overlay instance returned by {@link createMugshotOverlay}. */
-export interface MugshotOverlay {
-  /** Canvas element rendering the mugshot head crop. */
-  canvas: HTMLCanvasElement;
-  /** Redraw the mugshot with a new direction and health ratio. */
-  update: (direction: MugshotDirection, healthRatio?: number) => void;
-}
+// Type is defined in ./types and re-exported above.
 
 /**
  * Create a host-DOM canvas overlay that renders the robot mugshot head crop.
@@ -214,14 +203,14 @@ export function createMugshotOverlay(): MugshotOverlay {
   const canvas = document.createElement('canvas');
   canvas.width = MUGSHOT_CROP_WIDTH;
   canvas.height = MUGSHOT_CROP_HEIGHT;
-  canvas.style.imageRendering = 'pixelated';
-  canvas.style.height = '100%';
-  canvas.style.width = 'auto';
-  canvas.style.flex = '0 0 auto';
+  canvas.style.imageRendering = CSS_IMAGE_PIXELATED;
+  canvas.style.height = CSS_WIDTH_100PCT;
+  canvas.style.width = CSS_HEIGHT_AUTO;
+  canvas.style.flex = CSS_FLEX_0_0_AUTO;
 
   const update = (direction: MugshotDirection, healthRatio?: number): void => {
     const crop = decodeMugshotHeadCrop(direction, healthRatio);
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext(NEATENSTEIN_CANVAS_2D_CONTEXT);
     if (ctx) {
       const imageData = ctx.createImageData(crop.width, crop.height);
       imageData.data.set(crop.data);

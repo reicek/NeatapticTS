@@ -213,6 +213,7 @@ The remaining job is just to materialize the chosen edge.
 Parameters:
 - `genomeToEdit` - genome to edit
 - `pairNodes` - resolved pair nodes
+- `internal` - neat controller context providing RNG and connect helper.
 
 Returns: created connection or undefined
 

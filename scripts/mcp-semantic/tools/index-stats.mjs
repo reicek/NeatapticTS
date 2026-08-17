@@ -185,7 +185,7 @@ async function buildDocumentMetadataCoverageAsync(client, totalDocuments) {
     });
     const distribution = Object.fromEntries(
       distributionResult.rows.map((row) => [
-        String(row.value ?? 'null'),
+        String(/* istanbul ignore next -- SQL filters NULL values */ row.value ?? 'null'),
         Number(row.count),
       ]),
     );

@@ -78,6 +78,7 @@ function summarizeStdout(stdoutText) {
     return summarizeParsedOutput(parsedOutput);
   }
 
+  /* istanbul ignore next -- split always returns ≥1 element, so at(-1) never returns undefined */
   return trimmedText.split(/\r?\n/).at(-1) ?? 'ok';
 }
 

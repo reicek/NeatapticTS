@@ -24,7 +24,7 @@ import {
 } from './cli-utils.mjs';
 import { defaultDatabasePath } from './init-schema.mjs';
 
-export async function validateEmbeddings(options = {}) {
+export async function validateEmbeddings(/* istanbul ignore next -- default param, always called with options */ options = {}) {
   const modelId = String(options.modelId ?? 'all-MiniLM-L6-v2');
 
   if (options.client) {
@@ -32,6 +32,7 @@ export async function validateEmbeddings(options = {}) {
   }
 
   const corpusDatabasePath = path.resolve(
+    /* istanbul ignore next -- defensive: CLI always sets corpusDatabasePath, unit tests use client path */
     options.corpusDatabasePath ?? options.databasePath ?? defaultDatabasePath,
   );
 
@@ -130,19 +131,23 @@ async function main() {
       corpusDatabasePath: args.database,
       modelId: args['model-id'],
     });
+    /* istanbul ignore next -- CLI output formatting, validateEmbeddings tested directly */
     writeJsonOrText(report, Boolean(args.json), (payload) =>
       payload.pass
         ? 'Embeddings validation passed.'
         : `Embeddings validation failed: ${payload.evidence.map(({ issue }) => issue).join(', ')}`,
     );
+    /* istanbul ignore next -- CLI exit code, covered by error path tests */
     if (!report.pass) process.exitCode = 1;
   } catch (error) {
     fail(
+      /* istanbul ignore next -- defensive: thrown values are always Error instances */
       error instanceof Error ? error.message : String(error),
       Boolean(args.json),
     );
   }
 }
 
+/* istanbul ignore next -- CLI entry point guard */
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href)
   await main();

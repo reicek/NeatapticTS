@@ -266,10 +266,10 @@ export interface NetworkConstructorOptions {
   returnTypedActivations?: boolean;
 }
 
-/** Activation backend selector for {@link Network.activate}. */
+/** Activation backend selector for the {@link Network.activate} entry point, choosing between CPU, GPU, or automatic device selection at runtime. */
 export type ActivationBackend = 'cpu' | 'gpu' | 'auto';
 
-/** Observer callbacks for activation backend transitions and fallback events. */
+/** Observer callbacks for activation backend transitions and GPU fallback event notifications. */
 export interface ActivationObserver {
   /** Called when the chosen backend differs from the previous activation. */
   onBackendChange?(event: {
@@ -301,7 +301,7 @@ export interface NetworkActivationOptions {
   observer?: ActivationObserver;
 }
 
-/** Snapshot returned by {@link Network.getAccelerationStatus}. */
+/** Snapshot returned by the {@link Network.getAccelerationStatus} diagnostic query method, summarizing the current acceleration backend and device availability flags. */
 export interface AccelerationStatus {
   /** Most recently used backend, or `'cpu'` before any activation. */
   mode: ActivationBackend;
@@ -311,7 +311,7 @@ export interface AccelerationStatus {
   worker: { available: boolean };
 }
 
-/** Result of a GPU eligibility probe via {@link Network.getGPUEligibility}. */
+/** Result of a GPU eligibility probe via {@link Network.getGPUEligibility}, indicating whether the current network and device can use GPU accelerated activation. */
 export interface GPUEligibilityResult {
   /** Whether the current network and device can use the GPU path. */
   eligible: boolean;

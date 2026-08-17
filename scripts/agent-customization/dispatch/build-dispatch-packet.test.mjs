@@ -60,6 +60,16 @@ const AGENTS = [
     path: '.github/agents/synthetic.agent.md',
     description: 'Synthetic invalid agent.',
   },
+  {
+    name: 'tier5-no-model-agent',
+    tier: 5,
+    skills: [],
+    agents: [],
+    tools: [],
+    userInvocable: false,
+    path: '.github/agents/tier5-no-model-agent.agent.md',
+    description: 'Synthetic tier 5 agent without a model property.',
+  },
 ];
 
 describe('build-dispatch-packet constants', () => {
@@ -358,5 +368,48 @@ describe('buildDispatchPacket — delegation validation', () => {
     assert.strictEqual(result.ok, false);
     assert.strictEqual(result.dispatch_allowed, false);
     assert.match(result.reason, /Unknown agent/);
+  });
+});
+
+describe('buildDispatchPacket — branch coverage edge cases', () => {
+  it('coerces a non-string prompt to an empty string (typeof prompt !== "string")', () => {
+    const result = buildDispatchPacket(
+      {
+        target_agent: 'implementation-executor',
+        caller_tier: 1,
+        prompt: null,
+      },
+      AGENTS,
+    );
+    assert.strictEqual(result.ok, true);
+    assert.strictEqual(result.dispatch_packet.prompt, '');
+  });
+
+  it('handles a null agents inventory via the ?? [] fallback', () => {
+    const result = buildDispatchPacket(
+      { target_agent: 'implementation-executor', caller_tier: 1 },
+      null,
+    );
+    assert.strictEqual(result.ok, false);
+    assert.strictEqual(result.dispatch_allowed, false);
+    assert.match(result.reason, /Unknown agent/);
+  });
+
+  it('uses fallback tier label and null model for an unlisted tier and missing model', () => {
+    const result = buildDispatchPacket(
+      {
+        target_agent: 'tier5-no-model-agent',
+        caller_tier: 4,
+        prompt: 'Do the thing.',
+      },
+      AGENTS,
+    );
+    assert.strictEqual(result.ok, true);
+    assert.strictEqual(result.dispatch_allowed, true);
+    assert.strictEqual(result.agent.tier, 5);
+    assert.strictEqual(result.agent.tier_label, 'Tier 5');
+    assert.strictEqual(result.agent.model, null);
+    assert.strictEqual(result.dispatch_packet.model, null);
+    assert.strictEqual(result.dispatch_packet.prompt, 'Do the thing.');
   });
 });

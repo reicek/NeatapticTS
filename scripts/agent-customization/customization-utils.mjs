@@ -114,17 +114,24 @@ export function printUsage({ title, usage, options = [] }) {
  * @param opts.json - When `true`, serializes the full report as JSON.
  */
 export function writeReport(report, { json }) {
+  // Write UTF-8 encoded output to stdout so non-ASCII characters (e.g. ≤, —)
+  // are preserved regardless of the host console code page. Using
+  // process.stdout.write with explicit 'utf8' encoding avoids the implicit
+  // encoding translation that console.log may undergo on some platforms.
   if (json) {
-    console.log(JSON.stringify(report, null, 2));
+    process.stdout.write(JSON.stringify(report, null, 2) + '\n', 'utf8');
     return;
   }
 
-  console.log(
-    report.summaryText ?? `${report.ok ? 'PASS' : 'FAIL'} ${report.name}`,
+  process.stdout.write(
+    (report.summaryText ?? `${report.ok ? 'PASS' : 'FAIL'} ${report.name}`) +
+      '\n',
+    'utf8',
   );
   for (const issue of report.issues ?? []) {
-    console.log(
-      `- ${issue.severity.toUpperCase()}: ${issue.path}: ${issue.message}`,
+    process.stdout.write(
+      `- ${issue.severity.toUpperCase()}: ${issue.path}: ${issue.message}\n`,
+      'utf8',
     );
   }
 }
@@ -589,7 +596,7 @@ function parseObjectFields(
           object[key] = parsed.list;
           index = parsed.nextIndex;
         } else {
-          object[key] = emptyDefaultToObject ? {} : [];
+          object[key] = [];
           index = startIndex + 1;
         }
       } else {

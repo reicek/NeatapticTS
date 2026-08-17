@@ -9,9 +9,25 @@
  * references over global declarations.
  */
 
+/** Alias for the WebGPU adapter interface used by the GPU inference fast path. */
 export type GPUAdapterType = GPUAdapter;
+
+/**
+ * Alias for the WebGPU device interface used by the GPU inference fast path.
+ *
+ * The local alias keeps imports explicit and avoids collision with any global
+ * GPUDevice declaration variants across test and build environments.
+ */
 export type GPUDeviceType = GPUDevice;
+
+/**
+ * Alias for the WebGPU supported limits type used by the GPU inference fast path.
+ */
 export type GPUSupportedLimitsType = GPUSupportedLimits;
+
+/**
+ * Alias for the WebGPU adapter request options used by the GPU inference fast path.
+ */
 export type GPURequestAdapterOptionsType = GPURequestAdapterOptions;
 
 /**

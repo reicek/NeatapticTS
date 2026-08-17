@@ -23,6 +23,10 @@ import { emitShadowAttentionMappings } from './network.onnx.export-attention.uti
 
 /**
  * Creates an initialized ONNX model with graph dimensions and metadata derived from the resolved build options.
+ *
+ * @param networkLayers - Layered network node groups to derive input and output dimensions from.
+ * @param currentOptions - Resolved build options controlling metadata and batch dimensions.
+ * @returns Initialized ONNX model with graph dimensions and producer metadata applied.
  */
 export function createInitializedModel(
   networkLayers: NeatapticNode[][],
@@ -44,6 +48,9 @@ export function createInitializedModel(
 
 /**
  * Collects the layer indices of all recurrent layers present in the export context.
+ *
+ * @param context - Recurrent collection context carrying layered nodes and recurrent flags.
+ * @returns Array of layer indices identified as recurrent.
  */
 export function collectRecurrentIndices(
   context: OnnxRecurrentCollectionContext,
@@ -53,6 +60,9 @@ export function collectRecurrentIndices(
 
 /**
  * Emits ONNX graph nodes for every layer after the input layer and returns the accumulated emission result.
+ *
+ * @param context - Layer emission context carrying the model, layers, options, and recurrent metadata.
+ * @returns Accumulated emission result with output names and hidden-size metadata.
  */
 export function emitNonInputLayers(
   context: OnnxLayerEmissionContext,
@@ -82,6 +92,9 @@ export function emitNonInputLayers(
 
 /**
  * Applies all post-processing passes (recurrent heuristics, attention mappings, export metadata) to the model in place.
+ *
+ * @param context - Post-processing context with the model, layers, options, and emission results.
+ * @returns Nothing; the model is mutated in place.
  */
 export function applyPostProcessing(context: OnnxPostProcessingContext): void {
   emitFusedRecurrentHeuristics(

@@ -455,6 +455,150 @@ When logic is complex:
 3. Typed context: give each helper explicit input/output types.
 4. Orchestration top level: keep the main function as a declarative pipeline.
 
+### SOLID-Aligned Complexity Reduction (Canonical Pattern)
+
+This is the **canonical, mandatory** pattern for reducing cyclomatic or
+cognitive complexity in any function that exceeds the scanner threshold
+(currently `complexityThreshold = 10`). Every refactoring agent and
+implementation executor MUST follow this pattern. No exceptions, no
+shortcuts, no inline `??`-chain "optimizations."
+
+#### Two Method Types
+
+Every refactored function decomposes into exactly two kinds of methods:
+
+| Type         | Role                                           | Complexity Target  |
+| ------------ | ---------------------------------------------- | ------------------ |
+| Orchestrator | The target function. Calls executors in order. | ≤ 10 (ideally ≤ 5) |
+| Executor     | Targeted SRP pure function. One logical step.  | ≤ 5 (ideally ≤ 3)  |
+
+**Orchestrators** are the public-facing functions — the ones that were
+previously too complex. After refactoring, they read as a declarative
+sequence of steps with zero embedded branching:
+
+```ts
+/**
+ * Runs the grow-stabilize cycle by orchestrating phase executors.
+ * @param config - The grow-stabilize configuration.
+ * @returns The cycle result.
+ */
+export function runGrowStabilizeCycle(config: NgeConfig): CycleResult {
+  const initialized = initializeCycle(config);
+  const grown = applyGrowthPhase(initialized);
+  const stabilized = applyStabilizePhase(grown);
+  return finalizeCycle(stabilized);
+}
+```
+
+**Executors** are small, single-responsibility functions extracted from
+the original monolith. Each handles one step or sub-step:
+
+```ts
+/**
+ * Initializes the cycle state from configuration.
+ * @param config - The grow-stabilize configuration.
+ * @returns The initialized cycle state.
+ */
+export function initializeCycle(config: NgeConfig): CycleState {
+  // ...one logical step, minimal branching...
+}
+```
+
+#### File Placement
+
+Executors live in `{category}.utils.ts` files alongside the orchestrator:
+
+```
+bar/foo/
+  bar.foo.ts           ← orchestrator (public surface, exports)
+  bar.foo.utils.ts     ← executor helpers (SRP pure functions)
+  bar.foo.types.ts     ← interfaces, types
+```
+
+**800-line rule:** If a single `.utils.ts` file would exceed 800 lines,
+split into multiple category-based files:
+
+```
+bar/foo/
+  bar.foo.ts               ← orchestrator
+  bar.foo.growth.utils.ts  ← growth-phase executors
+  bar.foo.stabilize.utils.ts ← stabilize-phase executors
+  bar.foo.config.utils.ts  ← config-resolution executors
+```
+
+#### Refactoring Steps
+
+1. **Identify the target function** — the one with complexity > threshold.
+2. **Map the seams** — find natural boundaries where one logical step ends
+   and the next begins. Each seam becomes an executor.
+3. **Extract executors** — pull each seam into a named function in
+   `{category}.utils.ts`. Each executor:
+   - Has a descriptive verb-noun name (`applyGrowthPhase`, `resolveConfig`,
+     `decompressConnections`).
+   - Takes explicit typed inputs and returns explicit typed outputs.
+   - Has minimal cognitive complexity (ideally ≤ 3).
+   - Is a pure function (no side effects unless explicitly required).
+4. **Rewrite the orchestrator** — replace the original function body with a
+   declarative sequence of executor calls. The orchestrator should have
+   zero `if`/`switch`/`for`/`??`/`?.` branching — just sequential calls.
+5. **Handle config resolvers** — for functions that resolve configuration
+   with long `??` chains, replace with spread-based defaults:
+
+   ```ts
+   // ❌ Avoid (cc = 1 + 2N for N fields)
+   export function resolveConfig(partial?: Partial<Config>): Config {
+     return {
+       field1: partial?.field1 ?? DEFAULT_1,
+       field2: partial?.field2 ?? DEFAULT_2,
+       // ... 30 more fields, each adding +2 complexity
+     };
+   }
+
+   // ✅ Prefer (cc = 1)
+   const DEFAULT_CONFIG: Config = {
+     field1: DEFAULT_1,
+     field2: DEFAULT_2,
+     // ... all defaults
+   };
+
+   export function resolveConfig(partial?: Partial<Config>): Config {
+     return { ...DEFAULT_CONFIG, ...partial };
+   }
+   ```
+
+6. **Handle computed defaults** — if some defaults are computed (not
+   constants), extract a `createDefaultConfig()` executor that returns the
+   full default object, then spread the partial over it:
+
+   ```ts
+   export function resolveConfig(partial?: Partial<Config>): Config {
+     const defaults = createDefaultConfig();
+     return { ...defaults, ...partial };
+   }
+   ```
+
+#### Anti-Patterns (Forbidden)
+
+- **Inline `??` chains** — never leave 10+ `partial?.x ?? DEFAULT` lines in
+  a single function. Extract to spread-based defaults.
+- **Deep nesting** — never nest more than 2 levels. Extract inner blocks
+  to named executors.
+- **God executors** — if an executor exceeds complexity 5, split it further.
+- **Mixed concerns** — each executor does ONE thing. If it does two, split it.
+- **Inline conditionals in orchestrators** — the orchestrator calls executors;
+  it does not branch. If conditional dispatch is needed, extract a resolver
+  executor that returns a function or value.
+
+#### Verification
+
+After refactoring, verify:
+
+1. `npm run build` passes.
+2. The scanner reports complexity ≤ 10 for the orchestrator.
+3. The scanner reports complexity ≤ 5 for each executor.
+4. All existing tests pass (targeted tests only, per the targeted-test rule).
+5. JSDoc is present on all exported executors and the orchestrator.
+
 ## Validation Checklist
 
 After implementation work, validate with these gates.

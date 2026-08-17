@@ -192,6 +192,7 @@ export type {
  * ```
  *
  * @category Serialization
+ * @param this - Bound NEAT controller instance.
  * @returns Array of genome JSON objects.
  */
 export function exportPopulation(this: NeatLike): GenomeJSON[] {
@@ -222,9 +223,11 @@ export function exportPopulation(this: NeatLike): GenomeJSON[] {
  * - Malformed entries or native genomes that fail proper-NEAT validation throw
  *   explicit population-validation errors.
  *
+ * @param this - Bound NEAT controller instance.
  * @param populationJSON Array of serialized genome objects.
  * @returns Promise that resolves once all genomes have been rehydrated and the
  * controller population has been replaced.
+ * @throws {NeatExportPopulationValidationError} When the population JSON is not an array or contains malformed entries.
  */
 export async function importPopulation(
   this: NeatLike,
@@ -408,6 +411,7 @@ function resolveRestartPopulationSize(
  * const neat2 = Neat.importState(raw, fitnessFn); // identical evolutionary context
  * ```
  *
+ * @param this - Bound NEAT controller instance.
  * @returns A {@link NeatStateJSON} bundle containing meta + population.
  */
 export function exportState(this: NeatLike): NeatStateJSON {
@@ -446,8 +450,10 @@ export function exportState(this: NeatLike): NeatStateJSON {
  * };
  * ```
  *
+ * @param this - Bound NEAT controller instance.
  * @param exportOptions Export policy describing how many elite genomes to keep.
  * @returns Light checkpoint bundle for approximate restart.
+ * @throws {NeatExportPopulationValidationError} When `eliteCount` is not a positive integer.
  */
 export function exportLightState(
   this: NeatLike,
@@ -506,10 +512,12 @@ export function exportLightState(
  * neat.evolve();
  * ```
  *
+ * @param this - NEAT constructor (class, not instance) used to create the new controller.
  * @param stateBundle Full state bundle from {@link exportState}.
  * @param fitnessFunction Fitness evaluation callback used for new instance.
  * @param restoreOptions Explicit restore-mode override. Defaults to strict exact resume.
  * @returns Rehydrated NEAT instance ready to continue evolving.
+ * @throws {Error} When the bundle is not an object, omits the population array, or fails the proper-NEAT resume contract.
  */
 export async function importStateImpl(
   this: NeatConstructor,
@@ -568,9 +576,11 @@ export async function importStateImpl(
  * than part of the restart contract. Import therefore ignores that bag while it
  * validates the light checkpoint-owned bootstrap fields.
  *
+ * @param this - NEAT constructor (class, not instance) used to create the new controller.
  * @param stateBundle Light checkpoint bundle produced by {@link exportLightState}.
  * @param fitnessFunction Fitness evaluation callback used for the new instance.
  * @returns Rehydrated NEAT instance ready for approximate restart.
+ * @throws {Error} When the light checkpoint bundle is not a valid object or fails validation.
  */
 export async function importLightStateImpl(
   this: NeatConstructor,
@@ -826,6 +836,7 @@ function resolveLightCheckpointBootstrapOptions(
  * const neat2 = Neat.fromJSONImpl(metaLoaded, fitnessFn); // empty population
  * ```
  *
+ * @param this - Bound NEAT controller instance.
  * @returns {@link NeatMetaJSON} object describing current NEAT meta state.
  */
 export function toJSONImpl(this: NeatLike): NeatMetaJSON {
@@ -861,9 +872,11 @@ export function toJSONImpl(this: NeatLike): NeatMetaJSON {
  * neat.importPopulation(popSnapshot); // optional
  * ```
  *
- * @param neatJSON Serialized meta (no population).
- * @param fitnessFunction Fitness callback used to construct the new instance.
+ * @param this - NEAT constructor used to create the restored instance.
+ * @param neatJSON - Serialized meta (no population).
+ * @param fitnessFunction - Fitness callback used to construct the new instance.
  * @returns Fresh NEAT instance with restored innovation history.
+ * @throws {NeatExportStateControllerRestoreError} When the meta format version is unsupported or innovation tracker state is missing.
  */
 export function fromJSONImpl(
   this: NeatConstructor,

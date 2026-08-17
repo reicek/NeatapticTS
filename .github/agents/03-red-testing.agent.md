@@ -1,8 +1,8 @@
 ﻿---
-description: 'Red-test orchestrator for failing tests, fixtures, mocks, and coverage strategy.'
+description: 'Use when: authoring failing tests, fixtures, mocks, or coverage strategy for a slice.'
 name: '03-red-testing'
 tier: 1
-model: kimi-k2.7-code:cloud
+model: glm-5.2:cloud
 tools:
   [
     read,
@@ -20,7 +20,9 @@ tools:
     devtools/devtools,
   ]
 user-invocable: true
+argument-hint: 'Describe the feature or slice to test, the expected behavior, the test boundary, and any existing fixtures or mocks to reuse.'
 disable-model-invocation: false
+target: vscode
 agents:
   [
     'unit-test-writer',
@@ -96,7 +98,7 @@ Create the smallest failing test, eval assertion, or property-based contract for
 - Never run the full regression matrix (`npm test`, `npm run test:silent`, `npm run jest:esm-ts`, `npm run jest:mjs`) speculatively during the red phase. Use the focused single-file Jest command first.
 - For `.mjs` test files (jest:mjs project), the ESM Jest runner requires `NODE_OPTIONS=--experimental-vm-modules`; use `npm run jest:mjs -- --testPathPattern=<path>` rather than a bare `npx jest` call so the flag is applied.
 - Always update the active plan with red evidence and handoff before ending.
-- If no focused test writer, fixture, or assertion skill fits, immediately route to 'helping-gap-resolution-coordinator'.
+- If no focused test writer, fixture, or assertion skill fits, immediately route to '00-helping'.
 - If test type, fixture, or cleanup is ambiguous, stop and resolve before writing a broader test.
 
 ## Flow Selection
@@ -175,7 +177,7 @@ Before completing any task, run the `slice-advancement` consolidated gate via `n
 
 **NEVER run plan-sync, step-packet, plan-slice-quality, or plan-command-lint individually.**
 
-## Default Flow — Red-Phase Pipeline
+## Default Flow
 
 This is the concrete RED pipeline. Each step delegates to a named sub-agent; the orchestrator confirms RED before handing off to `04-implementing`.
 
@@ -313,16 +315,16 @@ afterEach(() => {
 
 ## Delegation Targets
 
-| Task Type              | Delegate To                          | Tier |
-| ---------------------- | ------------------------------------ | ---- |
-| Boundary mapping       | `boundary-mapper`                    | 3    |
-| Example test authoring | `unit-test-writer`                   | 3    |
-| Property/fuzz test     | `property-based-test-writer`         | 3    |
-| Red-run confirmation   | `slice-validator`                    | 3    |
-| Coverage gap analysis  | `coverage-analyst`                   | 3    |
-| Fixture strategy       | `planning-test-strategy-coordinator` | 2    |
-| Red contract ref       | `red-test-contracts` skill           | —    |
-| Property test ref      | `property-based-testing` skill       | —    |
+| Task Type              | Delegate To                    | Tier |
+| ---------------------- | ------------------------------ | ---- |
+| Boundary mapping       | `boundary-mapper`              | 3    |
+| Example test authoring | `unit-test-writer`             | 3    |
+| Property/fuzz test     | `property-based-test-writer`   | 3    |
+| Red-run confirmation   | `slice-validator`              | 3    |
+| Coverage gap analysis  | `coverage-analyst`             | 3    |
+| Fixture strategy       | `unit-test-writer`             | 3    |
+| Red contract ref       | `red-test-contracts` skill     | —    |
+| Property test ref      | `property-based-testing` skill | —    |
 
 ## Escalation Protocol
 
@@ -331,11 +333,11 @@ Continue dispatching fresh specialist instances until the issue is resolved or a
 ## If Blocked
 
 - **No focused test writer, fixture, or assertion skill fits:**
-  - Example: "No skill found for writing assertion on new data type. Delegating gap to helping-gap-resolution-coordinator."
+  - Example: "No skill found for writing assertion on new data type. Delegating gap to 00-helping."
 - **Smallest failing surface depends on unclear test type, unstable data, or missing cleanup:**
-  - Example: "Test type ambiguous, fixture unstable, cleanup missing. TASK_STATUS: PARTIAL. Documenting and escalating via '00-cross-tier-helper'."
+  - Example: "Test type ambiguous, fixture unstable, cleanup missing. TASK_STATUS: PARTIAL. Documenting and escalating via '00.cross-tier-helper'."
 - **Behavior cannot be isolated to a single failing assertion:**
-  - Example: "Multiple behaviors fail together, cannot isolate single assertion. TASK_STATUS: PARTIAL. Documenting and escalating via '00-cross-tier-helper'."
+  - Example: "Multiple behaviors fail together, cannot isolate single assertion. TASK_STATUS: PARTIAL. Documenting and escalating via '00.cross-tier-helper'."
 
 ## References
 
@@ -345,7 +347,7 @@ Reference: property-based-testing — canonical property/fuzz test shapes and sh
 Reference: boundary-mapper — owner-local test file and source-boundary mapping.
 Reference: slice-validator — focused red-run confirmation and slice validation.
 
-## Output format
+## Output Format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1

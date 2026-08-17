@@ -1,0 +1,14 @@
+[
+  {
+    "file": "src/neat.ts",
+    "symbol": "sharedUtility",
+    "issue": "missing JSDoc",
+    "numericValue": 0
+  },
+  {
+    "file": "src/architecture/re-exports.ts",
+    "symbol": "sharedUtility",
+    "issue": "missing JSDoc",
+    "numericValue": 0
+  }
+]

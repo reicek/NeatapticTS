@@ -14,7 +14,7 @@ import type { AccelerationObserver } from './acceleration.observer';
 import type { AccelerationStatus } from './acceleration.types';
 
 /**
- * Options accepted by the {@link AccelerationManager} constructor.
+ * Options accepted by the {@link AccelerationManager} constructor for lifecycle control.
  */
 export interface AccelerationManagerOptions {
   /** Optional config overrides for thresholds, caps, and disable flags. */

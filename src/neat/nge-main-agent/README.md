@@ -4,7 +4,7 @@
 
 ### NgeMainAgentAdult
 
-Main agent adult state after maturation.
+Main agent adult state after maturation and structural pruning are complete.
 
 ### NgeMainAgentAttentionHead
 
@@ -38,7 +38,7 @@ logic lives in later NGE phases.
 
 ### NgeMainAgentEquilibrium
 
-Equilibrium candidate produced by adult optimization.
+Equilibrium candidate produced by adult optimization when the network stabilizes.
 
 ### NgeMainAgentGatedRecurrentCell
 
@@ -69,7 +69,7 @@ own cadence without being coupled to a different demo's lifecycle policy.
 
 ### NgeMainAgentLifecycleState
 
-Shared state fields across all main-agent lifecycle stages.
+Shared state fields across all main-agent lifecycle stages for the NGE extension.
 
 ### NgeMainAgentReproducing
 

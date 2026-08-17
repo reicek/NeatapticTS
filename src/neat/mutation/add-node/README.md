@@ -70,6 +70,7 @@ Parameters:
 - `splitDescriptor` - metadata for the split
 - `splitRecord` - existing innovation record
 - `NodeClass` - node constructor
+- `randomValue` - RNG callback for deterministic bias initialization.
 
 Returns: void
 

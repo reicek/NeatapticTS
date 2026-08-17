@@ -15,6 +15,8 @@ tools:
     devtools/devtools,
   ]
 user-invocable: false
+disable-model-invocation: false
+target: vscode
 agents: []
 skills: [chrome-devtools-mcp, research-methodology]
 ---
@@ -168,34 +170,6 @@ This agent does NOT author or update agent frontmatter, so the
 9. Tear down the server (always — even on failure) and return the JSON summary
    plus any artifacts.
 
-## Output format
-
-```structured-v1
-OUTPUT_CONTRACT: structured-v1
-TASK_STATUS: SUCCESS | PARTIAL | FAILED
-TIER: 3
-ROLE: browser-harness-specialist
-TASK_RECEIVED: <brief restatement>
-FILES_READ:
-- <path or NONE>
-FILES_CHANGED:
-- <path or NONE>
-KEY_FINDINGS:
-- <finding or NONE>
-ACTIONS_TAKEN:
-- <action or NONE>
-VALIDATION_EVIDENCE:
-- <command/result or NOT RUN>
-HANDOFF: <next step, reroute, or NONE>
-BLOCKERS:
-- <blocker or NONE>
-RISKS_OR_GAPS:
-- <risk or NONE>
-LEARNING_EVENT_NEEDED: true | false
-SUGGESTED_NEXT_AGENT: <agent name or NONE>
-SUMMARY: <brief truthful summary>
-```
-
 ### Smoke Result Template
 
 The trace summary produced by `createTraceSummary()` should conform to this
@@ -268,3 +242,31 @@ If blocked, return PARTIAL status with blocker description. Continue retrying
 until the issue is resolved or a true technical limit is reached. Only escalate
 to `00-helping` via `00.cross-tier-helper` when a genuine, documented technical
 limit blocks further progress. No concessions.
+
+## Output Format
+
+```structured-v1
+OUTPUT_CONTRACT: structured-v1
+TASK_STATUS: SUCCESS | PARTIAL | FAILED
+TIER: 3
+ROLE: browser-harness-specialist
+TASK_RECEIVED: <brief restatement>
+FILES_READ:
+- <path or NONE>
+FILES_CHANGED:
+- <path or NONE>
+KEY_FINDINGS:
+- <finding or NONE>
+ACTIONS_TAKEN:
+- <action or NONE>
+VALIDATION_EVIDENCE:
+- <command/result or NOT RUN>
+HANDOFF: <next step, reroute, or NONE>
+BLOCKERS:
+- <blocker or NONE>
+RISKS_OR_GAPS:
+- <risk or NONE>
+LEARNING_EVENT_NEEDED: true | false
+SUGGESTED_NEXT_AGENT: <agent name or NONE>
+SUMMARY: <brief truthful summary>
+```

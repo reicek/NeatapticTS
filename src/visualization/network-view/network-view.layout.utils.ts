@@ -138,6 +138,7 @@ export function positionNetworkNodes(
  *
  * @param positionedNodes - Positioned nodes.
  * @param drawableWidthPx - Drawable width.
+ * @param drawableLeftPx - Left pixel offset of the drawable area (defaults to 0).
  * @returns Centered positioned nodes.
  */
 export function centerPositionedNodesInDrawableArea(

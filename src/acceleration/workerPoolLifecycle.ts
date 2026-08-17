@@ -204,6 +204,65 @@ function notifyBackendChange(
 }
 
 /**
+ * Broadcast a message to every worker in the set, skipping when the handle
+ * is already terminated.
+ *
+ * @param workers - Workers owned by the handle.
+ * @param terminated - Whether the owning handle has been terminated.
+ * @param message - Structured-clone-safe payload to post.
+ * @param transferables - Optional `Transferable` objects to move.
+ *
+ * @internal
+ */
+function broadcastToWorkers(
+  workers: Worker[],
+  terminated: boolean,
+  message: unknown,
+  transferables?: Transferable[],
+): void {
+  if (terminated) {
+    return;
+  }
+
+  for (const worker of workers) {
+    worker.postMessage(message, transferables ?? []);
+  }
+}
+
+/**
+ * Terminate every worker in the set.
+ *
+ * @param workers - Workers to terminate.
+ *
+ * @internal
+ */
+function terminateWorkerSet(workers: Worker[]): void {
+  for (const worker of workers) {
+    worker.terminate();
+  }
+}
+
+/**
+ * Spawn a pool of workers capped by the computed pool size.
+ *
+ * @param WorkerCtor - Worker constructor to use.
+ * @param poolSize - Number of workers to create.
+ * @returns Array of newly created workers.
+ *
+ * @internal
+ */
+function spawnWorkerPool(
+  WorkerCtor: typeof Worker,
+  poolSize: number,
+): Worker[] {
+  const workers: Worker[] = [];
+  for (let index = 0; index < poolSize; index++) {
+    workers.push(new WorkerCtor(DEFAULT_WORKER_SCRIPT_URL));
+  }
+  return workers;
+}
+
+/**
  * Create a scoped worker pool lifecycle manager.
  *
  * The returned instance is isolated from every other instance; it does not
@@ -257,13 +316,7 @@ export function createWorkerPoolLifecycle(
 
     return {
       broadcast(message: unknown, transferables?: Transferable[]): void {
-        if (terminated) {
-          return;
-        }
-
-        for (const worker of workers) {
-          worker.postMessage(message, transferables ?? []);
-        }
+        broadcastToWorkers(workers, terminated, message, transferables);
       },
 
       async terminate(): Promise<void> {
@@ -272,9 +325,7 @@ export function createWorkerPoolLifecycle(
         }
 
         terminated = true;
-        for (const worker of workers) {
-          worker.terminate();
-        }
+        terminateWorkerSet(workers);
 
         if (activeHandle === this) {
           setActive(undefined, []);
@@ -322,10 +373,7 @@ export function createWorkerPoolLifecycle(
         1,
         Math.min(resolvedConfig.maxWorkers!, DEFAULT_ACCELERATION_MAX_WORKERS),
       );
-      const workers: Worker[] = [];
-      for (let index = 0; index < poolSize; index++) {
-        workers.push(new WorkerCtor(DEFAULT_WORKER_SCRIPT_URL));
-      }
+      const workers = spawnWorkerPool(WorkerCtor, poolSize);
 
       // Build and register the handle, then notify observers of the backend change.
       const handle = buildHandle(workers);

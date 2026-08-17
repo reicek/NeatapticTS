@@ -16,6 +16,8 @@ tools:
 agents: []
 skills: ['capturing-learning-event']
 user-invocable: false
+disable-model-invocation: false
+target: vscode
 ---
 
 ## CRITICAL RULE — NEVER RUN GIT
@@ -61,7 +63,7 @@ Capture one compact ISO-42001-style local learning event per invocation when a c
 - Keep the recorded gap, change, and follow-up action concise; full transcripts belong in trackers or logs, not the learning log.
 - This helper does NOT dispatch agents, does NOT run builds/tests/lint, and does NOT manage trackers or session summaries.
 
-## Capture Steps
+## Default Flow
 
 1. **Identify the trigger.** Confirm the caller named a concrete trigger: an incident (failure or workaround), a pattern (recurring friction), or a surprise (unexpected routing/model/contract change). If no evidence-backed trigger is given, set `TASK_STATUS: PARTIAL` and stop.
 2. **Gather context.** From the caller's packet and Cortex RAG, collect: what happened, why it happened (root cause), what was learned, and what should change (follow-up action). Classify the event into exactly one category: `agent-system-gap | routing-update | skill-update | model-update | output-contract-fix`.
@@ -96,7 +98,7 @@ Record the gate result as evidence in the structured output.
 - Set `TASK_STATUS: PARTIAL` when the learning-event target or required evidence is missing.
 - Record the smallest blocker, suggest the next agent, and stop without making speculative edits.
 
-## Output format
+## Output Format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1
@@ -112,9 +114,6 @@ KEY_FINDINGS:
 - <finding or NONE>
 ACTIONS_TAKEN:
 - <action or NONE>
-VALIDATION_EVIDENCE:
-- <learning-event gate result or NOT RUN>
-HANDOFF: <next step, reroute, or NONE>
 BLOCKERS:
 - <blocker or NONE>
 RISKS_OR_GAPS:

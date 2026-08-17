@@ -342,6 +342,24 @@ Keeping thresholds as exported constants makes them easy to reference from
 tests, documentation, and downstream configuration builders without hunting
 for magic numbers in implementation code.
 
+### clampToMaxBufferSize
+
+```ts
+clampToMaxBufferSize(
+  floored: number,
+  maxBufferSize: number | undefined,
+): number
+```
+
+Clamp a computed byte cap to one quarter of the device `maxBufferSize`
+when a device limit is supplied.
+
+Parameters:
+- `floored` - The computed cap after applying the minimum floor.
+- `maxBufferSize` - Optional device `maxBufferSize` for clamping.
+
+Returns: The clamped cap, or `floored` when no device limit is given.
+
 ### DEFAULT_ACCELERATION_GPU_BATCH_PARALLEL_THRESHOLD
 
 Minimum number of parallel candidate evaluations before GPU batching is
@@ -440,51 +458,16 @@ resolveBufferPoolMaxPooledBytes(
 ): number
 ```
 
-Resolve the maximum pooled-byte cap for a GPU buffer-set pool.
-
-The cap is computed from the workload size (`nodeCount`) and a small set of
-heuristic defaults. Callers can override the result with an explicit
-`maxPooledBytes` budget or clamp it to one quarter of a device
-`maxBufferSize`. The default knobs can also be overridden for benchmarking
-or unusual network motifs.
-
-The formula is:
-
-```text
-max(minBytes, nodeCount * avgDegree * float32Bytes * bufferCount * safetyFactor)
-```
-
-and is clamped to `floor(maxBufferSize / 4)` when `maxBufferSize` is given.
-`variantCount` is part of the workload contract for future scaling but does
-not affect the current heuristic.
-
-```mermaid
-flowchart TD
-  Start([Workload + options]) --> Explicit{maxPooledBytes given?}
-  Explicit -->|yes| ReturnExplicit[Return explicit cap]
-  Explicit -->|no| Estimate["bytes = nodeCount * avgDegree * float32Bytes * bufferCount * safetyFactor"]
-  Estimate --> Floor["bytes = max(minBytes, bytes)"]
-  Floor --> Clamp{maxBufferSize given?}
-  Clamp -->|yes| ApplyClamp["bytes = min(bytes, floor(maxBufferSize / 4))"]
-  Clamp -->|no| ReturnComputed[Return computed cap]
-  ApplyClamp --> ReturnComputed
-```
+Resolve the maximum pooled bytes for the buffer pool based on the given
+workload and optional overrides. When `maxPooledBytes` is provided it is
+returned directly; otherwise the value is estimated from workload metrics
+and clamped to the configured maximum buffer size.
 
 Parameters:
-- `workload` - Workload description; `nodeCount` drives the heuristic.
-- `options` - Optional explicit cap, device-size clamp, or heuristic overrides.
+- `workload` - Buffer pool workload metrics (node count, connections, etc.).
+- `options` - Optional overrides for estimated calculation parameters.
 
-Returns: The resolved byte cap.
-
-Example:
-
-```ts
-const cap = resolveBufferPoolMaxPooledBytes(
-  { nodeCount: 1_024, variantCount: 8 },
-  { maxBufferSize: 64 * 1024 * 1024 }
-);
-console.log(cap); // 262144 (min floor) for a 1k-node workload
-```
+Returns: The resolved maximum pooled bytes value.
 
 ## acceleration/acceleration.config.ts
 
@@ -827,7 +810,7 @@ console.log(resolved.mode); // 'worker' when workers own execution
 
 ### ResolveAccelerationModeOptions
 
-Options that influence mode resolution.
+Options that influence the resolved acceleration mode selection from detected status.
 
 ## acceleration/acceleration.policy.ts
 
@@ -1098,6 +1081,21 @@ Background reading:
 - The W3C WebGPU specification is the authoritative reference:
   [WebGPU API](https://www.w3.org/TR/webgpu/).
 
+### createGPUDevice
+
+```ts
+createGPUDevice(
+  gpuSurface: GPU,
+): Promise<GPUDevice>
+```
+
+Request an adapter and create a device from it, caching the result.
+
+Parameters:
+- `gpuSurface` - The `navigator.gpu` surface to request from.
+
+Returns: A ready-to-use `GPUDevice`.
+
 ### isDeviceReady
 
 ```ts
@@ -1137,30 +1135,27 @@ try {
 requestGPUDevice(): Promise<GPUDevice>
 ```
 
-Request a high-performance WebGPU device suitable for compute inference.
+Asynchronously request a WebGPU device, caching the result so that
+repeated calls reuse the same device instance. Concurrent calls share
+a single pending request promise to avoid duplicate initialization.
+Throws when the device request fails or no suitable adapter is found.
 
-Probes `navigator.gpu`, requests a `high-performance` adapter, then asks
-the adapter for a device whose limits match the adapter's reported limits for
-`maxStorageBufferBindingSize` and `maxBufferSize`. Rejects with a descriptive
-error when WebGPU is unavailable, no adapter can be obtained, or device
-creation fails.
+Returns: A promise that resolves to the cached or newly created GPUDevice.
 
-The resolved device is cached at module scope so subsequent calls can reuse
-a ready device and `isDeviceReady` can report status without an argument.
-Concurrent calls while a request is in flight return the same promise.
-
-Returns: A ready-to-use `GPUDevice`.
-
-Example:
+### resolveRequiredLimits
 
 ```ts
-try {
-  const device = await requestGPUDevice();
-  network.gpuDevice = device;
-} catch (error) {
-  console.log('GPU unavailable:', error.message);
-}
+resolveRequiredLimits(
+  adapter: GPUAdapter,
+): GPUSupportedLimits
 ```
+
+Resolve the required device limits from an adapter's reported limits.
+
+Parameters:
+- `adapter` - The WebGPU adapter to read limits from.
+
+Returns: A partial limits object suitable for `adapter.requestDevice`.
 
 ## acceleration/acceleration.gpu.ts
 
@@ -1223,7 +1218,7 @@ if (result.enabled) {
 
 ### AutoEnableGpuOptions
 
-Parameters accepted by {@link autoEnableGpu}.
+Parameters accepted by the {@link autoEnableGpu} helper for GPU acceleration probing.
 
 ### evaluateWeightVariantsOnGpu
 
@@ -1407,8 +1402,8 @@ if (result.enabled) {
 
 ### AutoEnableWorkerOptions
 
-Parameters accepted by {@link autoEnableWorker} and
-{@link shouldAutoEnableWorker}.
+Parameters accepted by the {@link autoEnableWorker} and
+{@link shouldAutoEnableWorker} acceleration helpers.
 
 ### readCrossOriginIsolated
 
@@ -1697,7 +1692,7 @@ console.log(status.mode); // 'gpu', 'worker', or 'cpu'
 
 ### AutoEnableAccelerationOptions
 
-Parameters accepted by {@link autoEnableAcceleration}.
+Parameters accepted by the {@link autoEnableAcceleration} unified backend selection helper.
 
 ## acceleration/acceleration.manager.ts
 
@@ -1815,7 +1810,7 @@ initialized and enabled flags are cleared.
 
 ### AccelerationManagerOptions
 
-Options accepted by the {@link AccelerationManager} constructor.
+Options accepted by the {@link AccelerationManager} constructor for lifecycle control.
 
 ### createDefaultStatus
 
@@ -2034,7 +2029,7 @@ Returns: Median duration.
 
 ### RegressionBenchmarkBackendResult
 
-Per-backend median duration reported by {@link runRegressionBenchmark}.
+Per-backend median duration measurements reported by the {@link runRegressionBenchmark} micro-benchmark harness, capturing one representative timing sample.
 
 ### RegressionBenchmarkObserver
 
@@ -2045,11 +2040,11 @@ runtime has fallen back from GPU to CPU.
 
 ### RegressionBenchmarkOptions
 
-Options accepted by {@link runRegressionBenchmark}.
+Options accepted by the {@link runRegressionBenchmark} paired CPU vs GPU micro-benchmark.
 
 ### RegressionBenchmarkResult
 
-Result returned by {@link runRegressionBenchmark}.
+Result returned by the {@link runRegressionBenchmark} paired CPU vs GPU micro-benchmark.
 
 ### resolveSampleCount
 

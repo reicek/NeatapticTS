@@ -925,6 +925,7 @@ function createLevelBindGroups(
  * @param levelWorkgroupCounts - Optional per-level workgroup dispatch counts.
  *   When provided, each level is dispatched with exactly the workgroups needed
  *   for its node count instead of the whole-network ceiling.
+ * @throws {Error} When a required bind group is missing for a topological level.
  */
 export function encodeActivationKernel(
   commandEncoder: GPUCommandEncoder,

@@ -17,46 +17,15 @@ import {
   NEATENSTEIN_BACKGROUND_RGB,
   NEATENSTEIN_RENDER_DISTANCE_CAP,
 } from './framebuffer';
+import { RGBA_CHANNELS, RGBA_OPAQUE_ALPHA } from './renderer.wall.constants';
+import type { ParsedRgb } from './renderer.wall.types';
 
-/** Number of RGBA channels per framebuffer pixel. */
-const NEATENSTEIN_RGBA_CHANNELS = 4;
-
-/** Fully opaque alpha value written for wall pixels. */
-const NEATENSTEIN_WALL_ALPHA = 255;
-
-/**
- * Minimal canvas-like context consumed by the CPU wall renderer.
- *
- * Only `putImageData` is required. The interface is intentionally narrow so
- * the renderer can be unit-tested with a lightweight mock and still accept a
- * real `CanvasRenderingContext2D` at runtime through structural typing.
- */
-export interface NeatensteinWallRenderContext {
-  /**
-   * Flush an ImageData-like payload to the canvas.
-   *
-   * @param imageData - Object with `data`, `width`, and `height`.
-   * @param dx - Destination X coordinate.
-   * @param dy - Destination Y coordinate.
-   */
-  putImageData(
-    imageData: { data: Uint8ClampedArray; width: number; height: number },
-    dx: number,
-    dy: number,
-  ): void;
-}
-
-/**
- * Parsed RGB triplet from a `#rrggbb` hex color string.
- */
-interface ParsedRgb {
-  /** Red channel in `[0, 255]`. */
-  r: number;
-  /** Green channel in `[0, 255]`. */
-  g: number;
-  /** Blue channel in `[0, 255]`. */
-  b: number;
-}
+// Re-export constants and types for external consumers.
+export { RGBA_CHANNELS, RGBA_OPAQUE_ALPHA } from './renderer.wall.constants';
+export type {
+  NeatensteinWallRenderContext,
+  ParsedRgb,
+} from './renderer.wall.types';
 
 /**
  * Cache of parsed wall colors.
@@ -206,7 +175,7 @@ export function writeNeonWallColumn(
   }
 
   for (let row = clampedStart; row < clampedEnd; row += 1) {
-    const offset = (row * framebufferWidth + x) * NEATENSTEIN_RGBA_CHANNELS;
+    const offset = (row * framebufferWidth + x) * RGBA_CHANNELS;
 
     // Defensive guard for mismatched framebuffer dimensions.
     if (offset + 3 >= framebuffer.length) {
@@ -216,6 +185,6 @@ export function writeNeonWallColumn(
     framebuffer[offset] = finalColor.r;
     framebuffer[offset + 1] = finalColor.g;
     framebuffer[offset + 2] = finalColor.b;
-    framebuffer[offset + 3] = NEATENSTEIN_WALL_ALPHA;
+    framebuffer[offset + 3] = RGBA_OPAQUE_ALPHA;
   }
 }

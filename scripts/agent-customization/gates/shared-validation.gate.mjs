@@ -12,7 +12,7 @@
  * Usage:
  *   node scripts/agent-customization/gates/shared-validation.gate.mjs --json
  *   node scripts/agent-customization/gates/shared-validation.gate.mjs --json --changed-files=src/foo.ts,src/bar.ts
- *   node scripts/agent-customization/gates/shared-validation.gate.mjs --json --changed-files=src/foo.ts --artifact-path=artifacts/shared-validation.json
+ *   node scripts/agent-customization/gates/shared-validation.gate.mjs --json --changed-files=src/foo.ts --artifact-path=coverage/shared-validation.json
  */
 
 import path from 'node:path';
@@ -24,6 +24,7 @@ import { parseArgs, repoRoot } from '../customization-utils.mjs';
 import { deriveTestFiles } from './gate-test-utils.mjs';
 
 const OWNER = 'shared-validation';
+const DEFAULT_ARTIFACT_PATH = 'coverage/shared-validation.json';
 const DEFAULT_JEST_CONFIG = 'jest.config.mjs';
 
 /* istanbul ignore next */
@@ -44,12 +45,12 @@ export async function main(argv = process.argv.slice(2)) {
 Usage:
   node scripts/agent-customization/gates/shared-validation.gate.mjs --json
   node scripts/agent-customization/gates/shared-validation.gate.mjs --json --changed-files=src/foo.ts,src/bar.ts
-  node scripts/agent-customization/gates/shared-validation.gate.mjs --json --changed-files=src/foo.ts --artifact-path=artifacts/shared-validation.json
+  node scripts/agent-customization/gates/shared-validation.gate.mjs --json --changed-files=src/foo.ts --artifact-path=coverage/shared-validation.json
 
 Options:
   --json               Write machine-readable JSON to stdout.
   --changed-files      Comma or newline separated repo-relative source paths.
-  --artifact-path      Repo-relative path for the JSON artifact (default: artifacts/shared-validation.json).
+  --artifact-path      Repo-relative path for the JSON artifact (default: coverage/shared-validation.json).
   --help, -h           Show this help text.`);
     process.exit(0);
   }
@@ -112,8 +113,7 @@ export async function runSharedValidationGate(params = {}) {
     };
   }
 
-  const artifactPath =
-    params.artifactPath ?? 'artifacts/shared-validation.json';
+  const artifactPath = params.artifactPath ?? DEFAULT_ARTIFACT_PATH;
   const testFiles = deriveTestFiles(changedFiles);
 
   const testRunner = params.testRunner ?? defaultTestRunner;
@@ -188,11 +188,68 @@ async function defaultTestRunner({ testFiles }) {
     return { status: 0, stdout: 'No test files selected.', stderr: '' };
   }
 
-  const absoluteFiles = testFiles.map((file) => path.join(repoRoot, file));
+  const existingFiles = testFiles.filter((file) =>
+    existsSync(path.join(repoRoot, file)),
+  );
+  if (existingFiles.length === 0) {
+    return { status: 0, stdout: 'No test files selected.', stderr: '' };
+  }
+
+  const mjsFiles = existingFiles.filter((file) => file.endsWith('.mjs'));
+  const otherFiles = existingFiles.filter((file) => !file.endsWith('.mjs'));
+
+  const groups = [];
+  if (mjsFiles.length > 0) {
+    groups.push({
+      files: mjsFiles,
+      nodeOptions: '--experimental-vm-modules',
+    });
+  }
+  if (otherFiles.length > 0) {
+    groups.push({ files: otherFiles });
+  }
+
+  let overallStatus = 0;
+  const outputs = [];
+  const errors = [];
+
+  for (const group of groups) {
+    const groupResult = await runJestGroup(group.files, group.nodeOptions);
+    if (groupResult.status !== 0) {
+      overallStatus = groupResult.status || 1;
+    }
+    outputs.push(`[${group.files.join(', ')}]\nstdout:\n${groupResult.stdout}`);
+    errors.push(`[${group.files.join(', ')}]\nstderr:\n${groupResult.stderr}`);
+  }
+
+  return {
+    status: overallStatus,
+    stdout: outputs.join('\n---\n'),
+    stderr: errors.join('\n---\n'),
+  };
+}
+
+/**
+ * Run Jest for a single homogeneous group of test files.
+ *
+ * `.mjs` test files require `--experimental-vm-modules`; other files must not
+ * inherit that flag (it breaks ts-jest). The runner spawns a fresh Node
+ * process with the appropriate NODE_OPTIONS for the group.
+ *
+ * @param {string[]} files - Absolute paths to test files.
+ * @param {string|undefined} nodeOptions - NODE_OPTIONS value for the group.
+ * @returns {Promise<{status: number, stdout: string, stderr: string}>} Group result.
+ */
+async function runJestGroup(files, nodeOptions) {
+  const absoluteFiles = files.map((file) => path.join(repoRoot, file));
   const useShell = process.platform === 'win32';
+  const env = {
+    ...process.env,
+    NODE_OPTIONS: nodeOptions ?? '',
+  };
   const evalScript =
     `import { spawnSync } from 'node:child_process'; ` +
-    `const r = spawnSync('npx', ['jest', '--config=${DEFAULT_JEST_CONFIG}', '--no-cache', '--runInBand', ...${JSON.stringify(absoluteFiles)}], { cwd: ${JSON.stringify(repoRoot)}, encoding: 'utf8', timeout: 600_000, stdio: ['ignore', 'pipe', 'pipe'], shell: ${JSON.stringify(useShell)} }); ` +
+    `const r = spawnSync('npx', ['jest', '--config=${DEFAULT_JEST_CONFIG}', '--no-cache', '--runInBand', ...${JSON.stringify(absoluteFiles)}], { cwd: ${JSON.stringify(repoRoot)}, encoding: 'utf8', timeout: 600_000, stdio: ['ignore', 'pipe', 'pipe'], shell: ${JSON.stringify(useShell)}, env: ${JSON.stringify(env)} }); ` +
     `console.log(JSON.stringify({ status: r.status ?? (r.signal ? 1 : 0), stdout: r.stdout ?? '', stderr: r.stderr ?? '', error: r.error ? String(r.error) : undefined }));`;
 
   const result = spawnSync(
@@ -306,5 +363,5 @@ function parseArtifactPath(argv) {
       return argv[++index];
     }
   }
-  return 'artifacts/shared-validation.json';
+  return DEFAULT_ARTIFACT_PATH;
 }

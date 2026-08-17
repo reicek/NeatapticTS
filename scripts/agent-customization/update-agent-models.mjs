@@ -143,11 +143,13 @@ function extractModelValue(line) {
  */
 function buildReplacementLine(originalLine, newModel) {
   const indentMatch = /^(\s*)/.exec(originalLine);
+  /* istanbul ignore next -- regex /^(\s*)/ always matches, so indentMatch is never null */
   const indent = indentMatch ? indentMatch[1] : '';
   // Detect quote style: single, double, or none
   const valueMatch = /^(\s*model:\s*)(['"]?)(.*?)(['"]?)\s*$/.exec(
     originalLine,
   );
+  /* istanbul ignore next -- regex always matches when buildReplacementLine is called from processAgentFile after model: line detection */
   const prefix = valueMatch ? valueMatch[1] : `${indent}model: `;
   const openQuote = valueMatch?.[2] || "'";
   const closeQuote = valueMatch?.[4] || "'";

@@ -34,8 +34,11 @@ const result = {
 if (options.json) {
   console.log(JSON.stringify(result, null, 2));
 } else {
+  /* istanbul ignore next: result.pass is always true in standalone-descriptor mode */
   console.log(result.pass ? 'PASS' : 'FAIL', 'green-validation-evidence gate');
+  /* istanbul ignore if: result.pass is always true in standalone-descriptor mode */
   if (!result.pass) console.log('fixHint:', result.fixHint);
 }
 
+/* istanbul ignore next: result.pass is always true in standalone-descriptor mode */
 process.exitCode = result.pass ? 0 : 1;

@@ -339,6 +339,7 @@ export function invalidateCompatibilityCaches(
  * probability when the sample size is large enough to be meaningful.
  *
  * @param internal - NEAT controller instance.
+ * @param config - Adaptation thresholds and bounds for re-enable probability.
  * @returns Nothing.
  */
 export function adaptReenableProbability(

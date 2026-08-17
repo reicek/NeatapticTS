@@ -79,6 +79,7 @@ retained on the produced entry. Core fields (generation, best score and
 species count) are always preserved.
 
 Parameters:
+- `this` - Telemetry context bound by method call.
 - `entry` - Raw telemetry object to be filtered in-place.
 
 Returns: The filtered telemetry object (same reference as input).
@@ -153,6 +154,7 @@ This function intentionally mirrors the legacy in-loop telemetry construction
 to preserve behavior relied upon by tests and consumers.
 
 Parameters:
+- `this` - NEAT host instance bound by method call.
 - `fittest` - The currently fittest genome (used to report `best` score).
 
 Returns: A TelemetryEntry object suitable for recording/streaming.
@@ -185,6 +187,9 @@ can report compatibility spread, entropy, graphlet variety, and lineage depth.
 This helper is intentionally conservative at runtime. When `fastMode` is
 enabled it tunes sampling defaults downward so telemetry stays informative
 without turning every generation into a quadratic metrics pass.
+
+Parameters:
+- `this` - NEAT host instance bound by method call.
 
 Example:
 
@@ -304,6 +309,7 @@ Write order:
 4. trim history to a bounded window
 
 Parameters:
+- `this` - NEAT host instance bound by method call.
 - `entry` - Telemetry entry to record.
 
 Returns: Nothing. The entry is persisted by side effect on the host.
@@ -376,6 +382,7 @@ The result is cached on the graph object for the current generation in
 `_entropyVal` to avoid repeated expensive recomputation.
 
 Parameters:
+- `this` - NEAT host instance bound by method call.
 - `graph` - A genome-like object with `nodes` and `connections` arrays.
 
 Returns: A non-negative number approximating structural entropy.

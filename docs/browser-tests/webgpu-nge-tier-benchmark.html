@@ -1,0 +1,557 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>WebGPU NGE Tier Throughput Benchmark</title>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 1rem; }
+      pre { background: #f4f4f4; padding: 1rem; overflow-x: auto; }
+      button { margin-top: 1rem; }
+    </style>
+  </head>
+  <body>
+    <h1>WebGPU NGE Tier Throughput Benchmark</h1>
+    <p>
+      Stress-tests GPU activation throughput across increasing single-hidden-layer
+      network sizes and then measures the parallel-agent CPU-vs-GPU crossover for
+      an 8k-hidden-node MLP. All GPU measurements require a visible, focused
+      browser window.
+    </p>
+    <div id="status">Running...</div>
+    <pre id="result">{}</pre>
+    <button id="download" disabled>Download artifact</button>
+
+    <script type="importmap">
+      {
+        "imports": {
+          "child_process": "./scenarios/node-stubs/child_process.mjs",
+          "path": "./scenarios/node-stubs/path.mjs"
+        }
+      }
+    </script>
+    <script type="module">
+      import {
+        runNGETierBenchmark,
+        runParallelCrossover as runParallelCrossoverCore,
+        buildDeterministicMLP,
+        makeBenchmarkInput,
+        computeThroughput,
+        batchActivate,
+        INPUT_NODE_COUNT,
+        OUTPUT_NODE_COUNT,
+        ARTIFACT_FILE_NAME,
+      } from './scenarios/webgpu-nge-tier-throughput.mjs';
+
+      const statusEl = document.getElementById('status');
+      const resultEl = document.getElementById('result');
+      const downloadBtn = document.getElementById('download');
+
+      /**
+       * Runtime flag that skips the tier ladder and scaling scenarios.
+       *
+       * When the URL contains `?crossoverOnly` the page runs only the canonical
+       * 6×8k parallel crossover measurement. This is useful when the full ladder
+       * hangs (for example, the 50×32k scaling scenario) and only the crossover
+       * result is needed.
+       */
+      const searchParams = new URLSearchParams(window.location.search);
+      const crossoverOnly = searchParams.has('crossoverOnly');
+
+      /**
+       * Trigger a browser download of the benchmark artifact as JSON.
+       * @param {object} result - Benchmark artifact to serialize.
+       */
+      function downloadArtifact(result) {
+        const blob = new Blob([JSON.stringify(result, null, 2)], {
+          type: 'application/json',
+        });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = ARTIFACT_FILE_NAME;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+      }
+
+      /**
+       * Verify that the browser window is visible and focused.
+       *
+       * Headless, hidden, minimized, or background windows produce invalid GPU
+       * timing data, so any GPU measurement must be rejected when this check
+       * fails.
+       *
+       * @returns {{visible: boolean, browserVisibility: string, reason?: string}}
+       */
+      function checkBrowserVisibility() {
+        if (
+          typeof window === 'undefined' ||
+          typeof document === 'undefined' ||
+          typeof navigator === 'undefined'
+        ) {
+          return {
+            visible: false,
+            browserVisibility: 'not-a-browser-window',
+            reason: 'No browser window context available.',
+          };
+        }
+
+        const visibilityState = document.visibilityState ?? 'unknown';
+        const hidden = document.hidden ?? visibilityState !== 'visible';
+        const hasFocus =
+          typeof document.hasFocus === 'function'
+            ? document.hasFocus()
+            : false;
+        const outerWidth = window.outerWidth ?? 0;
+        const outerHeight = window.outerHeight ?? 0;
+
+        if (hidden || visibilityState !== 'visible') {
+          return {
+            visible: false,
+            browserVisibility: visibilityState,
+            reason: `Document visibilityState is ${visibilityState} and document.hidden is ${hidden}.`,
+          };
+        }
+
+        if (outerWidth <= 0 || outerHeight <= 0) {
+          return {
+            visible: false,
+            browserVisibility: 'minimized-or-tiny',
+            reason: `Window has no rendered size (${outerWidth}x${outerHeight}).`,
+          };
+        }
+
+        if (!hasFocus) {
+          return {
+            visible: false,
+            browserVisibility: 'not-focused',
+            reason: 'Window is visible but does not have focus.',
+          };
+        }
+
+        return {
+          visible: true,
+          browserVisibility: 'visible-foreground',
+        };
+      }
+
+      /**
+       * Parallel-agent scaling scenarios for the GPU-only throughput ladder.
+       *
+       * Each entry records a cohort size, a hidden-layer width, and the
+       * iteration counts used by {@link runScalingScenarios}.
+       */
+      const SCALING_SCENARIOS = [
+        {
+          name: '12×8k',
+          agentCount: 12,
+          hiddenNodes: 8192,
+          iterations: 10,
+          warmupIterations: 3,
+        },
+        {
+          name: '6×16k',
+          agentCount: 6,
+          hiddenNodes: 16384,
+          iterations: 10,
+          warmupIterations: 3,
+        },
+        {
+          name: '6×32k',
+          agentCount: 6,
+          hiddenNodes: 32768,
+          iterations: 10,
+          warmupIterations: 3,
+        },
+        {
+          name: '10×32k',
+          agentCount: 10,
+          hiddenNodes: 32768,
+          iterations: 10,
+          warmupIterations: 3,
+        },
+        {
+          name: '20×32k',
+          agentCount: 20,
+          hiddenNodes: 32768,
+          iterations: 10,
+          warmupIterations: 3,
+        },
+        {
+          name: '50×32k',
+          agentCount: 50,
+          hiddenNodes: 32768,
+          iterations: 10,
+          warmupIterations: 3,
+        },
+      ];
+
+      /**
+       * Run a deterministic MLP on the CPU sequentially.
+       *
+       * Builds `networkCount` independent networks and activates each one for
+       * `iterations` passes in series. The total work is `networkCount *
+       * iterations` forward passes measured with one wall-clock interval.
+       *
+       * @param {object} options - Sequential CPU benchmark options.
+       * @param {number} options.hiddenNodes - Hidden-layer node count.
+       * @param {number} options.networkCount - Number of networks to run in series.
+       * @param {number} options.iterations - Forward passes per network.
+       * @param {number} options.warmupIterations - Untimed warmup passes per network.
+       * @returns {Promise<object>} CPU throughput metrics.
+       */
+      async function runSequentialCPU(options) {
+        const hiddenNodes = options.hiddenNodes;
+        const networkCount = options.networkCount;
+        const iterations = options.iterations;
+        const warmupIterations = options.warmupIterations;
+
+        const networks = [];
+        for (let index = 0; index < networkCount; index += 1) {
+          networks.push(
+            buildDeterministicMLP(
+              INPUT_NODE_COUNT,
+              [hiddenNodes],
+              OUTPUT_NODE_COUNT,
+            ),
+          );
+        }
+
+        const input = makeBenchmarkInput(INPUT_NODE_COUNT);
+
+        for (const network of networks) {
+          for (let index = 0; index < warmupIterations; index += 1) {
+            await network.activate(input);
+          }
+        }
+
+        const start = performance.now();
+        for (const network of networks) {
+          for (let index = 0; index < iterations; index += 1) {
+            await network.activate(input);
+          }
+        }
+        const wallTimeMs = performance.now() - start;
+        const totalActivations = networkCount * iterations;
+
+        return {
+          hiddenNodes,
+          networkCount,
+          iterations,
+          totalActivations,
+          wallTimeMs,
+          throughputActivationsPerSecond: computeThroughput(
+            totalActivations,
+            wallTimeMs,
+          ),
+        };
+      }
+
+      /**
+       * Run a deterministic MLP on the GPU as a single-agent baseline.
+       *
+       * Routes the single-network measurement through {@link batchActivate} with
+       * `iterations` and `skipUpload: true`. The naïve one-activation-per-call
+       * path (`network.activate(..., { useGPU: true })`) pays for a full
+       * CPU-GPU round trip on every forward pass and was measured at only ~54
+       * activations/s for an 8k hidden-node network. Fusing the work into one
+       * command buffer with a single mapAsync readback removes that bottleneck
+       * and makes the single-GPU baseline comparable to the parallel-GPU path.
+       *
+       * @param {object} options - Single-agent GPU benchmark options.
+       * @param {GPUDevice} options.device - WebGPU device.
+       * @param {number} options.hiddenNodes - Hidden-layer node count.
+       * @param {number} options.iterations - Forward passes.
+       * @param {number} options.warmupIterations - Untimed warmup passes.
+       * @returns {Promise<object>} GPU throughput metrics.
+       */
+      async function runSingleGPU(options) {
+        const { device, hiddenNodes, iterations, warmupIterations } = options;
+        const network = buildDeterministicMLP(
+          INPUT_NODE_COUNT,
+          [hiddenNodes],
+          OUTPUT_NODE_COUNT,
+        );
+        network.gpuDevice = device;
+
+        const input = makeBenchmarkInput(INPUT_NODE_COUNT);
+        const inputMatrix = new Float32Array(input);
+
+        // Warm up the GPU caches and upload the static weights/biases once.
+        await batchActivate(device, [network], inputMatrix);
+        if (warmupIterations > 1) {
+          await batchActivate(device, [network], inputMatrix, {
+            skipUpload: true,
+            iterations: warmupIterations - 1,
+          });
+        }
+
+        // Record every repeated evaluation in a single command buffer so the
+        // CPU-GPU round trip is paid once for the whole run.
+        const start = performance.now();
+        await batchActivate(device, [network], inputMatrix, {
+          skipUpload: true,
+          iterations,
+        });
+        const wallTimeMs = performance.now() - start;
+
+        return {
+          hiddenNodes,
+          networkCount: 1,
+          iterations,
+          totalActivations: iterations,
+          wallTimeMs,
+          throughputActivationsPerSecond: computeThroughput(
+            iterations,
+            wallTimeMs,
+          ),
+        };
+      }
+
+      /**
+       * Run several deterministic MLPs on the GPU in a single batched
+       * submission.
+       *
+       * Instead of dispatching each agent independently, the benchmark builds
+       * one row-major input matrix for the whole cohort and calls
+       * `batchActivate`. This reduces CPU-GPU round trips, reuses the compiled
+       * pipeline across identical topologies, and lets the GPU schedule all
+       * agents together. The aggregate throughput is measured against the total
+       * wall time for the batched call.
+       *
+       * @param {object} options - Parallel GPU benchmark options.
+       * @param {GPUDevice} options.device - WebGPU device shared by agents.
+       * @param {number} options.hiddenNodes - Hidden-layer node count.
+       * @param {number} options.agentCount - Number of parallel agents.
+       * @param {number} options.iterations - Forward passes per agent.
+       * @param {number} options.warmupIterations - Untimed warmup passes per agent.
+       * @returns {Promise<object>} Parallel GPU throughput metrics.
+       */
+      async function runParallelGPU(options) {
+        const {
+          device,
+          hiddenNodes,
+          agentCount,
+          iterations,
+          warmupIterations,
+        } = options;
+
+        const networks = [];
+        for (let index = 0; index < agentCount; index += 1) {
+          const network = buildDeterministicMLP(
+            INPUT_NODE_COUNT,
+            [hiddenNodes],
+            OUTPUT_NODE_COUNT,
+          );
+          network.gpuDevice = device;
+          networks.push(network);
+        }
+
+        const input = makeBenchmarkInput(INPUT_NODE_COUNT);
+        const inputMatrix = new Float32Array(
+          agentCount * INPUT_NODE_COUNT,
+        );
+        for (let agent = 0; agent < agentCount; agent += 1) {
+          inputMatrix.set(input, agent * INPUT_NODE_COUNT);
+        }
+
+        // Warm up the GPU caches, upload the static weights/biases once, and
+        // exercise the fused-iteration path so the timed loop measures
+        // steady-state command-buffer amortization.
+        await batchActivate(device, networks, inputMatrix);
+        if (warmupIterations > 1) {
+          await batchActivate(device, networks, inputMatrix, {
+            skipUpload: true,
+            iterations: warmupIterations - 1,
+          });
+        }
+
+        // Record every repeated evaluation in a single command buffer so the
+        // CPU-GPU round trip is paid once for the whole cohort.
+        const start = performance.now();
+        await batchActivate(device, networks, inputMatrix, {
+          skipUpload: true,
+          iterations,
+        });
+        const wallTimeMs = performance.now() - start;
+        const totalActivations = agentCount * iterations;
+
+        return {
+          hiddenNodes,
+          agentCount,
+          iterations,
+          totalActivations,
+          wallTimeMs,
+          throughputActivationsPerSecond: computeThroughput(
+            totalActivations,
+            wallTimeMs,
+          ),
+        };
+      }
+
+      /**
+       * Measure throughput across a ladder of parallel-agent scaling scenarios.
+       *
+       * Each scenario is run independently with `runParallelGPU`. If a scenario
+       * fails (for example, due to device memory limits), it is recorded as a
+       * failed entry so the rest of the ladder can still be reported.
+       *
+       * @param {object} options - Scaling benchmark options.
+       * @param {GPUDevice} options.device - WebGPU device shared by agents.
+       * @returns {Promise<object[]>} Array of scenario results.
+       */
+      async function runScalingScenarios(options) {
+        const { device } = options;
+        const results = [];
+
+        for (const scenario of SCALING_SCENARIOS) {
+          statusEl.textContent = `Measuring ${scenario.name} parallel GPU...`;
+          try {
+            const result = await runParallelGPU({
+              device,
+              hiddenNodes: scenario.hiddenNodes,
+              agentCount: scenario.agentCount,
+              iterations: scenario.iterations,
+              warmupIterations: scenario.warmupIterations,
+            });
+            results.push({ name: scenario.name, success: true, ...result });
+          } catch (error) {
+            results.push({
+              name: scenario.name,
+              success: false,
+              error: String(error),
+            });
+          }
+        }
+
+        return results;
+      }
+
+      /**
+       * Measure the parallel-agent CPU-vs-GPU crossover at 8k hidden nodes.
+       *
+       * Browser-facing wrapper around {@link runParallelCrossoverCore} that
+       * validates the window is visible and focused before measuring, and
+       * forwards status messages to the page UI.
+       *
+       * @param {object} options - Crossover options.
+       * @param {GPUDevice|null} options.device - WebGPU device.
+       * @returns {Promise<object>} Crossover artifact.
+       */
+      async function runParallelCrossover(options) {
+        const device = options.device ?? null;
+        const visibility = checkBrowserVisibility();
+
+        if (!visibility.visible) {
+          return {
+            success: false,
+            browserVisibility: visibility.browserVisibility,
+            error: visibility.reason,
+          };
+        }
+
+        const coreResult = await runParallelCrossoverCore({
+          device,
+          onStatus: (message) => {
+            statusEl.textContent = message;
+          },
+        });
+
+        return {
+          ...coreResult,
+          browserVisibility: visibility.browserVisibility,
+        };
+      }
+
+      async function main() {
+        try {
+          const adapter = await navigator.gpu?.requestAdapter({
+            powerPreference: 'high-performance',
+          });
+          const device = await adapter?.requestDevice();
+
+          if (crossoverOnly) {
+            statusEl.textContent =
+              'Benchmarking parallel crossover (standalone)...';
+            const crossoverResult = await runParallelCrossover({ device });
+
+            // Expose the crossover result immediately for external harnesses.
+            window.crossoverResult = crossoverResult;
+
+            const result = {
+              parallelCrossover: crossoverResult,
+              summary: {
+                crossoverMet: crossoverResult.success
+                  ? crossoverResult.crossover.met
+                  : false,
+                crossoverSpeedupRatio: crossoverResult.success
+                  ? crossoverResult.crossover.speedupRatio
+                  : 0,
+              },
+            };
+            window.ngeTierBenchmarkResult = result;
+            resultEl.textContent = JSON.stringify(result, null, 2);
+            statusEl.textContent = `Done. Standalone crossover ${result.summary.crossoverMet ? 'met' : 'not met'} (${result.summary.crossoverSpeedupRatio.toFixed(2)}×).`;
+            downloadBtn.disabled = false;
+            downloadBtn.addEventListener('click', () =>
+              downloadArtifact(result),
+            );
+
+            // Automatically offer the artifact for download on completion.
+            downloadArtifact(result);
+            return;
+          }
+
+          statusEl.textContent = 'Benchmarking tiers...';
+          const tierResult = await runNGETierBenchmark({ device, adapter });
+
+          statusEl.textContent = 'Benchmarking parallel crossover...';
+          const crossoverResult = await runParallelCrossover({ device });
+
+          statusEl.textContent = 'Benchmarking scaling scenarios...';
+          const scalingScenarios = await runScalingScenarios({ device });
+
+          const successfulScalingScenarios = scalingScenarios.filter(
+            (scenario) => scenario.success,
+          );
+
+          const result = {
+            ...tierResult,
+            parallelCrossover: crossoverResult,
+            scalingScenarios,
+            summary: {
+              ...tierResult.summary,
+              crossoverMet: crossoverResult.success
+                ? crossoverResult.crossover.met
+                : false,
+              crossoverSpeedupRatio: crossoverResult.success
+                ? crossoverResult.crossover.speedupRatio
+                : 0,
+              scalingScenarioCount: scalingScenarios.length,
+              successfulScalingScenarioCount:
+                successfulScalingScenarios.length,
+            },
+          };
+
+          window.ngeTierBenchmarkResult = result;
+          resultEl.textContent = JSON.stringify(result, null, 2);
+          statusEl.textContent = `Done. ${result.summary.tierCount} tiers, crossover ${result.summary.crossoverMet ? 'met' : 'not met'} (${result.summary.crossoverSpeedupRatio.toFixed(2)}×), scaling ${successfulScalingScenarios.length}/${scalingScenarios.length} passed.`;
+          downloadBtn.disabled = false;
+          downloadBtn.addEventListener('click', () => downloadArtifact(result));
+
+          // Automatically offer the artifact for download on completion.
+          downloadArtifact(result);
+        } catch (error) {
+          const failure = { success: false, error: String(error) };
+          window.ngeTierBenchmarkResult = failure;
+          resultEl.textContent = JSON.stringify(failure, null, 2);
+          statusEl.textContent = 'Benchmark failed.';
+        }
+      }
+
+      main();
+    </script>
+  </body>
+</html>

@@ -34,7 +34,6 @@ skills:
   - 'green-validation-gates'
 
 specialists:
-  - 'unit-test-runner'
   - 'green-test-failure-triage-coordinator'
   - 'performance-trace-specialist'
   - 'browser-ui-specialist'

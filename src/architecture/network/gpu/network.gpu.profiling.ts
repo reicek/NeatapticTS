@@ -118,7 +118,7 @@ export const PROFILING_PHASE_NAMES = [
   'outputReadback',
 ] as const;
 
-/** Canonical phase name used by the profiler. */
+/** Canonical phase name used by the GPU activation profiler for timing breakdown. */
 export type ProfilingPhaseName = (typeof PROFILING_PHASE_NAMES)[number];
 
 /**
@@ -780,7 +780,7 @@ export function rankWeakPoints(
 }
 
 /**
- * Identify the single dominant bottleneck from a profiling result.
+ * Identify the single dominant bottleneck phase from a profiling result object.
  *
  * @param result - Profiling result produced by `profileGPUActivation`.
  * @returns Human-readable bottleneck label, or `'unknown'` when no phases were timed.
@@ -818,7 +818,7 @@ export function computeOverheadBreakdown(
 }
 
 /**
- * Reference hardware metadata embedded in the overhead-breakdown artifact.
+ * Reference hardware metadata embedded in the overhead-breakdown artifact for comparison baselines.
  */
 export const OVERHEAD_REFERENCE_HARDWARE = {
   processor: 'Intel i7-10700 @ 2.90GHz, 8 Cores/16 Logical',
@@ -830,34 +830,41 @@ export const OVERHEAD_REFERENCE_HARDWARE = {
 };
 
 /**
- * Build the overhead-breakdown artifact consumed by the browser scenario.
+ * Resolve optional profiling options to their default values.
  *
- * @param tierResults - Per-tier profiling results.
- * @param options - Benchmark options and probed environment values.
- * @param options.browserVisibility - Visibility label, e.g. 'visible-foreground'.
- * @returns JSON-serializable artifact object.
+ * @param options - Raw options object with optional fields.
+ * @returns Fully-resolved options with all defaults applied.
  */
-export function buildOverheadArtifact(
-  tierResults: ProfilingResult[],
-  options: {
-    tiers?: number[];
-    inputCount?: number;
-    outputCount?: number;
-    timestampQuerySupported?: boolean;
-    gpuTimestampQueryNs?: number | null;
-    gpuAdapterInfo?: Record<string, unknown> | null;
-    gpuProbedLimits?: Record<string, number> | null;
-    referenceHardware?: typeof OVERHEAD_REFERENCE_HARDWARE;
-    browserVisibility?: string;
-  } = {},
-): Record<string, unknown> {
-  const tiers = options.tiers ?? [64, 256, 1024, 4096, 8192, 16384, 32768];
-  const inputCount = options.inputCount ?? 10;
-  const outputCount = options.outputCount ?? 4;
-  const referenceHardware =
-    options.referenceHardware ?? OVERHEAD_REFERENCE_HARDWARE;
+function resolveProfilingOptions(options: {
+  tiers?: number[];
+  inputCount?: number;
+  outputCount?: number;
+  referenceHardware?: typeof OVERHEAD_REFERENCE_HARDWARE;
+  browserVisibility?: string;
+}) {
+  return {
+    tiers: options.tiers ?? [64, 256, 1024, 4096, 8192, 16384, 32768],
+    inputCount: options.inputCount ?? 10,
+    outputCount: options.outputCount ?? 4,
+    referenceHardware: options.referenceHardware ?? OVERHEAD_REFERENCE_HARDWARE,
+    browserVisibility: options.browserVisibility ?? 'visible-foreground',
+  };
+}
 
-  const perTier = tierResults.map((result, index) => ({
+/**
+ * Build per-tier result entries from raw profiling results.
+ *
+ * @param tierResults - Raw profiling results from instrumented forward passes.
+ * @param tiers - Hidden-node tier values corresponding to each result.
+ * @param inputCount - Number of input nodes, used to compute total node counts.
+ * @returns Array of per-tier summary objects.
+ */
+function buildPerTierResults(
+  tierResults: ProfilingResult[],
+  tiers: number[],
+  inputCount: number,
+) {
+  return tierResults.map((result, index) => ({
     hiddenNodes: tiers[index] ?? 0,
     totalNodes:
       typeof result.output?.length === 'number'
@@ -885,14 +892,23 @@ export function buildOverheadArtifact(
     overheadRatio: result.overheadRatio,
     weakPoints: rankWeakPoints(result.phases),
   }));
+}
 
-  // Aggregate weak points across tiers: count how often each phase dominates.
+/**
+ * Compute ranked weak points by counting dominant-bottleneck occurrences across tiers.
+ *
+ * @param perTier - Per-tier summary entries.
+ * @returns Weak points sorted by descending tier count, each with a strategy.
+ */
+function computeRankedWeakPoints(
+  perTier: ReadonlyArray<{ dominantBottleneck: string }>,
+): Array<{ name: string; tierCount: number; strategy: string }> {
   const dominanceCounts = new Map<string, number>();
   for (const tier of perTier) {
-    const name = tier.dominantBottleneck as string;
+    const name = tier.dominantBottleneck;
     dominanceCounts.set(name, (dominanceCounts.get(name) ?? 0) + 1);
   }
-  const rankedWeakPoints = Array.from(dominanceCounts.entries())
+  return Array.from(dominanceCounts.entries())
     .toSorted((a, b) => b[1] - a[1])
     .map(([name, count]) => {
       const strategy =
@@ -905,6 +921,71 @@ export function buildOverheadArtifact(
         ])[0]?.strategy ?? 'No strategy available.';
       return { name, tierCount: count, strategy };
     });
+}
+
+/**
+ * Resolve a navigator field safely across browser and Node environments.
+ *
+ * @param field - Navigator property to read.
+ * @returns The field value, or `'node'` when `navigator` is unavailable.
+ */
+function resolveNavigatorField(field: 'userAgent' | 'platform'): string {
+  return typeof navigator !== 'undefined' ? navigator[field] : 'node';
+}
+
+/**
+ * Build the environment metadata block for the overhead-breakdown artifact.
+ *
+ * @param options - Raw options with probed GPU adapter info and limits.
+ * @returns Environment info object for the artifact.
+ */
+function buildEnvironmentInfo(options: {
+  timestampQuerySupported?: boolean;
+  gpuTimestampQueryNs?: number | null;
+  gpuAdapterInfo?: Record<string, unknown> | null;
+  gpuProbedLimits?: Record<string, number> | null;
+}): Record<string, unknown> {
+  return {
+    userAgent: resolveNavigatorField('userAgent'),
+    platform: resolveNavigatorField('platform'),
+    gpuAdapterInfo: options.gpuAdapterInfo ?? null,
+    gpuProbedLimits: options.gpuProbedLimits ?? null,
+    timestampQuerySupported: options.timestampQuerySupported ?? false,
+    gpuTimestampQueryNs: options.gpuTimestampQueryNs ?? null,
+  };
+}
+
+/**
+ * Build the overhead-breakdown artifact consumed by the browser benchmark scenario page.
+ *
+ * @param tierResults - Per-tier profiling results.
+ * @param options - Benchmark options and probed environment values.
+ * @param options.browserVisibility - Visibility label, e.g. 'visible-foreground'.
+ * @returns JSON-serializable artifact object.
+ */
+export function buildOverheadArtifact(
+  tierResults: ProfilingResult[],
+  options: {
+    tiers?: number[];
+    inputCount?: number;
+    outputCount?: number;
+    timestampQuerySupported?: boolean;
+    gpuTimestampQueryNs?: number | null;
+    gpuAdapterInfo?: Record<string, unknown> | null;
+    gpuProbedLimits?: Record<string, number> | null;
+    referenceHardware?: typeof OVERHEAD_REFERENCE_HARDWARE;
+    browserVisibility?: string;
+  } = {},
+): Record<string, unknown> {
+  const {
+    tiers,
+    inputCount,
+    outputCount,
+    referenceHardware,
+    browserVisibility,
+  } = resolveProfilingOptions(options);
+  const perTier = buildPerTierResults(tierResults, tiers, inputCount);
+  const rankedWeakPoints = computeRankedWeakPoints(perTier);
 
   const successfulTierCount = perTier.filter((tier) => tier.success).length;
   const averageOverheadRatio =
@@ -938,16 +1019,8 @@ export function buildOverheadArtifact(
     success: true,
     generatedAt: new Date().toISOString(),
     reference_hardware: referenceHardware,
-    browser_visibility: options.browserVisibility ?? 'visible-foreground',
-    environment: {
-      userAgent:
-        typeof navigator !== 'undefined' ? navigator.userAgent : 'node',
-      platform: typeof navigator !== 'undefined' ? navigator.platform : 'node',
-      gpuAdapterInfo: options.gpuAdapterInfo ?? null,
-      gpuProbedLimits: options.gpuProbedLimits ?? null,
-      timestampQuerySupported: options.timestampQuerySupported ?? false,
-      gpuTimestampQueryNs: options.gpuTimestampQueryNs ?? null,
-    },
+    browser_visibility: browserVisibility,
+    environment: buildEnvironmentInfo(options),
     configuration: {
       hiddenNodeTiers: tiers,
       inputNodeCount: inputCount,

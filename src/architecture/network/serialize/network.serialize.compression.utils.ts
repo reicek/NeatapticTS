@@ -206,6 +206,7 @@ export async function createCompressedNetworkArchiveAsync(
  *
  * @param compressedArchive - Base64-wrapped compressed archive payload.
  * @returns Restored compressed network payload.
+ * @throws {TypeError} When the archive format tag is invalid.
  */
 export function parseCompressedNetworkArchive(
   compressedArchive: CompressedSerializedNetworkArchive,
@@ -237,10 +238,9 @@ export function parseCompressedNetworkArchive(
  * owner when browser streams are unavailable.
  *
  * @param compressedArchive - Base64-wrapped compressed archive payload.
+ * @param options - Optional incremental decode progress callbacks.
  * @returns Restored compressed network payload.
- */
-/**
- * Exported contract for parseCompressedNetworkArchiveAsync.
+ * @throws {TypeError} When the archive format tag is invalid or no compression runtime is available.
  */
 export async function parseCompressedNetworkArchiveAsync(
   compressedArchive: CompressedSerializedNetworkArchive,
@@ -340,17 +340,66 @@ export function compressSerializedConnections(
 }
 
 /**
- * Decompress one array-oriented connection block back into compact rows so archived connection payloads regain legacy-friendly per-edge field records.
+ * Resolve an optional compressed vector element, returning `undefined` when the vector or element is absent.
  *
- * @param compressedConnections - Compressed connection block.
- * @returns Reconstructed serialized connection rows.
+ * @param values - Optional array of values to index into.
+ * @param index - Zero-based index to retrieve.
+ * @returns The element at `index`, or `undefined` when unavailable.
  */
-export function decompressSerializedConnections(
-  compressedConnections: CompressedSerializedConnectionBlock,
-): NetworkJSONConnection[] {
-  const connectionCount = compressedConnections.connectionCount;
+function resolveOptionalVectorValue<T>(
+  values: T[] | undefined,
+  index: number,
+): NonNullable<T> | undefined {
+  return values?.[index] ?? undefined;
+}
 
-  // Step 1: Validate owner-aligned vector widths before reconstruction.
+/**
+ * Resolve the gater index for a decompressed connection, mapping the sentinel to `null`.
+ *
+ * @param encodedGaterIndex - Raw gater index from the compressed block (may be the null sentinel).
+ * @returns The gater index, or `null` when the sentinel or absent.
+ */
+function resolveGaterIndex(
+  encodedGaterIndex: number | undefined,
+): number | null {
+  if (
+    typeof encodedGaterIndex === 'number' &&
+    encodedGaterIndex !== NULL_GATER_INDEX_SENTINEL
+  ) {
+    return encodedGaterIndex;
+  }
+  return null;
+}
+
+/**
+ * Resolve the enabled state for a decompressed connection, honoring the disabled mask first.
+ *
+ * @param isDisabled - Whether the disabled run mask marks this connection as disabled.
+ * @param enabledStates - Optional compressed enabled-states vector.
+ * @param index - Zero-based index to retrieve.
+ * @returns `false` when disabled, otherwise the stored state or `true` as default.
+ */
+function resolveEnabledState(
+  isDisabled: boolean,
+  enabledStates: boolean[] | undefined,
+  index: number,
+): boolean {
+  if (isDisabled) {
+    return false;
+  }
+  return enabledStates?.[index] ?? true;
+}
+
+/**
+ * Validate every compressed vector width in a connection block before reconstruction.
+ *
+ * @param compressedConnections - Compressed connection block to validate.
+ * @param connectionCount - Expected number of connections.
+ */
+function validateCompressedConnectionVectors(
+  compressedConnections: CompressedSerializedConnectionBlock,
+  connectionCount: number,
+): void {
   validateCompressedVectorLength(
     'fromIndices',
     compressedConnections.fromIndices,
@@ -401,6 +450,75 @@ export function decompressSerializedConnections(
     compressedConnections.gaterGeneIds,
     connectionCount,
   );
+}
+
+/**
+ * Rebuild one compact serialized connection row from compressed vectors at the given index.
+ *
+ * @param compressedConnections - Compressed connection block to read from.
+ * @param decodedWeights - Decoded float64 weight sequence.
+ * @param disabledMask - Optional disabled-run mask expanded over all connections.
+ * @param connectionIndex - Zero-based index of the connection to rebuild.
+ * @returns One reconstructed serialized connection row.
+ */
+function buildDecompressedConnectionRow(
+  compressedConnections: CompressedSerializedConnectionBlock,
+  decodedWeights: number[],
+  disabledMask: boolean[] | undefined,
+  connectionIndex: number,
+): NetworkJSONConnection {
+  const encodedGaterIndex = resolveOptionalVectorValue(
+    compressedConnections.gaterIndices,
+    connectionIndex,
+  );
+  const isDisabledConnection = disabledMask?.[connectionIndex] === true;
+
+  return {
+    enabled: resolveEnabledState(
+      isDisabledConnection,
+      compressedConnections.enabledStates,
+      connectionIndex,
+    ),
+    from: compressedConnections.fromIndices[connectionIndex]!,
+    fromGeneId: resolveOptionalVectorValue(
+      compressedConnections.fromGeneIds,
+      connectionIndex,
+    ),
+    gain: resolveOptionalVectorValue(
+      compressedConnections.gainValues,
+      connectionIndex,
+    ),
+    gater: resolveGaterIndex(encodedGaterIndex),
+    gaterGeneId: resolveOptionalVectorValue(
+      compressedConnections.gaterGeneIds,
+      connectionIndex,
+    ),
+    innovation: resolveOptionalVectorValue(
+      compressedConnections.innovationIds,
+      connectionIndex,
+    ),
+    to: compressedConnections.toIndices[connectionIndex]!,
+    toGeneId: resolveOptionalVectorValue(
+      compressedConnections.toGeneIds,
+      connectionIndex,
+    ),
+    weight: decodedWeights[connectionIndex]!,
+  };
+}
+
+/**
+ * Decompress one array-oriented connection block back into compact rows so archived connection payloads regain legacy-friendly per-edge field records.
+ *
+ * @param compressedConnections - Compressed connection block.
+ * @returns Reconstructed serialized connection rows.
+ */
+export function decompressSerializedConnections(
+  compressedConnections: CompressedSerializedConnectionBlock,
+): NetworkJSONConnection[] {
+  const connectionCount = compressedConnections.connectionCount;
+
+  // Step 1: Validate owner-aligned vector widths before reconstruction.
+  validateCompressedConnectionVectors(compressedConnections, connectionCount);
 
   // Step 2: Decode the exact float64 weight sequence.
   const decodedWeights = decodeExactConnectionWeights(
@@ -413,33 +531,14 @@ export function decompressSerializedConnections(
   );
 
   // Step 3: Rebuild compact serialized rows with legacy defaults.
-  return Array.from({ length: connectionCount }, (_, connectionIndex) => {
-    const encodedGaterIndex =
-      compressedConnections.gaterIndices?.[connectionIndex];
-    const isDisabledConnection = disabledMask?.[connectionIndex] === true;
-
-    return {
-      enabled: isDisabledConnection
-        ? false
-        : (compressedConnections.enabledStates?.[connectionIndex] ?? true),
-      from: compressedConnections.fromIndices[connectionIndex]!,
-      fromGeneId:
-        compressedConnections.fromGeneIds?.[connectionIndex] ?? undefined,
-      gain: compressedConnections.gainValues?.[connectionIndex] ?? undefined,
-      gater:
-        typeof encodedGaterIndex === 'number' &&
-        encodedGaterIndex !== NULL_GATER_INDEX_SENTINEL
-          ? encodedGaterIndex
-          : null,
-      gaterGeneId:
-        compressedConnections.gaterGeneIds?.[connectionIndex] ?? undefined,
-      innovation:
-        compressedConnections.innovationIds?.[connectionIndex] ?? undefined,
-      to: compressedConnections.toIndices[connectionIndex]!,
-      toGeneId: compressedConnections.toGeneIds?.[connectionIndex] ?? undefined,
-      weight: decodedWeights[connectionIndex]!,
-    };
-  });
+  return Array.from({ length: connectionCount }, (_, connectionIndex) =>
+    buildDecompressedConnectionRow(
+      compressedConnections,
+      decodedWeights,
+      disabledMask,
+      connectionIndex,
+    ),
+  );
 }
 
 /**
@@ -507,6 +606,7 @@ export function createCompressedArchiveDecodeMetrics(
  * @param payloadBytes - UTF-8 payload bytes.
  * @param compression - Archive compression codec.
  * @returns Compressed payload bytes.
+ * @throws {TypeError} When the compression codec is unsupported or the Node zlib module is unavailable.
  */
 export function compressArchivePayloadBytes(
   payloadBytes: Uint8Array,
@@ -570,6 +670,7 @@ async function compressArchivePayloadBytesAsync(
  * @param payloadBytes - Compressed archive payload bytes.
  * @param compression - Archive compression codec.
  * @returns Inflated UTF-8 payload bytes.
+ * @throws {TypeError} When the compression codec is unsupported or the Node zlib module is unavailable.
  */
 export function decompressArchivePayloadBytes(
   payloadBytes: Uint8Array,
@@ -594,7 +695,9 @@ export function decompressArchivePayloadBytes(
  *
  * @param payloadBytes - Compressed archive payload bytes.
  * @param compression - Archive compression codec.
+ * @param options - Optional incremental decode progress callbacks.
  * @returns Inflated UTF-8 payload bytes.
+ * @throws {TypeError} When zstd is requested in a browser runtime or no compression runtime is available.
  */
 export async function decompressArchivePayloadBytesAsync(
   payloadBytes: Uint8Array,
@@ -874,6 +977,7 @@ function resolveBrowserDecompressionStreamConstructor():
  *
  * @param payloadBytes - Binary archive payload bytes.
  * @returns Base64-encoded payload text.
+ * @throws {TypeError} When the current runtime lacks base64 encoding support.
  */
 export function encodeArchivePayloadBase64(payloadBytes: Uint8Array): string {
   const browserBase64Encoder = Reflect.get(globalThis, 'btoa');
@@ -910,6 +1014,7 @@ export function encodeArchivePayloadBase64(payloadBytes: Uint8Array): string {
  *
  * @param payload - Base64-encoded payload text.
  * @returns Binary archive payload bytes.
+ * @throws {TypeError} When the current runtime lacks base64 decoding support.
  */
 export function decodeArchivePayloadBase64(payload: string): Uint8Array {
   const browserBase64Decoder = Reflect.get(globalThis, 'atob');

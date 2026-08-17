@@ -71,6 +71,7 @@ const DEFAULT_COMPRESSED_GENOME_ARCHIVE_COMPRESSION = 'gzip';
  * This keeps the payload structural and replay-safe: runtime activation traces,
  * slab allocations, and other phenotype-only state remain outside the archive.
  *
+ * @param this - Bound network instance to archive.
  * @param options - Optional archive codec and genome-capture settings.
  * @returns Base64-wrapped compressed strict-genome archive.
  *
@@ -114,6 +115,7 @@ export function serializeCompressedGenomeArchive(
  * Archive one runtime phenotype through the strict genome contract and report deterministic encode metrics for observability.
  * The metrics payload helps compare codec and capture-option tradeoffs without changing archive semantics.
  *
+ * @param this - Bound network instance to archive.
  * @param options - Optional archive codec and genome-capture settings.
  * @returns Archived strict-genome payload plus encode metrics.
  */
@@ -145,6 +147,8 @@ export function serializeCompressedGenomeArchiveWithMetrics(
  *
  * @param compressedArchive - Base64-wrapped strict-genome archive payload.
  * @returns Restored strict genome contract.
+ * @throws {TypeError} When the archive or payload format tag is invalid.
+ * @throws {Error} When the restored genome fails contract validation.
  */
 export function parseCompressedGenomeArchive(
   compressedArchive: CompressedSerializedGenomeArchive,
@@ -185,6 +189,8 @@ export function parseCompressedGenomeArchive(
  * @param compressedArchive - Base64-wrapped strict-genome archive payload.
  * @param options - Optional incremental decode callbacks.
  * @returns Restored strict genome contract.
+ * @throws {TypeError} When the archive or payload format tag is invalid.
+ * @throws {Error} When the restored genome fails contract validation.
  */
 export async function parseCompressedGenomeArchiveAsync(
   compressedArchive: CompressedSerializedGenomeArchive,

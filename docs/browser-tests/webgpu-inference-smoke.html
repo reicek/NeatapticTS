@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>WebGPU Inference Smoke Test</title>
+  </head>
+  <body>
+    <h1>WebGPU Inference Smoke Test</h1>
+    <pre id="result">Running...</pre>
+
+    <!--
+      Load the browser IIFE bundle. The scenario expects `Neataptic.Network`
+      and `Neataptic.Architect` to be available on the global scope.
+    -->
+    <script src="../../dist/neataptic.browser.iife.js"></script>
+
+    <!--
+      Scenario logic: build a 2-3-1 MLP, time CPU and (when available) GPU
+      inference over many iterations, compute parity metrics, and emit the
+      canonical `window.webgpuSmokeResult` object consumed by the harness.
+    -->
+    <script type="module">
+      import { runWebGPUSmoke } from './scenarios/webgpu-smoke.mjs';
+
+      const ITERATION_COUNT = 10000;
+      const SAMPLE_INPUT = [0.5, -0.2];
+
+      async function readAdapterInfo(adapter) {
+        if (!adapter) return null;
+        try {
+          if (typeof adapter.requestAdapterInfo === 'function') {
+            return await adapter.requestAdapterInfo();
+          }
+          if (adapter.info) {
+            const info = adapter.info;
+            return {
+              vendor: info.vendor,
+              architecture: info.architecture,
+              device: info.device,
+              description: info.description,
+            };
+          }
+        } catch (error) {
+          return { error: String(error) };
+        }
+        return null;
+      }
+
+      /**
+       * Create a worker-registry-compatible logistic activation.
+       *
+       * The IIFE browser bundle contains two copies of the built-in activation
+       * functions: the public `methods.Activation` registry and the worker
+       * registry used by the WebGPU path. esbuild deduplicates the duplicate
+       * function names by appending a "2" suffix to the worker copies, so the
+       * GPU lookup (which matches by function identity or by name/symbol key)
+       * fails for the public activations. This scenario-level wrapper delegates
+       * to the public logistic function while tagging itself with the worker
+       * registry key that the GPU code expects.
+       */
+      function makeGPULogisticActivation() {
+        const workerKey = 'logisticActivation2';
+        const fn = (x, derivate = false) =>
+          Neataptic.methods.Activation.logistic(x, derivate);
+        fn[Symbol.for('neataptic.activation.key')] = workerKey;
+        try {
+          Object.defineProperty(fn, 'name', { value: workerKey, configurable: true });
+        } catch (_) {
+          // If the environment does not allow renaming, the symbol key is enough.
+        }
+        return fn;
+      }
+      async function main() {
+        try {
+          // Step 1: Build a 2-3-1 MLP and give every node the worker-compatible
+          // logistic squash so the WebGPU path can resolve its activation index.
+          const network = Neataptic.Network.createMLP(2, [3], 1);
+          const gpuLogistic = makeGPULogisticActivation();
+          for (const node of network.nodes) {
+            if (typeof node.squash === 'function') {
+              node.squash = gpuLogistic;
+            }
+          }
+
+          // Step 2: Request a WebGPU adapter/device and bind it to the network.
+          const adapter = await navigator.gpu?.requestAdapter();
+          const device = await adapter?.requestDevice();
+          const gpuAdapterInfo = await readAdapterInfo(adapter);
+          let gpuDeviceBound = Boolean(device);
+          if (device) {
+            network.gpuDevice = device;
+          }
+
+          // Step 3: Single parity activations.
+          const cpuOutput = network.activate(SAMPLE_INPUT);
+          let gpuOutput = [];
+          let gpuPathViable = false;
+          if (gpuDeviceBound) {
+            try {
+              device.pushErrorScope('validation');
+              const candidateGpuOutput = await network.activate(SAMPLE_INPUT, { useGPU: true });
+              const validationError = await device.popErrorScope();
+              const outputArray =
+                candidateGpuOutput instanceof Float32Array
+                  ? Array.from(candidateGpuOutput)
+                  : candidateGpuOutput;
+              const outputValid =
+                Array.isArray(outputArray) &&
+                outputArray.length === cpuOutput.length &&
+                outputArray.every((value) => Number.isFinite(value));
+              console.log('WebGPU candidate output:', candidateGpuOutput, 'validationError:', validationError?.message ?? validationError);
+              if (!validationError && outputValid) {
+                gpuOutput = outputArray;
+                gpuPathViable = true;
+              } else {
+                console.warn(
+                  'WebGPU test activation is not viable (validation error or invalid output). Using CPU-only metrics.',
+                );
+              }
+              // Treat an unusable GPU device as unbound for the result contract.
+              gpuDeviceBound = gpuPathViable;
+            } catch (gpuError) {
+              console.warn('WebGPU test activation threw:', gpuError);
+              gpuDeviceBound = false;
+            }
+          }
+
+          // Step 4: CPU timing loop.
+          const cpuStart = performance.now();
+          for (let i = 0; i < ITERATION_COUNT; i++) {
+            network.activate(SAMPLE_INPUT);
+          }
+          const cpuEnd = performance.now();
+          const cpuTotalMs = cpuEnd - cpuStart;
+
+          // Step 5: GPU timing loop (only when the GPU path proved viable).
+          let gpuTotalMs = 0;
+          if (gpuPathViable) {
+            const gpuStart = performance.now();
+            for (let i = 0; i < ITERATION_COUNT; i++) {
+              await network.activate(SAMPLE_INPUT, { useGPU: true });
+            }
+            const gpuEnd = performance.now();
+            gpuTotalMs = gpuEnd - gpuStart;
+          }
+
+          // Step 6: Compute parity metrics and assemble the result.
+          const result = await runWebGPUSmoke({
+            cpuOutput,
+            gpuOutput,
+            gpuDeviceBound,
+            iterationCount: ITERATION_COUNT,
+            cpuTotalMs,
+            gpuTotalMs,
+            gpuAdapterInfo,
+          });
+
+          // Step 7: Emit the canonical result object for the harness.
+          window.webgpuSmokeResult = result;
+
+          document.getElementById('result').textContent = JSON.stringify(
+            window.webgpuSmokeResult,
+            null,
+            2,
+          );
+        } catch (error) {
+          window.webgpuSmokeResult = {
+            success: false,
+            error: String(error),
+          };
+          document.getElementById('result').textContent = String(error);
+        }
+      }
+
+      main();
+    </script>
+  </body>
+</html>

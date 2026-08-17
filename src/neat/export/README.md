@@ -120,6 +120,7 @@ namespaced add-ons, not for overriding the light checkpoint's bootstrap
 contract.
 
 Parameters:
+- `this` - Bound NEAT controller instance.
 - `exportOptions` - Export policy describing how many elite genomes to keep.
 
 Returns: Light checkpoint bundle for approximate restart.
@@ -160,6 +161,9 @@ const popSnapshot = neat.exportPopulation();
 fs.writeFileSync('population.json', JSON.stringify(popSnapshot, null, 2));
 ```
 
+Parameters:
+- `this` - Bound NEAT controller instance.
+
 Returns: Array of genome JSON objects.
 
 ### exportState
@@ -197,6 +201,9 @@ const raw = JSON.parse(fs.readFileSync('state.json', 'utf8')) as NeatStateJSON;
 const neat2 = Neat.importState(raw, fitnessFn); // identical evolutionary context
 ```
 
+Parameters:
+- `this` - Bound NEAT controller instance.
+
 Returns: A  {@link NeatStateJSON} bundle containing meta + population.
 
 ### fromJSONImpl
@@ -228,6 +235,7 @@ neat.importPopulation(popSnapshot); // optional
 ```
 
 Parameters:
+- `this` - NEAT constructor used to create the restored instance.
 - `neatJSON` - Serialized meta (no population).
 - `fitnessFunction` - Fitness callback used to construct the new instance.
 
@@ -277,6 +285,7 @@ than part of the restart contract. Import therefore ignores that bag while it
 validates the light checkpoint-owned bootstrap fields.
 
 Parameters:
+- `this` - NEAT constructor (class, not instance) used to create the new controller.
 - `stateBundle` - Light checkpoint bundle produced by  {@link exportLightState} .
 - `fitnessFunction` - Fitness evaluation callback used for the new instance.
 
@@ -312,6 +321,7 @@ Edge cases handled:
   explicit population-validation errors.
 
 Parameters:
+- `this` - Bound NEAT controller instance.
 - `populationJSON` - Array of serialized genome objects.
 
 Returns: Promise that resolves once all genomes have been rehydrated and the
@@ -356,6 +366,7 @@ neat.evolve();
 ```
 
 Parameters:
+- `this` - NEAT constructor (class, not instance) used to create the new controller.
 - `stateBundle` - Full state bundle from  {@link exportState} .
 - `fitnessFunction` - Fitness evaluation callback used for new instance.
 - `restoreOptions` - Explicit restore-mode override. Defaults to strict exact resume.
@@ -455,6 +466,9 @@ fs.writeFileSync('neat-meta.json', JSON.stringify(meta));
 const metaLoaded = JSON.parse(fs.readFileSync('neat-meta.json', 'utf8')) as NeatMetaJSON;
 const neat2 = Neat.fromJSONImpl(metaLoaded, fitnessFn); // empty population
 ```
+
+Parameters:
+- `this` - Bound NEAT controller instance.
 
 ## neat/export/neat.export.types.ts
 
@@ -816,6 +830,7 @@ worth preserving beside the network JSON.
 
 Parameters:
 - `genome` - Live genome from the controller population.
+- `networkPayload` - Pre-serialized network JSON; defaults to `genome.toJSON()`.
 
 Returns: Serialized genome payload with optional controller metadata.
 
@@ -906,6 +921,25 @@ flowchart LR
   B --> D
 ```
 
+### collectLivePopulationIds
+
+```ts
+collectLivePopulationIds(
+  internal: NeatControllerForExport,
+): Set<number>
+```
+
+Collect the set of stable genome ids present in the live population.
+
+This set drives the decision of whether a species representative must be
+serialized as a detached anchor (when it no longer lives in the current
+population).
+
+Parameters:
+- `internal` - Live controller host.
+
+Returns: Set of stable genome ids in the current population.
+
 ### createCheckpointMemberPlaceholder
 
 ```ts
@@ -989,8 +1023,24 @@ restoring the related speciation bookkeeping maps and threshold state.
 Parameters:
 - `neatInstance` - Controller instance whose population is already restored.
 - `speciationCheckpoint` - Serialized speciation payload from persistence.
+- `networkClass` - Network constructor class for rehydrating representative anchors.
 
 Returns: Nothing.
+
+### serializePrevSpeciesMembers
+
+```ts
+serializePrevSpeciesMembers(
+  internal: NeatControllerForExport,
+): [number, number[]][]
+```
+
+Serialize the previous-generation species member id map for checkpoint continuity.
+
+Parameters:
+- `internal` - Live controller host.
+
+Returns: Array of species-id to member-id-list pairs.
 
 ### serializeSpeciationCheckpoint
 
@@ -1010,6 +1060,42 @@ Parameters:
 - `internal` - Live controller host.
 
 Returns: Serializable speciation checkpoint payload.
+
+### serializeSpeciesCheckpointRows
+
+```ts
+serializeSpeciesCheckpointRows(
+  internal: NeatControllerForExport,
+  livePopulationIds: Set<number>,
+): SpeciesCheckpointJSON[]
+```
+
+Serialize all species rows from the live registry.
+
+Each row writes member ids by stable genome id and optionally carries a
+detached representative anchor when the representative is no longer in the
+live population.
+
+Parameters:
+- `internal` - Live controller host.
+- `livePopulationIds` - Stable genome ids present in the current population.
+
+Returns: Array of serialized species checkpoint rows.
+
+### serializeSpeciesLastStats
+
+```ts
+serializeSpeciesLastStats(
+  internal: NeatControllerForExport,
+): [number, SpeciesLastStats][]
+```
+
+Serialize per-species rolling statistics with deep-cloned payloads.
+
+Parameters:
+- `internal` - Live controller host.
+
+Returns: Array of species-id to cloned statistics pairs.
 
 ### shouldSerializeRepresentativeAnchor
 

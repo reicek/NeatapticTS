@@ -1,7 +1,7 @@
 import type { NgeSchemaVersion } from './neat.nge-dna.types';
 
 /**
- * Initial schema version for the canonical NGE DNA envelope.
+ * Initial schema version for the canonical NGE DNA envelope serialization format.
  */
 export const NGE_DNA_SCHEMA_VERSION = 'A.1.0' as NgeSchemaVersion;
 
@@ -16,7 +16,7 @@ export const NGE_DNA_DEFAULT_BUDGET_MAX_NODES = 512;
 export const NGE_DNA_DEFAULT_BUDGET_MAX_EDGES = 1_024;
 
 /**
- * Default per-axis partition count for the unit-cube substrate.
+ * Default per-axis partition count for the unit-cube substrate coordinate space.
  */
 export const NGE_DNA_DEFAULT_ZONE_PARTITION_COUNT = 3;
 

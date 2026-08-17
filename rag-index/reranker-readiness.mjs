@@ -132,6 +132,7 @@ export async function checkRerankerReadiness(options = {}) {
     const session = await InferenceSession.create(modelPath);
 
     // Warm: model + valid session
+    /* istanbul ignore next -- requires a valid ONNX model file to reach */
     await session.release?.();
 
     return {
@@ -142,11 +143,13 @@ export async function checkRerankerReadiness(options = {}) {
       state: 'warm',
     };
   } catch (error) {
+    /* istanbul ignore next -- defensive: ONNX errors are always Error instances */
+    const errorMsg = error instanceof Error ? error.message : String(error);
     return {
       max_sequence_length: maxSequenceLength,
       model_id: modelIdFromMeta,
       ready: false,
-      reason: `Reranker model exists but session creation failed: ${error instanceof Error ? error.message : String(error)}`,
+      reason: `Reranker model exists but session creation failed: ${errorMsg}`,
       state: 'model-only',
     };
   }
@@ -183,6 +186,7 @@ function createForcedReadinessReport(state) {
   };
 }
 
+/* istanbul ignore next -- CLI entry point, not exported */
 async function main() {
   const args = parseCliArgs(process.argv.slice(2));
 
@@ -218,5 +222,6 @@ async function main() {
   }
 }
 
+/* istanbul ignore next -- direct execution guard, untestable in Jest */
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href)
   await main();

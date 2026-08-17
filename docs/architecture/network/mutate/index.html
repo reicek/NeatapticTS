@@ -1,0 +1,1472 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>architecture/network/mutate – NeatapticTS Docs</title><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;600;700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../../assets/theme.css"><script defer src="../../../assets/theme-tooltips.js"></script></head><body class="">
+<header class="topbar"><div class="inner topbar-inner-connected"><div class="brand"><a class="brand-link" href="../../../index.html"><span class="brand-title-lockup" aria-hidden="true"><span class="brand-title-row brand-title-row-top"><span class="brand-title-corner">╔══</span><span class="brand-label">NeatapticTS</span><span class="brand-title-corner">══╗</span></span></span><span class="brand-title-accessible">NeatapticTS</span></a></div><nav class="main-nav"><a href="../../../index.html">Home</a><a href="../../../index.html" class="active">Docs</a><a href="../../../examples/index.html">Examples</a><a href="https://github.com/reicek/NeatapticTS" target="_blank" rel="noopener">GitHub</a></nav></div></header>
+<div class="layout"><aside class="sidebar docs-panel docs-panel-left"><ul class="sidebar-sections"><li class="group group-priority"><div class="g-head">Start With Examples</div><p class="group-copy">The demos are the fastest way to learn the library in the order a first-time reader can actually absorb.</p><div class="nav-priority-links"><ul class="pipe-nav-list pipe-nav-list-priority"><li class="pipe-nav-item nav-priority-link"><a href="../../../examples/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Examples overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul><ul class="pipe-nav-list pipe-nav-list-compact"><li class="pipe-nav-item"><a href="../../../examples/flappy_bird/docs/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Flappy Bird</span></a></li><li class="pipe-nav-item"><a href="../../../examples/asciiMaze/docs/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">ASCII Maze</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></div></li><ul class="pipe-nav-list pipe-nav-list-root"><li class="pipe-nav-item"><a href="../../../index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul><li class="group"><div class="g-head">Architecture</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-item"><a href="../../activationArrayPool/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">ActivationArrayPool</span></a></li><li class="pipe-nav-item"><a href="../../architect/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Architect</span></a></li><li class="pipe-nav-item"><a href="../../connection/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Connection</span></a></li><li class="pipe-nav-item"><a href="../../group/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Group</span></a></li><li class="pipe-nav-item"><a href="../../layer/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Layer</span></a></li><li class="pipe-nav-item"><a href="../index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network</span></a></li><li class="pipe-nav-item"><a href="../activate/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Activate</span></a></li><li class="pipe-nav-item"><a href="../bootstrap/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Bootstrap</span></a></li><li class="pipe-nav-item"><a href="../connect/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Connect</span></a></li><li class="pipe-nav-item"><a href="../construct/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Construct</span></a></li><li class="pipe-nav-item"><a href="../deterministic/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Deterministic</span></a></li><li class="pipe-nav-item"><a href="../evaluation-pack/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Evaluation Pack</span></a></li><li class="pipe-nav-item"><a href="../evolve/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Evolve</span></a></li><li class="pipe-nav-item"><a href="../gating/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Gating</span></a></li><li class="pipe-nav-item"><a href="../genetic/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Genetic</span></a></li><li class="pipe-nav-item"><a href="../gpu/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Gpu</span></a></li><li class="pipe-nav-item"><a href="../gpu/__mocks__/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Gpu / Mocks</span></a></li><li class="pipe-nav-item current"><a href="./index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Mutate</span></a></li><li class="pipe-nav-item"><a href="../onnx/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Onnx</span></a></li><li class="pipe-nav-item"><a href="../onnx/export/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Onnx / Export</span></a></li><li class="pipe-nav-item"><a href="../onnx/export/layers/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Export / Layers</span></a></li><li class="pipe-nav-item"><a href="../onnx/import/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Onnx / Import</span></a></li><li class="pipe-nav-item"><a href="../onnx/parity/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Onnx / Parity</span></a></li><li class="pipe-nav-item"><a href="../onnx/schema/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Onnx / Schema</span></a></li><li class="pipe-nav-item"><a href="../onnx/validate/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Onnx / Validate</span></a></li><li class="pipe-nav-item"><a href="../prune/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Prune</span></a></li><li class="pipe-nav-item"><a href="../remove/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Remove</span></a></li><li class="pipe-nav-item"><a href="../runtime/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Runtime</span></a></li><li class="pipe-nav-item"><a href="../serialize/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Serialize</span></a></li><li class="pipe-nav-item"><a href="../slab/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Slab</span></a></li><li class="pipe-nav-item"><a href="../standalone/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Standalone</span></a></li><li class="pipe-nav-item"><a href="../stats/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Stats</span></a></li><li class="pipe-nav-item"><a href="../topology/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Topology</span></a></li><li class="pipe-nav-item"><a href="../training/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Training</span></a></li><li class="pipe-nav-item"><a href="../visualization/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Visualization</span></a></li><li class="pipe-nav-item"><a href="../window/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Window</span></a></li><li class="pipe-nav-item"><a href="../worker-payload/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Worker Payload</span></a></li><li class="pipe-nav-item"><a href="../../node/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Node</span></a></li><li class="pipe-nav-item"><a href="../../nodePool/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">NodePool</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Methods</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../methods/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-item"><a href="../../../methods/activation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Activation</span></a></li><li class="pipe-nav-item"><a href="../../../methods/connection/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Connection</span></a></li><li class="pipe-nav-item"><a href="../../../methods/cost/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Cost</span></a></li><li class="pipe-nav-item"><a href="../../../methods/crossover/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Crossover</span></a></li><li class="pipe-nav-item"><a href="../../../methods/gating/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Gating</span></a></li><li class="pipe-nav-item"><a href="../../../methods/mutation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation</span></a></li><li class="pipe-nav-item"><a href="../../../methods/rate/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Rate</span></a></li><li class="pipe-nav-item"><a href="../../../methods/selection/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Selection</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Neat</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../neat/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-item"><a href="../../../neat/adaptive/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Adaptive</span></a></li><li class="pipe-nav-item"><a href="../../../neat/adaptive/acceptance/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Adaptive / Acceptance</span></a></li><li class="pipe-nav-item"><a href="../../../neat/adaptive/complexity/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Adaptive / Complexity</span></a></li><li class="pipe-nav-item"><a href="../../../neat/adaptive/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Adaptive / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/adaptive/lineage/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Adaptive / Lineage</span></a></li><li class="pipe-nav-item"><a href="../../../neat/adaptive/mutation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Adaptive / Mutation</span></a></li><li class="pipe-nav-item"><a href="../../../neat/cache/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Cache</span></a></li><li class="pipe-nav-item"><a href="../../../neat/cache/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Cache / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/compat/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Compat</span></a></li><li class="pipe-nav-item"><a href="../../../neat/compat/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Compat / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/diversity/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Diversity</span></a></li><li class="pipe-nav-item"><a href="../../../neat/diversity/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Diversity / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/auto-distance/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Auto Distance</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/entropy-compat/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Entropy Compat</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/entropy-sharing/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Entropy Sharing</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/fitness/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Fitness</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/novelty/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Novelty</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/objectives/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Objectives</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/shared/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Shared</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/speciation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Speciation</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/adaptive/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Adaptive</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/objectives/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Objectives</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/offspring/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Offspring</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/population/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Population</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/runtime/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Runtime</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/speciation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Speciation</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/telemetry/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Telemetry</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/warnings/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Warnings</span></a></li><li class="pipe-nav-item"><a href="../../../neat/export/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Export</span></a></li><li class="pipe-nav-item"><a href="../../../neat/genome/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Genome</span></a></li><li class="pipe-nav-item"><a href="../../../neat/genome/heredity/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Genome / Heredity</span></a></li><li class="pipe-nav-item"><a href="../../../neat/harness/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Harness</span></a></li><li class="pipe-nav-item"><a href="../../../neat/helpers/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Helpers</span></a></li><li class="pipe-nav-item"><a href="../../../neat/hybrid/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Hybrid</span></a></li><li class="pipe-nav-item"><a href="../../../neat/init/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Init</span></a></li><li class="pipe-nav-item"><a href="../../../neat/innovation-tracker/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Innovation Tracker</span></a></li><li class="pipe-nav-item"><a href="../../../neat/lineage/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Lineage</span></a></li><li class="pipe-nav-item"><a href="../../../neat/lineage/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Lineage / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/maintenance/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Maintenance</span></a></li><li class="pipe-nav-item"><a href="../../../neat/maintenance/facade/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Maintenance / Facade</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/archive/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Archive</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/category/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Category</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/crowding/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Crowding</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/dominance/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Dominance</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/fronts/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Fronts</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/metrics/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Metrics</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/objectives/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Objectives</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/shared/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Shared</span></a></li><li class="pipe-nav-item"><a href="../../../neat/mutation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation</span></a></li><li class="pipe-nav-item"><a href="../../../neat/mutation/add-conn/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation / Add Conn</span></a></li><li class="pipe-nav-item"><a href="../../../neat/mutation/add-node/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation / Add Node</span></a></li><li class="pipe-nav-item"><a href="../../../neat/mutation/flow/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation / Flow</span></a></li><li class="pipe-nav-item"><a href="../../../neat/mutation/repair/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation / Repair</span></a></li><li class="pipe-nav-item"><a href="../../../neat/mutation/select/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation / Select</span></a></li><li class="pipe-nav-item"><a href="../../../neat/mutation/shared/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation / Shared</span></a></li><li class="pipe-nav-item"><a href="../../../neat/nge-adult/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Adult</span></a></li><li class="pipe-nav-item"><a href="../../../neat/nge-assimilation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Assimilation</span></a></li><li class="pipe-nav-item"><a href="../../../neat/nge-collective/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Collective</span></a></li><li class="pipe-nav-item"><a href="../../../neat/nge-dna/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Dna</span></a></li><li class="pipe-nav-item"><a href="../../../neat/nge-evolution/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Evolution</span></a></li><li class="pipe-nav-item"><a href="../../../neat/nge-juvenile/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Juvenile</span></a></li><li class="pipe-nav-item"><a href="../../../neat/nge-main-agent/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Main Agent</span></a></li><li class="pipe-nav-item"><a href="../../../neat/objectives/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Objectives</span></a></li><li class="pipe-nav-item"><a href="../../../neat/objectives/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Objectives / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/pruning/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Pruning</span></a></li><li class="pipe-nav-item"><a href="../../../neat/pruning/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Pruning / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/pruning/facade/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Pruning / Facade</span></a></li><li class="pipe-nav-item"><a href="../../../neat/rng/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Rng</span></a></li><li class="pipe-nav-item"><a href="../../../neat/rng/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Rng / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/rng/facade/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Rng / Facade</span></a></li><li class="pipe-nav-item"><a href="../../../neat/selection/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Selection</span></a></li><li class="pipe-nav-item"><a href="../../../neat/selection/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Selection / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/selection/facade/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Selection / Facade</span></a></li><li class="pipe-nav-item"><a href="../../../neat/shared/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Shared</span></a></li><li class="pipe-nav-item"><a href="../../../neat/speciation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Speciation</span></a></li><li class="pipe-nav-item"><a href="../../../neat/speciation/assignment/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Speciation / Assignment</span></a></li><li class="pipe-nav-item"><a href="../../../neat/speciation/history/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Speciation / History</span></a></li><li class="pipe-nav-item"><a href="../../../neat/speciation/shared/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Speciation / Shared</span></a></li><li class="pipe-nav-item"><a href="../../../neat/speciation/sharing/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Speciation / Sharing</span></a></li><li class="pipe-nav-item"><a href="../../../neat/speciation/threshold/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Speciation / Threshold</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Species</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Species / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/core/augmentation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Core / Augmentation</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/core/shared/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Core / Shared</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/history/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Species / History</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/history/context/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">History / Context</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/history/read/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">History / Read</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/stats/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Species / Stats</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/accessors/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Accessors</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/exports/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Exports</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Facade</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/archive/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Archive</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/buffer/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Buffer</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/lineage/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Lineage</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/novelty/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Novelty</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/objectives/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Objectives</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/operator-stats/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Operator Stats</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/runtime/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Runtime</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/species/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Species</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/metrics/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Metrics</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/recorder/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Recorder</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/runtime/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Runtime</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/types/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Types</span></a></li><li class="pipe-nav-item"><a href="../../../neat/topology-intent/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Topology Intent</span></a></li><li class="pipe-nav-item"><a href="../../../neat/validate/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Validate</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Multithreading</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../multithreading/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-item"><a href="../../../multithreading/workers/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Workers</span></a></li><li class="pipe-nav-item"><a href="../../../multithreading/workers/browser/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Workers / Browser</span></a></li><li class="pipe-nav-item"><a href="../../../multithreading/workers/node/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Workers / Node</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-footer"></span><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Acceleration</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../acceleration/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Browser Tests</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../browser-tests/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Env</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../env/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-item"><a href="../../../env/browser/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Browser</span></a></li><li class="pipe-nav-item"><a href="../../../env/node/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Node</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Memory</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../memory/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Performance</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../performance/nge/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Research</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../research/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Src</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../src/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Utils</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../utils/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Visualization</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../visualization/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-item"><a href="../../../visualization/network-view/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network View</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li></ul></aside><main class="content docs-panel docs-panel-center"><h1 id="architecture-network-mutate">architecture/network/mutate</h1><p>Raised when mutation is requested without a concrete mutation method.</p>
+<h2 id="architecture-network-mutate-network-mutate-errors-ts">architecture/network/mutate/network.mutate.errors.ts</h2><h3 id="networkmutatemethodrequirederror">NetworkMutateMethodRequiredError</h3><p>Raised when mutation is requested without a concrete mutation method.</p>
+<h3 id="networkmutaterecurrentlayeroutputinitializationerror">NetworkMutateRecurrentLayerOutputInitializationError</h3><p>Raised when recurrent mutation helpers cannot access the created layer output nodes.</p>
+<h2 id="architecture-network-mutate-network-mutate-utils-types-ts">architecture/network/mutate/network.mutate.utils.types.ts</h2><h3 id="batch-norm-flag-key">BATCH_NORM_FLAG_KEY</h3><p>Internal node property key used to flag batch normalization participation during forward-pass activation computation.</p>
+<h3 id="default-mutation-max">DEFAULT_MUTATION_MAX</h3><p>Default maximum mutation perturbation value applied when the active mutation method provides no explicit range override.</p>
+<h3 id="default-mutation-min">DEFAULT_MUTATION_MIN</h3><p>Default minimum mutation perturbation value applied when the active mutation method provides no explicit range override.</p>
+<h3 id="error-no-mutate-method">ERROR_NO_MUTATE_METHOD</h3><p>Error message thrown when the mutate dispatcher is called without a recognized or valid mutation method argument.</p>
+<h3 id="gate-reassign-threshold">GATE_REASSIGN_THRESHOLD</h3><p>Probability threshold used for random 50/50 gating decisions during gate-reassignment mutation passes.</p>
+<h3 id="min-redundant-connection-count">MIN_REDUNDANT_CONNECTION_COUNT</h3><p>Minimum redundant in-degree or out-degree required on both endpoints before a connection may be safely removed.</p>
+<h3 id="min-swappable-node-count">MIN_SWAPPABLE_NODE_COUNT</h3><p>Minimum number of nodes that must exist in the network before swap-node mutation can safely select two distinct candidates.</p>
+<h3 id="node-type-hidden">NODE_TYPE_HIDDEN</h3><p>Canonical node-type literal for hidden nodes used as a discriminant in mutation eligibility guards.</p>
+<h3 id="node-type-input">NODE_TYPE_INPUT</h3><p>Canonical node-type literal for input nodes used as a discriminant in mutation eligibility guards.</p>
+<h3 id="node-type-output">NODE_TYPE_OUTPUT</h3><p>Canonical node-type literal for output nodes used as a discriminant in mutation eligibility guards.</p>
+<h3 id="recurrent-block-gru">RECURRENT_BLOCK_GRU</h3><p>Canonical recurrent block literal for GRU expansion used when inserting a gated recurrent unit block.</p>
+<h3 id="recurrent-block-lstm">RECURRENT_BLOCK_LSTM</h3><p>Canonical recurrent block literal for LSTM expansion used when inserting a long short-term memory block.</p>
+<h3 id="single-unit-recurrent-block-width">SINGLE_UNIT_RECURRENT_BLOCK_WIDTH</h3><p>Width used when creating a minimal single-unit recurrent block during LSTM or GRU insertion mutations.</p>
+<h3 id="sub-node-stability-weight-delta">SUB_NODE_STABILITY_WEIGHT_DELTA</h3><p>Small weight delta applied to sub-node connections to keep mutation side effects numerically observable and non-degenerate.</p>
+<h3 id="unknown-mutation-warning-prefix">UNKNOWN_MUTATION_WARNING_PREFIX</h3><p>Log message prefix used when the mutate dispatcher encounters and discards an unrecognized mutation method identifier.</p>
+<h3 id="warning-all-connections-gated">WARNING_ALL_CONNECTIONS_GATED</h3><p>Warning message emitted when add-gate mutation cannot proceed because all eligible connections are already gated.</p>
+<h3 id="warning-no-activation-mutation-targets">WARNING_NO_ACTIVATION_MUTATION_TARGETS</h3><p>Warning message emitted when activation mutation finds no nodes eligible for squash-function replacement based on current config.</p>
+<h3 id="warning-no-gated-connections-to-remove">WARNING_NO_GATED_CONNECTIONS_TO_REMOVE</h3><p>Warning message emitted when remove-gate mutation finds no gated connections eligible to ungate in the current network.</p>
+<h3 id="warning-no-hidden-nodes-to-remove">WARNING_NO_HIDDEN_NODES_TO_REMOVE</h3><p>Warning message emitted when remove-node mutation finds no hidden nodes eligible for removal in the current topology.</p>
+<h3 id="warning-no-self-connections-to-remove">WARNING_NO_SELF_CONNECTIONS_TO_REMOVE</h3><p>Warning message emitted when remove-self-connection mutation finds no eligible self-connections to remove from the network.</p>
+<h3 id="warning-self-connections-already-present">WARNING_SELF_CONNECTIONS_ALREADY_PRESENT</h3><p>Warning message emitted when all self-connection candidates are already occupied and no new self-connection can be added.</p>
+<h2 id="architecture-network-mutate-network-mutate-utils-ts">architecture/network/mutate/network.mutate.utils.ts</h2><p>Mutation orchestration entrypoint for network-level structural and parametric edits.</p>
+<p>This module intentionally stays lightweight:</p>
+<ul>
+<li>It resolves the incoming mutation request into a dispatch key.</li>
+<li>It selects a concrete handler from the dispatch table.</li>
+<li>It delegates execution and marks topology caches dirty after successful handling.</li>
+</ul>
+<p>Handler-specific logic lives in dedicated helper files so this module remains a stable,
+high-level control surface for mutation flow.</p>
+<h3 id="mutateimpl">mutateImpl</h3><pre><code class="language-ts">mutateImpl(
+  method: MutationMethod | undefined,
+): void
+</code></pre>
+<p>Public entry point: apply a single mutation operator to the network.</p>
+<p>Runtime flow:</p>
+<ol>
+<li>Validate mutation input.</li>
+<li>Resolve the mutation key from string/object/reference forms.</li>
+<li>Resolve a concrete handler from the dispatch table.</li>
+<li>Delegate execution and mark topology-derived caches dirty.</li>
+</ol>
+<p>Error and warning behavior:</p>
+<ul>
+<li>Throws when no method is provided.</li>
+<li>Emits a warning and no-ops when an unknown method key is received.</li>
+</ul>
+<p>Parameters:</p>
+<ul>
+<li><code>this</code> - Network instance bound by method call.</li>
+<li><code>method</code> - Mutation enum value or descriptor object.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<p>Example:</p>
+<pre><code class="language-ts">network.mutate(&#39;ADD_NODE&#39;);
+network.mutate({ name: &#39;MOD_WEIGHT&#39;, min: -0.1, max: 0.1 });
+</code></pre>
+<h3 id="mutationmethod">MutationMethod</h3><p>Mutation method descriptor shape used across all mutation strategy dispatch and planning logic.</p>
+<h2 id="architecture-network-mutate-network-mutate-public-utils-ts">architecture/network/mutate/network.mutate.public.utils.ts</h2><p>Public structural-mutation helpers that stay outside the mutation dispatch table.</p>
+<p>This file owns small graph-editing methods that are exposed directly on
+<code>Network</code> for callers who want one specific structural operation without
+going through the broader mutation-method dispatch flow.</p>
+<h3 id="addnodebetweenimpl">addNodeBetweenImpl</h3><pre><code class="language-ts">addNodeBetweenImpl(): void
+</code></pre>
+<p>Split one randomly selected connection by inserting a hidden node.</p>
+<p>This preserves the long-standing public <code>addNodeBetween()</code> behavior:</p>
+<ul>
+<li>it does not opt into <code>ADD_NODE</code> deterministic-chain policy,</li>
+<li>it preserves the original source-edge weight on the first new connection,</li>
+<li>it uses <code>1</code> for the hidden-to-target edge to keep the split easy to reason about.</li>
+</ul>
+<p>Parameters:</p>
+<ul>
+<li><code>this</code> - Target network instance.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h2 id="architecture-network-mutate-network-mutate-dispatch-utils-ts">architecture/network/mutate/network.mutate.dispatch.utils.ts</h2><p>Mutation-key normalization and warning helpers used by the mutate orchestrator.</p>
+<p>Responsibilities:</p>
+<ul>
+<li>Normalize string/object/reference mutation inputs into a dispatch key.</li>
+<li>Emit unknown-mutation warnings when warning mode is enabled.</li>
+</ul>
+<p>The helpers in this module are intentionally side-effect-light, except for optional
+warning emission, so orchestration code can remain deterministic and easy to inspect.</p>
+<h3 id="findmutationkeybyidentityreference">findMutationKeyByIdentityReference</h3><pre><code class="language-ts">findMutationKeyByIdentityReference(
+  method: MutationMethod,
+): string | undefined
+</code></pre>
+<p>Resolves a mutation key by direct identity-reference comparison.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>method</code> - Mutation object reference.</li>
+</ul>
+<p>Returns: Matching mutation key or undefined.</p>
+<h3 id="ismutationmethodkeystring">isMutationMethodKeyString</h3><pre><code class="language-ts">isMutationMethodKeyString(
+  method: MutationMethod,
+): boolean
+</code></pre>
+<p>Checks whether mutation input is already a direct key string.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>method</code> - Mutation method input.</li>
+</ul>
+<p>Returns: True when method is a key string.</p>
+<h3 id="resolvedirectmutationkey">resolveDirectMutationKey</h3><pre><code class="language-ts">resolveDirectMutationKey(
+  methodObject: { [key: string]: unknown; name?: string | undefined; type?: string | undefined; identity?: string | undefined; max?: number | undefined; min?: number | undefined; mutateOutput?: boolean | undefined; },
+): string | undefined
+</code></pre>
+<p>Resolves direct object fields that can represent a mutation key.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>methodObject</code> - Mutation method object.</li>
+</ul>
+<p>Returns: Direct key or undefined.</p>
+<h3 id="resolvemutationkey">resolveMutationKey</h3><pre><code class="language-ts">resolveMutationKey(
+  method: MutationMethod,
+): string | undefined
+</code></pre>
+<p>Resolves a mutation dispatch key from user-provided method input.</p>
+<p>Resolution order:</p>
+<ol>
+<li>Use string input directly.</li>
+<li>Use direct object identity fields (<code>name</code>, <code>type</code>, <code>identity</code>).</li>
+<li>Fall back to identity-reference comparison against known mutation objects.</li>
+</ol>
+<p>Parameters:</p>
+<ul>
+<li><code>method</code> - Mutation method input.</li>
+</ul>
+<p>Returns: Dispatch key or undefined.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const key = resolveMutationKey(&#39;ADD_NODE&#39;);
+</code></pre>
+<h3 id="resolvemutationkeyfromobject">resolveMutationKeyFromObject</h3><pre><code class="language-ts">resolveMutationKeyFromObject(
+  methodObject: { [key: string]: unknown; name?: string | undefined; type?: string | undefined; identity?: string | undefined; max?: number | undefined; min?: number | undefined; mutateOutput?: boolean | undefined; },
+): string | undefined
+</code></pre>
+<p>Resolves mutation key from object-form descriptor.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>methodObject</code> - Mutation method object.</li>
+</ul>
+<p>Returns: Dispatch key or undefined.</p>
+<h3 id="warnunknownmutation">warnUnknownMutation</h3><pre><code class="language-ts">warnUnknownMutation(
+  mutationKey: string | undefined,
+): void
+</code></pre>
+<p>Emits unknown-mutation warning when configured.</p>
+<p>This helper intentionally no-ops when warnings are disabled so callers can invoke it
+without repeating feature-flag checks.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>mutationKey</code> - Resolved mutation key.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h2 id="architecture-network-mutate-network-mutate-handlers-utils-ts">architecture/network/mutate/network.mutate.handlers.utils.ts</h2><p>Concrete mutation handler implementations used by the network mutate orchestrator.</p>
+<p>Organization:</p>
+<ul>
+<li>Exported functions represent public mutation operations mapped by dispatch key.</li>
+<li>Internal helpers encapsulate candidate collection, validation, and graph rewiring.</li>
+<li>Shared constants and warning strings are imported from <code>network.mutate.utils.types.ts</code>
+to keep cross-file contracts explicit and avoid circular dependencies.</li>
+</ul>
+<p>Behavioral notes:</p>
+<ul>
+<li>Handlers preserve fail-soft semantics where possible (return early when no candidate exists).</li>
+<li>Acyclic mode checks are enforced in handlers that could introduce recurrence.</li>
+<li>Randomness is sourced from network mutation internals for reproducible deterministic flows.</li>
+</ul>
+<h3 id="addbackconn">addBackConn</h3><pre><code class="language-ts">addBackConn(): void
+</code></pre>
+<p>Add one backward recurrent connection between eligible node pairs when topology intent allows cyclic graph structure changes.
+This operation is skipped in acyclic mode.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>this</code> - Bound network.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="addconn">addConn</h3><pre><code class="language-ts">addConn(): void
+</code></pre>
+<p>Adds one forward connection between currently unconnected eligible node pairs.</p>
+<p>Candidate generation respects node ordering so the added edge is feed-forward.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>this</code> - Bound network.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="addgate">addGate</h3><pre><code class="language-ts">addGate(): void
+</code></pre>
+<p>Assign a random eligible node as gater for a random ungated connection to evolve dynamic modulation behavior.
+Candidate pool includes normal and self-connections.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>this</code> - Bound network.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="addgrunode">addGRUNode</h3><pre><code class="language-ts">addGRUNode(): void
+</code></pre>
+<p>Replaces one connection by inserting a minimal GRU recurrent block.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>this</code> - Bound network.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="addlstmnode">addLSTMNode</h3><pre><code class="language-ts">addLSTMNode(): void
+</code></pre>
+<p>Replaces one connection by inserting a minimal LSTM recurrent block.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>this</code> - Bound network.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="addnode">addNode</h3><pre><code class="language-ts">addNode(): void
+</code></pre>
+<p>Adds one hidden node by splitting an existing connection.</p>
+<p>Execution modes:</p>
+<ul>
+<li>Deterministic chain mode grows a linear input→...→output chain.</li>
+<li>Standard mode splits a randomly selected forward connection.</li>
+</ul>
+<p>Parameters:</p>
+<ul>
+<li><code>this</code> - Bound network.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="addnodedeterministicchain">addNodeDeterministicChain</h3><pre><code class="language-ts">addNodeDeterministicChain(
+  network: default,
+  mutationProps: NetworkMutationProps,
+): void
+</code></pre>
+<p>Applies deterministic chain-growth ADD_NODE mutation.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+<li><code>mutationProps</code> - Runtime mutation props.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="addnoderandomsplit">addNodeRandomSplit</h3><pre><code class="language-ts">addNodeRandomSplit(
+  network: default,
+  mutationProps: NetworkMutationProps,
+): void
+</code></pre>
+<p>Applies non-deterministic ADD_NODE by splitting a random connection.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+<li><code>mutationProps</code> - Runtime mutation props.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="addrecurrentnode">addRecurrentNode</h3><pre><code class="language-ts">addRecurrentNode(
+  network: default,
+  blockType: &quot;lstm&quot; | &quot;gru&quot;,
+): void
+</code></pre>
+<p>Shared orchestrator for recurrent-node mutation variants.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+<li><code>blockType</code> - Recurrent block type.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="addselfconn">addSelfConn</h3><pre><code class="language-ts">addSelfConn(): void
+</code></pre>
+<p>Adds one self-connection on an eligible node that does not already have one.</p>
+<p>This operation is skipped in acyclic mode.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>this</code> - Bound network.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="appendrecurrentlayernodes">appendRecurrentLayerNodes</h3><pre><code class="language-ts">appendRecurrentLayerNodes(
+  network: default,
+  layerNodes: default[],
+): void
+</code></pre>
+<p>Appends recurrent layer nodes as hidden nodes.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+<li><code>layerNodes</code> - Layer nodes.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="applyfirstconnectionstabilitynudge">applyFirstConnectionStabilityNudge</h3><pre><code class="language-ts">applyFirstConnectionStabilityNudge(
+  network: default,
+): void
+</code></pre>
+<p>Applies tiny stability nudge to the first remaining connection.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="asmutationprops">asMutationProps</h3><pre><code class="language-ts">asMutationProps(
+  network: default,
+): NetworkMutationProps
+</code></pre>
+<p>Converts a network to its internal mutation runtime shape.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Network to convert.</li>
+</ul>
+<p>Returns: Runtime mutation props.</p>
+<h3 id="batchnorm">batchNorm</h3><pre><code class="language-ts">batchNorm(): void
+</code></pre>
+<p>Enables the internal batch-normalization flag on one random hidden node.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>this</code> - Bound network.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="collectallconnections">collectAllConnections</h3><pre><code class="language-ts">collectAllConnections(
+  network: default,
+): default[]
+</code></pre>
+<p>Collects normal and self connections.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+</ul>
+<p>Returns: Combined connections.</p>
+<h3 id="collectbackwardcandidatesforlaternode">collectBackwardCandidatesForLaterNode</h3><pre><code class="language-ts">collectBackwardCandidatesForLaterNode(
+  traversalContext: BackwardCandidateTraversalContext,
+): NodePair[]
+</code></pre>
+<p>Collects all backward candidates for one later-node traversal context.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>traversalContext</code> - Later-node traversal context.</li>
+</ul>
+<p>Returns: Candidate source/target pairs.</p>
+<h3 id="collectbackwardcandidatesfromcontext">collectBackwardCandidatesFromContext</h3><pre><code class="language-ts">collectBackwardCandidatesFromContext(
+  backwardConnectionCandidates: NodePair[],
+  traversalContext: BackwardCandidateTraversalContext,
+): NodePair[]
+</code></pre>
+<p>Reduces one backward traversal context into candidate connection pairs.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>backwardConnectionCandidates</code> - Existing candidate pairs.</li>
+<li><code>traversalContext</code> - Later-node traversal context.</li>
+</ul>
+<p>Returns: Updated candidate pairs.</p>
+<h3 id="collectbackwardconnectioncandidates">collectBackwardConnectionCandidates</h3><pre><code class="language-ts">collectBackwardConnectionCandidates(
+  network: default,
+): NodePair[]
+</code></pre>
+<p>Collects backward (recurrent) connection candidates.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+</ul>
+<p>Returns: Candidate source/target pairs.</p>
+<h3 id="collectbackwardtraversalcontexts">collectBackwardTraversalContexts</h3><pre><code class="language-ts">collectBackwardTraversalContexts(
+  network: default,
+): BackwardCandidateTraversalContext[]
+</code></pre>
+<p>Collects backward traversal contexts for all eligible later nodes.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+</ul>
+<p>Returns: Backward traversal contexts.</p>
+<h3 id="collectconnectiongroupsforreinit">collectConnectionGroupsForReinit</h3><pre><code class="language-ts">collectConnectionGroupsForReinit(
+  targetNode: default,
+): default[][]
+</code></pre>
+<p>Collects all connection groups affected by REINIT_WEIGHT.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>targetNode</code> - Node receiving the reinitialization.</li>
+</ul>
+<p>Returns: Mutable connection groups.</p>
+<h3 id="collectdistinctnodecandidates">collectDistinctNodeCandidates</h3><pre><code class="language-ts">collectDistinctNodeCandidates(
+  nodeCandidates: default[],
+  excludedNode: default,
+): default[]
+</code></pre>
+<p>Collects candidates that are distinct from an excluded node.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>nodeCandidates</code> - Candidate nodes.</li>
+<li><code>excludedNode</code> - Node to exclude.</li>
+</ul>
+<p>Returns: Distinct candidates.</p>
+<h3 id="collectforwardcandidatesforsource">collectForwardCandidatesForSource</h3><pre><code class="language-ts">collectForwardCandidatesForSource(
+  traversalContext: ForwardCandidateTraversalContext,
+): NodePair[]
+</code></pre>
+<p>Collects all forward candidates for one source traversal context.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>traversalContext</code> - Source traversal context.</li>
+</ul>
+<p>Returns: Candidate source/target pairs.</p>
+<h3 id="collectforwardcandidatesfromcontext">collectForwardCandidatesFromContext</h3><pre><code class="language-ts">collectForwardCandidatesFromContext(
+  forwardConnectionCandidates: NodePair[],
+  traversalContext: ForwardCandidateTraversalContext,
+): NodePair[]
+</code></pre>
+<p>Reduces one forward traversal context into candidate connection pairs.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>forwardConnectionCandidates</code> - Existing candidate pairs.</li>
+<li><code>traversalContext</code> - Source traversal context.</li>
+</ul>
+<p>Returns: Updated candidate pairs.</p>
+<h3 id="collectforwardconnectioncandidates">collectForwardConnectionCandidates</h3><pre><code class="language-ts">collectForwardConnectionCandidates(
+  network: default,
+): NodePair[]
+</code></pre>
+<p>Collects forward connection candidates.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+</ul>
+<p>Returns: Candidate source/target pairs.</p>
+<h3 id="collectforwardtraversalcontexts">collectForwardTraversalContexts</h3><pre><code class="language-ts">collectForwardTraversalContexts(
+  network: default,
+): ForwardCandidateTraversalContext[]
+</code></pre>
+<p>Collects forward traversal contexts for all eligible source nodes.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+</ul>
+<p>Returns: Forward traversal contexts.</p>
+<h3 id="collectmutablenoninputnodes">collectMutableNonInputNodes</h3><pre><code class="language-ts">collectMutableNonInputNodes(
+  network: default,
+  excludeOutputNodes: boolean,
+): default[]
+</code></pre>
+<p>Collects mutable non-input nodes.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+<li><code>excludeOutputNodes</code> - True to exclude output nodes.</li>
+</ul>
+<p>Returns: Mutable nodes.</p>
+<h3 id="collectnodesbytype">collectNodesByType</h3><pre><code class="language-ts">collectNodesByType(
+  network: default,
+  nodeType: string,
+): default[]
+</code></pre>
+<p>Collects nodes by type.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Source network.</li>
+<li><code>nodeType</code> - Desired node type.</li>
+</ul>
+<p>Returns: Matching nodes.</p>
+<h3 id="collectnodeswithoutselfloop">collectNodesWithoutSelfLoop</h3><pre><code class="language-ts">collectNodesWithoutSelfLoop(
+  network: default,
+): default[]
+</code></pre>
+<p>Collects non-input nodes that do not have self loops.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+</ul>
+<p>Returns: Eligible nodes.</p>
+<h3 id="collectremovablebackwardconnections">collectRemovableBackwardConnections</h3><pre><code class="language-ts">collectRemovableBackwardConnections(
+  network: default,
+): default[]
+</code></pre>
+<p>Collects removable backward connections using redundancy constraints.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+</ul>
+<p>Returns: Removable backward connections.</p>
+<h3 id="collectremovableforwardconnections">collectRemovableForwardConnections</h3><pre><code class="language-ts">collectRemovableForwardConnections(
+  network: default,
+): default[]
+</code></pre>
+<p>Collects removable forward connections using redundancy constraints.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+</ul>
+<p>Returns: Removable forward connections.</p>
+<h3 id="collectswappablenodesformutation">collectSwappableNodesForMutation</h3><pre><code class="language-ts">collectSwappableNodesForMutation(
+  network: default,
+  method: MutationMethod | undefined,
+): default[]
+</code></pre>
+<p>Collects swap-eligible nodes based on mutation configuration.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+<li><code>method</code> - Optional method descriptor.</li>
+</ul>
+<p>Returns: Swap-eligible nodes.</p>
+<h3 id="collecttargetlayerpeers">collectTargetLayerPeers</h3><pre><code class="language-ts">collectTargetLayerPeers(
+  network: default,
+  targetNode: default,
+): default[]
+</code></pre>
+<p>Collects peers around a target node in the same type/layer neighborhood.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+<li><code>targetNode</code> - Node whose peers are collected.</li>
+</ul>
+<p>Returns: Peer nodes.</p>
+<h3 id="collectungatedconnections">collectUngatedConnections</h3><pre><code class="language-ts">collectUngatedConnections(
+  network: default,
+): default[]
+</code></pre>
+<p>Collects ungated connections including self-connections.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+</ul>
+<p>Returns: Ungated connections.</p>
+<h3 id="connectpair">connectPair</h3><pre><code class="language-ts">connectPair(
+  network: default,
+  selectedConnectionPair: NodePair,
+): void
+</code></pre>
+<p>Connects source/target node pair.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+<li><code>selectedConnectionPair</code> - Source/target pair.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="containsnode">containsNode</h3><pre><code class="language-ts">containsNode(
+  nodes: default[],
+  node: default,
+): boolean
+</code></pre>
+<p>Checks whether a node list contains a node reference.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>nodes</code> - Node list.</li>
+<li><code>node</code> - Node reference.</li>
+</ul>
+<p>Returns: True when contained.</p>
+<h3 id="countconnectionwhensourcetargetspeer">countConnectionWhenSourceTargetsPeer</h3><pre><code class="language-ts">countConnectionWhenSourceTargetsPeer(
+  peerConnectionsFromSource: number,
+  existingConnection: default,
+  countContext: SourcePeerConnectionCountContext,
+): number
+</code></pre>
+<p>Counts one connection when it originates from source and targets a peer.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>peerConnectionsFromSource</code> - Current count.</li>
+<li><code>existingConnection</code> - Existing network connection.</li>
+<li><code>countContext</code> - Count context.</li>
+</ul>
+<p>Returns: Updated count.</p>
+<h3 id="countsourceconnectionsintopeerset">countSourceConnectionsIntoPeerSet</h3><pre><code class="language-ts">countSourceConnectionsIntoPeerSet(
+  network: default,
+  candidateConnection: default,
+  targetLayerPeers: default[],
+): number
+</code></pre>
+<p>Counts source-originated connections that end inside the target peer set.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+<li><code>candidateConnection</code> - Candidate connection.</li>
+<li><code>targetLayerPeers</code> - Peer-set nodes.</li>
+</ul>
+<p>Returns: Number of source-to-peer connections.</p>
+<h3 id="createbackwardcandidatetraversalcontext">createBackwardCandidateTraversalContext</h3><pre><code class="language-ts">createBackwardCandidateTraversalContext(
+  network: default,
+  laterNodeIndex: number,
+): BackwardCandidateTraversalContext
+</code></pre>
+<p>Creates context for one backward-candidate traversal pass.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+<li><code>laterNodeIndex</code> - Current later-node index.</li>
+</ul>
+<p>Returns: Immutable traversal context.</p>
+<h3 id="createconnectiongroupreinitcontext">createConnectionGroupReinitContext</h3><pre><code class="language-ts">createConnectionGroupReinitContext(
+  randomValue: () =&gt; number,
+  methodObject: { [key: string]: unknown; name?: string | undefined; type?: string | undefined; identity?: string | undefined; max?: number | undefined; min?: number | undefined; mutateOutput?: boolean | undefined; },
+): ConnectionGroupReinitContext
+</code></pre>
+<p>Creates immutable context for connection-group reinitialization.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>randomValue</code> - Random generator.</li>
+<li><code>methodObject</code> - Method override object.</li>
+</ul>
+<p>Returns: Reinitialization context.</p>
+<h3 id="createdirectionalconnectioncontext">createDirectionalConnectionContext</h3><pre><code class="language-ts">createDirectionalConnectionContext(
+  network: default,
+  candidateConnection: default,
+): DirectionalConnectionContext
+</code></pre>
+<p>Creates indexed directional context for a connection candidate.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+<li><code>candidateConnection</code> - Candidate connection.</li>
+</ul>
+<p>Returns: Directional context.</p>
+<h3 id="createforwardcandidatetraversalcontext">createForwardCandidateTraversalContext</h3><pre><code class="language-ts">createForwardCandidateTraversalContext(
+  network: default,
+  sourceNodeIndex: number,
+): ForwardCandidateTraversalContext
+</code></pre>
+<p>Creates context for one forward-candidate source traversal pass.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+<li><code>sourceNodeIndex</code> - Current source index.</li>
+</ul>
+<p>Returns: Immutable traversal context.</p>
+<h3 id="createhiddennode">createHiddenNode</h3><pre><code class="language-ts">createHiddenNode(
+  randomValue: () =&gt; number,
+): default
+</code></pre>
+<p>Creates a hidden node with random activation mutation.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>randomValue</code> - Random generator.</li>
+</ul>
+<p>Returns: Hidden node.</p>
+<h3 id="createrecurrentlayer">createRecurrentLayer</h3><pre><code class="language-ts">createRecurrentLayer(
+  blockType: &quot;lstm&quot; | &quot;gru&quot;,
+): RecurrentLayerShape
+</code></pre>
+<p>Creates recurrent layer by type.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>blockType</code> - Recurrent block type.</li>
+</ul>
+<p>Returns: Created recurrent layer.</p>
+<h3 id="createsourcepeerconnectioncountcontext">createSourcePeerConnectionCountContext</h3><pre><code class="language-ts">createSourcePeerConnectionCountContext(
+  candidateConnection: default,
+  targetLayerPeers: default[],
+): SourcePeerConnectionCountContext
+</code></pre>
+<p>Creates immutable context for source-to-peer connection counting.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>candidateConnection</code> - Candidate connection.</li>
+<li><code>targetLayerPeers</code> - Peer-set nodes.</li>
+</ul>
+<p>Returns: Count context.</p>
+<h3 id="createtargetlayerpeercontext">createTargetLayerPeerContext</h3><pre><code class="language-ts">createTargetLayerPeerContext(
+  network: default,
+  targetNode: default,
+): TargetLayerPeerContext
+</code></pre>
+<p>Creates immutable context for peer-layer collection.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+<li><code>targetNode</code> - Peer anchor node.</li>
+</ul>
+<p>Returns: Peer traversal context.</p>
+<h3 id="createweightsamplingrangecontext">createWeightSamplingRangeContext</h3><pre><code class="language-ts">createWeightSamplingRangeContext(
+  reinitContext: ConnectionGroupReinitContext,
+): WeightSamplingRangeContext
+</code></pre>
+<p>Creates immutable sampling range context.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>reinitContext</code> - Reinitialization context.</li>
+</ul>
+<p>Returns: Sampling range context.</p>
+<h3 id="disconnectconnectionandgetgater">disconnectConnectionAndGetGater</h3><pre><code class="language-ts">disconnectConnectionAndGetGater(
+  network: default,
+  connectionToExpand: default,
+): default | null
+</code></pre>
+<p>Disconnects a connection and returns its previous gater.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+<li><code>connectionToExpand</code> - Connection being expanded.</li>
+</ul>
+<p>Returns: Previous gater reference.</p>
+<h3 id="disconnectconnectionpair">disconnectConnectionPair</h3><pre><code class="language-ts">disconnectConnectionPair(
+  network: default,
+  selectedConnection: default,
+): void
+</code></pre>
+<p>Disconnects selected connection by endpoints.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+<li><code>selectedConnection</code> - Connection to disconnect.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="disconnectunexpectedoutgoingconnections">disconnectUnexpectedOutgoingConnections</h3><pre><code class="language-ts">disconnectUnexpectedOutgoingConnections(
+  network: default,
+  chainNode: default,
+  expectedTargetNode: default,
+): void
+</code></pre>
+<p>Removes outgoing connections that do not match the expected chain target.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+<li><code>chainNode</code> - Node whose outgoing edges are validated.</li>
+<li><code>expectedTargetNode</code> - Allowed outgoing target.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="enablenodebatchnorm">enableNodeBatchNorm</h3><pre><code class="language-ts">enableNodeBatchNorm(
+  node: default,
+): void
+</code></pre>
+<p>Enables internal batch-norm flag on a node.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>node</code> - Node to flag.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="ensureconnection">ensureConnection</h3><pre><code class="language-ts">ensureConnection(
+  network: default,
+  fromNode: default,
+  toNode: default,
+): default | undefined
+</code></pre>
+<p>Ensures a connection exists and returns it.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+<li><code>fromNode</code> - Source node.</li>
+<li><code>toNode</code> - Target node.</li>
+</ul>
+<p>Returns: Existing or created connection.</p>
+<h3 id="ensureseedforwardconnectionwhenempty">ensureSeedForwardConnectionWhenEmpty</h3><pre><code class="language-ts">ensureSeedForwardConnectionWhenEmpty(
+  network: default,
+): boolean
+</code></pre>
+<p>Ensures a seed input-&gt;output connection exists when connection list is empty.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+</ul>
+<p>Returns: True when mutation may continue.</p>
+<h3 id="expandconnectionwithrecurrentblock">expandConnectionWithRecurrentBlock</h3><pre><code class="language-ts">expandConnectionWithRecurrentBlock(
+  network: default,
+  connectionToExpand: default,
+  blockType: &quot;lstm&quot; | &quot;gru&quot;,
+): void
+</code></pre>
+<p>Replaces one connection with a minimal recurrent block.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+<li><code>connectionToExpand</code> - Connection to replace.</li>
+<li><code>blockType</code> - Recurrent block type.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="findconnection">findConnection</h3><pre><code class="language-ts">findConnection(
+  network: default,
+  fromNode: default,
+  toNode: default,
+): default | undefined
+</code></pre>
+<p>Gets a connection between two nodes when it exists.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+<li><code>fromNode</code> - Source node.</li>
+<li><code>toNode</code> - Target node.</li>
+</ul>
+<p>Returns: Matching connection or undefined.</p>
+<h3 id="findfirstnodebytype">findFirstNodeByType</h3><pre><code class="language-ts">findFirstNodeByType(
+  network: default,
+  nodeType: string,
+): default | undefined
+</code></pre>
+<p>Returns the first node by type.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+<li><code>nodeType</code> - Node type to match.</li>
+</ul>
+<p>Returns: Matching node or undefined.</p>
+<h3 id="hasredundantendpoints">hasRedundantEndpoints</h3><pre><code class="language-ts">hasRedundantEndpoints(
+  candidateConnection: default,
+): boolean
+</code></pre>
+<p>Checks whether both endpoints maintain at least one redundant edge.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>candidateConnection</code> - Candidate connection.</li>
+</ul>
+<p>Returns: True when endpoint redundancy exists.</p>
+<h3 id="initializedeterministicchain">initializeDeterministicChain</h3><pre><code class="language-ts">initializeDeterministicChain(
+  network: default,
+  mutationProps: NetworkMutationProps,
+  inputNode: default,
+  outputNode: default,
+): void
+</code></pre>
+<p>Initializes deterministic chain storage and seed edge.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+<li><code>mutationProps</code> - Runtime mutation props.</li>
+<li><code>inputNode</code> - Input node.</li>
+<li><code>outputNode</code> - Output node.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="insertnodebeforeoutputtail">insertNodeBeforeOutputTail</h3><pre><code class="language-ts">insertNodeBeforeOutputTail(
+  network: default,
+  nodeToInsert: default,
+  targetNode: default,
+  mutationProps: NetworkMutationProps,
+): void
+</code></pre>
+<p>Inserts a node before output tail while preserving output block ordering.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+<li><code>nodeToInsert</code> - Node to insert.</li>
+<li><code>targetNode</code> - Target node for insertion alignment.</li>
+<li><code>mutationProps</code> - Runtime mutation props.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="isbackwardcandidatetargetavailable">isBackwardCandidateTargetAvailable</h3><pre><code class="language-ts">isBackwardCandidateTargetAvailable(
+  laterNode: default,
+  earlierNode: default,
+): boolean
+</code></pre>
+<p>Checks whether a backward candidate target is not already projected.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>laterNode</code> - Candidate source node.</li>
+<li><code>earlierNode</code> - Candidate target node.</li>
+</ul>
+<p>Returns: True when connection may be added.</p>
+<h3 id="isbackwarddirectionalcontext">isBackwardDirectionalContext</h3><pre><code class="language-ts">isBackwardDirectionalContext(
+  directionContext: DirectionalConnectionContext,
+): boolean
+</code></pre>
+<p>Checks whether a directional context represents a backward edge.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>directionContext</code> - Directional context.</li>
+</ul>
+<p>Returns: True when backward.</p>
+<h3 id="isforwardcandidatetargetavailable">isForwardCandidateTargetAvailable</h3><pre><code class="language-ts">isForwardCandidateTargetAvailable(
+  sourceNode: default,
+  targetNode: default,
+): boolean
+</code></pre>
+<p>Checks whether a forward candidate target is not already projected.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>sourceNode</code> - Candidate source node.</li>
+<li><code>targetNode</code> - Candidate target node.</li>
+</ul>
+<p>Returns: True when connection may be added.</p>
+<h3 id="isforwardconnectionstructurallyremovable">isForwardConnectionStructurallyRemovable</h3><pre><code class="language-ts">isForwardConnectionStructurallyRemovable(
+  network: default,
+  candidateConnection: default,
+): boolean
+</code></pre>
+<p>Checks structural preconditions for removable forward connections.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+<li><code>candidateConnection</code> - Candidate connection.</li>
+</ul>
+<p>Returns: True when the connection is a forward edge with redundant endpoints.</p>
+<h3 id="isforwarddirectionalcontext">isForwardDirectionalContext</h3><pre><code class="language-ts">isForwardDirectionalContext(
+  directionContext: DirectionalConnectionContext,
+): boolean
+</code></pre>
+<p>Checks whether a directional context represents a forward edge.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>directionContext</code> - Directional context.</li>
+</ul>
+<p>Returns: True when forward.</p>
+<h3 id="isnodewithoutselfloop">isNodeWithoutSelfLoop</h3><pre><code class="language-ts">isNodeWithoutSelfLoop(
+  candidateNode: default,
+): boolean
+</code></pre>
+<p>Checks whether a node currently has no self-loop connections.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>candidateNode</code> - Node under evaluation.</li>
+</ul>
+<p>Returns: True when the node has no self-loop.</p>
+<h3 id="isremovablebackwardconnection">isRemovableBackwardConnection</h3><pre><code class="language-ts">isRemovableBackwardConnection(
+  network: default,
+  candidateConnection: default,
+): boolean
+</code></pre>
+<p>Evaluates whether a backward connection is safe to remove.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+<li><code>candidateConnection</code> - Connection under evaluation.</li>
+</ul>
+<p>Returns: True when removable.</p>
+<h3 id="isremovableforwardconnection">isRemovableForwardConnection</h3><pre><code class="language-ts">isRemovableForwardConnection(
+  network: default,
+  candidateConnection: default,
+): boolean
+</code></pre>
+<p>Evaluates whether a forward connection is safe to remove.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+<li><code>candidateConnection</code> - Connection under evaluation.</li>
+</ul>
+<p>Returns: True when removable.</p>
+<h3 id="istargetlayerpeer">isTargetLayerPeer</h3><pre><code class="language-ts">isTargetLayerPeer(
+  candidateNode: default,
+  candidateNodeIndex: number,
+  peerContext: TargetLayerPeerContext,
+): boolean
+</code></pre>
+<p>Checks whether candidate node belongs to the target peer-layer set.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>candidateNode</code> - Candidate node.</li>
+<li><code>candidateNodeIndex</code> - Candidate node index.</li>
+<li><code>peerContext</code> - Peer traversal context.</li>
+</ul>
+<p>Returns: True when candidate is an eligible peer.</p>
+<h3 id="istargetlayerpeertypematch">isTargetLayerPeerTypeMatch</h3><pre><code class="language-ts">isTargetLayerPeerTypeMatch(
+  candidateNode: default,
+  peerContext: TargetLayerPeerContext,
+): boolean
+</code></pre>
+<p>Checks whether node type matches the target-layer peer type.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>candidateNode</code> - Candidate node.</li>
+<li><code>peerContext</code> - Peer traversal context.</li>
+</ul>
+<p>Returns: True when type matches.</p>
+<h3 id="istargetlayerpeerwithindistance">isTargetLayerPeerWithinDistance</h3><pre><code class="language-ts">isTargetLayerPeerWithinDistance(
+  candidateNodeIndex: number,
+  peerContext: TargetLayerPeerContext,
+): boolean
+</code></pre>
+<p>Checks whether candidate index lies within allowed peer distance.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>candidateNodeIndex</code> - Candidate node index.</li>
+<li><code>peerContext</code> - Peer traversal context.</li>
+</ul>
+<p>Returns: True when within distance.</p>
+<h3 id="isungatedconnection">isUngatedConnection</h3><pre><code class="language-ts">isUngatedConnection(
+  candidateConnection: default,
+): boolean
+</code></pre>
+<p>Checks whether a connection has no gater attached.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>candidateConnection</code> - Connection under evaluation.</li>
+</ul>
+<p>Returns: True when ungated.</p>
+<h3 id="marktopodirtyifacyclic">markTopoDirtyIfAcyclic</h3><pre><code class="language-ts">markTopoDirtyIfAcyclic(
+  mutationProps: NetworkMutationProps,
+): void
+</code></pre>
+<p>Marks topology caches dirty when acyclic mode is enforced.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>mutationProps</code> - Runtime mutation props.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="modactivation">modActivation</h3><pre><code class="language-ts">modActivation(
+  method: MutationMethod | undefined,
+): void
+</code></pre>
+<p>Mutate the activation function on one random non-input node using method-controlled output eligibility guards.
+Output-node eligibility is controlled by <code>method.mutateOutput</code> when provided.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>this</code> - Bound network.</li>
+<li><code>method</code> - Optional method descriptor.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="modbias">modBias</h3><pre><code class="language-ts">modBias(
+  method: MutationMethod | undefined,
+): void
+</code></pre>
+<p>Mutate bias parameters on one random non-input node so scalar offsets can drift without changing graph topology.
+Output nodes remain eligible for this operator.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>this</code> - Bound network.</li>
+<li><code>method</code> - Optional method descriptor.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="modweight">modWeight</h3><pre><code class="language-ts">modWeight(
+  method: MutationMethod | undefined,
+): void
+</code></pre>
+<p>Perturb one randomly selected connection weight by a sampled uniform delta while honoring configured mutation bounds.
+The candidate pool includes standard and self-connections.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>this</code> - Bound network.</li>
+<li><code>method</code> - Optional method descriptor.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="pickdistinctnodepair">pickDistinctNodePair</h3><pre><code class="language-ts">pickDistinctNodePair(
+  swappableNodes: default[],
+  randomValue: () =&gt; number,
+): DistinctNodePair | undefined
+</code></pre>
+<p>Picks two distinct nodes from a candidate set.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>swappableNodes</code> - Swap candidate nodes.</li>
+<li><code>randomValue</code> - Random generator.</li>
+</ul>
+<p>Returns: Distinct pair or undefined.</p>
+<h3 id="pickdistinctrandomnode">pickDistinctRandomNode</h3><pre><code class="language-ts">pickDistinctRandomNode(
+  nodeCandidates: default[],
+  excludedNode: default,
+  randomValue: () =&gt; number,
+): default | undefined
+</code></pre>
+<p>Picks a random node distinct from a given reference.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>nodeCandidates</code> - Candidate nodes.</li>
+<li><code>excludedNode</code> - Node to exclude.</li>
+<li><code>randomValue</code> - Random generator.</li>
+</ul>
+<p>Returns: Distinct node or undefined.</p>
+<h3 id="pickrandomentry">pickRandomEntry</h3><pre><code class="language-ts">pickRandomEntry(
+  entries: T[],
+  randomValue: () =&gt; number,
+): T | undefined
+</code></pre>
+<p>Selects a random array element.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>entries</code> - Source entries.</li>
+<li><code>randomValue</code> - Random generator.</li>
+</ul>
+<p>Returns: Random entry or undefined when empty.</p>
+<h3 id="pickrandomnoninputnode">pickRandomNonInputNode</h3><pre><code class="language-ts">pickRandomNonInputNode(
+  network: default,
+  excludeOutputNodes: boolean,
+  randomValue: () =&gt; number,
+): default | undefined
+</code></pre>
+<p>Selects a random mutable non-input node.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+<li><code>excludeOutputNodes</code> - True to exclude outputs.</li>
+<li><code>randomValue</code> - Random generator.</li>
+</ul>
+<p>Returns: Selected mutable node.</p>
+<h3 id="prunedeterministicchainextraedges">pruneDeterministicChainExtraEdges</h3><pre><code class="language-ts">pruneDeterministicChainExtraEdges(
+  network: default,
+  deterministicChain: default[],
+  outputNode: default,
+): void
+</code></pre>
+<p>Prunes side edges from chain nodes to preserve linear deterministic depth.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+<li><code>deterministicChain</code> - Chain node list.</li>
+<li><code>outputNode</code> - Output node.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="reconnectthroughrecurrentlayer">reconnectThroughRecurrentLayer</h3><pre><code class="language-ts">reconnectThroughRecurrentLayer(
+  network: default,
+  connectionToExpand: default,
+  recurrentLayer: RecurrentLayerShape,
+): default | undefined
+</code></pre>
+<p>Reconnects a source/target pair through a recurrent layer.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+<li><code>connectionToExpand</code> - Original connection.</li>
+<li><code>recurrentLayer</code> - Recurrent-layer shape.</li>
+</ul>
+<p>Returns: Latest newly created connection or undefined.</p>
+<h3 id="registerrecurrentlayerconnection">registerRecurrentLayerConnection</h3><pre><code class="language-ts">registerRecurrentLayerConnection(
+  network: default,
+  connection: default,
+): void
+</code></pre>
+<p>Registers one recurrent-layer connection on the canonical runtime shelves.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+<li><code>connection</code> - Recurrent-layer connection to register.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="registerrecurrentlayerconnections">registerRecurrentLayerConnections</h3><pre><code class="language-ts">registerRecurrentLayerConnections(
+  network: default,
+  layerNodes: default[],
+): void
+</code></pre>
+<p>Registers a recurrent layer&#39;s prebuilt internal connections on the network.</p>
+<p>Recurrent layer factories wire their own internal node graph before the layer
+is attached to a <code>Network</code>. Mutation must therefore register those existing
+connection objects onto the network&#39;s canonical forward, self, and gated
+shelves before later serialization, validation, and compatibility paths read
+the graph.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+<li><code>layerNodes</code> - Recurrent layer nodes whose internal edges should be registered.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="reinitializeconnectiongroupweights">reinitializeConnectionGroupWeights</h3><pre><code class="language-ts">reinitializeConnectionGroupWeights(
+  connections: default[],
+  reinitContext: ConnectionGroupReinitContext,
+): void
+</code></pre>
+<p>Reinitializes all weights in a connection group.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>connections</code> - Connection group.</li>
+<li><code>randomValue</code> - Random generator.</li>
+<li><code>minWeight</code> - Minimum sampled weight.</li>
+<li><code>maxWeight</code> - Maximum sampled weight.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="reinitweight">reinitWeight</h3><pre><code class="language-ts">reinitWeight(
+  method: MutationMethod | undefined,
+): void
+</code></pre>
+<p>Reinitializes incoming, outgoing, and self-connection weights for one target node.</p>
+<p>Weight sampling bounds come from method overrides or default mutation bounds.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>this</code> - Bound network.</li>
+<li><code>method</code> - Optional method descriptor.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="removehiddennodeandapplystabilitynudge">removeHiddenNodeAndApplyStabilityNudge</h3><pre><code class="language-ts">removeHiddenNodeAndApplyStabilityNudge(
+  network: default,
+  hiddenNode: default,
+): void
+</code></pre>
+<p>Removes selected hidden node and applies stability nudge.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+<li><code>hiddenNode</code> - Hidden node to remove.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="resolvedeterministicchainmutationcontext">resolveDeterministicChainMutationContext</h3><pre><code class="language-ts">resolveDeterministicChainMutationContext(
+  network: default,
+  mutationProps: NetworkMutationProps,
+): DeterministicChainMutationContext | undefined
+</code></pre>
+<p>Resolves all deterministic add-node prerequisites into one context object.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+<li><code>mutationProps</code> - Runtime mutation props.</li>
+</ul>
+<p>Returns: Deterministic context or undefined when one or more prerequisites fail.</p>
+<h3 id="resolvedistinctpairwithknownfirstnode">resolveDistinctPairWithKnownFirstNode</h3><pre><code class="language-ts">resolveDistinctPairWithKnownFirstNode(
+  swappableNodes: default[],
+  firstNode: default,
+  randomValue: () =&gt; number,
+): DistinctNodePair | undefined
+</code></pre>
+<p>Resolves a distinct pair when first node is already known.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>swappableNodes</code> - Swap candidate nodes.</li>
+<li><code>firstNode</code> - Chosen first node.</li>
+<li><code>randomValue</code> - Random generator.</li>
+</ul>
+<p>Returns: Distinct pair or undefined.</p>
+<h3 id="resolveexpectedchaintarget">resolveExpectedChainTarget</h3><pre><code class="language-ts">resolveExpectedChainTarget(
+  deterministicChain: default[],
+  chainNodeIndex: number,
+  outputNode: default,
+): default
+</code></pre>
+<p>Resolves the expected outgoing target for a chain node position.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>deterministicChain</code> - Chain node list.</li>
+<li><code>chainNodeIndex</code> - Current chain index.</li>
+<li><code>outputNode</code> - Terminal output node.</li>
+</ul>
+<p>Returns: Expected successor target.</p>
+<h3 id="resolveinputoutputendpoints">resolveInputOutputEndpoints</h3><pre><code class="language-ts">resolveInputOutputEndpoints(
+  network: default,
+): InputOutputEndpoints | undefined
+</code></pre>
+<p>Resolves input/output endpoints required for seed and deterministic flows.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+</ul>
+<p>Returns: Endpoint nodes or undefined when missing.</p>
+<h3 id="resolvemethodobject">resolveMethodObject</h3><pre><code class="language-ts">resolveMethodObject(
+  method: MutationMethod | undefined,
+): { [key: string]: unknown; name?: string | undefined; type?: string | undefined; identity?: string | undefined; max?: number | undefined; min?: number | undefined; mutateOutput?: boolean | undefined; }
+</code></pre>
+<p>Extracts method-object form when provided.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>method</code> - Optional mutation method.</li>
+</ul>
+<p>Returns: Method object view.</p>
+<h3 id="resolverecurrentgrowthbudgetrequirement">resolveRecurrentGrowthBudgetRequirement</h3><pre><code class="language-ts">resolveRecurrentGrowthBudgetRequirement(
+  blockType: &quot;lstm&quot; | &quot;gru&quot;,
+): number
+</code></pre>
+<p>Resolve the net connection growth required by a minimal recurrent block.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>blockType</code> - Recurrent block type being inserted.</li>
+</ul>
+<p>Returns: Net additional connections created by the mutation.</p>
+<h3 id="resolveselectedbackwardconnectionpair">resolveSelectedBackwardConnectionPair</h3><pre><code class="language-ts">resolveSelectedBackwardConnectionPair(
+  network: default,
+  randomValue: () =&gt; number,
+): NodePair | undefined
+</code></pre>
+<p>Resolves random selected backward connection pair.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+<li><code>randomValue</code> - Random generator.</li>
+</ul>
+<p>Returns: Selected source/target pair.</p>
+<h3 id="resolveselectedforwardconnectionpair">resolveSelectedForwardConnectionPair</h3><pre><code class="language-ts">resolveSelectedForwardConnectionPair(
+  network: default,
+  randomValue: () =&gt; number,
+): NodePair | undefined
+</code></pre>
+<p>Resolves random selected forward connection pair.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+<li><code>randomValue</code> - Random generator.</li>
+</ul>
+<p>Returns: Selected source/target pair.</p>
+<h3 id="resolveselfconnectiontargetnode">resolveSelfConnectionTargetNode</h3><pre><code class="language-ts">resolveSelfConnectionTargetNode(
+  network: default,
+  randomValue: () =&gt; number,
+): default | undefined
+</code></pre>
+<p>Resolves random node eligible for self-connection creation.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+<li><code>randomValue</code> - Random generator.</li>
+</ul>
+<p>Returns: Selected node.</p>
+<h3 id="sampleuniform">sampleUniform</h3><pre><code class="language-ts">sampleUniform(
+  randomValue: () =&gt; number,
+  minValue: number,
+  maxValue: number,
+): number
+</code></pre>
+<p>Samples a uniform value from [minValue, maxValue].</p>
+<p>Parameters:</p>
+<ul>
+<li><code>randomValue</code> - Random generator.</li>
+<li><code>minValue</code> - Minimum value.</li>
+<li><code>maxValue</code> - Maximum value.</li>
+</ul>
+<p>Returns: Sampled value.</p>
+<h3 id="sampleuniformfromcontext">sampleUniformFromContext</h3><pre><code class="language-ts">sampleUniformFromContext(
+  samplingContext: WeightSamplingRangeContext,
+): number
+</code></pre>
+<p>Samples one weight using a prebuilt range context.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>samplingContext</code> - Sampling range context.</li>
+</ul>
+<p>Returns: Sampled weight.</p>
+<h3 id="selecthiddennodeforremoval">selectHiddenNodeForRemoval</h3><pre><code class="language-ts">selectHiddenNodeForRemoval(
+  network: default,
+  hiddenNodes: default[],
+): default | undefined
+</code></pre>
+<p>Selects a hidden node candidate for SUB_NODE mutation.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+<li><code>hiddenNodes</code> - Hidden nodes.</li>
+</ul>
+<p>Returns: Selected hidden node.</p>
+<h3 id="splitconnectionthroughhiddennode">splitConnectionThroughHiddenNode</h3><pre><code class="language-ts">splitConnectionThroughHiddenNode(
+  network: default,
+  mutationProps: NetworkMutationProps,
+  connectionToSplit: default,
+): ConnectionSplitResult
+</code></pre>
+<p>Replaces one connection by inserting a hidden node and reconnecting edges.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+<li><code>mutationProps</code> - Runtime mutation props.</li>
+<li><code>connectionToSplit</code> - Connection to split.</li>
+</ul>
+<p>Returns: Split result values.</p>
+<h3 id="subbackconn">subBackConn</h3><pre><code class="language-ts">subBackConn(): void
+</code></pre>
+<p>Removes one backward connection that satisfies per-endpoint structural redundancy constraints.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>this</code> - Bound network.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="subconn">subConn</h3><pre><code class="language-ts">subConn(): void
+</code></pre>
+<p>Remove one forward connection only when redundancy checks prove the mutation will not collapse endpoint connectivity or peer-layer coverage.
+Constraints require endpoint redundancy and avoid disconnecting peer-layer groups.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>this</code> - Bound network.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="subgate">subGate</h3><pre><code class="language-ts">subGate(): void
+</code></pre>
+<p>Removes active gating from one randomly selected currently gated connection.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>this</code> - Bound network.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="subnode">subNode</h3><pre><code class="language-ts">subNode(): void
+</code></pre>
+<p>Removes one hidden node and applies a tiny weight nudge for numerical continuity.</p>
+<p>The stability nudge helps keep downstream mutation effects observable in edge cases
+where node removal substantially changes effective signal flow.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>this</code> - Bound network.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="subselfconn">subSelfConn</h3><pre><code class="language-ts">subSelfConn(): void
+</code></pre>
+<p>Removes one existing hidden node self-connection chosen uniformly at random.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>this</code> - Bound network.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="swapnodebiasandsquash">swapNodeBiasAndSquash</h3><pre><code class="language-ts">swapNodeBiasAndSquash(
+  firstNode: default,
+  secondNode: default,
+): void
+</code></pre>
+<p>Swaps bias and squash values between two nodes.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>firstNode</code> - First node.</li>
+<li><code>secondNode</code> - Second node.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="swapnodes">swapNodes</h3><pre><code class="language-ts">swapNodes(
+  method: MutationMethod | undefined,
+): void
+</code></pre>
+<p>Swaps bias and activation squash functions between two distinct mutable nodes.</p>
+<p>This provides a lightweight structural-parameter recombination without changing
+graph connectivity.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>this</code> - Bound network.</li>
+<li><code>method</code> - Optional method descriptor.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="trydisconnectconnection">tryDisconnectConnection</h3><pre><code class="language-ts">tryDisconnectConnection(
+  network: default,
+  connection: default,
+): void
+</code></pre>
+<p>Disconnects a connection pair while suppressing errors.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+<li><code>connection</code> - Connection to remove.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="trygatelatestconnection">tryGateLatestConnection</h3><pre><code class="language-ts">tryGateLatestConnection(
+  network: default,
+  previousGater: default | null,
+  latestConnection: default | undefined,
+): void
+</code></pre>
+<p>Gates the latest connection when both previous gater and target exist.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+<li><code>previousGater</code> - Previously assigned gater.</li>
+<li><code>latestConnection</code> - Connection to receive the gater.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="tryreassigngateaftersplit">tryReassignGateAfterSplit</h3><pre><code class="language-ts">tryReassignGateAfterSplit(
+  network: default,
+  randomValue: () =&gt; number,
+  splitResult: ConnectionSplitResult,
+): void
+</code></pre>
+<p>Reassigns prior gater to one of the new split connections when possible.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+<li><code>randomValue</code> - Random generator.</li>
+<li><code>splitResult</code> - Split result values.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="warnwhenenabled">warnWhenEnabled</h3><pre><code class="language-ts">warnWhenEnabled(
+  message: string,
+): void
+</code></pre>
+<p>Emits a warning when warning mode is enabled.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>message</code> - Warning message.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="woulddisconnecttargetpeerlayergroup">wouldDisconnectTargetPeerLayerGroup</h3><pre><code class="language-ts">wouldDisconnectTargetPeerLayerGroup(
+  network: default,
+  candidateConnection: default,
+): boolean
+</code></pre>
+<p>Determines whether removal would disconnect a target peer-layer group.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Target network.</li>
+<li><code>candidateConnection</code> - Connection under evaluation.</li>
+</ul>
+<p>Returns: True when peer group would be disconnected.</p>
+<footer class="site-footer">Generated from source JSDoc • <a href="https://github.com/reicek/NeatapticTS">GitHub</a></footer></main><aside class="toc docs-panel docs-panel-right"><div class="page-toc"><h2>Files</h2><div class="toc-file"><a href="#architecture-network-mutate-network-mutate-errors-ts">architecture/network/mutate/network.mutate.errors.ts</a><ul><li><a href="#networkmutatemethodrequirederror">NetworkMutateMethodRequiredError</a></li><li><a href="#networkmutaterecurrentlayeroutputinitializationerror">NetworkMutateRecurrentLayerOutputInitializationError</a></li></ul></div><div class="toc-file"><a href="#architecture-network-mutate-network-mutate-utils-types-ts">architecture/network/mutate/network.mutate.utils.types.ts</a><ul><li><a href="#batch-norm-flag-key">BATCH_NORM_FLAG_KEY</a></li><li><a href="#default-mutation-max">DEFAULT_MUTATION_MAX</a></li><li><a href="#default-mutation-min">DEFAULT_MUTATION_MIN</a></li><li><a href="#error-no-mutate-method">ERROR_NO_MUTATE_METHOD</a></li><li><a href="#gate-reassign-threshold">GATE_REASSIGN_THRESHOLD</a></li><li><a href="#min-redundant-connection-count">MIN_REDUNDANT_CONNECTION_COUNT</a></li><li><a href="#min-swappable-node-count">MIN_SWAPPABLE_NODE_COUNT</a></li><li><a href="#node-type-hidden">NODE_TYPE_HIDDEN</a></li><li><a href="#node-type-input">NODE_TYPE_INPUT</a></li><li><a href="#node-type-output">NODE_TYPE_OUTPUT</a></li><li><a href="#recurrent-block-gru">RECURRENT_BLOCK_GRU</a></li><li><a href="#recurrent-block-lstm">RECURRENT_BLOCK_LSTM</a></li><li><a href="#single-unit-recurrent-block-width">SINGLE_UNIT_RECURRENT_BLOCK_WIDTH</a></li><li><a href="#sub-node-stability-weight-delta">SUB_NODE_STABILITY_WEIGHT_DELTA</a></li><li><a href="#unknown-mutation-warning-prefix">UNKNOWN_MUTATION_WARNING_PREFIX</a></li><li><a href="#warning-all-connections-gated">WARNING_ALL_CONNECTIONS_GATED</a></li><li><a href="#warning-no-activation-mutation-targets">WARNING_NO_ACTIVATION_MUTATION_TARGETS</a></li><li><a href="#warning-no-gated-connections-to-remove">WARNING_NO_GATED_CONNECTIONS_TO_REMOVE</a></li><li><a href="#warning-no-hidden-nodes-to-remove">WARNING_NO_HIDDEN_NODES_TO_REMOVE</a></li><li><a href="#warning-no-self-connections-to-remove">WARNING_NO_SELF_CONNECTIONS_TO_REMOVE</a></li><li><a href="#warning-self-connections-already-present">WARNING_SELF_CONNECTIONS_ALREADY_PRESENT</a></li></ul></div><div class="toc-file"><a href="#architecture-network-mutate-network-mutate-utils-ts">architecture/network/mutate/network.mutate.utils.ts</a><ul><li><a href="#mutateimpl">mutateImpl</a></li><li><a href="#mutationmethod">MutationMethod</a></li></ul></div><div class="toc-file"><a href="#architecture-network-mutate-network-mutate-public-utils-ts">architecture/network/mutate/network.mutate.public.utils.ts</a><ul><li><a href="#addnodebetweenimpl">addNodeBetweenImpl</a></li></ul></div><div class="toc-file"><a href="#architecture-network-mutate-network-mutate-dispatch-utils-ts">architecture/network/mutate/network.mutate.dispatch.utils.ts</a><ul><li><a href="#findmutationkeybyidentityreference">findMutationKeyByIdentityReference</a></li><li><a href="#ismutationmethodkeystring">isMutationMethodKeyString</a></li><li><a href="#resolvedirectmutationkey">resolveDirectMutationKey</a></li><li><a href="#resolvemutationkey">resolveMutationKey</a></li><li><a href="#resolvemutationkeyfromobject">resolveMutationKeyFromObject</a></li><li><a href="#warnunknownmutation">warnUnknownMutation</a></li></ul></div><div class="toc-file"><a href="#architecture-network-mutate-network-mutate-handlers-utils-ts">architecture/network/mutate/network.mutate.handlers.utils.ts</a><ul><li><a href="#addbackconn">addBackConn</a></li><li><a href="#addconn">addConn</a></li><li><a href="#addgate">addGate</a></li><li><a href="#addgrunode">addGRUNode</a></li><li><a href="#addlstmnode">addLSTMNode</a></li><li><a href="#addnode">addNode</a></li><li><a href="#addnodedeterministicchain">addNodeDeterministicChain</a></li><li><a href="#addnoderandomsplit">addNodeRandomSplit</a></li><li><a href="#addrecurrentnode">addRecurrentNode</a></li><li><a href="#addselfconn">addSelfConn</a></li><li><a href="#appendrecurrentlayernodes">appendRecurrentLayerNodes</a></li><li><a href="#applyfirstconnectionstabilitynudge">applyFirstConnectionStabilityNudge</a></li><li><a href="#asmutationprops">asMutationProps</a></li><li><a href="#batchnorm">batchNorm</a></li><li><a href="#collectallconnections">collectAllConnections</a></li><li><a href="#collectbackwardcandidatesforlaternode">collectBackwardCandidatesForLaterNode</a></li><li><a href="#collectbackwardcandidatesfromcontext">collectBackwardCandidatesFromContext</a></li><li><a href="#collectbackwardconnectioncandidates">collectBackwardConnectionCandidates</a></li><li><a href="#collectbackwardtraversalcontexts">collectBackwardTraversalContexts</a></li><li><a href="#collectconnectiongroupsforreinit">collectConnectionGroupsForReinit</a></li><li><a href="#collectdistinctnodecandidates">collectDistinctNodeCandidates</a></li><li><a href="#collectforwardcandidatesforsource">collectForwardCandidatesForSource</a></li><li><a href="#collectforwardcandidatesfromcontext">collectForwardCandidatesFromContext</a></li><li><a href="#collectforwardconnectioncandidates">collectForwardConnectionCandidates</a></li><li><a href="#collectforwardtraversalcontexts">collectForwardTraversalContexts</a></li><li><a href="#collectmutablenoninputnodes">collectMutableNonInputNodes</a></li><li><a href="#collectnodesbytype">collectNodesByType</a></li><li><a href="#collectnodeswithoutselfloop">collectNodesWithoutSelfLoop</a></li><li><a href="#collectremovablebackwardconnections">collectRemovableBackwardConnections</a></li><li><a href="#collectremovableforwardconnections">collectRemovableForwardConnections</a></li><li><a href="#collectswappablenodesformutation">collectSwappableNodesForMutation</a></li><li><a href="#collecttargetlayerpeers">collectTargetLayerPeers</a></li><li><a href="#collectungatedconnections">collectUngatedConnections</a></li><li><a href="#connectpair">connectPair</a></li><li><a href="#containsnode">containsNode</a></li><li><a href="#countconnectionwhensourcetargetspeer">countConnectionWhenSourceTargetsPeer</a></li><li><a href="#countsourceconnectionsintopeerset">countSourceConnectionsIntoPeerSet</a></li><li><a href="#createbackwardcandidatetraversalcontext">createBackwardCandidateTraversalContext</a></li><li><a href="#createconnectiongroupreinitcontext">createConnectionGroupReinitContext</a></li><li><a href="#createdirectionalconnectioncontext">createDirectionalConnectionContext</a></li><li><a href="#createforwardcandidatetraversalcontext">createForwardCandidateTraversalContext</a></li><li><a href="#createhiddennode">createHiddenNode</a></li><li><a href="#createrecurrentlayer">createRecurrentLayer</a></li><li><a href="#createsourcepeerconnectioncountcontext">createSourcePeerConnectionCountContext</a></li><li><a href="#createtargetlayerpeercontext">createTargetLayerPeerContext</a></li><li><a href="#createweightsamplingrangecontext">createWeightSamplingRangeContext</a></li><li><a href="#disconnectconnectionandgetgater">disconnectConnectionAndGetGater</a></li><li><a href="#disconnectconnectionpair">disconnectConnectionPair</a></li><li><a href="#disconnectunexpectedoutgoingconnections">disconnectUnexpectedOutgoingConnections</a></li><li><a href="#enablenodebatchnorm">enableNodeBatchNorm</a></li><li><a href="#ensureconnection">ensureConnection</a></li><li><a href="#ensureseedforwardconnectionwhenempty">ensureSeedForwardConnectionWhenEmpty</a></li><li><a href="#expandconnectionwithrecurrentblock">expandConnectionWithRecurrentBlock</a></li><li><a href="#findconnection">findConnection</a></li><li><a href="#findfirstnodebytype">findFirstNodeByType</a></li><li><a href="#hasredundantendpoints">hasRedundantEndpoints</a></li><li><a href="#initializedeterministicchain">initializeDeterministicChain</a></li><li><a href="#insertnodebeforeoutputtail">insertNodeBeforeOutputTail</a></li><li><a href="#isbackwardcandidatetargetavailable">isBackwardCandidateTargetAvailable</a></li><li><a href="#isbackwarddirectionalcontext">isBackwardDirectionalContext</a></li><li><a href="#isforwardcandidatetargetavailable">isForwardCandidateTargetAvailable</a></li><li><a href="#isforwardconnectionstructurallyremovable">isForwardConnectionStructurallyRemovable</a></li><li><a href="#isforwarddirectionalcontext">isForwardDirectionalContext</a></li><li><a href="#isnodewithoutselfloop">isNodeWithoutSelfLoop</a></li><li><a href="#isremovablebackwardconnection">isRemovableBackwardConnection</a></li><li><a href="#isremovableforwardconnection">isRemovableForwardConnection</a></li><li><a href="#istargetlayerpeer">isTargetLayerPeer</a></li><li><a href="#istargetlayerpeertypematch">isTargetLayerPeerTypeMatch</a></li><li><a href="#istargetlayerpeerwithindistance">isTargetLayerPeerWithinDistance</a></li><li><a href="#isungatedconnection">isUngatedConnection</a></li><li><a href="#marktopodirtyifacyclic">markTopoDirtyIfAcyclic</a></li><li><a href="#modactivation">modActivation</a></li><li><a href="#modbias">modBias</a></li><li><a href="#modweight">modWeight</a></li><li><a href="#pickdistinctnodepair">pickDistinctNodePair</a></li><li><a href="#pickdistinctrandomnode">pickDistinctRandomNode</a></li><li><a href="#pickrandomentry">pickRandomEntry</a></li><li><a href="#pickrandomnoninputnode">pickRandomNonInputNode</a></li><li><a href="#prunedeterministicchainextraedges">pruneDeterministicChainExtraEdges</a></li><li><a href="#reconnectthroughrecurrentlayer">reconnectThroughRecurrentLayer</a></li><li><a href="#registerrecurrentlayerconnection">registerRecurrentLayerConnection</a></li><li><a href="#registerrecurrentlayerconnections">registerRecurrentLayerConnections</a></li><li><a href="#reinitializeconnectiongroupweights">reinitializeConnectionGroupWeights</a></li><li><a href="#reinitweight">reinitWeight</a></li><li><a href="#removehiddennodeandapplystabilitynudge">removeHiddenNodeAndApplyStabilityNudge</a></li><li><a href="#resolvedeterministicchainmutationcontext">resolveDeterministicChainMutationContext</a></li><li><a href="#resolvedistinctpairwithknownfirstnode">resolveDistinctPairWithKnownFirstNode</a></li><li><a href="#resolveexpectedchaintarget">resolveExpectedChainTarget</a></li><li><a href="#resolveinputoutputendpoints">resolveInputOutputEndpoints</a></li><li><a href="#resolvemethodobject">resolveMethodObject</a></li><li><a href="#resolverecurrentgrowthbudgetrequirement">resolveRecurrentGrowthBudgetRequirement</a></li><li><a href="#resolveselectedbackwardconnectionpair">resolveSelectedBackwardConnectionPair</a></li><li><a href="#resolveselectedforwardconnectionpair">resolveSelectedForwardConnectionPair</a></li><li><a href="#resolveselfconnectiontargetnode">resolveSelfConnectionTargetNode</a></li><li><a href="#sampleuniform">sampleUniform</a></li><li><a href="#sampleuniformfromcontext">sampleUniformFromContext</a></li><li><a href="#selecthiddennodeforremoval">selectHiddenNodeForRemoval</a></li><li><a href="#splitconnectionthroughhiddennode">splitConnectionThroughHiddenNode</a></li><li><a href="#subbackconn">subBackConn</a></li><li><a href="#subconn">subConn</a></li><li><a href="#subgate">subGate</a></li><li><a href="#subnode">subNode</a></li><li><a href="#subselfconn">subSelfConn</a></li><li><a href="#swapnodebiasandsquash">swapNodeBiasAndSquash</a></li><li><a href="#swapnodes">swapNodes</a></li><li><a href="#trydisconnectconnection">tryDisconnectConnection</a></li><li><a href="#trygatelatestconnection">tryGateLatestConnection</a></li><li><a href="#tryreassigngateaftersplit">tryReassignGateAfterSplit</a></li><li><a href="#warnwhenenabled">warnWhenEnabled</a></li><li><a href="#woulddisconnecttargetpeerlayergroup">wouldDisconnectTargetPeerLayerGroup</a></li></ul></div></div></aside></div><script>
+const docsPanels = Array.from(document.querySelectorAll('.docs-panel'));
+
+function setActiveDocsPanel(nextPanel) {
+  docsPanels.forEach((panel) => {
+    panel.classList.toggle('is-active', panel === nextPanel);
+  });
+}
+
+document.addEventListener('click', (event) => {
+  const target = event.target;
+  if (!(target instanceof Element)) {
+    setActiveDocsPanel(null);
+    return;
+  }
+
+  const activePanel = target.closest('.docs-panel');
+  setActiveDocsPanel(activePanel instanceof HTMLElement ? activePanel : null);
+});
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') {
+    setActiveDocsPanel(null);
+  }
+});
+</script></body></html>

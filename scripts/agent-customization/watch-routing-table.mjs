@@ -58,7 +58,7 @@ function printUsage() {
   );
 }
 
-function shouldRegenerate(relativePath = '') {
+function shouldRegenerate(relativePath) {
   return (
     relativePath.endsWith('.agent.md') || relativePath.endsWith('SKILL.md')
   );

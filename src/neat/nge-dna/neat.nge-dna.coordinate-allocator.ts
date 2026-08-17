@@ -25,7 +25,7 @@ export interface EnemyCoordinateAllocatorInput {
 }
 
 /**
- * Result of allocating one deterministic enemy substrate coordinate.
+ * Result of allocating one deterministic enemy substrate coordinate within the unit cube.
  */
 export interface EnemyCoordinateAllocatorResult {
   /** Three-axis unit-cube coordinate assigned to the enemy. */

@@ -16,21 +16,37 @@ import {
   NEATENSTEIN_MLP_TOPOLOGY,
   NEATENSTEIN_MLP_VARIANT_COUNT,
 } from './constants';
+import { SNAPSHOT_KIND_MLP } from '../constants';
+import {
+  MLP_ALLOWED_MUTATION_TYPES,
+  NEATENSTEIN_MLP_OUTPUT_LABELS,
+  CHAMPION_SEED_PRIME,
+  OUTPUT_PRECISION,
+} from './enemy-mlp.constants';
 import type {
-  EnemyPopulation,
   EnemyVariant,
   MlpSnapshot,
   Snapshot,
+  CreateMlpEnemyPopulationOptions,
+  MlpEnemyPopulation,
 } from './types';
 import { warmStartTemplate, warmStartWeights } from './enemy-warmstart';
 
 /**
  * Options accepted by {@link createMlpEnemyPopulation}.
+ *
+ * @deprecated Import from `./types` instead. This re-export preserves the
+ *   public API for existing consumers.
  */
-export interface CreateMlpEnemyPopulationOptions {
-  /** Deterministic seed used to generate the initial variant weights. */
-  seed?: number;
-}
+export type { CreateMlpEnemyPopulationOptions } from './types';
+
+/**
+ * MLP enemy population returned by {@link createMlpEnemyPopulation}.
+ *
+ * @deprecated Import from `./types` instead. This re-export preserves the
+ * public API for existing consumers.
+ */
+export type { MlpEnemyPopulation } from './types';
 
 /**
  * Create a weight-only MLP enemy population.
@@ -58,7 +74,7 @@ export function createMlpEnemyPopulation(
   let championSnapshot: MlpSnapshot = createSnapshot(variants[0].weights);
 
   return {
-    kind: 'mlp',
+    kind: SNAPSHOT_KIND_MLP,
     size: NEATENSTEIN_MLP_VARIANT_COUNT,
     sample(index: number): unknown {
       // Index-stable sampling: any index maps deterministically to a variant.
@@ -81,28 +97,9 @@ export function createMlpEnemyPopulation(
 }
 
 /**
- * MLP enemy population returned by {@link createMlpEnemyPopulation}.
+ * Guard that rejects structural mutation operators for MLP enemies.
  */
-export interface MlpEnemyPopulation extends EnemyPopulation {
-  /**
-   * Advance the population snapshot on refresh generations.
-   *
-   * @param context - Current generation context.
-   * @returns The population snapshot. The same reference is returned when no
-   *   refresh happens; a new reference is returned on refresh generations.
-   */
-  update: (context: { generation: number }) => Snapshot;
-}
-
-/**
- * Allowed weight-only mutation operator types for the MLP enemy backend.
- *
- * The MLP backend uses a fixed 6→6→4→4 topology, so structural operators such
- * as add-node or add-connection would corrupt the feed-forward shape. This
- * allowlist is the single source of truth for operator types that are safe to
- * apply to an MLP enemy.
- */
-const MLP_ALLOWED_MUTATION_TYPES = new Set(['weight', 'weights', 'perturb']);
+const MLP_ALLOWED_MUTATION_SET = new Set(MLP_ALLOWED_MUTATION_TYPES);
 
 /**
  * Guard that rejects structural mutation operators for MLP enemies.
@@ -124,7 +121,7 @@ const MLP_ALLOWED_MUTATION_TYPES = new Set(['weight', 'weights', 'perturb']);
 export function guardMlpStructuralMutation(operator: {
   type: string;
 }): boolean {
-  return MLP_ALLOWED_MUTATION_TYPES.has(operator.type);
+  return MLP_ALLOWED_MUTATION_SET.has(operator.type);
 }
 
 /**
@@ -132,13 +129,11 @@ export function guardMlpStructuralMutation(operator: {
  *
  * The four outputs produced by {@link activateMlp} are mapped to:
  * move, strafe, turn, and fire.
+ *
+ * @deprecated Import `NEATENSTEIN_MLP_OUTPUT_LABELS` from `./enemy-mlp.constants`
+ *   instead. This re-export preserves the public API.
  */
-export const NEATENSTEIN_MLP_OUTPUT_LABELS: readonly string[] = [
-  'move',
-  'strafe',
-  'turn',
-  'fire',
-];
+export { NEATENSTEIN_MLP_OUTPUT_LABELS } from './enemy-mlp.constants';
 
 /**
  * Activate the fixed-topology MLP for a set of world inputs.
@@ -228,7 +223,9 @@ export function interpretMlpOutputs(
   }
   const result: Record<string, number> = {};
   for (let i = 0; i < labels.length; i++) {
-    result[labels[i]] = Number(Number(outputs[i]).toPrecision(6));
+    result[labels[i]] = Number(
+      Number(outputs[i]).toPrecision(OUTPUT_PRECISION),
+    );
   }
   return result;
 }
@@ -261,7 +258,7 @@ function createVariants(seed: number): EnemyVariant[] {
  * @returns A new deterministic champion weight vector.
  */
 function createChampionWeights(seed: number, generation: number): Float32Array {
-  return warmStartTemplate(seed + generation * 7919);
+  return warmStartTemplate(seed + generation * CHAMPION_SEED_PRIME);
 }
 
 /**
@@ -290,7 +287,7 @@ export function countParameters(topology: readonly number[]): number {
  */
 function createSnapshot(weights: Float32Array): MlpSnapshot {
   return {
-    kind: 'mlp',
+    kind: SNAPSHOT_KIND_MLP,
     weights: new Float32Array(weights),
   };
 }

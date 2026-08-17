@@ -61,6 +61,7 @@ import {
  * ordered list. Recurrent mode uses the SCC condensation graph to emit
  * deterministic recurrent-component boundaries while leaving the legacy acyclic
  * cache empty until the activation path adopts the richer schedule directly.
+ * @param this - Network instance bound by method call.
  */
 export function computeTopoOrder(this: Network): void {
   // Step 1: Resolve internal topology flags.
@@ -83,7 +84,14 @@ export function computeTopoOrder(this: Network): void {
   finalizeTopoOrder(buildContext);
 }
 
-/** Depth-first reachability test that avoids infinite loops using a visited set. */
+/**
+ * Depth-first reachability test that avoids infinite loops using a visited set.
+ *
+ * @param this - Network instance bound by method call.
+ * @param from - Source node from which reachability is tested.
+ * @param to - Target node to which reachability is tested.
+ * @returns True when a path exists from `from` to `to`, false otherwise.
+ */
 export function hasPath(this: Network, from: Node, to: Node): boolean {
   // Step 1: Handle trivial reachability.
   if (isSameNode(from, to)) {

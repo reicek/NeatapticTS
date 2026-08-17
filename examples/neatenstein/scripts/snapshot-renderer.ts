@@ -10,68 +10,39 @@
 
 import type { Voxel, VoxelGrid } from './voxel-enemy';
 
-/**
- * Output of the directional voxel snapshot renderer, containing the image
- * dimensions and a flat RGBA buffer in row-major order.
- */
-export interface VoxelSnapshot {
-  /** Output width in pixels. */
-  width: number;
-  /** Output height in pixels. */
-  height: number;
-  /** Flat RGBA pixel buffer in row-major order. */
-  data: Uint8ClampedArray;
-}
+// Re-export types and constants from extracted modules so existing imports
+// from snapshot-renderer.ts continue to work.
+export type { VoxelSnapshot, SnapshotOptions } from './snapshot-renderer.types';
+export {
+  ENEMY_FRAME_SIZE_PX,
+  NUM_DIRECTIONS,
+  RGBA_OPAQUE_ALPHA,
+  YAW_STEP_DEGREES,
+  PROJECTION_MARGIN,
+  AMBIENT_LIGHT,
+  MAX_DIFFUSE,
+  EMISSIVE_BOOST,
+  EDGE_DARKENING_MAX,
+  SNAPSHOT_EDGE_DARKENING_PER_FACE,
+  LIGHT_DIRECTION,
+  LIGHT_NORM,
+} from './snapshot-renderer.constants';
 
-/**
- * Optional configuration for `renderVoxelSnapshot`, including output
- * dimensions and a pre-computed occupancy grid for faster repeated renders.
- */
-export interface SnapshotOptions {
-  /** Output width in pixels. Defaults to 128. */
-  width?: number;
-  /** Output height in pixels. Defaults to 128. */
-  height?: number;
-  /**
-   * Optional pre-computed occupancy grid for the voxel grid. When supplied, the
-   * renderer skips rebuilding the grid, which is significantly faster when many
-   * frames are rendered from the same grid. The grid is a dense `Uint8Array`
-   * indexed by `z * (height * width) + y * width + x`.
-   */
-  occupancy?: Uint8Array;
-}
-
-/** Default runtime frame size used when no options are supplied. */
-const DEFAULT_FRAME_SIZE = 128;
-
-/** Number of discrete yaw directions in the sprite sheet. */
-const YAW_DIRECTIONS = 8;
-
-/** Angular step between adjacent yaw directions, in degrees. */
-const YAW_STEP_DEGREES = 45;
-
-/** Margin left around the projected silhouette, in pixels. */
-const PROJECTION_MARGIN = 4;
-
-/** Ambient light level applied to every voxel. */
-const AMBIENT_LIGHT = 0.35;
-
-/** Maximum diffuse contribution from the directional light. */
-const MAX_DIFFUSE = 0.55;
-
-/** Extra brightness added to emissive (neon/accent) voxels. */
-const EMISSIVE_BOOST = 0.55;
-
-/** Maximum edge-darkening penalty for isolated silhouette voxels. */
-const EDGE_DARKENING_MAX = 0.35;
-
-/** Light direction in camera space: from camera-left and slightly above. */
-const LIGHT_DIRECTION = Object.freeze({ x: -1, y: 0.3, z: 1 });
-const LIGHT_NORM = Math.hypot(
-  LIGHT_DIRECTION.x,
-  LIGHT_DIRECTION.y,
-  LIGHT_DIRECTION.z,
-);
+import type { VoxelSnapshot, SnapshotOptions } from './snapshot-renderer.types';
+import {
+  ENEMY_FRAME_SIZE_PX,
+  NUM_DIRECTIONS,
+  RGBA_OPAQUE_ALPHA,
+  YAW_STEP_DEGREES,
+  PROJECTION_MARGIN,
+  AMBIENT_LIGHT,
+  MAX_DIFFUSE,
+  EMISSIVE_BOOST,
+  EDGE_DARKENING_MAX,
+  SNAPSHOT_EDGE_DARKENING_PER_FACE,
+  LIGHT_DIRECTION,
+  LIGHT_NORM,
+} from './snapshot-renderer.constants';
 
 /**
  * Render an orthographic snapshot of a voxel enemy facing one of eight
@@ -98,8 +69,8 @@ export function renderVoxelSnapshot(
 ): VoxelSnapshot {
   validateYawIndex(yawIndex);
 
-  const width = options?.width ?? DEFAULT_FRAME_SIZE;
-  const height = options?.height ?? DEFAULT_FRAME_SIZE;
+  const width = options?.width ?? ENEMY_FRAME_SIZE_PX;
+  const height = options?.height ?? ENEMY_FRAME_SIZE_PX;
   const frame = createClearFrame(width, height);
   const zBuffer = new Float32Array(width * height).fill(-Infinity);
 
@@ -162,10 +133,10 @@ function validateYawIndex(yawIndex: number): void {
   if (
     !Number.isInteger(yawIndex) ||
     yawIndex < 0 ||
-    yawIndex >= YAW_DIRECTIONS
+    yawIndex >= NUM_DIRECTIONS
   ) {
     throw new Error(
-      `yawIndex must be an integer in [0, ${YAW_DIRECTIONS - 1}]`,
+      `yawIndex must be an integer in [0, ${NUM_DIRECTIONS - 1}]`,
     );
   }
 }
@@ -388,7 +359,10 @@ function computeEdgeFactor(
   }
 
   const exposedFaces = 6 - neighborCount;
-  return Math.max(1 - EDGE_DARKENING_MAX, 1 - exposedFaces * 0.08);
+  return Math.max(
+    1 - EDGE_DARKENING_MAX,
+    1 - exposedFaces * SNAPSHOT_EDGE_DARKENING_PER_FACE,
+  );
 }
 
 /**
@@ -403,7 +377,7 @@ function writePixel(
   data[offset] = clampByte(voxel.r * shade);
   data[offset + 1] = clampByte(voxel.g * shade);
   data[offset + 2] = clampByte(voxel.b * shade);
-  data[offset + 3] = 255;
+  data[offset + 3] = RGBA_OPAQUE_ALPHA;
 }
 
 /**

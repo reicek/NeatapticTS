@@ -1,6 +1,6 @@
 ---
 name: solid-split
-description: 'Use when: planning or executing a repo-consistent SOLID split.'
+description: 'Use when: planning or executing a repo-consistent SOLID split — folderization of an overloaded file, orchestration-first facade extraction, small-chapter README restructure, or multi-session split tracker management. Covers map, plan, execute, and close modes with README-first discovery, direct-path migration, no-shim defaults, and mandatory educational-docs follow-up.'
 argument-hint: 'Provide split root, mode (map|plan|execute|close), current boundary, plan path, stable import or compatibility requirements, expected validations, documentation follow-up needs, and any blocker or worktree caution.'
 user-invocable: true
 disable-model-invocation: false
@@ -9,6 +9,7 @@ skills:
   - educational-docs
   - tracker-handoff
   - coverage-guard
+  - implementation-standards
 ---
 
 > **Search policy:** Follow the Cortex-First Search Policy from the `research-methodology` skill. Prefer Cortex MCP tools (`search_corpus`, `search_context`, `search_advanced`, `load_chunk`, `traverse_graph`) over native tools (`grep`, `glob`, `view`). Use native tools only as fallback when Cortex is degraded.
@@ -19,10 +20,12 @@ Use this skill to run the NeatapticTS house style for deliberate, resumable,
 documentation-aware SOLID splits across `src/`, `examples/`, `benchmarks/`,
 `testing/`, `scripts/`, and repo-tooling surfaces.
 
-This skill complements the `solid-split` custom agent. The skill owns the
-durable workflow, discovery order, split-shape rules, automation defaults,
-blocker recovery, companion-skill coordination, validation cadence, and
-reporting contract that should stay consistent across sessions.
+This skill owns the durable workflow, discovery order, split-shape rules,
+automation defaults, blocker recovery, companion-skill coordination,
+validation cadence, and reporting contract that should stay consistent across
+sessions. It is carried by the implementation, planning, and researching
+agents (`04-implementing`, `01-planning`, `02-researching`) and may also be
+invoked directly by users.
 
 A split step is only done when the boundary is clearer, the tracker state is
 accurate, the required documentation follow-up has run or been explicitly
@@ -81,6 +84,13 @@ Typical direct use:
 /solid-split
 SOLID split #file:flappy_bird
 ```
+
+In addition to direct user invocation, this skill is carried by the
+`04-implementing`, `01-planning`, and `02-researching` agents. Those agents
+load the skill when a SOLID split, folderization, or boundary-mapping task
+enters their scope, so the same workflow, discovery order, and validation
+cadence apply whether the skill is invoked directly or through a carrying
+agent.
 
 Useful optional detail to include up front:
 
@@ -172,8 +182,8 @@ Use this boundary intentionally:
 - The skill owns durable knowledge: repo conventions, README-first discovery,
   small-chapter standards, plan sequencing, blocker recovery, validation
   expectations, and split philosophy.
-- The agent owns session-local execution: reading the request, choosing the
-  single step to run now, applying edits, updating the plan, validating the
+- The carrying agent owns session-local execution: reading the request, choosing
+  the single step to run now, applying edits, updating the plan, validating the
   touched surface, and producing the handoff or close-out output.
 - The agent should not restate this entire playbook in every prompt; it should
   pass the current packet into the skill and keep the prompt execution-focused.
@@ -187,7 +197,8 @@ Use this boundary intentionally:
 - [Documentation improvement checklist](./assets/docs-checklist.md)
 - Companion skill: `tracker-handoff`
 - Companion skill: `educational-docs`
-- Existing split execution agent: `solid-split`
+- Companion skill: `implementation-standards`
+- Carried by agents: `04-implementing`, `01-planning`, `02-researching`
 
 ## Repo Discovery Order
 
@@ -588,7 +599,9 @@ This mode exists so large splits remain resumable, reviewable, and low-risk.
 
 ## Companion Agent Contract
 
-If a companion agent uses this skill, it should:
+Any agent that carries this skill (`04-implementing`, `01-planning`,
+`02-researching`, or any future agent that adds `solid-split` to its `skills:`
+field) should:
 
 1. Name this skill explicitly as `solid-split`.
 2. Pass the current task packet into the skill instead of paraphrasing it away.
@@ -599,7 +612,8 @@ If a companion agent uses this skill, it should:
 5. Hand tracker-only work back to `tracker-handoff`, docs-only work back to
    `educational-docs`, and validation repair to the appropriate testing
    workflow instead of broadening the prompt.
-6. Update the agent when this skill changes materially so both remain aligned.
+6. Update the carrying agent when this skill changes materially so both remain
+   aligned.
 
 ## Before / After Examples
 

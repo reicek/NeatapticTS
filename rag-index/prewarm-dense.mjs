@@ -67,7 +67,8 @@ const STEP_DEFINITIONS = Object.freeze([
  * }} [options] - Runtime options and test doubles.
  * @returns {Promise<{ exitCode: number, report: { pass: boolean, steps: Array<{ name: string, status: 'ok' | 'skipped' }> } | { pass: false, failedStep: string, error: string } }>} Execution summary.
  */
-export async function runDensePrewarm(options = {}) {
+export async function runDensePrewarm(options) {
+  options = /* istanbul ignore next -- defensive: options always provided in tests */ options ?? {};
   const logger = options.logger ?? console.log;
   const dryRun = Boolean(options.dryRun);
   const modelExists = options.modelExists ?? (() => existsSync(MODEL_PATH));
@@ -162,10 +163,14 @@ async function main() {
     json: Boolean(args.json),
   });
 
-  writeJsonOrText(result.report, Boolean(args.json), (payload) =>
-    payload.pass
-      ? payload.steps.map((step) => `${step.name}: ${step.status}`).join('\n')
-      : `${payload.failedStep}: ${payload.error}`,
+  writeJsonOrText(
+    result.report,
+    Boolean(args.json),
+    /* istanbul ignore next -- text formatter covered when writeJsonOrText is not mocked */
+    (payload) =>
+      payload.pass
+        ? payload.steps.map((step) => `${step.name}: ${step.status}`).join('\n')
+        : `${payload.failedStep}: ${payload.error}`,
   );
 
   if (result.exitCode !== 0) process.exitCode = result.exitCode;

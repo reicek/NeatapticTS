@@ -1,0 +1,142 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>WebGPU Parallel Throughput Benchmark</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        margin: 1rem;
+      }
+      pre {
+        background: #f4f4f4;
+        padding: 1rem;
+        overflow-x: auto;
+      }
+      button {
+        margin-top: 1rem;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>WebGPU Parallel Throughput Benchmark</h1>
+    <p>
+      Runs in a single visible, foreground browser window and emulates six
+      parallel agents. Each agent owns its own
+      <code>Network.createMLP()</code> instance with its own GPU buffers, and
+      all agents share one WebGPU device. The benchmark measures per-agent
+      latency, aggregate throughput across all agents, and GPU contention
+      overhead compared to a single-agent baseline. The result is a
+      downloadable JSON artifact.
+    </p>
+    <div id="status">Ready.</div>
+    <pre id="result">{}</pre>
+    <button id="start">Start benchmark</button>
+    <button id="download" disabled>Download artifact</button>
+
+    
+    <!-- Load the browser IIFE bundle so the scenario module can use Neataptic.* -->
+    <script src="../../dist/neataptic.browser.iife.js"></script>
+
+    <script type="module">
+      import {
+        runParallelSingleWindowBenchmark,
+        ARTIFACT_FILE_NAME,
+      } from './scenarios/webgpu-parallel-throughput.mjs';
+
+      const statusEl = document.getElementById('status');
+      const resultEl = document.getElementById('result');
+      const startBtn = document.getElementById('start');
+      const downloadBtn = document.getElementById('download');
+
+      /**
+       * Trigger a browser download of the benchmark artifact as JSON.
+       *
+       * @param {object} result - Benchmark artifact to serialize.
+       */
+      function downloadArtifact(result) {
+        const blob = new Blob([JSON.stringify(result, null, 2)], {
+          type: 'application/json',
+        });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = ARTIFACT_FILE_NAME;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+      }
+
+      /**
+       * Bind a high-performance WebGPU adapter and device.
+       *
+       * @returns {Promise<{adapter: GPUAdapter|null, device: GPUDevice|null}>}
+       */
+      async function bindGPU() {
+        const adapter = await navigator.gpu?.requestAdapter({
+          powerPreference: 'high-performance',
+        });
+        const device = await adapter?.requestDevice();
+        return { adapter: adapter ?? null, device: device ?? null };
+      }
+
+      const params = new URLSearchParams(window.location.search);
+
+      const tierParam = params.get('tiers');
+      const tiers = tierParam
+        ? tierParam.split(',').map((s) => Number(s.trim())).filter((n) => Number.isFinite(n) && n > 0)
+        : undefined;
+
+      async function startBenchmark() {
+        startBtn.disabled = true;
+        downloadBtn.disabled = true;
+        statusEl.textContent =
+          'Binding GPU and running single-window parallel benchmark...';
+
+        try {
+          const { adapter, device } = await bindGPU();
+          const result = await runParallelSingleWindowBenchmark({
+            device,
+            adapter,
+            agentCount: Number(params.get('agentCount') ?? 6),
+            warmupIterations: Number(params.get('warmupIterations') ?? 3),
+            benchmarkIterations: Number(
+              params.get('benchmarkIterations') ?? 60,
+            ),
+            baselineIterations: Number(params.get('baselineIterations') ?? 10),
+            tiers,
+          });
+
+          window.webgpuParallelThroughputResult = result;
+          resultEl.textContent = JSON.stringify(result, null, 2);
+          statusEl.textContent = result.success
+            ? `Done. Aggregate FPS for tier ${result.tier_results.at(0)?.tier ?? '?'}: ${result.tier_results.at(0)?.aggregate.total_fps.toFixed(2) ?? 'N/A'} (${result.configuration.agentCount} agents).`
+            : `Benchmark failed: ${result.error ?? 'visibility check failed.'}`;
+          downloadBtn.disabled = false;
+          downloadBtn.addEventListener('click', () => downloadArtifact(result));
+          downloadArtifact(result);
+        } catch (error) {
+          const failure = { success: false, error: String(error) };
+          window.webgpuParallelThroughputResult = failure;
+          resultEl.textContent = JSON.stringify(failure, null, 2);
+          statusEl.textContent = 'Benchmark failed.';
+        }
+      }
+
+      startBtn.addEventListener('click', startBenchmark);
+
+      if (params.get('autostart') !== '0') {
+        window.addEventListener('load', () => {
+          // Defer slightly so the browser can render the page before the GPU
+          // work begins, making the visibility/focus state unambiguous.
+          setTimeout(startBenchmark, 100);
+        });
+      }
+    </script>
+  </body>
+</html>
+
+
+

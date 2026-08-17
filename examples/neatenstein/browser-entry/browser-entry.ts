@@ -13,11 +13,6 @@
  * @module
  */
 
-import {
-  NEATENSTEIN_FALLBACK_CANVAS_WIDTH,
-  NEATENSTEIN_FALLBACK_STATUS_TEXT_RGB,
-  NEATENSTEIN_WORKER_BUNDLE_FILENAME,
-} from './constants';
 import { forwardWorkerInput } from './host/game/controls';
 import { NEATENSTEIN_ENEMY_MAX_CONCURRENT } from './host/game/constants';
 import { createGameState } from './host/game/state';
@@ -34,24 +29,42 @@ import { selectMugshotDirection } from './host/hud-mugshot';
 import { createInputRouter, type InputRouter } from './host/input';
 import { createNeatensteinRendererBridge } from './host/renderer-bridge';
 import type { NeatensteinRendererBridge } from './host/renderer-bridge';
-import { NEATENSTEIN_BACKGROUND_RGB } from './renderer/framebuffer';
+import {
+  computeDeltaMs,
+  advanceSimTick,
+  computeHiveDensityRatio,
+  buildRenderState,
+  deriveDeathFeedbackDirection,
+  resolveWaveNumber,
+} from './render-loop.utils';
+import {
+  resolveWorkerUrl,
+  supportsWorkerOffscreenCanvas,
+  drawCanvasStatus,
+} from './bootstrap.utils';
+import {
+  resolveCanvasRenderDimensions,
+  applyCanvasBackingStore,
+  updateRendererSize,
+} from './canvas-dimensions.utils';
+import {
+  REFERENCE_TIMESTEP_MS,
+  DEFAULT_MAX_HEALTH,
+  DEFAULT_MAX_AMMO,
+  DELTA_MULTIPLIER,
+  RENDER_TIER_WORKER,
+  RENDER_TIER_CPU,
+} from './constants';
+import { DOM_EVENT_RESIZE } from './host/dom-events.constants';
+import type { NeatensteinStart, NeatensteinStop } from './browser-entry.types';
 
 /**
  * Exported shape expected by the host shell on `window`.
  *
- * @param outputId - Host container element id that owns the HIVE DENSITY HUD
- *   overlay.
- * @param canvasId - Visible canvas element id to bind the renderer to.
- * @returns A teardown function that cancels the render loop, detaches input, and
- *   terminates the worker.
+ * @deprecated Import from `./browser-entry.types` instead. This re-export
+ *   preserves the public API for existing consumers.
  */
-export type NeatensteinStart = (
-  outputId: string,
-  canvasId: string,
-) => NeatensteinStop;
-
-/** Teardown function returned by {@link NeatensteinStart}. */
-export type NeatensteinStop = () => void;
+export type { NeatensteinStart, NeatensteinStop } from './browser-entry.types';
 
 /**
  * Host script that loaded this IIFE bundle.
@@ -62,66 +75,6 @@ export type NeatensteinStop = () => void;
  * `examples/neatenstein/`.
  */
 const hostScript = document.currentScript;
-
-/**
- * Resolve the published worker URL relative to the host bundle.
- *
- * The worker asset lives next to the host bundle under `docs/assets/`. Resolving
- * against `document.currentScript.src` works correctly under any server root.
- */
-function resolveWorkerUrl(): string {
-  if (!hostScript || !(hostScript instanceof HTMLScriptElement)) {
-    throw new Error(
-      'Neatenstein bundle must be loaded through a <script> tag so the worker URL can be resolved relative to the host bundle.',
-    );
-  }
-  return new URL(NEATENSTEIN_WORKER_BUNDLE_FILENAME, hostScript.src).href;
-}
-
-/**
- * Runtime capability check for the OffscreenCanvas worker transfer path.
- *
- * Returns `true` only when both the visible canvas can produce an
- * {@link OffscreenCanvas} and the worker-side type is present.
- */
-function supportsWorkerOffscreenCanvas(): boolean {
-  return (
-    typeof HTMLCanvasElement !== 'undefined' &&
-    typeof OffscreenCanvas !== 'undefined' &&
-    typeof HTMLCanvasElement.prototype.transferControlToOffscreen === 'function'
-  );
-}
-
-/**
- * Format an RGB triple as a CSS `rgb(...)` string.
- *
- * Small local helper so the fallback status path can share the same canonical
- * background color as the worker/CPU/GPU renderers.
- */
-function formatRgb(color: { r: number; g: number; b: number }): string {
-  return `rgb(${Math.round(color.r)}, ${Math.round(color.g)}, ${Math.round(color.b)})`;
-}
-
-/**
- * Draw a centered status message on the visible canvas.
- *
- * Used by the CPU fallback path when OffscreenCanvas is unavailable so the
- * page shows an explanation instead of a blank screen.
- */
-function drawCanvasStatus(canvas: HTMLCanvasElement, message: string): void {
-  const context = canvas.getContext('2d');
-  if (!context) {
-    return;
-  }
-
-  context.fillStyle = formatRgb(NEATENSTEIN_BACKGROUND_RGB);
-  context.fillRect(0, 0, canvas.width, canvas.height);
-  context.fillStyle = formatRgb(NEATENSTEIN_FALLBACK_STATUS_TEXT_RGB);
-  context.font = '0.875rem system-ui, Segoe UI, Arial, sans-serif';
-  context.textAlign = 'center';
-  context.textBaseline = 'middle';
-  context.fillText(message, canvas.width / 2, canvas.height / 2);
-}
 
 /**
  * Start the Neatenstein demo on the host page.
@@ -155,113 +108,30 @@ function neatensteinStart(outputId: string, canvasId: string): NeatensteinStop {
   // viewport when the page includes status bars, gaps, or flex layout.
   const htmlCanvas = canvas;
 
-  /**
-   * Fixed render height in pixels used for the canvas backing store and for
-   * the worker-tier render dimensions forwarded in simState.
-   */
-  const NEATENSTEIN_FIXED_RENDER_HEIGHT = 480;
-
-  /**
-   * Compute the CSS-derived render dimensions for the visible canvas.
-   *
-   * The width is proportional to the canvas CSS box aspect ratio so the
-   * rendered scene is never stretched, while the height stays fixed at 480px
-   * to keep the raycaster projection math stable.
-   *
-   * @param element - Visible host canvas.
-   * @returns Render width and height in pixels.
-   */
-  function resolveCanvasRenderDimensions(element: HTMLCanvasElement): {
-    width: number;
-    height: number;
-  } {
-    const clientWidth = element.clientWidth;
-    const clientHeight = element.clientHeight;
-
-    if (clientWidth && clientHeight) {
-      return {
-        width: Math.round(
-          NEATENSTEIN_FIXED_RENDER_HEIGHT * (clientWidth / clientHeight),
-        ),
-        height: NEATENSTEIN_FIXED_RENDER_HEIGHT,
-      };
-    }
-
-    // Fall back to viewport dimensions when the canvas has not been laid out yet.
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-    const fallbackWidth =
-      viewportWidth && viewportHeight
-        ? Math.round(
-            NEATENSTEIN_FIXED_RENDER_HEIGHT * (viewportWidth / viewportHeight),
-          )
-        : NEATENSTEIN_FALLBACK_CANVAS_WIDTH;
-
-    return {
-      width: fallbackWidth,
-      height: NEATENSTEIN_FIXED_RENDER_HEIGHT,
-    };
-  }
-
-  /**
-   * Apply computed render dimensions to the visible canvas backing store.
-   *
-   * Safe to call only when the canvas is still owned by the host (i.e., the
-   * CPU fallback tier). The worker tier transfers the canvas to the worker,
-   * after which direct width/height assignment throws.
-   *
-   * @param element - Visible host canvas.
-   * @param dimensions - Render width and height in pixels.
-   */
-  function applyCanvasBackingStore(
-    element: HTMLCanvasElement,
-    dimensions: { width: number; height: number },
-  ): void {
-    element.width = dimensions.width;
-    element.height = dimensions.height;
-  }
-
   let currentRenderDimensions = resolveCanvasRenderDimensions(htmlCanvas);
   applyCanvasBackingStore(htmlCanvas, currentRenderDimensions);
 
   let bridge: NeatensteinRendererBridge | null = null;
 
   const useWorkerTier = supportsWorkerOffscreenCanvas();
-  const tier = useWorkerTier ? 'worker' : 'cpu';
+  const tier = useWorkerTier ? RENDER_TIER_WORKER : RENDER_TIER_CPU;
 
-  /**
-   * React to a change in the visible canvas CSS box.
-   *
-   * For the worker tier, the host canvas is transferred to the worker, so the
-   * host cannot mutate its backing store. Instead the new dimensions are routed
-   * to the bridge, which posts them to the worker, and the render loop uses
-   * the CSS-derived dimensions directly. For the CPU fallback tier, the host
-   * still owns the canvas and updates the backing store as before.
-   */
-  function updateRendererSize(): void {
-    currentRenderDimensions = resolveCanvasRenderDimensions(htmlCanvas);
-
-    if (useWorkerTier && bridge !== null) {
-      bridge.resize(
-        currentRenderDimensions.width,
-        currentRenderDimensions.height,
-      );
-      return;
-    }
-
-    applyCanvasBackingStore(htmlCanvas, currentRenderDimensions);
-  }
+  /** React to a change in the visible canvas CSS box via imported executor. */
+  const handleResize = () => {
+    currentRenderDimensions = updateRendererSize({
+      canvas: htmlCanvas,
+      useWorkerTier,
+      bridge,
+    });
+  };
 
   let resizeObserver: ResizeObserver | null = null;
   if (typeof ResizeObserver !== 'undefined') {
-    resizeObserver = new ResizeObserver(updateRendererSize);
+    resizeObserver = new ResizeObserver(handleResize);
     resizeObserver.observe(htmlCanvas);
   }
 
-  const handleResize = () => {
-    updateRendererSize();
-  };
-  window.addEventListener('resize', handleResize);
+  window.addEventListener(DOM_EVENT_RESIZE, handleResize);
 
   if (!useWorkerTier) {
     drawCanvasStatus(
@@ -294,7 +164,7 @@ function neatensteinStart(outputId: string, canvasId: string): NeatensteinStop {
 
   bridge = createNeatensteinRendererBridge({
     canvas,
-    workerUrl: resolveWorkerUrl(),
+    workerUrl: resolveWorkerUrl(hostScript),
     tier,
     mapSeed: initialState.seed,
   });
@@ -302,9 +172,9 @@ function neatensteinStart(outputId: string, canvasId: string): NeatensteinStop {
   // Wire the status bar to render frames posted by the worker so the health
   // segments, ammo segments, and kill/death labels update on each frame.
   let lastFrameHealth = 0;
-  let lastFrameMaxHealth = 100;
+  let lastFrameMaxHealth = DEFAULT_MAX_HEALTH;
   let lastFrameAmmo = 0;
-  let lastFrameMaxAmmo = 50;
+  let lastFrameMaxAmmo = DEFAULT_MAX_AMMO;
   let lastFrameKills = 0;
   let lastFrameDeaths = 0;
   let lastFrameGeneration = 0;
@@ -315,9 +185,9 @@ function neatensteinStart(outputId: string, canvasId: string): NeatensteinStop {
 
   bridge.setFrameConsumer((frame) => {
     lastFrameHealth = frame.playerHealth ?? 0;
-    lastFrameMaxHealth = frame.playerMaxHealth ?? 100;
+    lastFrameMaxHealth = frame.playerMaxHealth ?? DEFAULT_MAX_HEALTH;
     lastFrameAmmo = frame.playerAmmo ?? 0;
-    lastFrameMaxAmmo = frame.playerMaxAmmo ?? 50;
+    lastFrameMaxAmmo = frame.playerMaxAmmo ?? DEFAULT_MAX_AMMO;
     lastFrameKills = frame.playerKills ?? 0;
     lastFrameDeaths = frame.playerDeaths ?? 0;
     lastFrameGeneration = frame.generation ?? 0;
@@ -351,10 +221,10 @@ function neatensteinStart(outputId: string, canvasId: string): NeatensteinStop {
     // the first enemy of the new wave actually spawns, not when the 8th
     // enemy of the current wave spawns.
     const spawnCount = frame.spawnCount ?? 0;
-    const waveNumber =
-      Math.floor(
-        Math.max(0, spawnCount - 1) / NEATENSTEIN_ENEMY_MAX_CONCURRENT,
-      ) + 1;
+    const waveNumber = resolveWaveNumber(
+      spawnCount,
+      NEATENSTEIN_ENEMY_MAX_CONCURRENT,
+    );
     if (waveNumber > lastWaveNumber) {
       lastWaveNumber = waveNumber;
       waveAnnouncement.show(waveNumber);
@@ -390,7 +260,7 @@ function neatensteinStart(outputId: string, canvasId: string): NeatensteinStop {
       resizeObserver.disconnect();
       resizeObserver = null;
     }
-    window.removeEventListener('resize', handleResize);
+    window.removeEventListener(DOM_EVENT_RESIZE, handleResize);
     cancelRenderLoop();
     inputRouter.detach();
     bridge.destroy();
@@ -473,25 +343,7 @@ function startRenderLoop(
    */
   let prevHiveDensity = 0;
 
-  /**
-   * Reference timestep for FPS-scaled simulation stepping.
-   *
-   * The host no longer uses a fixed timestep constant — delta-time drives the
-   * clock. This local value is only used to scale `simTick` increments so a
-   * 60 Hz display yields ~1 tick/frame, 30 Hz yields ~2, etc.
-   */
-  const REFERENCE_TIMESTEP_MS = 16;
-
-  /**
-   * Upper bound for the rAF delta-time in milliseconds.
-   *
-   * When a tab is suspended/resumed or the main thread stalls for a few
-   * hundred milliseconds, the raw delta can be several seconds long. Clamping
-   * it prevents the next physics tick from tunnelling through walls (point-
-   * sample collision can step past thin wall segments when the single-step
-   * displacement exceeds the grid cell size).
-   */
-  const MAX_DELTA_MS = 4 * REFERENCE_TIMESTEP_MS; // 64 ms ≈ four reference frames
+  const MAX_DELTA_MS = DELTA_MULTIPLIER * REFERENCE_TIMESTEP_MS; // 64 ms ≈ four reference frames
 
   /**
    * Render loop: ship an updated render state snapshot to the worker on each
@@ -509,47 +361,26 @@ function startRenderLoop(
    * @param timestamp - High-resolution animation-frame timestamp in ms.
    */
   function tick(timestamp: number): void {
-    // Compute delta-time from consecutive rAF timestamps. On the first frame
-    // there is no previous timestamp, so deltaMs is 0. Clamp the delta to
-    // MAX_DELTA_MS so a suspended tab or long frame cannot produce a single
-    // physics step large enough to tunnel through walls.
-    const deltaMs = Math.min(
-      lastTimestamp === null ? 0 : timestamp - lastTimestamp,
-      MAX_DELTA_MS,
-    );
+    // --- Compute delta-time ---
+    const deltaMs = computeDeltaMs(lastTimestamp, timestamp, MAX_DELTA_MS);
     lastTimestamp = timestamp;
 
-    // FPS-scaled simulation stepping: increment simTick proportionally to the
-    // frame delta so simulation progress is consistent across varying refresh
-    // rates.
-    simTick += Math.max(1, Math.round(deltaMs / REFERENCE_TIMESTEP_MS));
+    // --- Advance simulation tick ---
+    simTick = advanceSimTick(simTick, deltaMs, REFERENCE_TIMESTEP_MS);
 
+    // --- Forward input ---
     const snapshot = inputRouter.getSnapshot();
-
-    // Forward look deltas first so the worker can apply them to the incoming
-    // simulation state for this frame.
     forwardWorkerInput(bridge.worker, snapshot);
 
+    // --- Compute hive density ---
     const renderDimensions = getRenderDimensions();
-
-    // HIVE DENSITY: enemy population density relative to the concurrency cap,
-    // clamped to [0, 1]. The host render state carries the initial enemy count;
-    // the worker maintains the live population. Forwarding this field keeps the
-    // HUD overlay synchronized with the render state snapshot posted to the
-    // worker on each animation frame.
-    const hiveDensity = Math.min(
-      1,
-      Math.max(
-        0,
-        initialState.enemies.length / NEATENSTEIN_ENEMY_MAX_CONCURRENT,
-      ),
+    const hiveDensity = computeHiveDensityRatio(
+      initialState.enemies.length,
+      NEATENSTEIN_ENEMY_MAX_CONCURRENT,
     );
 
-    // Post simState on every animation frame. The bridge applies worker-busy
-    // backpressure so only one snapshot is in flight at a time; additional
-    // frames are deferred until the worker acknowledges. The deltaMs field
-    // lets the worker use FPS-scaled timing for its simulation stepping.
-    const renderState = {
+    // --- Build render state ---
+    const renderState = buildRenderState({
       canvasWidth: renderDimensions.width,
       canvasHeight: renderDimensions.height,
       simTick,
@@ -558,56 +389,38 @@ function startRenderLoop(
       cameraYaw,
       mapSeed: initialState.seed,
       movement: snapshot.movement,
-      enemies: [],
       deltaMs,
       hiveDensity,
       humanMode: getHumanMode(),
-    };
+    });
 
+    // --- Update status bar ---
     statusBar.update({
       hiveDensity,
       ...getLatestFrameState(),
     });
 
-    // MUGSHOT OVERLAY: update the robot head crop each render frame with the
-    // current mouse-look direction and health-based eye-stripe tint.
+    // --- Update mugshot overlay ---
     statusBar.mugshot.update(
       selectMugshotDirection({ yawDelta: snapshot.look.yawDelta }),
       getMugshotHealthRatio(),
     );
 
-    // DEATH FEEDBACK: derive a simple adaptation signal from the hive-density
-    // delta between consecutive frames. The signal mirrors the
-    // AdaptationSignal shape produced by computeAdaptationSignal in the
-    // harness death-feedback module so the HUD indicator stays consistent with
-    // the arms-race result wiring.
+    // --- Update death feedback ---
     const densityDelta = hiveDensity - prevHiveDensity;
     prevHiveDensity = hiveDensity;
-    const direction =
-      densityDelta > 0.01
-        ? 'stronger'
-        : densityDelta < -0.01
-          ? 'weaker'
-          : 'shifted';
     deathFeedback.update({
-      direction,
+      direction: deriveDeathFeedbackDirection(densityDelta),
       aggressionDelta: densityDelta,
       movementDelta: 0,
       positioningDelta: 0,
     });
 
+    // --- Post sim state to worker ---
     bridge.postSimState(renderState);
 
-    // The authoritative camera yaw is accumulated on the host so it persists
-    // across frames while the worker uses the per-frame delta for responsive
-    // visual feedback.
+    // --- Accumulate camera yaw on host ---
     cameraYaw += snapshot.look.yawDelta;
-
-    // The next rAF is scheduled by the onFrameReady callback (registered
-    // below) when the worker finishes rendering and is idle. This makes the
-    // loop purely worker-paced instead of running continuously at display
-    // refresh rate, eliminating wasted rAF ticks when the worker renders
-    // slower than the display.
   }
 
   // Register the worker-paced rAF trigger: when the worker finishes a frame

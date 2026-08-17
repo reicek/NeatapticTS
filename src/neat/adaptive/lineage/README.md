@@ -68,6 +68,9 @@ band. Low ancestor uniqueness means too many genomes share ancestors
 (risking premature convergence); high uniqueness might indicate
 excessive divergence.
 
+Parameters:
+- `this` - NeatEngine instance whose lineage diversity options may be adjusted.
+
 Returns: May update lineage-related controller options and record the most recent adjustment generation.
 
 Example:

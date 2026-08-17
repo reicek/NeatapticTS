@@ -244,7 +244,7 @@ export interface NgeRulePass {
 }
 
 /**
- * CPPN activation families supported by the canonical deterministic evaluator.
+ * CPPN activation families supported by the canonical deterministic phenotype evaluator.
  */
 export type NgeCppnActivationKind =
   'linear' | 'tanh' | 'sigmoid' | 'gaussian' | 'sine';
@@ -391,7 +391,7 @@ export interface NgeVirtualModulePlan {
 }
 
 /**
- * One realized module emitted by the phenotype materialization pass.
+ * One realized module emitted by the phenotype materialization pass for the genome.
  */
 export interface NgeRealizedModule {
   /** Stable deterministic module identifier derived from the canonical pass order. */

@@ -40,6 +40,7 @@ export function advancePlateauRecord(
  * @param rewardDelta - Normalized reward improvement produced by the current edit batch.
  * @param structuralEditCount - Number of structural edits responsible for the observed reward delta.
  * @returns Reward improvement normalized by the structural edit count.
+ * @throws {NgeAdult_PlateauError} When the structural edit count is zero or negative.
  */
 export function computeMarginalReturn(
   rewardDelta: number,

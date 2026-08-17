@@ -1,12 +1,27 @@
 {
-  "metricVersion": 1,
-  "threshold": {
+  "metricVersion": 2,
+  "scannerVersion": "2.0.0",
+  "gitCommit": "unknown",
+  "generatedAt": "2026-08-14T03:49:51.498Z",
+  "thresholdConfig": {
     "minJsdocWords": 10,
     "complexityThreshold": 10
   },
-  "scopeType": "paths",
-  "scopeDigest": "9f4ac9f8f2d0afac8beffd2d95b8d6c38b57f03b9057c2a8f6cc6d0bbf6f0a11",
-  "scannerVersion": "1.0.0",
-  "summaryPath": "artifacts/docs-quality/runs/baseline/summary.json",
-  "evidencePath": "artifacts/docs-quality/runs/baseline/evidence.json"
+  "scopeConfig": {
+    "scopeType": "paths",
+    "scopeValue": [
+      "src/neat.ts",
+      "src/architecture/network.ts"
+    ],
+    "scopeDigest": "9f4ac9f8f2d0afac8beffd2d95b8d6c38b57f03b9057c2a8f6cc6d0bbf6f0a11"
+  },
+  "sourcePathsDigest": "9f4ac9f8f2d0afac8beffd2d95b8d6c38b57f03b9057c2a8f6cc6d0bbf6f0a11",
+  "issueBreakdown": {
+    "missingJsdoc": 20,
+    "weakJsdoc": 12,
+    "highComplexity": 8,
+    "incompleteJsdocTags": 0
+  },
+  "weakCount": 12,
+  "normalizedEvidenceDigest": "0000000000000000000000000000000000000000000000000000000000000000"
 }

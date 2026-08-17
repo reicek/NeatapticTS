@@ -21,6 +21,7 @@ import {
   NEATENSTEIN_MLP_REFRESH_INTERVAL_GENERATIONS,
   NEATENSTEIN_SWARM_REFRESH_INTERVAL_GENERATIONS,
 } from './constants.ts';
+import { SNAPSHOT_KIND_MLP } from '../constants';
 import type { EnemyPopulation, MlpSnapshot, Snapshot } from './types.ts';
 
 /**
@@ -58,7 +59,7 @@ const enemySnapshotStore = new Map<number, Snapshot>();
 export function refreshEnemySnapshots(population: EnemyPopulation): void {
   enemySnapshotStore.clear();
 
-  if (population.kind !== 'mlp') {
+  if (population.kind !== SNAPSHOT_KIND_MLP) {
     return;
   }
 
@@ -68,7 +69,7 @@ export function refreshEnemySnapshots(population: EnemyPopulation): void {
     };
     const frozenWeights = Object.freeze(Array.from(variant.weights));
     const snapshot: MlpSnapshot = {
-      kind: 'mlp',
+      kind: SNAPSHOT_KIND_MLP,
       weights: frozenWeights as unknown as Float32Array,
     };
     enemySnapshotStore.set(variantId, Object.freeze(snapshot));

@@ -36,6 +36,7 @@ const NODE_INDEX_STEP = 1;
  *
  * @param nodeCount Number of nodes in the layer.
  * @param inputValues Optional activation values provided by the caller.
+ * @throws {LayerSizeMismatchError} When `inputValues.length !== nodeCount`.
  */
 export function assertActivationInputSize(
   nodeCount: number,

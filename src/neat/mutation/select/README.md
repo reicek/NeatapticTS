@@ -139,6 +139,7 @@ the rest of the selection code can stay focused on scoring and weighting.
 
 Parameters:
 - `mutationMethod` - mutation operator to check
+- `genome` - genome whose recurrent policy eligibility is evaluated.
 - `internal` - neat controller context
 - `methods` - methods module
 
@@ -284,3 +285,33 @@ Parameters:
 - `internal` - neat controller context
 
 Returns: sampled method or null
+
+### selectBestMethodByUCB
+
+```ts
+selectBestMethodByUCB(
+  pool: MutationMethod[],
+  operatorStats: Map<string, OperatorStats>,
+  fallbackMethod: MutationMethod,
+  explorationCoefficient: number,
+  minAttempts: number,
+  totalAttempts: number,
+): MutationMethod
+```
+
+Select the best mutation method using a UCB-style score.
+
+Iterates over the candidate pool and computes a combined exploitation and
+exploration score for each operator. Under-sampled operators receive an
+effectively infinite exploration bonus, ensuring every candidate is tried at
+least `minAttempts` times before the bandit converges on observed payoff.
+
+Parameters:
+- `pool` - candidate operator pool.
+- `operatorStats` - per-operator success and attempt counters.
+- `fallbackMethod` - method returned when no candidate scores higher.
+- `explorationCoefficient` - exploration weight applied to the bonus term.
+- `minAttempts` - minimum attempts before exploration bonus is bounded.
+- `totalAttempts` - total attempts across all operators (for log term).
+
+Returns: The method with the highest combined UCB score.

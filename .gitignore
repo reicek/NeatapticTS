@@ -20,6 +20,15 @@ pnpm-debug.log*
 !/docs/research/
 !/docs/research/README.md
 
+# Relocated root documentation (Step 04)
+!/docs/browser-tests/
+!/docs/browser-tests/README.md
+!/docs/onnx-export.md
+!/docs/webgpu-inference.md
+!/docs/architecture/
+!/docs/architecture/webgpu/
+!/docs/architecture/webgpu/*.md
+
 # RAG generated artifacts
 rag-index/data/*.sqlite
 rag-index/data/*.sqlite-journal
@@ -66,12 +75,12 @@ Thumbs.db
 *.results.json
 jest-dev.dev.bundle.*
 jest-prod.prod.bundle.*
-bench-browser/dev.bundle*.js
-bench-browser/dev.bundle*.js.map
-bench-browser/prod.bundle*.js
-bench-browser/prod.bundle*.js.map
-bench-browser/jest-*.html
-bench-browser/tmp-*.html
+testing/browser-benchmarks/dev.bundle*.js
+testing/browser-benchmarks/dev.bundle*.js.map
+testing/browser-benchmarks/prod.bundle*.js
+testing/browser-benchmarks/prod.bundle*.js.map
+testing/browser-benchmarks/jest-*.html
+testing/browser-benchmarks/tmp-*.html
 benchmarks/asciiMaze.benchmark.results.
 .tmp_liquidcarrot_flappy
 

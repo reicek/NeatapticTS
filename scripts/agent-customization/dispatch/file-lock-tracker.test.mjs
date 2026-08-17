@@ -94,4 +94,29 @@ describe('file-lock-tracker', () => {
     snap.clear();
     assert.strictEqual(snapshot().size, 1);
   });
+
+  it('normalizes non-array input to an empty file list without throwing', () => {
+    assert.strictEqual(isConflict(null), false);
+    assert.strictEqual(isConflict(undefined), false);
+    assert.strictEqual(isConflict('not-an-array'), false);
+    assert.strictEqual(isConflict(42), false);
+    assert.ok(acquire(null) !== null);
+    reset();
+  });
+
+  it('skips non-string and blank entries when normalizing files', () => {
+    const lockId = acquire([
+      123,
+      null,
+      undefined,
+      {},
+      '',
+      '   ',
+      'src/real.ts',
+    ]);
+    assert.ok(lockId !== null);
+    const snap = snapshot();
+    const files = snap.get(lockId);
+    assert.deepStrictEqual(files, ['src/real.ts']);
+  });
 });

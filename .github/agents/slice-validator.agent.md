@@ -14,6 +14,8 @@ tools:
     neataptic-workflow-mcp/*,
   ]
 user-invocable: false
+disable-model-invocation: false
+target: vscode
 agents: []
 skills: ['phase-handoff-workflow', 'plan-sync-validation']
 ---
@@ -181,7 +183,7 @@ verification) to confirm slice compliance before phase work proceeds. Uses the
 `plan-sync-validation` skill for plan-tracker alignment. This agent delegates
 nothing (`agents: []`).
 
-## Output format
+## Output Format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1
@@ -199,9 +201,6 @@ ACTIONS_TAKEN:
 - <action or NONE>
 VALIDATION_EVIDENCE:
 - gate: <step-packet|plan-slice-quality|cortex-index>, pass: <bool>, fixHint: <one-line or NONE>
-VERDICT: PASS | FAIL
-OBSERVATIONS:
-- check_id: <SC-##>, severity: <high|medium|low>, confidence: <0-1>, detail: <concise finding>
 HANDOFF: <next step, reroute, or NONE>
 BLOCKERS:
 - <blocker or NONE>

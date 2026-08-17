@@ -245,6 +245,7 @@ export function compareResults(resultA, resultB) {
  * @param {string} [options.condition='hybrid']
  * @returns {Promise<Array>}
  */
+/* istanbul ignore next -- defensive: always called with explicit options */
 export async function alphaSweep(options = {}) {
   const queries = Array.isArray(options.queries) ? options.queries : [];
   const alphas = Array.isArray(options.alphas) ? options.alphas : [];

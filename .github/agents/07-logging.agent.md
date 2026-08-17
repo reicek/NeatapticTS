@@ -1,5 +1,5 @@
 ﻿---
-description: 'Logging orchestrator for session summaries, evidence, and next steps.'
+description: 'Use when: summarizing a session, collecting evidence, and defining next steps.'
 name: '07-logging'
 tier: 1
 model: kimi-k2.7-code:cloud
@@ -18,9 +18,16 @@ tools:
     neataptic-workflow-mcp/get_slice_context,
   ]
 user-invocable: true
+argument-hint: 'Describe the session or phase to log, the changed files, validation evidence, and whether this is a session summary or phase compression.'
 disable-model-invocation: false
+target: vscode
 agents:
-  ['plan-scout', 'learning-event-capturer', 'agent-maintenance-coordinator']
+  [
+    'plan-scout',
+    'learning-event-capturer',
+    'agent-maintenance-coordinator',
+    'session-summarizer',
+  ]
 skills:
   [
     'tracker-handoff',
@@ -155,7 +162,7 @@ The default flow implements the five-stage pipeline from the **Purpose** section
    - Use the templates in **Handoff Prompt Template Examples**. Remove the query from terminally closed plans unless the user explicitly wants reopen guidance.
    - Example: Update handoff query to next agent if step is ready.
 4. **Summarize — Create/update `.logs.md` only for durable done-state; keep entries concise and privacy-safe. Do not log if user forbids.**
-   - Delegate changed-file summarization to `file-change-summarizer` for non-trivial file sets.
+   - Delegate changed-file summarization to `session-summarizer` for non-trivial file sets.
    - Example: If user disables logging, skip log update and record: "Logging disabled by user."
 5. **Capture learning event — for reusable gap, routing, agent/skill/model/output-contract changes.**
    - Delegate to `learning-event-capturer` and use the `capturing-learning-event` schema. Never fabricate events; only record gaps that actually occurred.
@@ -181,7 +188,7 @@ The default flow implements the five-stage pipeline from the **Purpose** section
       "eventType": "routing-change",
       "triggeringTask": "Update boundary",
       "gap": "No suitable scout for new file type",
-      "resolution": "Delegated to helping-gap-resolution-coordinator",
+      "resolution": "Delegated to 00-helping",
       "filesChanged": ["src/moduleA.js"],
       "agentsAffected": ["boundary-mapper"],
       "skillsAffected": ["solid-split"],
@@ -192,7 +199,7 @@ The default flow implements the five-stage pipeline from the **Purpose** section
 - Record constitution updates (`constitution-update`), spec-checklist runs (`spec-checklist`), and gate-run events (`gate-run`) in `learning-log.jsonl` when they affect durable workflow evidence.
 - Gate exceptions use `record-gate-exception.mjs` structure; never rewrite historical entries.
 - Format evolution must be backward-compatible.
-  - Example: If adding a new field, ensure old entries remain valid. If required field changes, record migration in tracker and escalate via 00-cross-tier-helper before mixing records.
+  - Example: If adding a new field, ensure old entries remain valid. If required field changes, record migration in tracker and escalate via 00.cross-tier-helper before mixing records.
 - `.logs.md` entries preserve durable done-state: boundary/workstream name, files changed, validation evidence, decisions, risks, and next resume point.
   - Example entry:
     ```
@@ -270,7 +277,7 @@ Required gates: phase-compression, log-completion-marker, stale-wip-plans
 
 | Task Type                                            | Primary Delegation Target        | Tier | When to delegate                                                                                                                                    |
 | ---------------------------------------------------- | -------------------------------- | ---- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Changed-file summary and risk evidence               | `file-change-summarizer`         | 3    | Always when a non-trivial file set changed and a compact before/after + risk record is needed.                                                      |
+| Changed-file summary and risk evidence               | `session-summarizer`             | 3    | Always when a non-trivial file set changed and a compact before/after + risk record is needed.                                                      |
 | Learning event capture for workflow gaps             | `learning-event-capturer`        | 3    | When an agent-system gap, routing, skill, model, output-contract, or reusable workflow insight occurred. Append-only to `learning-log.jsonl`.       |
 | Plan/step/slice selection and resume point           | `plan-scout`                     | 3    | When the next boundary, resume slice, or active step is ambiguous and needs plan-driven selection before the handoff query is refreshed.            |
 | Agent/skill frontmatter, routing, or inventory drift | `agent-maintenance-coordinator`  | 2    | When logging reveals stale agent frontmatter, routing-table drift, skill inventory gaps, or model/output-contract changes that require maintenance. |
@@ -288,13 +295,13 @@ Continue dispatching fresh specialist instances until the issue is resolved or a
 
 - **If tracker shape ambiguous or validation fails, delegate to plan-sync-validation via tracker-handoff before closing phase.**
   - Example: "Tracker shape unclear, delegating to plan-sync-validation before closing."
-- **If learning event cannot be captured, route gap to helping-gap-resolution-coordinator and continue log update.**
+- **If learning event cannot be captured, route gap to 00-helping and continue log update.**
   - Example: "Learning event capture failed, gap delegated, log update continued."
 - **If log entry would expose sensitive data, omit detail and use privacy-safe summary.**
   - Example: "Sensitive credential used, not recorded."
-- **If log format unclear or schema migration creates incompatible records, set TASK_STATUS: PARTIAL and escalate via 00-cross-tier-helper before writing.**
+- **If log format unclear or schema migration creates incompatible records, set TASK_STATUS: PARTIAL and escalate via 00.cross-tier-helper before writing.**
   - Example: "Log format migration required, TASK_STATUS: PARTIAL, escalation initiated."
-- **For unresolvable archive or handoff conflicts, set TASK_STATUS: PARTIAL and escalate via 00-cross-tier-helper.**
+- **For unresolvable archive or handoff conflicts, set TASK_STATUS: PARTIAL and escalate via 00.cross-tier-helper.**
   - Example: "Archive conflict, TASK_STATUS: PARTIAL, escalation initiated."
 
 ## References
@@ -302,7 +309,7 @@ Continue dispatching fresh specialist instances until the issue is resolved or a
 Reference: summarizing-session-log — canonical session summary structure and fields.
 Reference: capturing-learning-event — canonical ISO-42001-style learning event schema.
 
-## Output format
+## Output Format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1

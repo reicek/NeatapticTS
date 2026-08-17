@@ -11,6 +11,11 @@ import {
   writeReport,
 } from './customization-utils.mjs';
 
+// Ensure stdout uses UTF-8 encoding so non-ASCII characters (e.g. ≤, —) in
+// parsed frontmatter are not corrupted to '?' on hosts with a non-UTF-8
+// console code page (notably Windows PowerShell with OEM code page 437).
+process.stdout.setDefaultEncoding('utf8');
+
 const options = parseArgs(process.argv.slice(2));
 
 const strictVisibleAgentPathsByName = new Map([
@@ -73,14 +78,6 @@ const strictTier2CoordinatorPathsByName = new Map([
     'planning-risk-coordinator',
     '.github/agents/planning-risk-coordinator.agent.md',
   ],
-  [
-    'planning-test-strategy-coordinator',
-    '.github/agents/planning-test-strategy-coordinator.agent.md',
-  ],
-  [
-    'research-codebase-coordinator',
-    '.github/agents/research-codebase-coordinator.agent.md',
-  ],
   ['solid-split', '.github/agents/solid-split.agent.md'],
 ]);
 const strictTier2CoordinatorPaths = new Set(
@@ -105,11 +102,8 @@ const strictTier2StructuredFields = [
   'SUGGESTED_NEXT_AGENT',
   'SUMMARY',
 ];
-const strictAllowedModels = new Set([
-  'glm-5.2:cloud (ollama)',
-  'anthropic/claude-sonnet-4-20250514',
-  'kimi-k2.7-code:cloud',
-]);
+const strictAllowedModels = new Set(['glm-5.2:cloud', 'kimi-k2.7-code:cloud']);
+const allowedTargetValues = new Set(['vscode', 'github-copilot']);
 
 if (options.help) {
   printUsage({
@@ -202,6 +196,19 @@ function validateAgent(agent, agents, skillNames, { strict }) {
         '`disable-model-invocation` must be a boolean.',
       ),
     );
+  }
+  if ('target' in data) {
+    if (typeof data.target !== 'string') {
+      issues.push(issue('error', relativePath, '`target` must be a string.'));
+    } else if (!allowedTargetValues.has(data.target)) {
+      issues.push(
+        issue(
+          'error',
+          relativePath,
+          `\`target\` must be one of: ${[...allowedTargetValues].join(', ')}.`,
+        ),
+      );
+    }
   }
   if ('tools' in data && !Array.isArray(data.tools)) {
     issues.push(
@@ -351,7 +358,7 @@ function validateAgent(agent, agents, skillNames, { strict }) {
       issue(
         'error',
         relativePath,
-        'Model must be a qualified model string like glm-5.2:cloud (ollama).',
+        'Model must be a qualified model string like glm-5.2:cloud.',
       ),
     );
   }
@@ -466,6 +473,7 @@ function validateStructuredV1PromptContract(agent, contract) {
     return issues;
   }
 
+  /* istanbul ignore next -- regex always captures body group when matched */
   const fenceBody = structuredFenceMatches[0].groups?.body ?? '';
   const parsedFields = parsePromptFields(fenceBody);
   const detectedFields = parsedFields.map(({ field }) => field);

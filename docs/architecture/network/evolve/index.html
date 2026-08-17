@@ -1,0 +1,762 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>architecture/network/evolve – NeatapticTS Docs</title><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;600;700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../../assets/theme.css"><script defer src="../../../assets/theme-tooltips.js"></script></head><body class="">
+<header class="topbar"><div class="inner topbar-inner-connected"><div class="brand"><a class="brand-link" href="../../../index.html"><span class="brand-title-lockup" aria-hidden="true"><span class="brand-title-row brand-title-row-top"><span class="brand-title-corner">╔══</span><span class="brand-label">NeatapticTS</span><span class="brand-title-corner">══╗</span></span></span><span class="brand-title-accessible">NeatapticTS</span></a></div><nav class="main-nav"><a href="../../../index.html">Home</a><a href="../../../index.html" class="active">Docs</a><a href="../../../examples/index.html">Examples</a><a href="https://github.com/reicek/NeatapticTS" target="_blank" rel="noopener">GitHub</a></nav></div></header>
+<div class="layout"><aside class="sidebar docs-panel docs-panel-left"><ul class="sidebar-sections"><li class="group group-priority"><div class="g-head">Start With Examples</div><p class="group-copy">The demos are the fastest way to learn the library in the order a first-time reader can actually absorb.</p><div class="nav-priority-links"><ul class="pipe-nav-list pipe-nav-list-priority"><li class="pipe-nav-item nav-priority-link"><a href="../../../examples/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Examples overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul><ul class="pipe-nav-list pipe-nav-list-compact"><li class="pipe-nav-item"><a href="../../../examples/flappy_bird/docs/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Flappy Bird</span></a></li><li class="pipe-nav-item"><a href="../../../examples/asciiMaze/docs/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">ASCII Maze</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></div></li><ul class="pipe-nav-list pipe-nav-list-root"><li class="pipe-nav-item"><a href="../../../index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul><li class="group"><div class="g-head">Architecture</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-item"><a href="../../activationArrayPool/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">ActivationArrayPool</span></a></li><li class="pipe-nav-item"><a href="../../architect/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Architect</span></a></li><li class="pipe-nav-item"><a href="../../connection/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Connection</span></a></li><li class="pipe-nav-item"><a href="../../group/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Group</span></a></li><li class="pipe-nav-item"><a href="../../layer/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Layer</span></a></li><li class="pipe-nav-item"><a href="../index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network</span></a></li><li class="pipe-nav-item"><a href="../activate/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Activate</span></a></li><li class="pipe-nav-item"><a href="../bootstrap/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Bootstrap</span></a></li><li class="pipe-nav-item"><a href="../connect/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Connect</span></a></li><li class="pipe-nav-item"><a href="../construct/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Construct</span></a></li><li class="pipe-nav-item"><a href="../deterministic/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Deterministic</span></a></li><li class="pipe-nav-item"><a href="../evaluation-pack/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Evaluation Pack</span></a></li><li class="pipe-nav-item current"><a href="./index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Evolve</span></a></li><li class="pipe-nav-item"><a href="../gating/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Gating</span></a></li><li class="pipe-nav-item"><a href="../genetic/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Genetic</span></a></li><li class="pipe-nav-item"><a href="../gpu/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Gpu</span></a></li><li class="pipe-nav-item"><a href="../gpu/__mocks__/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Gpu / Mocks</span></a></li><li class="pipe-nav-item"><a href="../mutate/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Mutate</span></a></li><li class="pipe-nav-item"><a href="../onnx/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Onnx</span></a></li><li class="pipe-nav-item"><a href="../onnx/export/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Onnx / Export</span></a></li><li class="pipe-nav-item"><a href="../onnx/export/layers/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Export / Layers</span></a></li><li class="pipe-nav-item"><a href="../onnx/import/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Onnx / Import</span></a></li><li class="pipe-nav-item"><a href="../onnx/parity/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Onnx / Parity</span></a></li><li class="pipe-nav-item"><a href="../onnx/schema/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Onnx / Schema</span></a></li><li class="pipe-nav-item"><a href="../onnx/validate/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Onnx / Validate</span></a></li><li class="pipe-nav-item"><a href="../prune/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Prune</span></a></li><li class="pipe-nav-item"><a href="../remove/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Remove</span></a></li><li class="pipe-nav-item"><a href="../runtime/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Runtime</span></a></li><li class="pipe-nav-item"><a href="../serialize/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Serialize</span></a></li><li class="pipe-nav-item"><a href="../slab/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Slab</span></a></li><li class="pipe-nav-item"><a href="../standalone/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Standalone</span></a></li><li class="pipe-nav-item"><a href="../stats/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Stats</span></a></li><li class="pipe-nav-item"><a href="../topology/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Topology</span></a></li><li class="pipe-nav-item"><a href="../training/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Training</span></a></li><li class="pipe-nav-item"><a href="../visualization/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Visualization</span></a></li><li class="pipe-nav-item"><a href="../window/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Window</span></a></li><li class="pipe-nav-item"><a href="../worker-payload/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network / Worker Payload</span></a></li><li class="pipe-nav-item"><a href="../../node/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Node</span></a></li><li class="pipe-nav-item"><a href="../../nodePool/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">NodePool</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Methods</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../methods/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-item"><a href="../../../methods/activation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Activation</span></a></li><li class="pipe-nav-item"><a href="../../../methods/connection/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Connection</span></a></li><li class="pipe-nav-item"><a href="../../../methods/cost/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Cost</span></a></li><li class="pipe-nav-item"><a href="../../../methods/crossover/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Crossover</span></a></li><li class="pipe-nav-item"><a href="../../../methods/gating/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Gating</span></a></li><li class="pipe-nav-item"><a href="../../../methods/mutation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation</span></a></li><li class="pipe-nav-item"><a href="../../../methods/rate/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Rate</span></a></li><li class="pipe-nav-item"><a href="../../../methods/selection/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Selection</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Neat</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../neat/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-item"><a href="../../../neat/adaptive/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Adaptive</span></a></li><li class="pipe-nav-item"><a href="../../../neat/adaptive/acceptance/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Adaptive / Acceptance</span></a></li><li class="pipe-nav-item"><a href="../../../neat/adaptive/complexity/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Adaptive / Complexity</span></a></li><li class="pipe-nav-item"><a href="../../../neat/adaptive/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Adaptive / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/adaptive/lineage/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Adaptive / Lineage</span></a></li><li class="pipe-nav-item"><a href="../../../neat/adaptive/mutation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Adaptive / Mutation</span></a></li><li class="pipe-nav-item"><a href="../../../neat/cache/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Cache</span></a></li><li class="pipe-nav-item"><a href="../../../neat/cache/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Cache / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/compat/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Compat</span></a></li><li class="pipe-nav-item"><a href="../../../neat/compat/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Compat / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/diversity/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Diversity</span></a></li><li class="pipe-nav-item"><a href="../../../neat/diversity/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Diversity / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/auto-distance/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Auto Distance</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/entropy-compat/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Entropy Compat</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/entropy-sharing/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Entropy Sharing</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/fitness/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Fitness</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/novelty/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Novelty</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/objectives/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Objectives</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/shared/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Shared</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evaluate/speciation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evaluate / Speciation</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/adaptive/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Adaptive</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/objectives/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Objectives</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/offspring/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Offspring</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/population/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Population</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/runtime/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Runtime</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/speciation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Speciation</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/telemetry/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Telemetry</span></a></li><li class="pipe-nav-item"><a href="../../../neat/evolve/warnings/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Evolve / Warnings</span></a></li><li class="pipe-nav-item"><a href="../../../neat/export/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Export</span></a></li><li class="pipe-nav-item"><a href="../../../neat/genome/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Genome</span></a></li><li class="pipe-nav-item"><a href="../../../neat/genome/heredity/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Genome / Heredity</span></a></li><li class="pipe-nav-item"><a href="../../../neat/harness/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Harness</span></a></li><li class="pipe-nav-item"><a href="../../../neat/helpers/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Helpers</span></a></li><li class="pipe-nav-item"><a href="../../../neat/hybrid/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Hybrid</span></a></li><li class="pipe-nav-item"><a href="../../../neat/init/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Init</span></a></li><li class="pipe-nav-item"><a href="../../../neat/innovation-tracker/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Innovation Tracker</span></a></li><li class="pipe-nav-item"><a href="../../../neat/lineage/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Lineage</span></a></li><li class="pipe-nav-item"><a href="../../../neat/lineage/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Lineage / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/maintenance/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Maintenance</span></a></li><li class="pipe-nav-item"><a href="../../../neat/maintenance/facade/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Maintenance / Facade</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/archive/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Archive</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/category/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Category</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/crowding/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Crowding</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/dominance/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Dominance</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/fronts/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Fronts</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/metrics/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Metrics</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/objectives/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Objectives</span></a></li><li class="pipe-nav-item"><a href="../../../neat/multiobjective/shared/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Multiobjective / Shared</span></a></li><li class="pipe-nav-item"><a href="../../../neat/mutation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation</span></a></li><li class="pipe-nav-item"><a href="../../../neat/mutation/add-conn/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation / Add Conn</span></a></li><li class="pipe-nav-item"><a href="../../../neat/mutation/add-node/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation / Add Node</span></a></li><li class="pipe-nav-item"><a href="../../../neat/mutation/flow/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation / Flow</span></a></li><li class="pipe-nav-item"><a href="../../../neat/mutation/repair/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation / Repair</span></a></li><li class="pipe-nav-item"><a href="../../../neat/mutation/select/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation / Select</span></a></li><li class="pipe-nav-item"><a href="../../../neat/mutation/shared/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Mutation / Shared</span></a></li><li class="pipe-nav-item"><a href="../../../neat/nge-adult/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Adult</span></a></li><li class="pipe-nav-item"><a href="../../../neat/nge-assimilation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Assimilation</span></a></li><li class="pipe-nav-item"><a href="../../../neat/nge-collective/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Collective</span></a></li><li class="pipe-nav-item"><a href="../../../neat/nge-dna/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Dna</span></a></li><li class="pipe-nav-item"><a href="../../../neat/nge-evolution/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Evolution</span></a></li><li class="pipe-nav-item"><a href="../../../neat/nge-juvenile/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Juvenile</span></a></li><li class="pipe-nav-item"><a href="../../../neat/nge-main-agent/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge Main Agent</span></a></li><li class="pipe-nav-item"><a href="../../../neat/objectives/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Objectives</span></a></li><li class="pipe-nav-item"><a href="../../../neat/objectives/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Objectives / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/pruning/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Pruning</span></a></li><li class="pipe-nav-item"><a href="../../../neat/pruning/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Pruning / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/pruning/facade/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Pruning / Facade</span></a></li><li class="pipe-nav-item"><a href="../../../neat/rng/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Rng</span></a></li><li class="pipe-nav-item"><a href="../../../neat/rng/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Rng / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/rng/facade/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Rng / Facade</span></a></li><li class="pipe-nav-item"><a href="../../../neat/selection/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Selection</span></a></li><li class="pipe-nav-item"><a href="../../../neat/selection/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Selection / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/selection/facade/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Selection / Facade</span></a></li><li class="pipe-nav-item"><a href="../../../neat/shared/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Shared</span></a></li><li class="pipe-nav-item"><a href="../../../neat/speciation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Speciation</span></a></li><li class="pipe-nav-item"><a href="../../../neat/speciation/assignment/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Speciation / Assignment</span></a></li><li class="pipe-nav-item"><a href="../../../neat/speciation/history/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Speciation / History</span></a></li><li class="pipe-nav-item"><a href="../../../neat/speciation/shared/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Speciation / Shared</span></a></li><li class="pipe-nav-item"><a href="../../../neat/speciation/sharing/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Speciation / Sharing</span></a></li><li class="pipe-nav-item"><a href="../../../neat/speciation/threshold/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Speciation / Threshold</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Species</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/core/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Species / Core</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/core/augmentation/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Core / Augmentation</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/core/shared/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Core / Shared</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/history/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Species / History</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/history/context/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">History / Context</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/history/read/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">History / Read</span></a></li><li class="pipe-nav-item"><a href="../../../neat/species/stats/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Species / Stats</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/accessors/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Accessors</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/exports/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Exports</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Facade</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/archive/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Archive</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/buffer/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Buffer</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/lineage/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Lineage</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/novelty/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Novelty</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/objectives/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Objectives</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/operator-stats/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Operator Stats</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/runtime/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Runtime</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/facade/species/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Facade / Species</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/metrics/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Metrics</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/recorder/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Recorder</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/runtime/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Runtime</span></a></li><li class="pipe-nav-item"><a href="../../../neat/telemetry/types/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Telemetry / Types</span></a></li><li class="pipe-nav-item"><a href="../../../neat/topology-intent/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Topology Intent</span></a></li><li class="pipe-nav-item"><a href="../../../neat/validate/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Validate</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Multithreading</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../multithreading/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-item"><a href="../../../multithreading/workers/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Workers</span></a></li><li class="pipe-nav-item"><a href="../../../multithreading/workers/browser/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Workers / Browser</span></a></li><li class="pipe-nav-item"><a href="../../../multithreading/workers/node/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell"></span><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Workers / Node</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-footer"></span><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Acceleration</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../acceleration/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Browser Tests</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../browser-tests/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Env</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../env/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-item"><a href="../../../env/browser/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Browser</span></a></li><li class="pipe-nav-item"><a href="../../../env/node/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Node</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Memory</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../memory/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Performance</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../performance/nge/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Nge</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Research</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../research/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Src</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../src/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Utils</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../utils/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li><li class="group"><div class="g-head">Visualization</div><ul class="pipe-nav-list"><li class="pipe-nav-item"><a href="../../../visualization/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Overview</span></a></li><li class="pipe-nav-item"><a href="../../../visualization/network-view/index.html"><span class="nav-rail-track" aria-hidden="true"><span class="nav-rail-cell nav-rail-cell-last"></span></span><span class="nav-link-label">Network View</span></a></li><li class="pipe-nav-footer" aria-hidden="true"><span class="nav-rail-track"><span class="nav-rail-cell nav-rail-cell-last nav-rail-cell-footer"></span></span></li></ul></li></ul></aside><main class="content docs-panel docs-panel-center"><h1 id="architecture-network-evolve">architecture/network/evolve</h1><p>Network-level neuroevolution loop for improving one runnable graph in place.</p>
+<p>This chapter sits between the lightweight <code>Network</code> facade and the broader
+<code>neat/</code> subsystem. Call <code>network.evolve()</code> when the question is &quot;improve
+this graph against a supervised dataset&quot; without first wiring a separate
+experiment harness. The method treats the current network as a seed genome,
+configures a short-lived NEAT runtime around it, evaluates descendants, then
+copies the best discovered structure back into the original instance.</p>
+<p>The folder is split by the same stages the public call executes. <code>setup</code>
+validates dataset shape and resolves defaults. <code>fitness</code> turns prediction
+error into a comparable score. <code>loop</code> owns generation-to-generation stopping
+logic. <code>finalize</code> adopts the winning genome and tears down worker resources.
+Keeping those shelves separate makes the README read like an evolution run
+rather than an alphabetical pile of helpers.</p>
+<pre class="mermaid mermaid-diagram">flowchart LR
+  Seed[Seed Network] --&gt; Normalize[Normalize options and dataset]
+  Normalize --&gt; Fitness[Build fitness evaluator]
+  Fitness --&gt; Neat[Create temporary NEAT runtime]
+  Neat --&gt; Loop[Run evolve loop]
+  Loop --&gt; Adopt[Adopt best genome into original network]</pre><p>Use this boundary when you want a bounded local search over network
+structure, not a long-lived population controller. <code>error</code> answers &quot;stop
+when good enough&quot;, <code>iterations</code> answers &quot;stop after this many generations&quot;,
+and <code>growth</code> answers &quot;how much should extra structure cost while searching&quot;.</p>
+<p>For compact background reading on the wider search family behind this folder,
+see Wikipedia contributors,
+<a href="https://en.wikipedia.org/wiki/Evolutionary_algorithm">Evolutionary algorithm</a>.
+The implementation here is intentionally narrower: it keeps the public call
+site small while reusing the repo&#39;s NEAT runtime under the hood.</p>
+<p>Example: stop when the network gets below an error target or hits a
+generation cap.</p>
+<pre><code class="language-ts">const summary = await network.evolve(trainingSet, {
+  error: 0.02,
+  iterations: 500,
+  growth: 0.0005,
+});
+</code></pre>
+<p>Example: cap the search more tightly and fan evaluation across workers when
+dataset scoring dominates.</p>
+<pre><code class="language-ts">const summary = await network.evolve(trainingSet, {
+  iterations: 120,
+  threads: 2,
+  log: 20,
+});
+</code></pre>
+<h2 id="architecture-network-evolve-network-evolve-utils-ts">architecture/network/evolve/network.evolve.utils.ts</h2><h3 id="evolvenetwork">evolveNetwork</h3><pre><code class="language-ts">evolveNetwork(
+  set: TrainingSample[],
+  options: EvolveOptions,
+): Promise&lt;{ error: number; iterations: number; time: number; }&gt;
+</code></pre>
+<p>Evolves a network with a NEAT-style search loop until an error target or generation limit is reached.</p>
+<p>Overview:</p>
+<ul>
+<li>This method treats the current network as a <em>seed genome</em> and explores better variants.</li>
+<li>Candidate genomes are scored by prediction error plus a structural complexity penalty.</li>
+<li>The best discovered genome is copied back into the current instance (in-place upgrade).</li>
+</ul>
+<p>Typical usage guidance:</p>
+<ul>
+<li>Use <code>error</code> when you care about reaching a quality threshold.</li>
+<li>Use <code>iterations</code> when you need deterministic runtime bounds.</li>
+<li>Use both when you want &quot;stop when good enough, otherwise cap time&quot; behavior.</li>
+<li>Increase <code>threads</code> only when worker support exists and dataset evaluation is expensive.</li>
+</ul>
+<p>Parameters:</p>
+<ul>
+<li><code>this</code> - Bound Network instance that receives the best evolved structure.</li>
+<li><code>set</code> - Supervised samples; sample input/output dimensions must match network I/O.</li>
+<li><code>options</code> - Evolution hyperparameters and stop conditions.</li>
+</ul>
+<p>Returns: Final summary containing best error estimate, generations processed, and elapsed milliseconds.</p>
+<p>Example:</p>
+<pre><code class="language-ts">const summary = await network.evolve(trainingSet, {
+  error: 0.02,
+  iterations: 500,
+  growth: 0.0005,
+  threads: 2,
+});
+console.log(summary.error, summary.iterations, summary.time);
+</code></pre>
+<h2 id="architecture-network-evolve-network-evolve-setup-utils-ts">architecture/network/evolve/network.evolve.setup.utils.ts</h2><h3 id="applysmallpopulationheuristics">applySmallPopulationHeuristics</h3><pre><code class="language-ts">applySmallPopulationHeuristics(
+  neatInstance: NeatRuntime,
+  evolveOptions: EvolveOptions,
+): void
+</code></pre>
+<p>Apply conservative mutation-rate and mutation-amount defaults for tiny populations to reduce early stagnation risk while avoiding aggressive overrides when callers already configured explicit mutation controls.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>neatInstance</code> - Active NEAT instance.</li>
+<li><code>evolveOptions</code> - Evolve options object.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="assertevolutiondatasetcompatibility">assertEvolutionDatasetCompatibility</h3><pre><code class="language-ts">assertEvolutionDatasetCompatibility(
+  network: default,
+  dataSet: TrainingSample[],
+): void
+</code></pre>
+<p>Validate that training samples exist and that each sample shape matches the network input and output arity before any evolution work starts.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Network being evolved.</li>
+<li><code>dataSet</code> - Supervised dataset.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="configureneatoptions">configureNeatOptions</h3><pre><code class="language-ts">configureNeatOptions(
+  network: default,
+  evolveOptions: EvolveOptions,
+): void
+</code></pre>
+<p>Normalize options consumed by the NEAT constructor, including compatibility mapping between populationSize and popsize, plus default speciation behavior needed for historical evolve-call consistency.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Network instance being evolved.</li>
+<li><code>evolveOptions</code> - Evolve options object.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="createevolutionconfig">createEvolutionConfig</h3><pre><code class="language-ts">createEvolutionConfig(
+  settingsToSummarize: EvolutionSettings,
+): EvolutionConfig | undefined
+</code></pre>
+<p>Build a structured evolution-config snapshot for diagnostics, callback payloads, and log hooks whenever scheduling metadata exists, while keeping omitted schedule paths represented as an explicit undefined result.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>settingsToSummarize</code> - Scalar evolution settings.</li>
+</ul>
+<p>Returns: Optional summary config.</p>
+<h3 id="createneatinstance">createNeatInstance</h3><pre><code class="language-ts">createNeatInstance(
+  network: default,
+  fitnessFunction: EvolutionFitnessFunction,
+  evolveOptions: EvolveOptions,
+): Promise&lt;NeatRuntime&gt;
+</code></pre>
+<p>Lazy-load the NEAT runtime class and create an instance bound to the prepared fitness evaluator and normalized options so evolution setup can remain lightweight until construction is truly needed.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Network instance being evolved.</li>
+<li><code>fitnessFunction</code> - Prepared fitness evaluator.</li>
+<li><code>evolveOptions</code> - Evolve options object.</li>
+</ul>
+<p>Returns: Constructed NEAT instance.</p>
+<h3 id="getnormalizedoptions">getNormalizedOptions</h3><pre><code class="language-ts">getNormalizedOptions(
+  evolveOptions: EvolveOptions,
+): EvolveOptions
+</code></pre>
+<p>Return the normalized evolve-options object that every downstream setup helper reads so defaults, compatibility shims, and diagnostics all start from one stable and predictable structure.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>evolveOptions</code> - Incoming evolve options.</li>
+</ul>
+<p>Returns: Safe options object.</p>
+<h3 id="preparefitnessfunction">prepareFitnessFunction</h3><pre><code class="language-ts">prepareFitnessFunction(
+  dataSet: TrainingSample[],
+  resolvedSettings: EvolutionSettings,
+  evolveOptions: EvolveOptions,
+): Promise&lt;FitnessSetup&gt;
+</code></pre>
+<p>Build the effective fitness evaluator by selecting either single-thread or worker-backed execution from resolved threading settings, then return both the callable function and the resolved runtime thread count.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>dataSet</code> - Supervised dataset.</li>
+<li><code>resolvedSettings</code> - Scalar evolution settings.</li>
+<li><code>evolveOptions</code> - Evolve options object.</li>
+</ul>
+<p>Returns: Fitness function and resolved thread count.</p>
+<h3 id="resolveevolutionsettings">resolveEvolutionSettings</h3><pre><code class="language-ts">resolveEvolutionSettings(
+  evolveOptions: EvolveOptions,
+): EvolutionSettings
+</code></pre>
+<p>Resolve scalar evolution settings with explicit and stable defaults so later setup phases can run deterministically without repeating option-default logic in several different orchestration branches.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>evolveOptions</code> - Evolve options object.</li>
+</ul>
+<p>Returns: Normalized scalar settings.</p>
+<h3 id="resolvestopconditions">resolveStopConditions</h3><pre><code class="language-ts">resolveStopConditions(
+  evolveOptions: EvolveOptions,
+  initialTargetError: number,
+): EvolutionStopConditions
+</code></pre>
+<p>Resolve stopping conditions while preserving legacy iteration-and-error semantics so existing callers keep the same termination behavior, including compatibility with historical zero-iteration and disabled-error workflows.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>evolveOptions</code> - Evolve options object.</li>
+<li><code>initialTargetError</code> - Target error resolved from options.</li>
+</ul>
+<p>Returns: Final stop conditions.</p>
+<h3 id="warnifnobestgenomemayoccur">warnIfNoBestGenomeMayOccur</h3><pre><code class="language-ts">warnIfNoBestGenomeMayOccur(
+  neatInstance: NeatRuntime,
+  evolveOptions: EvolveOptions,
+): void
+</code></pre>
+<p>Emit a best-genome advisory warning for zero-iteration runs where legacy flows can complete without setting a champion, preventing silent confusion when a caller expects a populated best network.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>neatInstance</code> - Active NEAT instance.</li>
+<li><code>evolveOptions</code> - Evolve options object.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h2 id="architecture-network-evolve-network-evolve-fitness-utils-ts">architecture/network/evolve/network.evolve.fitness.utils.ts</h2><h3 id="buildmultithreadfitness">buildMultiThreadFitness</h3><pre><code class="language-ts">buildMultiThreadFitness(
+  set: TrainingSample[],
+  cost: CostFunctionOrRef,
+  amount: number,
+  growth: number,
+  threads: number,
+  options: Record&lt;string, unknown&gt;,
+): Promise&lt;FitnessSetup&gt;
+</code></pre>
+<p>Build worker-based population fitness setup that serializes the dataset once and assigns a population-scoring function.
+When worker construction fails, this helper falls back to the single-thread evaluator automatically.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>set</code> - Dataset.</li>
+<li><code>cost</code> - Cost function or reference.</li>
+<li><code>amount</code> - Repetition count.</li>
+<li><code>growth</code> - Complexity penalty scalar.</li>
+<li><code>threads</code> - Desired worker count.</li>
+<li><code>options</code> - Evolution options object.</li>
+</ul>
+<p>Returns: Population fitness setup.</p>
+<h3 id="buildpopulationworkerfitnessfunction">buildPopulationWorkerFitnessFunction</h3><pre><code class="language-ts">buildPopulationWorkerFitnessFunction(
+  workers: TestWorkerInstance[],
+  growth: number,
+): PopulationFitnessFunction
+</code></pre>
+<p>Build population-level fitness function powered by worker queue.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>workers</code> - Spawned worker instances.</li>
+<li><code>growth</code> - Complexity penalty scalar.</li>
+</ul>
+<p>Returns: Population-level fitness function.</p>
+<h3 id="buildsinglethreadfitness">buildSingleThreadFitness</h3><pre><code class="language-ts">buildSingleThreadFitness(
+  set: TrainingSample[],
+  cost: EvolveCostFunction,
+  amount: number,
+  growth: number,
+): SingleGenomeFitnessFunction
+</code></pre>
+<p>Build a single-threaded genome fitness evaluator that repeats scoring, applies complexity penalty, and normalizes by evaluation count.
+This path is the deterministic fallback when worker-based evaluation is unavailable.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>set</code> - Dataset of training samples.</li>
+<li><code>cost</code> - Cost function reference.</li>
+<li><code>amount</code> - Number of repeated evaluations.</li>
+<li><code>growth</code> - Complexity penalty scalar.</li>
+</ul>
+<p>Returns: Single-genome fitness function.</p>
+<h3 id="cachecomplexitybase">cacheComplexityBase</h3><pre><code class="language-ts">cacheComplexityBase(
+  genome: default,
+  structureCounts: GenomeStructureCounts,
+  complexityBase: number,
+): void
+</code></pre>
+<p>Store complexity base cache entry for future reuse.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>genome</code> - Candidate network used as cache key.</li>
+<li><code>structureCounts</code> - Current structural counts.</li>
+<li><code>complexityBase</code> - Computed base complexity value.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="claimnextgenome">claimNextGenome</h3><pre><code class="language-ts">claimNextGenome(
+  context: PopulationWorkerEvaluationContext,
+): default | undefined
+</code></pre>
+<p>Claims the next genome index from shared queue state.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Population evaluation context.</li>
+</ul>
+<p>Returns: Next genome, or undefined when queue is exhausted.</p>
+<h3 id="computecomplexitybase">computeComplexityBase</h3><pre><code class="language-ts">computeComplexityBase(
+  genome: default,
+  structureCounts: GenomeStructureCounts,
+): number
+</code></pre>
+<p>Compute non-scaled complexity base from structural counts.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>genome</code> - Candidate network whose complexity to compute.</li>
+<li><code>structureCounts</code> - Current structural counts.</li>
+</ul>
+<p>Returns: Base complexity value before growth scaling.</p>
+<h3 id="computecomplexitypenalty">computeComplexityPenalty</h3><pre><code class="language-ts">computeComplexityPenalty(
+  genome: default,
+  growth: number,
+): number
+</code></pre>
+<p>Compute structural complexity penalty scaled by growth so larger genomes receive deterministic parsimony pressure during fitness scoring.
+Cached structure counts avoid repeated recomputation for unchanged genome objects.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>genome</code> - Candidate network whose complexity to measure.</li>
+<li><code>growth</code> - Positive scalar controlling parsimony pressure.</li>
+</ul>
+<p>Returns: Complexity penalty.</p>
+<h3 id="createpopulationworkerevaluationcontext">createPopulationWorkerEvaluationContext</h3><pre><code class="language-ts">createPopulationWorkerEvaluationContext(
+  sourceWorkers: TestWorkerInstance[],
+  sourcePopulation: default[],
+  sourceGrowth: number,
+  sourceResolve: () =&gt; void,
+): PopulationWorkerEvaluationContext
+</code></pre>
+<p>Creates the shared evaluation context for one population run.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>sourceWorkers</code> - Worker pool.</li>
+<li><code>sourcePopulation</code> - Population to evaluate.</li>
+<li><code>sourceGrowth</code> - Complexity penalty scalar.</li>
+<li><code>sourceResolve</code> - Promise resolver.</li>
+</ul>
+<p>Returns: Population evaluation context.</p>
+<h3 id="createsinglethreadfallbackfitness">createSingleThreadFallbackFitness</h3><pre><code class="language-ts">createSingleThreadFallbackFitness(
+  set: TrainingSample[],
+  cost: CostFunctionOrRef,
+  amount: number,
+  growth: number,
+): FitnessSetup
+</code></pre>
+<p>Build single-thread fallback fitness setup.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>set</code> - Dataset.</li>
+<li><code>cost</code> - Cost function.</li>
+<li><code>amount</code> - Repetition count.</li>
+<li><code>growth</code> - Complexity penalty scalar.</li>
+</ul>
+<p>Returns: Single-thread fitness setup.</p>
+<h3 id="createworkertraversalcontext">createWorkerTraversalContext</h3><pre><code class="language-ts">createWorkerTraversalContext(
+  context: PopulationWorkerEvaluationContext,
+  worker: TestWorkerInstance,
+): WorkerTraversalContext
+</code></pre>
+<p>Creates traversal context for one worker.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Population evaluation context.</li>
+<li><code>worker</code> - Worker instance.</li>
+</ul>
+<p>Returns: Worker traversal context.</p>
+<h3 id="evaluategenomeamounttimes">evaluateGenomeAmountTimes</h3><pre><code class="language-ts">evaluateGenomeAmountTimes(
+  genome: default,
+  set: TrainingSample[],
+  cost: EvolveCostFunction,
+  amount: number,
+): number
+</code></pre>
+<p>Evaluate one genome repeatedly and accumulate negative error.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>genome</code> - Genome under evaluation.</li>
+<li><code>set</code> - Dataset used for evaluation.</li>
+<li><code>cost</code> - Cost function reference.</li>
+<li><code>amount</code> - Number of repeated evaluations.</li>
+</ul>
+<p>Returns: Accumulated negative error or -Infinity on failure.</p>
+<h3 id="evaluategenomeerrorsafely">evaluateGenomeErrorSafely</h3><pre><code class="language-ts">evaluateGenomeErrorSafely(
+  genome: default,
+  set: TrainingSample[],
+  cost: EvolveCostFunction,
+): number | null
+</code></pre>
+<p>Evaluate one genome and return error, with warning-protected failure handling.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>genome</code> - Genome under evaluation.</li>
+<li><code>set</code> - Dataset used for evaluation.</li>
+<li><code>cost</code> - Cost function reference.</li>
+</ul>
+<p>Returns: Error value, or null when evaluation fails.</p>
+<h3 id="evaluategenomewithworker">evaluateGenomeWithWorker</h3><pre><code class="language-ts">evaluateGenomeWithWorker(
+  worker: TestWorkerInstance,
+  genome: default,
+  growth: number,
+): Promise&lt;void&gt;
+</code></pre>
+<p>Evaluate one genome with a worker and assign a penalized score that includes structural complexity pressure.
+Non-numeric worker results are ignored so calling loops can continue safely.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>worker</code> - Worker instance.</li>
+<li><code>genome</code> - Genome under evaluation.</li>
+<li><code>growth</code> - Complexity penalty scalar.</li>
+</ul>
+<p>Returns: Promise resolving when score assignment completes.</p>
+<h3 id="finalizeworker">finalizeWorker</h3><pre><code class="language-ts">finalizeWorker(
+  context: PopulationWorkerEvaluationContext,
+): void
+</code></pre>
+<p>Marks one worker as completed and resolves when all workers finish.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Population evaluation context.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="getcachedcomplexitybase">getCachedComplexityBase</h3><pre><code class="language-ts">getCachedComplexityBase(
+  genome: default,
+  structureCounts: GenomeStructureCounts,
+): number | null
+</code></pre>
+<p>Retrieve cached complexity base if cached structure counts still match.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>genome</code> - Candidate network whose cached complexity is queried.</li>
+<li><code>structureCounts</code> - Current structural counts.</li>
+</ul>
+<p>Returns: Cached complexity base or null when cache miss occurs.</p>
+<h3 id="getgenomestructurecounts">getGenomeStructureCounts</h3><pre><code class="language-ts">getGenomeStructureCounts(
+  genome: default,
+): GenomeStructureCounts
+</code></pre>
+<p>Get structural counts used by complexity heuristic.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>genome</code> - Candidate network whose structure is being measured.</li>
+</ul>
+<p>Returns: Structural counts used for complexity computation.</p>
+<h3 id="hasnoworkers">hasNoWorkers</h3><pre><code class="language-ts">hasNoWorkers(
+  context: PopulationWorkerEvaluationContext,
+): boolean
+</code></pre>
+<p>Checks whether there are workers available to process genomes.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Population evaluation context.</li>
+</ul>
+<p>Returns: True when worker pool is empty.</p>
+<h3 id="installworkerterminationhook">installWorkerTerminationHook</h3><pre><code class="language-ts">installWorkerTerminationHook(
+  options: Record&lt;string, unknown&gt;,
+  workers: TestWorkerInstance[],
+): void
+</code></pre>
+<p>Register a worker termination hook onto the evolve options object so spawned workers can be cleaned up deterministically.
+Termination errors are swallowed to avoid masking primary evolution outcomes.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>options</code> - Evolve options object.</li>
+<li><code>workers</code> - Spawned worker instances.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="resolvecostname">resolveCostName</h3><pre><code class="language-ts">resolveCostName(
+  cost: CostFunctionOrRef,
+): string
+</code></pre>
+<p>Resolve serializable cost name for worker payload.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>cost</code> - Cost function or cost reference.</li>
+</ul>
+<p>Returns: Cost name string.</p>
+<h3 id="resolveevaluation">resolveEvaluation</h3><pre><code class="language-ts">resolveEvaluation(
+  context: PopulationWorkerEvaluationContext,
+): void
+</code></pre>
+<p>Resolves the population evaluation promise.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Population evaluation context.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="resolvetestworkerconstructor">resolveTestWorkerConstructor</h3><pre><code class="language-ts">resolveTestWorkerConstructor(): Promise&lt;TestWorkerConstructor | null&gt;
+</code></pre>
+<p>Resolve worker constructor for current runtime environment.</p>
+<p>Returns: Worker constructor or null when unavailable.</p>
+<h3 id="runworkertraversalstep">runWorkerTraversalStep</h3><pre><code class="language-ts">runWorkerTraversalStep(
+  traversalContext: WorkerTraversalContext,
+): void
+</code></pre>
+<p>Runs one asynchronous traversal step for a worker.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>traversalContext</code> - Worker traversal context.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="spawntestworkers">spawnTestWorkers</h3><pre><code class="language-ts">spawnTestWorkers(
+  workerConstructor: TestWorkerConstructor,
+  serializedSet: number[],
+  cost: CostFunctionOrRef,
+  threads: number,
+): TestWorkerInstance[]
+</code></pre>
+<p>Spawn worker instances up to requested thread count.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>workerConstructor</code> - Worker constructor resolved for runtime.</li>
+<li><code>serializedSet</code> - Serialized dataset shared with workers.</li>
+<li><code>cost</code> - Cost function or cost reference.</li>
+<li><code>threads</code> - Requested worker count.</li>
+</ul>
+<p>Returns: Spawned worker instances.</p>
+<h3 id="startworkertraversal">startWorkerTraversal</h3><pre><code class="language-ts">startWorkerTraversal(
+  context: PopulationWorkerEvaluationContext,
+): void
+</code></pre>
+<p>Starts traversal loops for all workers.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>context</code> - Population evaluation context.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="warngenomeevaluationfailure">warnGenomeEvaluationFailure</h3><pre><code class="language-ts">warnGenomeEvaluationFailure(
+  error: unknown,
+): void
+</code></pre>
+<p>Emit warning when genome evaluation fails.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>error</code> - Unknown evaluation error.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h2 id="architecture-network-evolve-network-evolve-loop-utils-ts">architecture/network/evolve/network.evolve.loop.utils.ts</h2><h3 id="applyevolutionstep">applyEvolutionStep</h3><pre><code class="language-ts">applyEvolutionStep(
+  state: EvolutionLoopState,
+  evolvedGenome: default,
+  growth: number,
+): void
+</code></pre>
+<p>Applies one evolve() result to loop state.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>state</code> - Mutable loop state.</li>
+<li><code>evolvedGenome</code> - Genome returned by NEAT evolve step.</li>
+<li><code>growth</code> - Complexity growth scalar.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="createinitialloopstate">createInitialLoopState</h3><pre><code class="language-ts">createInitialLoopState(): EvolutionLoopState
+</code></pre>
+<p>Creates initial loop state snapshot.</p>
+<p>Returns: Initial loop state.</p>
+<h3 id="deriveerrorfromfitness">deriveErrorFromFitness</h3><pre><code class="language-ts">deriveErrorFromFitness(
+  fitness: number,
+  genome: default,
+  growth: number,
+): number
+</code></pre>
+<p>Derive error from fitness by inverting score composition.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>fitness</code> - Fitness value from fittest genome.</li>
+<li><code>genome</code> - Fittest genome.</li>
+<li><code>growth</code> - Complexity growth scalar.</li>
+</ul>
+<p>Returns: Derived error value.</p>
+<h3 id="runevolutionloop">runEvolutionLoop</h3><pre><code class="language-ts">runEvolutionLoop(
+  neatInstance: NeatRuntime,
+  resolvedSettings: EvolutionSettings,
+  targetError: number,
+  iterations: number | undefined,
+): Promise&lt;{ error: number; bestGenome: default | undefined; }&gt;
+</code></pre>
+<p>Run the core evolution loop until error target or iteration limit is reached.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>neatInstance</code> - Active NEAT instance.</li>
+<li><code>resolvedSettings</code> - Scalar evolution settings.</li>
+<li><code>targetError</code> - Effective target error (-1 means disabled).</li>
+<li><code>iterations</code> - Optional max iteration count.</li>
+</ul>
+<p>Returns: Loop result snapshot.</p>
+<h3 id="runschedulecallbacksafely">runScheduleCallbackSafely</h3><pre><code class="language-ts">runScheduleCallbackSafely(
+  scheduleConfig: { iterations: number; function: (stats: { fitness: number; error: number; iteration: number; }) =&gt; void; } | undefined,
+  generation: number,
+  bestFitness: number,
+  error: number,
+): void
+</code></pre>
+<p>Run schedule callback if schedule trigger is reached.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>scheduleConfig</code> - Optional schedule configuration.</li>
+<li><code>generation</code> - Current generation.</li>
+<li><code>bestFitness</code> - Current best fitness.</li>
+<li><code>error</code> - Current error.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h3 id="shouldabortforinvaliderrors">shouldAbortForInvalidErrors</h3><pre><code class="language-ts">shouldAbortForInvalidErrors(
+  state: EvolutionLoopState,
+): boolean
+</code></pre>
+<p>Determines whether loop must abort due to invalid-error streak.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>state</code> - Mutable loop state.</li>
+</ul>
+<p>Returns: True when invalid-error threshold is reached.</p>
+<h3 id="shouldcontinueevolution">shouldContinueEvolution</h3><pre><code class="language-ts">shouldContinueEvolution(
+  currentError: number,
+  targetError: number,
+  iterationsSpecified: boolean,
+  currentGeneration: number,
+  maxIterations: number | undefined,
+): boolean
+</code></pre>
+<p>Determine whether evolution loop should continue.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>currentError</code> - Current derived error value.</li>
+<li><code>targetError</code> - Effective target error (-1 means disabled).</li>
+<li><code>iterationsSpecified</code> - Whether iterations limit is active.</li>
+<li><code>currentGeneration</code> - Current NEAT generation index.</li>
+<li><code>maxIterations</code> - Maximum iteration limit.</li>
+</ul>
+<p>Returns: True when loop should continue.</p>
+<h3 id="updatebestgenomeifimproved">updateBestGenomeIfImproved</h3><pre><code class="language-ts">updateBestGenomeIfImproved(
+  currentBestFitness: number,
+  currentBestGenome: default | undefined,
+  candidateFitness: number,
+  candidateGenome: default,
+): { bestFitness: number; bestGenome: default | undefined; }
+</code></pre>
+<p>Update best fitness/genome snapshot when improved.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>currentBestFitness</code> - Current best fitness.</li>
+<li><code>currentBestGenome</code> - Current best genome.</li>
+<li><code>candidateFitness</code> - Candidate fitness.</li>
+<li><code>candidateGenome</code> - Candidate genome.</li>
+</ul>
+<p>Returns: Updated best snapshot.</p>
+<h3 id="updateinvaliderrorcounter">updateInvalidErrorCounter</h3><pre><code class="language-ts">updateInvalidErrorCounter(
+  currentCount: number,
+  currentError: number,
+): number
+</code></pre>
+<p>Update invalid-error counter.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>currentCount</code> - Current consecutive invalid-error count.</li>
+<li><code>currentError</code> - Current derived error value.</li>
+</ul>
+<p>Returns: Updated guard state.</p>
+<h2 id="architecture-network-evolve-network-evolve-finalize-utils-ts">architecture/network/evolve/network.evolve.finalize.utils.ts</h2><h3 id="adoptbestgenomeorwarn">adoptBestGenomeOrWarn</h3><pre><code class="language-ts">adoptBestGenomeOrWarn(
+  network: default,
+  neatInstance: NeatRuntime,
+  bestGenome: default | undefined,
+  clearState: boolean,
+): void
+</code></pre>
+<p>Finalization helper that adopts the best evolved genome into the caller&#39;s
+network when one exists.</p>
+<p>If no best genome is available, the optional NEAT warning hook is invoked so
+callers can surface diagnostic context without throwing from finalize flow.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>network</code> - Network instance to update with the best genome.</li>
+<li><code>neatInstance</code> - NEAT runtime with optional warning hook.</li>
+<li><code>bestGenome</code> - Best evolved genome or undefined when none exists.</li>
+<li><code>clearState</code> - Whether to clear network state after adoption.</li>
+</ul>
+<h3 id="buildevolutionsummary">buildEvolutionSummary</h3><pre><code class="language-ts">buildEvolutionSummary(
+  error: number,
+  iterations: number,
+  loopStartTime: number,
+): EvolutionSummary
+</code></pre>
+<p>Build the final evolution summary payload returned by the evolve loop.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>error</code> - Final loop error.</li>
+<li><code>iterations</code> - Final generation count.</li>
+<li><code>loopStartTime</code> - Loop start timestamp.</li>
+</ul>
+<p>Returns: Evolution summary object.</p>
+<h3 id="terminateworkerssafely">terminateWorkersSafely</h3><pre><code class="language-ts">terminateWorkersSafely(
+  evolveOptions: EvolveOptions,
+): void
+</code></pre>
+<p>Best-effort shutdown for worker terminators attached to evolve options.</p>
+<p>This keeps finalize paths resilient when background evaluators were used and
+avoids leaking worker resources if teardown throws.</p>
+<p>Parameters:</p>
+<ul>
+<li><code>evolveOptions</code> - Evolve options object.</li>
+</ul>
+<p>Returns: Nothing.</p>
+<h2 id="architecture-network-evolve-network-evolve-utils-types-ts">architecture/network/evolve/network.evolve.utils.types.ts</h2><p>Error message emitted when the supplied dataset dimensions do not match the network input or output size.</p>
+<h3 id="dataset-compatibility-error-message">DATASET_COMPATIBILITY_ERROR_MESSAGE</h3><p>Error message emitted when the supplied dataset dimensions do not match the network input or output size.</p>
+<h3 id="default-evaluation-amount">DEFAULT_EVALUATION_AMOUNT</h3><p>Default number of repeated fitness evaluations used when no explicit evaluation amount is specified per genome.</p>
+<h3 id="default-growth">DEFAULT_GROWTH</h3><p>Default per-connection complexity growth penalty applied when computing fitness-adjusted complexity scores in the evolve loop.</p>
+<h3 id="default-log-interval">DEFAULT_LOG_INTERVAL</h3><p>Default generation logging frequency; zero disables per-generation log output during the evolve loop.</p>
+<h3 id="default-target-error">DEFAULT_TARGET_ERROR</h3><p>Default target error threshold used when no explicit error stopping condition is provided to the evolve call.</p>
+<h3 id="default-thread-count">DEFAULT_THREAD_COUNT</h3><p>Default worker thread count used when no explicit thread override is provided to single-thread evolve calls.</p>
+<h3 id="disabled-target-error">DISABLED_TARGET_ERROR</h3><p>Sentinel error value indicating that error-based stopping is explicitly disabled and only iteration limits apply.</p>
+<h3 id="evolutionsummary">EvolutionSummary</h3><p>Shared summary payload returned by the evolve loop containing the best error, generation count, and wall-clock time.</p>
+<h3 id="genomestructurecounts">GenomeStructureCounts</h3><p>Structural node, connection, and gate counts used by complexity growth-penalty heuristics during fitness adjustment.</p>
+<h3 id="max-consecutive-invalid-errors">MAX_CONSECUTIVE_INVALID_ERRORS</h3><p>Maximum number of consecutive NaN or Infinity fitness values tolerated before the evolve loop aborts early.</p>
+<h3 id="small-population-mutation-amount">SMALL_POPULATION_MUTATION_AMOUNT</h3><p>Mutation amount fallback applied when the active population falls below the small-population threshold during evolution.</p>
+<h3 id="small-population-mutation-rate">SMALL_POPULATION_MUTATION_RATE</h3><p>Mutation rate fallback applied when the active population falls below the small-population threshold during evolution.</p>
+<h3 id="small-population-threshold">SMALL_POPULATION_THRESHOLD</h3><p>Population size threshold below which the evolve loop applies more aggressive fallback mutation rates and amounts.</p>
+<h3 id="stopping-condition-required-error-message">STOPPING_CONDITION_REQUIRED_ERROR_MESSAGE</h3><p>Error message emitted when an evolution call is started with neither an iteration limit nor an error target specified.</p>
+<h3 id="zero-iterations">ZERO_ITERATIONS</h3><p>Explicit zero used as an initial iteration counter and for stopping-condition comparisons during evolve loop entry.</p>
+<h2 id="architecture-network-evolve-network-evolve-errors-ts">architecture/network/evolve/network.evolve.errors.ts</h2><p>Raised when the evolve dataset is missing or does not match network IO.</p>
+<p>Example:</p>
+<pre><code class="language-ts">throw new NetworkEvolveDatasetCompatibilityError(
+  &#39;Dataset should have at least one sample and matching input/output sizes.&#39;,
+);
+</code></pre>
+<h3 id="networkevolvedatasetcompatibilityerror">NetworkEvolveDatasetCompatibilityError</h3><p>Contract for NetworkEvolveDatasetCompatibilityError.</p>
+<h3 id="networkevolvestoppingconditionrequirederror">NetworkEvolveStoppingConditionRequiredError</h3><p>Contract for NetworkEvolveStoppingConditionRequiredError.</p>
+<footer class="site-footer">Generated from source JSDoc • <a href="https://github.com/reicek/NeatapticTS">GitHub</a></footer></main><aside class="toc docs-panel docs-panel-right"><div class="page-toc"><h2>Files</h2><div class="toc-file"><a href="#architecture-network-evolve-network-evolve-utils-ts">architecture/network/evolve/network.evolve.utils.ts</a><ul><li><a href="#evolvenetwork">evolveNetwork</a></li></ul></div><div class="toc-file"><a href="#architecture-network-evolve-network-evolve-setup-utils-ts">architecture/network/evolve/network.evolve.setup.utils.ts</a><ul><li><a href="#applysmallpopulationheuristics">applySmallPopulationHeuristics</a></li><li><a href="#assertevolutiondatasetcompatibility">assertEvolutionDatasetCompatibility</a></li><li><a href="#configureneatoptions">configureNeatOptions</a></li><li><a href="#createevolutionconfig">createEvolutionConfig</a></li><li><a href="#createneatinstance">createNeatInstance</a></li><li><a href="#getnormalizedoptions">getNormalizedOptions</a></li><li><a href="#preparefitnessfunction">prepareFitnessFunction</a></li><li><a href="#resolveevolutionsettings">resolveEvolutionSettings</a></li><li><a href="#resolvestopconditions">resolveStopConditions</a></li><li><a href="#warnifnobestgenomemayoccur">warnIfNoBestGenomeMayOccur</a></li></ul></div><div class="toc-file"><a href="#architecture-network-evolve-network-evolve-fitness-utils-ts">architecture/network/evolve/network.evolve.fitness.utils.ts</a><ul><li><a href="#buildmultithreadfitness">buildMultiThreadFitness</a></li><li><a href="#buildpopulationworkerfitnessfunction">buildPopulationWorkerFitnessFunction</a></li><li><a href="#buildsinglethreadfitness">buildSingleThreadFitness</a></li><li><a href="#cachecomplexitybase">cacheComplexityBase</a></li><li><a href="#claimnextgenome">claimNextGenome</a></li><li><a href="#computecomplexitybase">computeComplexityBase</a></li><li><a href="#computecomplexitypenalty">computeComplexityPenalty</a></li><li><a href="#createpopulationworkerevaluationcontext">createPopulationWorkerEvaluationContext</a></li><li><a href="#createsinglethreadfallbackfitness">createSingleThreadFallbackFitness</a></li><li><a href="#createworkertraversalcontext">createWorkerTraversalContext</a></li><li><a href="#evaluategenomeamounttimes">evaluateGenomeAmountTimes</a></li><li><a href="#evaluategenomeerrorsafely">evaluateGenomeErrorSafely</a></li><li><a href="#evaluategenomewithworker">evaluateGenomeWithWorker</a></li><li><a href="#finalizeworker">finalizeWorker</a></li><li><a href="#getcachedcomplexitybase">getCachedComplexityBase</a></li><li><a href="#getgenomestructurecounts">getGenomeStructureCounts</a></li><li><a href="#hasnoworkers">hasNoWorkers</a></li><li><a href="#installworkerterminationhook">installWorkerTerminationHook</a></li><li><a href="#resolvecostname">resolveCostName</a></li><li><a href="#resolveevaluation">resolveEvaluation</a></li><li><a href="#resolvetestworkerconstructor">resolveTestWorkerConstructor</a></li><li><a href="#runworkertraversalstep">runWorkerTraversalStep</a></li><li><a href="#spawntestworkers">spawnTestWorkers</a></li><li><a href="#startworkertraversal">startWorkerTraversal</a></li><li><a href="#warngenomeevaluationfailure">warnGenomeEvaluationFailure</a></li></ul></div><div class="toc-file"><a href="#architecture-network-evolve-network-evolve-loop-utils-ts">architecture/network/evolve/network.evolve.loop.utils.ts</a><ul><li><a href="#applyevolutionstep">applyEvolutionStep</a></li><li><a href="#createinitialloopstate">createInitialLoopState</a></li><li><a href="#deriveerrorfromfitness">deriveErrorFromFitness</a></li><li><a href="#runevolutionloop">runEvolutionLoop</a></li><li><a href="#runschedulecallbacksafely">runScheduleCallbackSafely</a></li><li><a href="#shouldabortforinvaliderrors">shouldAbortForInvalidErrors</a></li><li><a href="#shouldcontinueevolution">shouldContinueEvolution</a></li><li><a href="#updatebestgenomeifimproved">updateBestGenomeIfImproved</a></li><li><a href="#updateinvaliderrorcounter">updateInvalidErrorCounter</a></li></ul></div><div class="toc-file"><a href="#architecture-network-evolve-network-evolve-finalize-utils-ts">architecture/network/evolve/network.evolve.finalize.utils.ts</a><ul><li><a href="#adoptbestgenomeorwarn">adoptBestGenomeOrWarn</a></li><li><a href="#buildevolutionsummary">buildEvolutionSummary</a></li><li><a href="#terminateworkerssafely">terminateWorkersSafely</a></li></ul></div><div class="toc-file"><a href="#architecture-network-evolve-network-evolve-utils-types-ts">architecture/network/evolve/network.evolve.utils.types.ts</a><ul><li><a href="#dataset-compatibility-error-message">DATASET_COMPATIBILITY_ERROR_MESSAGE</a></li><li><a href="#default-evaluation-amount">DEFAULT_EVALUATION_AMOUNT</a></li><li><a href="#default-growth">DEFAULT_GROWTH</a></li><li><a href="#default-log-interval">DEFAULT_LOG_INTERVAL</a></li><li><a href="#default-target-error">DEFAULT_TARGET_ERROR</a></li><li><a href="#default-thread-count">DEFAULT_THREAD_COUNT</a></li><li><a href="#disabled-target-error">DISABLED_TARGET_ERROR</a></li><li><a href="#evolutionsummary">EvolutionSummary</a></li><li><a href="#genomestructurecounts">GenomeStructureCounts</a></li><li><a href="#max-consecutive-invalid-errors">MAX_CONSECUTIVE_INVALID_ERRORS</a></li><li><a href="#small-population-mutation-amount">SMALL_POPULATION_MUTATION_AMOUNT</a></li><li><a href="#small-population-mutation-rate">SMALL_POPULATION_MUTATION_RATE</a></li><li><a href="#small-population-threshold">SMALL_POPULATION_THRESHOLD</a></li><li><a href="#stopping-condition-required-error-message">STOPPING_CONDITION_REQUIRED_ERROR_MESSAGE</a></li><li><a href="#zero-iterations">ZERO_ITERATIONS</a></li></ul></div><div class="toc-file"><a href="#architecture-network-evolve-network-evolve-errors-ts">architecture/network/evolve/network.evolve.errors.ts</a><ul><li><a href="#networkevolvedatasetcompatibilityerror">NetworkEvolveDatasetCompatibilityError</a></li><li><a href="#networkevolvestoppingconditionrequirederror">NetworkEvolveStoppingConditionRequiredError</a></li></ul></div></div></aside></div><script>
+const docsPanels = Array.from(document.querySelectorAll('.docs-panel'));
+
+function setActiveDocsPanel(nextPanel) {
+  docsPanels.forEach((panel) => {
+    panel.classList.toggle('is-active', panel === nextPanel);
+  });
+}
+
+document.addEventListener('click', (event) => {
+  const target = event.target;
+  if (!(target instanceof Element)) {
+    setActiveDocsPanel(null);
+    return;
+  }
+
+  const activePanel = target.closest('.docs-panel');
+  setActiveDocsPanel(activePanel instanceof HTMLElement ? activePanel : null);
+});
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') {
+    setActiveDocsPanel(null);
+  }
+});
+</script><script type="module">
+import mermaid from "../../../assets/vendor/mermaid.esm.min.mjs";
+
+mermaid.initialize({
+  startOnLoad: false,
+  securityLevel: 'loose',
+  theme: 'base',
+  themeVariables: {
+    darkMode: true,
+    background: '#121a24',
+    primaryColor: '#102131',
+    primaryTextColor: '#d7e4f3',
+    primaryBorderColor: '#5ec8ff',
+    secondaryColor: '#0f1722',
+    secondaryTextColor: '#d7e4f3',
+    secondaryBorderColor: '#5ec8ff',
+    tertiaryColor: '#16283a',
+    tertiaryTextColor: '#d7e4f3',
+    tertiaryBorderColor: '#ffbf69',
+    mainBkg: '#0f1722',
+    nodeBorder: '#5ec8ff',
+    clusterBkg: '#102131',
+    clusterBorder: '#5ec8ff',
+    lineColor: '#5ec8ff',
+    edgeLabelBackground: '#0f1722',
+    textColor: '#d7e4f3',
+    fontFamily: 'Open Sans, sans-serif'
+  }
+});
+
+try {
+  await mermaid.run({ querySelector: '.mermaid-diagram' });
+} catch (error) {
+  console.error('[docs] Mermaid render failed.', error);
+}
+</script></body></html>

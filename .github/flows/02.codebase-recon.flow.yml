@@ -31,7 +31,6 @@ skills:
 specialists:
   - 'Boundary Mapper'
   - 'implementation-pattern-scout'
-  - 'research-codebase-coordinator'
 
 timeout-minutes: 20
 

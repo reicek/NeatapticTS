@@ -24,6 +24,10 @@ import { GroupOneToOneSizeMismatchError } from './group.errors';
  * Returns ALL_TO_ALL for distinct source/target groups and ONE_TO_ONE when a
  * group is wired to itself, emitting a console warning for each case when
  * warnings are enabled.
+ *
+ * @param source The source group whose connection method is being resolved.
+ * @param target The target group to connect to.
+ * @returns The resolved group-connection method (ALL_TO_ALL or ONE_TO_ONE).
  */
 export function resolveDefaultGroupConnectionMethod(
   source: Group,
@@ -48,6 +52,12 @@ export function resolveDefaultGroupConnectionMethod(
  *
  * Skips self-pairs when ALL_TO_ELSE is requested. Registers every created
  * connection on both groups' bookkeeping lists.
+ *
+ * @param source The source group to connect from.
+ * @param target The target group to connect to.
+ * @param method The connection method (ALL_TO_ALL or ALL_TO_ELSE).
+ * @param weight Optional fixed weight to apply to each new connection.
+ * @returns The list of created connections.
  */
 export function connectAllToAll(
   source: Group,
@@ -78,6 +88,12 @@ export function connectAllToAll(
  *
  * Throws when the groups differ in size. Registers self-connections on
  * the self shelf when source and target are the same group object.
+ *
+ * @param source The source group to connect from.
+ * @param target The target group to connect to.
+ * @param weight Optional fixed weight to apply to each new connection.
+ * @returns The list of created connections.
+ * @throws {GroupOneToOneSizeMismatchError} When source and target groups differ in size.
  */
 export function connectOneToOne(
   source: Group,
@@ -108,6 +124,12 @@ export function connectOneToOne(
  *
  * Resolves a default method when none is provided and delegates to ALL_TO_ALL,
  * ALL_TO_ELSE, or ONE_TO_ONE helpers.
+ *
+ * @param source The source group to connect from.
+ * @param target The target group to connect to.
+ * @param method Optional connection method override.
+ * @param weight Optional fixed weight to apply to each new connection.
+ * @returns The list of created connections.
  */
 export function connectGroupToGroup(
   source: Group,
@@ -133,6 +155,11 @@ export function connectGroupToGroup(
  * Connect every node in source group to a single target node.
  *
  * Registers each created connection on the source group's outbound list.
+ *
+ * @param source The source group whose nodes will each connect to the target.
+ * @param target The single target node to connect every source node to.
+ * @param weight Optional fixed weight to apply to each new connection.
+ * @returns The list of created connections.
  */
 export function connectGroupToNode(
   source: Group,
@@ -150,6 +177,12 @@ export function connectGroupToNode(
 
 /**
  * Connect source group to target layer, delegating to the layer's input method.
+ *
+ * @param source The source group to connect from.
+ * @param target The target layer to connect to.
+ * @param method Optional connection method override.
+ * @param weight Optional fixed weight to apply to each new connection.
+ * @returns The list of created connections.
  */
 export function connectGroupToLayer(
   source: Group,
@@ -166,6 +199,9 @@ export function connectGroupToLayer(
  * Collect unique source nodes referenced by a set of connections.
  *
  * Preserves first-seen order so gating index assignment is deterministic.
+ *
+ * @param connections The connections to extract unique source nodes from.
+ * @returns The list of unique source nodes in first-seen order.
  */
 export function collectUniqueSourceNodes(connections: Connection[]): Node[] {
   const seen: Node[] = [];
@@ -179,6 +215,9 @@ export function collectUniqueSourceNodes(connections: Connection[]): Node[] {
 
 /**
  * Apply INPUT gating: assign each connection to the group node at connection-index modulo group size.
+ *
+ * @param group The group whose nodes act as gaters.
+ * @param gatedConnections The connections to gate.
  */
 export function gateByInput(
   group: Group,
@@ -192,6 +231,10 @@ export function gateByInput(
 
 /**
  * Apply OUTPUT gating: for each source node, gate its matching outbound connections.
+ *
+ * @param group The group whose nodes act as gaters.
+ * @param gatedConnections The connections to gate.
+ * @param sourceNodes The unique source nodes whose outbound connections are gated.
  */
 export function gateByOutput(
   group: Group,
@@ -212,6 +255,10 @@ export function gateByOutput(
 
 /**
  * Apply SELF gating: for each source node, gate its self-connection when present in the set.
+ *
+ * @param group The group whose nodes act as gaters.
+ * @param gatedConnections The connections to gate.
+ * @param sourceNodes The unique source nodes whose self-connections are gated.
  */
 export function gateBySelf(
   group: Group,
@@ -237,6 +284,10 @@ export function gateBySelf(
  *
  * Walks the list in reverse to avoid index-shift errors during splice. Stops
  * after the first removal because each source/target pair appears at most once.
+ *
+ * @param connectionList The outbound connection list to search and mutate.
+ * @param from The source node of the connection to remove.
+ * @param to The target node of the connection to remove.
  */
 export function removeOutboundConnection(
   connectionList: Connection[],
@@ -256,6 +307,10 @@ export function removeOutboundConnection(
  * Remove the first matching inbound connection from a connection list.
  *
  * Mirrors `removeOutboundConnection` for the receiving side of an edge.
+ *
+ * @param connectionList The inbound connection list to search and mutate.
+ * @param from The source node of the connection to remove.
+ * @param to The target node of the connection to remove.
  */
 export function removeInboundConnection(
   connectionList: Connection[],
@@ -276,6 +331,10 @@ export function removeInboundConnection(
  *
  * Also removes the disconnected connections from both groups' bookkeeping lists.
  * When twosided is true, the reverse connections are removed as well.
+ *
+ * @param source The source group whose nodes are disconnected.
+ * @param target The target group whose nodes are disconnected from.
+ * @param twosided Whether to remove reciprocal connections as well.
  */
 export function disconnectGroupFromGroup(
   source: Group,
@@ -306,6 +365,10 @@ export function disconnectGroupFromGroup(
  *
  * Removes the disconnected connections from the source group's outbound list.
  * When twosided is true, reverse connections are removed from the inbound list.
+ *
+ * @param source The source group whose nodes are disconnected.
+ * @param target The single target node to disconnect from.
+ * @param twosided Whether to remove reciprocal connections as well.
  */
 export function disconnectGroupFromNode(
   source: Group,

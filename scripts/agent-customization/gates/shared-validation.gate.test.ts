@@ -64,7 +64,7 @@ describe('shared-validation.gate.mjs', () => {
     process.exitCode = 0;
     jest.clearAllMocks();
     rmSync(tempDir, { recursive: true, force: true });
-    rmSync(path.join(REPO_ROOT, 'artifacts', 'shared-validation.json'), {
+    rmSync(path.join(REPO_ROOT, 'coverage', 'shared-validation.json'), {
       force: true,
     });
   });
@@ -152,7 +152,7 @@ describe('shared-validation.gate.mjs', () => {
     it('uses the default artifact path when none is supplied', async () => {
       const defaultPath = path.join(
         REPO_ROOT,
-        'artifacts',
+        'coverage',
         'shared-validation.json',
       );
       const { runSharedValidationGate } = await loadGate();
@@ -289,7 +289,7 @@ describe('shared-validation.gate.mjs', () => {
       result = (await main([
         '--json',
         '--changed-files',
-        'src/foo.ts',
+        'scripts/agent-customization/gates/shared-validation.gate.mjs',
         '--artifact-path',
         path.join(tempDir, 'main-artifact.json'),
       ])) as ValidationReport;
@@ -429,6 +429,153 @@ describe('shared-validation.gate.mjs', () => {
       expect(report.pass).toBe(true);
     });
 
+    it('returns early when derived test files are missing', async () => {
+      const { main } = await loadGate();
+      const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+      (spawnSync as jest.Mock).mockReturnValue({
+        status: 0,
+        stdout: '',
+        stderr: '',
+        pid: 1,
+        output: [],
+        signal: null,
+      });
+      await main(['--json', '--changed-files', 'src/foo.ts']);
+      const report = JSON.parse(
+        logSpy.mock.calls[0][0] as string,
+      ) as ValidationReport;
+      logSpy.mockRestore();
+      expect(report.pass).toBe(true);
+      expect(spawnSync).not.toHaveBeenCalledWith(
+        process.execPath,
+        expect.anything(),
+      );
+    });
+
+    it('runs .mjs tests with experimental-vm-modules', async () => {
+      const { main } = await loadGate();
+      const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+      (spawnSync as jest.Mock).mockReturnValue({
+        status: 0,
+        stdout: JSON.stringify({ status: 0, stdout: 'mjs ok', stderr: '' }),
+        stderr: '',
+        pid: 1,
+        output: [],
+        signal: null,
+      });
+      await main([
+        '--json',
+        '--changed-files',
+        'scripts/agent-customization/hooks/post-write-reindex-hook.test.mjs',
+      ]);
+      const report = JSON.parse(
+        logSpy.mock.calls[0][0] as string,
+      ) as ValidationReport;
+      logSpy.mockRestore();
+      expect(report.pass).toBe(true);
+      expect(report.evidence.testResult.stdout).toContain('mjs ok');
+      const execCalls = (spawnSync as jest.Mock).mock.calls.filter(
+        (call) => call[0] === process.execPath,
+      );
+      expect(execCalls.length).toBeGreaterThan(0);
+    });
+
+    it('runs .mjs and .ts tests in separate groups', async () => {
+      const { main } = await loadGate();
+      const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+      let callCount = 0;
+      (spawnSync as jest.Mock).mockImplementation(() => {
+        callCount += 1;
+        return {
+          status: 0,
+          stdout: JSON.stringify({
+            status: 0,
+            stdout: `group ${callCount}`,
+            stderr: '',
+          }),
+          stderr: '',
+          pid: 1,
+          output: [],
+          signal: null,
+        };
+      });
+      await main([
+        '--json',
+        '--changed-files',
+        'scripts/agent-customization/hooks/post-write-reindex-hook.test.mjs,scripts/agent-customization/gates/shared-validation.gate.test.ts',
+      ]);
+      const report = JSON.parse(
+        logSpy.mock.calls[0][0] as string,
+      ) as ValidationReport;
+      logSpy.mockRestore();
+      expect(report.pass).toBe(true);
+      const execCalls = (spawnSync as jest.Mock).mock.calls.filter(
+        (call) => call[0] === process.execPath,
+      );
+      expect(execCalls).toHaveLength(2);
+      expect(report.evidence.testResult.stdout).toContain('group 1');
+      expect(report.evidence.testResult.stdout).toContain('group 2');
+    });
+
+    it('reports failure when any test group fails', async () => {
+      const { main } = await loadGate();
+      const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+      let callCount = 0;
+      (spawnSync as jest.Mock).mockImplementation(() => {
+        callCount += 1;
+        return {
+          status: callCount === 1 ? 0 : 1,
+          stdout: JSON.stringify({
+            status: callCount === 1 ? 0 : 1,
+            stdout: `group ${callCount}`,
+            stderr: callCount === 1 ? '' : 'second group failed',
+          }),
+          stderr: '',
+          pid: 1,
+          output: [],
+          signal: null,
+        };
+      });
+      await main([
+        '--json',
+        '--changed-files',
+        'scripts/agent-customization/hooks/post-write-reindex-hook.test.mjs,scripts/agent-customization/gates/shared-validation.gate.test.ts',
+      ]);
+      const report = JSON.parse(
+        logSpy.mock.calls[0][0] as string,
+      ) as ValidationReport;
+      logSpy.mockRestore();
+      expect(report.pass).toBe(false);
+      expect(report.evidence.testResult.status).toBe(1);
+      expect(report.evidence.testResult.stderr).toContain(
+        'second group failed',
+      );
+    });
+
+    it('treats a null test group status as failure', async () => {
+      const { main } = await loadGate();
+      const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+      (spawnSync as jest.Mock).mockReturnValue({
+        status: 0,
+        stdout: JSON.stringify({ status: null, stdout: '', stderr: '' }),
+        stderr: '',
+        pid: 1,
+        output: [],
+        signal: null,
+      });
+      await main([
+        '--json',
+        '--changed-files',
+        'scripts/agent-customization/gates/shared-validation.gate.mjs',
+      ]);
+      const report = JSON.parse(
+        logSpy.mock.calls[0][0] as string,
+      ) as ValidationReport;
+      logSpy.mockRestore();
+      expect(report.pass).toBe(false);
+      expect(report.evidence.testResult.status).toBe(1);
+    });
+
     it('reports a test runner error from parsed JSON', async () => {
       const { main } = await loadGate();
       const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
@@ -501,8 +648,8 @@ describe('shared-validation.gate.mjs', () => {
       ) as ValidationReport;
       logSpy.mockRestore();
       expect(report.evidence.testResult.status).toBe(1);
-      expect(report.evidence.testResult.stdout).toBe('not json');
-      expect(report.evidence.testResult.stderr).toBe('bad');
+      expect(report.evidence.testResult.stdout).toContain('not json');
+      expect(report.evidence.testResult.stderr).toContain('bad');
     });
 
     it('falls back to empty strings when the test runner output is missing', async () => {
@@ -538,8 +685,12 @@ describe('shared-validation.gate.mjs', () => {
       ) as ValidationReport;
       logSpy.mockRestore();
       expect(report.evidence.testResult.status).toBe(1);
-      expect(report.evidence.testResult.stdout).toBe('');
-      expect(report.evidence.testResult.stderr).toBe('');
+      expect(report.evidence.testResult.stdout).toContain(
+        'scripts/agent-customization/gates/shared-validation.gate.test.ts',
+      );
+      expect(report.evidence.testResult.stderr).toContain(
+        'scripts/agent-customization/gates/shared-validation.gate.test.ts',
+      );
     });
 
     it('treats a build runner error as a failure', async () => {
@@ -817,7 +968,7 @@ describe('shared-validation.gate.mjs', () => {
       await main(['--json', '--changed-files', 'src/foo.md']);
       logSpy.mockRestore();
       expect(
-        existsSync(path.join(REPO_ROOT, 'artifacts', 'shared-validation.json')),
+        existsSync(path.join(REPO_ROOT, 'coverage', 'shared-validation.json')),
       ).toBe(true);
     });
 

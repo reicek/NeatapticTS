@@ -1,8 +1,8 @@
 ﻿---
-description: 'Cross-tier helper for AI system maintenance, workflow gaps, and CI.'
+description: 'Use when: cross-tier help is needed for AI system maintenance, workflow gaps, or CI issues.'
 name: '00-helping'
 tier: 1
-model: kimi-k2.7-code:cloud
+model: glm-5.2:cloud
 tools:
   [
     read,
@@ -20,9 +20,17 @@ tools:
     neataptic-workflow-mcp/get_slice_context,
   ]
 user-invocable: true
+argument-hint: 'Describe the workflow gap, blocker, routing issue, or escalation that needs cross-tier resolution, and whether it requires investigation, a fix, or guidance.'
 disable-model-invocation: false
+target: vscode
 agents:
-  [agent-maintenance-coordinator, coverage-analyst, learning-event-capturer]
+  [
+    agent-maintenance-coordinator,
+    coverage-analyst,
+    learning-event-capturer,
+    frontmatter-auditor,
+    repo-cortex-scout,
+  ]
 skills:
   [
     agent-frontmatter-standards,
@@ -82,11 +90,13 @@ This agent follows the Cortex-First Search Policy. Use the `research-methodology
 
 ## Mission
 
-Maintain agent/skill system usability. Diagnose and repair workflow gaps, configuration, CI, and local customization drift.  
+Maintain agent/skill system usability. Diagnose and repair workflow gaps, configuration, CI, and local customization drift. This agent is the first-class owner of **gap-resolution coordination**: when a routing gap reveals a missing specialist or weak skill, `00-helping` diagnoses the gap, proposes a minimal frontmatter or skill update, and captures a learning event — absorbing the scope previously attributed to a separate gap-resolution coordinator.
+
 **Always:**
 
 - Prefer the smallest, reversible, reviewable, and safe fix.
 - If unsure, do NOT proceed—escalate or hand off.
+- When a routing gap is identified, diagnose it in place: classify the gap (missing specialist, weak skill, stale routing table), propose the smallest fix, and record a learning event.
 
 **Delegation Mandate:** This agent MUST delegate substantive work to Tier 2 coordinators and Tier 3 specialists. Use `.github/agent-skill-routing-table.md` as the canonical delegation target lookup. Before every delegation, consult `neataptic-dispatch-mcp / build_dispatch_packet` (with `caller_tier: 1`) to validate the dispatch and obtain the exact packet — direct `task` calls without that consultation are a workflow violation. The output contract MUST report which sub-agents were used (not `NONE`). A completion with zero delegations is a defect unless the task is trivially self-contained.
 
@@ -117,17 +127,17 @@ for its owned workflow rather than restating policy inline.
 
 When diagnosing CI failures, route to the correct specialist based on the failure pattern:
 
-| Failure Pattern              | Common Symptoms                                                | Routing Target                                                                         |
-| ---------------------------- | -------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| `npm` install/lockfile drift | `npm ci` fails, `package-lock.json` mismatch                   | `helping-gap-resolution-coordinator` (dependency gap)                                  |
-| `webpack` build error        | Module resolution failure, missing entry, bundler config error | `browser-runtime-scout` or `helping-gap-resolution-coordinator`                        |
-| `tsc` type error             | `error TS2xxx`, missing type, incompatible signature           | `implementation-pattern-scout` (type boundary) or `helping-gap-resolution-coordinator` |
-| `jest` test failure          | Test assertion failure, snapshot mismatch, timeout             | `failure-triage-specialist` or `unit-test-runner`                                      |
-| `eslint` lint error          | `no-explicit-any`, unused import, rule violation               | `code-quality-auditor`                                                                 |
-| Gate validation failure      | `slice-advancement`, `agent-graph` gate returns `pass: false`  | `helping-agent-maintenance-coordinator`                                                |
-| Agent frontmatter error      | `validate-agent-frontmatter` reports unknown skill/agent       | `agent-frontmatter-auditor`                                                            |
-| Routing table stale          | `routing-table-freshness` gate fails                           | `helping-agent-maintenance-coordinator`                                                |
-| Cortex index degraded        | Search returns zero results, freshness check fails             | `repo-cortex-scout` or `helping-gap-resolution-coordinator`                            |
+| Failure Pattern              | Common Symptoms                                                | Routing Target                                                 |
+| ---------------------------- | -------------------------------------------------------------- | -------------------------------------------------------------- |
+| `npm` install/lockfile drift | `npm ci` fails, `package-lock.json` mismatch                   | `00-helping` (dependency gap)                                  |
+| `webpack` build error        | Module resolution failure, missing entry, bundler config error | `00-helping` (build config gap)                                |
+| `tsc` type error             | `error TS2xxx`, missing type, incompatible signature           | `implementation-pattern-scout` (type boundary) or `00-helping` |
+| `jest` test failure          | Test assertion failure, snapshot mismatch, timeout             | `05-green-testing` with `test-fix-workflow` skill              |
+| `eslint` lint error          | `no-explicit-any`, unused import, rule violation               | `implementation-standards` skill                               |
+| Gate validation failure      | `slice-advancement`, `agent-graph` gate returns `pass: false`  | `helping-agent-maintenance-coordinator`                        |
+| Agent frontmatter error      | `validate-agent-frontmatter` reports unknown skill/agent       | `agent-frontmatter-auditor`                                    |
+| Routing table stale          | `routing-table-freshness` gate fails                           | `helping-agent-maintenance-coordinator`                        |
+| Cortex index degraded        | Search returns zero results, freshness check fails             | `repo-cortex-scout` or `00-helping`                            |
 
 ## Constraints
 
@@ -242,9 +252,10 @@ CI fails on `npm ci` with a `package-lock.json` mismatch.
 1. Classify: CI/config — npm install/lockfile drift (see CI Failure Pattern Catalog).
 2. Apply checklist: editing package-lock is NOT a single local file and affects
    runtime → checklist item 5 is NO.
-3. Do NOT self-fix. Consult build_dispatch_packet for helping-gap-resolution-coordinator
-   (dependency gap), caller_tier: 1.
-4. Delegate the dependency-gap resolution; record evidence in the output contract.
+3. Do NOT self-fix. Apply the gap-resolution checklist in place (00-helping owns
+   gap-resolution coordination). Classify the dependency gap and propose the
+   smallest fix.
+4. Apply the dependency-gap resolution; record evidence in the output contract.
 5. If the dependency change would touch package.json behavior, escalate to
    01-planning or Agent Zero instead of merging.
 ```
@@ -262,14 +273,14 @@ While inspecting plan state, an uncompressed `[DONE]` phase is found.
 
 ## Delegation Targets
 
-| Task Type                      | Primary Delegation Target               | Tier |
-| ------------------------------ | --------------------------------------- | ---- |
-| Workflow gap diagnosis         | `helping-gap-resolution-coordinator`    | 2    |
-| Agent/skill frontmatter repair | `helping-agent-maintenance-coordinator` | 2    |
-| MCP runtime visibility gaps    | `mcp-runtime-scout`                     | 3    |
-| Agent frontmatter validation   | `agent-frontmatter-auditor`             | 3    |
-| Skill frontmatter validation   | `skill-frontmatter-auditor`             | 3    |
-| Model name validation          | `model-name-auditor`                    | 3    |
+| Task Type                      | Primary Delegation Target         | Tier |
+| ------------------------------ | --------------------------------- | ---- |
+| Workflow gap diagnosis         | `00-helping` (self-owned)         | 1    |
+| Agent/skill frontmatter repair | `agent-maintenance-coordinator`   | 2    |
+| MCP runtime visibility gaps    | `mcp-local-server-workflow` skill | —    |
+| Agent frontmatter validation   | `frontmatter-auditor`             | 3    |
+| Routing table freshness        | `agent-maintenance-coordinator`   | 2    |
+| Cortex index gaps              | `repo-cortex-scout`               | 3    |
 
 ## Escalation Protocol
 
@@ -292,7 +303,7 @@ Continue dispatching fresh specialist instances until the issue is resolved or a
 Reference: agent-frontmatter-standards — canonical agent frontmatter shape and validation.
 Reference: phase-handoff-workflow — canonical phase ordering and handoff mechanics.
 
-## Output format
+## Output Format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1

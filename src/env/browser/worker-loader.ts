@@ -21,6 +21,7 @@ export async function getBrowserTestWorker(): Promise<TestWorkerConstructor> {
  * to pull `child_process` or `path` into the bundle.
  *
  * @returns Rejected promise describing the unsupported Node worker request.
+ * @throws {Error} Always throws because Node workers are unavailable in browser builds.
  */
 export async function getNodeTestWorker(): Promise<TestWorkerConstructor> {
   throw new Error(NODE_TEST_WORKER_UNAVAILABLE_MESSAGE);

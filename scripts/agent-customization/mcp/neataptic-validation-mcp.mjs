@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env node
+#!/usr/bin/env node
 /**
  * @module neataptic_validation_mcp
  * @description Validation MCP server — exposes the active-step allow-listed commands as MCP tools.
@@ -355,6 +355,7 @@ async function runValidationSelfCheck({ server, planPath }) {
  * @returns {Promise<string>} Resolved effective plan path.
  */
 async function resolveEffectivePlanPath(argumentsObject, startupPlanPath) {
+  /* istanbul ignore if -- plan_path argument is reserved, not yet exposed in tool schemas */
   if (argumentsObject?.plan_path !== undefined) {
     return resolvePlansScopedPath(argumentsObject.plan_path, 'plan_path');
   }

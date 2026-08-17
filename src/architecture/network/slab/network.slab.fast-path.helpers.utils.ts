@@ -18,6 +18,7 @@ const ONE = 1;
 /**
  * Evaluate whether the high-performance slab forward pass is currently safe to use under runtime, topology, gating, dropout, and stochastic-regularization constraints.
  *
+ * @param this - Network instance bound by method call.
  * @param training - Whether caller is in training mode.
  * @returns True if fast path can be safely used.
  */

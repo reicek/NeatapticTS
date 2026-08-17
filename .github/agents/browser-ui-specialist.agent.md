@@ -15,6 +15,8 @@ tools:
     devtools/devtools,
   ]
 user-invocable: false
+disable-model-invocation: false
+target: vscode
 agents: []
 skills: ['chrome-devtools-mcp']
 ---
@@ -165,7 +167,7 @@ Example result produced by the UI inspection workflow. Summarize — do not dump
 }
 ```
 
-## Output format
+## Output Format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1

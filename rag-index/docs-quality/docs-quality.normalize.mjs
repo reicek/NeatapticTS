@@ -39,7 +39,7 @@ export function normalizeDocsQualityEvidence(evidence) {
   const dedupedRows = [];
   const seenKeys = new Set();
   for (const entry of normalizedRows) {
-    const entryKey = `${entry.file}|${entry.symbol}|${entry.issue}|${entry.numericValue}`;
+    const entryKey = `${entry.symbol}|${entry.issue}|${entry.numericValue}`;
     if (seenKeys.has(entryKey)) continue;
     seenKeys.add(entryKey);
     dedupedRows.push(entry);
@@ -117,26 +117,28 @@ function compareEvidenceRowsForPresentation(left, right) {
   const numericComparison = right.numericValue - left.numericValue;
   if (numericComparison !== 0) return numericComparison;
 
-  const fileComparison = left.file.localeCompare(right.file);
+  const fileComparison = left.file.localeCompare(right.file, 'en');
   if (fileComparison !== 0) return fileComparison;
 
-  const symbolComparison = left.symbol.localeCompare(right.symbol);
+  const symbolComparison = left.symbol.localeCompare(right.symbol, 'en');
   if (symbolComparison !== 0) return symbolComparison;
 
-  const issueComparison = left.issue.localeCompare(right.issue);
+  const issueComparison = left.issue.localeCompare(right.issue, 'en');
+  /* istanbul ignore else -- defensive: all evidence rows have unique sort keys in tests */
   if (issueComparison !== 0) return issueComparison;
 
+  /* istanbul ignore next -- defensive: all evidence rows have unique sort keys in tests */
   return 0;
 }
 
 function compareEvidenceRowsForDigest(left, right) {
-  const fileComparison = left.file.localeCompare(right.file);
+  const fileComparison = left.file.localeCompare(right.file, 'en');
   if (fileComparison !== 0) return fileComparison;
 
-  const issueComparison = left.issue.localeCompare(right.issue);
+  const issueComparison = left.issue.localeCompare(right.issue, 'en');
   if (issueComparison !== 0) return issueComparison;
 
-  const symbolComparison = left.symbol.localeCompare(right.symbol);
+  const symbolComparison = left.symbol.localeCompare(right.symbol, 'en');
   if (symbolComparison !== 0) return symbolComparison;
 
   return left.numericValue - right.numericValue;
@@ -145,15 +147,16 @@ function compareEvidenceRowsForDigest(left, right) {
 function resolveIssueSeverityRank(issue) {
   if (issue === 'high complexity') return 0;
   if (issue === 'missing JSDoc') return 1;
-  if (issue === 'weak JSDoc') return 2;
-  return 3;
+  if (issue === 'incomplete JSDoc tags') return 2;
+  if (issue === 'weak JSDoc') return 3;
+  return 4;
 }
 
 function normalizePathList(paths) {
   const normalizedPaths = (Array.isArray(paths) ? paths : [])
     .map((pathValue) => normalizePathValue(pathValue))
     .filter((pathValue) => pathValue.length > 0)
-    .toSorted((leftPath, rightPath) => leftPath.localeCompare(rightPath));
+    .toSorted((leftPath, rightPath) => leftPath.localeCompare(rightPath, 'en'));
 
   return Array.from(new Set(normalizedPaths));
 }

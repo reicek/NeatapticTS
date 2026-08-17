@@ -15,9 +15,20 @@ import type {
   NgeReproductionPolicyMode,
 } from '../nge-dna/neat.nge-dna.types';
 import type { ReproductionModePressureSignal } from '../nge-evolution/neat.nge-evolution.reproduction-mode';
+import { reproductionModeHysteresis } from '../nge-evolution/neat.nge-evolution.reproduction-mode';
 import type { NgeMainAgentEquilibriumResult } from './neat.nge-main-agent.adult';
 import { runReproductionStage } from './neat.nge-main-agent.reproduction';
 import type { NgeMainAgentLifecycleConfig } from './neat.nge-main-agent.types';
+
+jest.mock('../nge-evolution/neat.nge-evolution.reproduction-mode', () => {
+  const actual = jest.requireActual(
+    '../nge-evolution/neat.nge-evolution.reproduction-mode',
+  );
+  return {
+    ...actual,
+    reproductionModeHysteresis: jest.fn(actual.reproductionModeHysteresis),
+  };
+});
 
 const defaultConfig: NgeMainAgentLifecycleConfig = {
   seed: 42,
@@ -332,6 +343,59 @@ describe('runReproductionStage', () => {
       expect(result.parentFingerprints).toEqual([
         parentDna.fingerprint,
         parentDna.fingerprint,
+      ]);
+    });
+  });
+
+  describe('edge cases', () => {
+    it('throws on an unsupported reproduction mode from hysteresis', () => {
+      // Arrange
+      const config = createConfig();
+      const equilibriumResult = createEquilibriumResult(config);
+      const parentDna = createParentDna('parthenogenesis');
+
+      jest.mocked(reproductionModeHysteresis).mockReturnValueOnce({
+        mode: 'bogus' as NgeReproductionPolicyMode,
+        policy: parentDna.reproductionPolicy,
+      });
+
+      // Act + Assert
+      expect(() =>
+        runReproductionStage(
+          equilibriumResult,
+          buildPressure('dominating'),
+          parentDna,
+          config,
+        ),
+      ).toThrow('Unsupported reproduction mode encountered: bogus');
+    });
+
+    it('falls back to neutral mate fitness when complexityBonus is null', () => {
+      // Arrange
+      const config = createConfig();
+      const equilibriumResult = createEquilibriumResult(config);
+      (
+        equilibriumResult.stableCandidate.fitnessMetrics as {
+          complexityBonus: number | null;
+        }
+      ).complexityBonus = null;
+      const parentDna = createParentDna('parthenogenesis', true);
+      const secondParent = createMateDna();
+
+      // Act
+      const result = runReproductionStage(
+        equilibriumResult,
+        buildPressure('stalemate'),
+        parentDna,
+        config,
+        [secondParent],
+      );
+
+      // Assert — sexual path uses resolveParentScore which falls back to neutral
+      expect(result.mode).toBe('sexual');
+      expect(result.parentFingerprints).toEqual([
+        parentDna.fingerprint,
+        secondParent.fingerprint,
       ]);
     });
   });

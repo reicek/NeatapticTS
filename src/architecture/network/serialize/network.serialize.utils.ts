@@ -855,6 +855,7 @@ export const deserialize = (
  * @param inputSize - Optional input-size override.
  * @param outputSize - Optional output-size override.
  * @returns Reconstructed network instance.
+ * @throws {TypeError} When the payload format tag is invalid.
  */
 export const deserializeCompressed = (
   data: CompressedSerializedNetwork,
@@ -890,6 +891,7 @@ export const deserializeCompressed = (
  * @param inputSize - Optional input-size override.
  * @param outputSize - Optional output-size override.
  * @returns Reconstructed network instance.
+ * @throws {TypeError} When the archive format is invalid or the compressed payload format is unsupported.
  */
 export const deserializeCompressedArchive = (
   data: CompressedSerializedNetworkArchive,
@@ -911,6 +913,7 @@ export const deserializeCompressedArchive = (
  * @param inputSize - Optional input-size override.
  * @param outputSize - Optional output-size override.
  * @returns Rebuilt network plus decode metrics.
+ * @throws {TypeError} When the archive format is invalid or the compressed payload format is unsupported.
  */
 export const deserializeCompressedArchiveWithMetrics = (
   data: CompressedSerializedNetworkArchive,
@@ -952,7 +955,9 @@ export const deserializeCompressedArchiveWithMetrics = (
  * @param data - Archived compressed payload.
  * @param inputSize - Optional input-size override.
  * @param outputSize - Optional output-size override.
+ * @param options - Optional incremental decode callbacks.
  * @returns Reconstructed network instance.
+ * @throws {TypeError} When the archive format is invalid or no compression runtime is available.
  */
 export const deserializeCompressedArchiveAsync = async (
   data: CompressedSerializedNetworkArchive,
@@ -979,6 +984,7 @@ export const deserializeCompressedArchiveAsync = async (
  * @param outputSize - Optional output-size override.
  * @param options - Optional incremental decode callbacks.
  * @returns Rebuilt network plus decode metrics.
+ * @throws {TypeError} When the archive format is invalid or no compression runtime is available.
  */
 export const deserializeCompressedArchiveAsyncWithMetrics = async (
   data: CompressedSerializedNetworkArchive,

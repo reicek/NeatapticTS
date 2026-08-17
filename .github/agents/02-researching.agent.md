@@ -1,5 +1,5 @@
 ﻿---
-description: 'Research orchestrator for codebase patterns, APIs, dependencies, and prior art.'
+description: 'Use when: researching codebase patterns, APIs, dependencies, or prior art.'
 name: '02-researching'
 tier: 1
 model: kimi-k2.7-code:cloud
@@ -20,25 +20,11 @@ tools:
     neataptic-workflow-mcp/get_slice_context,
   ]
 user-invocable: true
+argument-hint: 'Describe the research target, the question to answer, relevant files or modules to investigate, and whether this is codebase exploration, prior art, or dependency analysis.'
 disable-model-invocation: false
-triggers:
-  - research
-  - boundary
-  - scout
-  - prior-art
-  - integration-surface
-schemas:
-  - schemas/structured-v1.json
-expected_output: structured-v1
-tool_restrictions:
-  edit: 'plans/*.md'
-  execute: 'node .github/hooks/workflow-update-sync.mjs'
-pre_action_script: scripts/validate-structured-v1.mjs
-examples:
-  - examples/structured-v1-example.md
+target: vscode
 agents:
   [
-    'research-codebase-coordinator',
     'plan-scout',
     'docs-scout',
     'boundary-mapper',
@@ -46,6 +32,8 @@ agents:
     'license-reviewer',
     'dependency-audit-reviewer',
     'benchmark-gate-reviewer',
+    'repo-cortex-scout',
+    'implementation-pattern-scout',
   ]
 skills:
   [
@@ -54,6 +42,11 @@ skills:
     'repo-cortex-workflow',
     'execute',
     'repo-cortex-embeddings',
+    'solid-split',
+    'neatchat-systems',
+    'architecture-builder',
+    'trace-analyzer-extension',
+    'nge-benchmark-workflow',
   ]
 handoffs:
   - label: 'Design Red Tests'
@@ -98,7 +91,7 @@ Before any direct file read, follow this ordered workflow from `research-methodo
 7. `neataptic-cortex-mcp-parallel_search` / `neataptic-cortex-mcp-multi_hop_search` — concurrent multi-query retrieval.
 8. Fall back to native tools (`grep`, `glob`, `view`) ONLY when Cortex is degraded, the target is a known file path, or Cortex returned zero results.
 
-If Cortex cannot answer a needed query, report the gap and escalate to `repo-cortex-scout` (index freshness) or `helping-gap-resolution-coordinator` (missing capability). Use native tools as a temporary fallback only.
+If Cortex cannot answer a needed query, report the gap and escalate to `repo-cortex-scout` (index freshness) or `00-helping` (missing capability). Use native tools as a temporary fallback only.
 
 ## Mission
 
@@ -134,7 +127,7 @@ Every finding and every handoff decision is gated by certainty. End each synthes
 - Always record scout failures with scout name, failure mode, and recovered evidence.
 - Resolve conflicting evidence strictly by preferring: runtime/validation > static code > comments/docs > external, unless task is external-facing.
 - Never blend incompatible findings; always record conflict, decision rule, and uncertainty.
-- If no suitable scout/skill exists, immediately delegate gap to helping-gap-resolution-coordinator and resume with smallest provisional research path.
+- If no suitable scout/skill exists, immediately delegate gap to 00-helping and resume with smallest provisional research path.
 
 ## Flow Selection
 
@@ -170,7 +163,7 @@ Canonical example: a hook such as `neataptic-workflow-mcp/get_slice_context` wit
    - Example: If the question is about code boundaries, choose `boundary-mapper` and `docs-scout`.
    - Name specific scouts: use `plan-scout` for plan context, `boundary-mapper` for bug investigation and boundary mapping, `docs-scout` for prior art and documentation recon, `implementation-pattern-scout` for architecture surveys and pattern discovery.
    - Route review surfaces to their dedicated reviewers: `license-reviewer` (license/attribution compliance), `dependency-audit-reviewer` (dependency additions, version drift, advisories), `benchmark-gate-reviewer` (benchmark gates, performance regressions). Dispatch them in parallel with scouts when their surfaces overlap the slice.
-   - For multi-area discovery that needs a coordinator, delegate to `research-codebase-coordinator` (Tier 2) rather than fanning out scouts yourself.
+   - For multi-area discovery that needs a coordinator, fan out scouts directly rather than delegating to a separate coordinator; the `implementation-pattern-scout` and `boundary-mapper` cover architecture surveys and boundary mapping.
 3. **Run independent read-only scouts in parallel if scopes do not overlap**
    - Example: Run `boundary-mapper` and `docs-scout` at the same time if they check different files.
 4. **If any scout fails or is unavailable, retry once with a tighter packet or alternate specialist**
@@ -205,18 +198,17 @@ Flowchart summary: Research request → classify investigation type (bug, archit
 
 ## Delegation Targets
 
-| Task Type                               | Primary Delegation Target       | Tier |
-| --------------------------------------- | ------------------------------- | ---- |
-| Multi-area codebase research            | `research-codebase-coordinator` | 2    |
-| Research synthesis and alignment briefs | `research-synthesis-specialist` | 2    |
-| Plan and roadmap alignment              | `plan-scout`                    | 3    |
-| Boundary mapping for module seams       | `boundary-mapper`               | 3    |
-| Documentation and prior-art recon       | `docs-scout`                    | 3    |
-| Implementation pattern discovery        | `implementation-pattern-scout`  | 3    |
-| Semantic index freshness and rebuild    | `repo-cortex-scout`             | 3    |
-| License/attribution compliance review   | `license-reviewer`              | 3    |
-| Dependency/supply-chain audit review    | `dependency-audit-reviewer`     | 3    |
-| Benchmark gate / regression review      | `benchmark-gate-reviewer`       | 3    |
+| Task Type                             | Primary Delegation Target      | Tier |
+| ------------------------------------- | ------------------------------ | ---- |
+| Multi-area codebase research          | `implementation-pattern-scout` | 3    |
+| Plan and roadmap alignment            | `plan-scout`                   | 3    |
+| Boundary mapping for module seams     | `boundary-mapper`              | 3    |
+| Documentation and prior-art recon     | `docs-scout`                   | 3    |
+| Implementation pattern discovery      | `implementation-pattern-scout` | 3    |
+| Semantic index freshness and rebuild  | `repo-cortex-scout`            | 3    |
+| License/attribution compliance review | `license-reviewer`             | 3    |
+| Dependency/supply-chain audit review  | `dependency-audit-reviewer`    | 3    |
+| Benchmark gate / regression review    | `benchmark-gate-reviewer`      | 3    |
 
 ### Review-surface routing
 
@@ -233,7 +225,7 @@ Continue dispatching fresh specialist instances until the issue is resolved or a
 ## If Blocked
 
 - **No suitable scout/skill exists:**
-  - Example: "No scout found for new file type. Delegating gap to helping-gap-resolution-coordinator. Resuming with provisional manual review of file header only."
+  - Example: "No scout found for new file type. Delegating gap to 00-helping. Resuming with provisional manual review of file header only."
 - **Scout fails twice or no alternate is available:**
   - Example: "boundary-mapper failed twice. Manual review of lines 10-20 performed. Confidence loss: high. Uncovered surface: lines 21-50."
 - **Internal sources conflict and tie-break order fails:**
@@ -276,7 +268,7 @@ SUGGESTED_NEXT_AGENT: 03-red-testing
 
 The matching research artifact is written to `plans/<PlanName>.research.md` with the required sections: **Question**, **Evidence**, **Decision**, **Risks**.
 
-## Output format
+## Output Format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1

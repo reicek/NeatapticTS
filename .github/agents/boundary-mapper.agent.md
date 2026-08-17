@@ -15,6 +15,8 @@ tools:
     neataptic-workflow-mcp/*,
   ]
 user-invocable: false
+disable-model-invocation: false
+target: vscode
 agents: []
 skills: ['solid-split', 'implementation-standards']
 ---
@@ -35,7 +37,7 @@ You map folder responsibilities, identify orchestration files versus helper/deta
 
 This agent is distinct from:
 
-- `solid-split` (Tier-2 coordinator) — **executes** the split, runs the durable workflow, applies edits, and validates.
+- `solid-split` (skill, carried by `04-implementing`/`01-planning`/`02-researching`) — **executes** the split, runs the durable workflow, applies edits, and validates.
 - `implementation-executor` (Tier-3) — applies scoped file edits under implementation standards.
 - `boundary-mapper` (this agent) — **maps and proposes only**; never edits, never splits, never runs validation gates beyond `cortex-index`.
 
@@ -63,8 +65,16 @@ Boundary reconnaissance benefits from an isolated context window. Import/export 
 Before completing any task, run the relevant gate check via `neataptic-gate-mcp:run_gate_check`:
 
 - `cortex-index` — verify index currency before searching for module boundary context.
+- `folder-quality` — **owned by `boundary-mapper`**. This gate verifies that
+  `npm run quality:folder` passes for the mapped folder boundary. Run after a
+  boundary map proposes a new folder structure or when the mapper's
+  recommendations are validated:
+  `node scripts/agent-customization/gates/folder-quality.gate.mjs --json --folder=<folder>`.
 
-This is the only gate a read-only scout runs. Do not run `slice-advancement`, `code-coverage`, `specialist-review`, or any edit-validation gate — those belong to the implementing agent after the split executes.
+This agent runs `cortex-index` and `folder-quality` only. Do not run
+`slice-advancement`, `code-coverage`, `specialist-review`, or any
+edit-validation gate — those belong to the implementing agent after the split
+executes.
 
 ## Approach
 
@@ -149,7 +159,7 @@ SPLIT_PLAN_PROPOSAL:
 - Set `TASK_STATUS: PARTIAL` when the required evidence cannot be gathered.
 - Record the smallest blocker, suggest the next agent, and stop without broadening scope.
 
-## Output format
+## Output Format
 
 ```structured-v1
 OUTPUT_CONTRACT: structured-v1

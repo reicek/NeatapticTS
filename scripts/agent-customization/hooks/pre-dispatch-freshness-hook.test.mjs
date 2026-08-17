@@ -24,8 +24,8 @@ jest.unstable_mockModule('node:child_process', () => ({
     return mockChild;
   },
   spawnSync: (...args) => {
-    mockSpawnSync(...args);
-    return { status: 0, stdout: '', stderr: '' };
+    const result = mockSpawnSync(...args);
+    return result ?? { status: 0, stdout: '', stderr: '' };
   },
 }));
 
@@ -196,6 +196,72 @@ describe('pre-dispatch-freshness-hook', () => {
       });
       assert.doesNotThrow(() => runReindexBackground());
     });
+
+    it('logs question mark when child pid is null', () => {
+      const originalPid = mockChild.pid;
+      mockChild.pid = null;
+      runReindexBackground();
+      mockChild.pid = originalPid;
+      assert.ok(
+        mockAppendFileSync.mock.calls.some((call) =>
+          call[1].includes('pid ?'),
+        ),
+      );
+    });
+
+    it('spawns embed-index when build-index exits with code 0', () => {
+      runReindexBackground();
+      const exitCall = mockChild.on.mock.calls.find(
+        (call) => call[0] === 'exit',
+      );
+      exitCall[1](0);
+      assert.ok(mockSpawn.mock.calls.length >= 2);
+    });
+
+    it('logs question mark for embed child pid when null on exit code 0', () => {
+      const originalPid = mockChild.pid;
+      runReindexBackground();
+      mockChild.pid = null;
+      const exitCall = mockChild.on.mock.calls.find(
+        (call) => call[0] === 'exit',
+      );
+      exitCall[1](0);
+      mockChild.pid = originalPid;
+      assert.ok(
+        mockAppendFileSync.mock.calls.some((call) =>
+          call[1].includes('pid ?'),
+        ),
+      );
+    });
+
+    it('logs exit code when build-index exits with non-zero code', () => {
+      runReindexBackground();
+      const exitCall = mockChild.on.mock.calls.find(
+        (call) => call[0] === 'exit',
+      );
+      exitCall[1](1);
+      assert.ok(
+        mockAppendFileSync.mock.calls.some((call) =>
+          call[1].includes('code 1'),
+        ),
+      );
+    });
+
+    it('logs embed-index spawn failure when spawn throws in exit callback', () => {
+      runReindexBackground();
+      mockSpawn.mockImplementationOnce(() => {
+        throw new Error('embed spawn failed');
+      });
+      const exitCall = mockChild.on.mock.calls.find(
+        (call) => call[0] === 'exit',
+      );
+      exitCall[1](0);
+      assert.ok(
+        mockAppendFileSync.mock.calls.some((call) =>
+          call[1].includes('embed-index spawn failed'),
+        ),
+      );
+    });
   });
 
   describe('runReindexSync', () => {
@@ -214,6 +280,28 @@ describe('pre-dispatch-freshness-hook', () => {
       });
       assert.doesNotThrow(() => runReindexSync());
     });
+
+    it('logs question mark when build status is null in sync reindex', () => {
+      mockSpawnSync.mockReturnValueOnce({ status: null, stdout: '', stderr: '' });
+      runReindexSync();
+      assert.ok(
+        mockAppendFileSync.mock.calls.some((call) =>
+          call[1].includes('status ?'),
+        ),
+      );
+    });
+
+    it('logs question mark when embed status is null in sync reindex', () => {
+      mockSpawnSync
+        .mockReturnValueOnce({ status: 0, stdout: '', stderr: '' })
+        .mockReturnValueOnce({ status: null, stdout: '', stderr: '' });
+      runReindexSync();
+      assert.ok(
+        mockAppendFileSync.mock.calls.some((call) =>
+          call[1].includes('status ?'),
+        ),
+      );
+    });
   });
 
   describe('safeLog', () => {
@@ -228,6 +316,126 @@ describe('pre-dispatch-freshness-hook', () => {
         throw new Error('ENOSPC');
       });
       assert.doesNotThrow(() => safeLog('test'));
+    });
+  });
+
+  describe('main() flow', () => {
+    it('logs fresh when index is within grace window', async () => {
+      mockExistsSync.mockReturnValue(true);
+      mockReadFileSync.mockImplementation((filePath) => {
+        if (filePath === 0) return '{}';
+        return JSON.stringify({ lastReindex: Date.now() });
+      });
+      const origWrite = process.stdout.write;
+      const messages = [];
+      process.stdout.write = (chunk) => {
+        messages.push(String(chunk));
+        return true;
+      };
+      jest.resetModules();
+      await import('./pre-dispatch-freshness-hook.mjs');
+      await new Promise((r) => setTimeout(r, 200));
+      process.stdout.write = origWrite;
+      assert.ok(
+        mockAppendFileSync.mock.calls.some((call) =>
+          call[1].includes('fresh'),
+        ),
+      );
+    });
+
+    it('runs sync reindex when wait_for_reindex is true', async () => {
+      mockExistsSync.mockReturnValue(false);
+      mockReadFileSync.mockImplementation((filePath) => {
+        if (filePath === 0) return JSON.stringify({ wait_for_reindex: true });
+        return '{}';
+      });
+      const origWrite = process.stdout.write;
+      process.stdout.write = () => true;
+      jest.resetModules();
+      await import('./pre-dispatch-freshness-hook.mjs');
+      await new Promise((r) => setTimeout(r, 200));
+      process.stdout.write = origWrite;
+      assert.ok(mockSpawnSync.mock.calls.length >= 2);
+    });
+
+    it('logs fatal error message when main rejects with Error', async () => {
+      mockExistsSync.mockReturnValue(false);
+      mockReadFileSync.mockReturnValue('{}');
+      const origWrite = process.stdout.write;
+      let firstCall = true;
+      process.stdout.write = () => {
+        if (firstCall) {
+          firstCall = false;
+          throw new Error('write failed');
+        }
+        return true;
+      };
+      jest.resetModules();
+      await import('./pre-dispatch-freshness-hook.mjs');
+      await new Promise((r) => setTimeout(r, 200));
+      process.stdout.write = origWrite;
+      assert.ok(
+        mockAppendFileSync.mock.calls.some((call) =>
+          call[1].includes('fatal: write failed'),
+        ),
+      );
+    });
+
+    it('logs fatal message when main rejects with non-Error', async () => {
+      mockExistsSync.mockReturnValue(false);
+      mockReadFileSync.mockReturnValue('{}');
+      const origWrite = process.stdout.write;
+      let firstCall = true;
+      process.stdout.write = () => {
+        if (firstCall) {
+          firstCall = false;
+          throw 'string error';
+        }
+        return true;
+      };
+      jest.resetModules();
+      await import('./pre-dispatch-freshness-hook.mjs');
+      await new Promise((r) => setTimeout(r, 200));
+      process.stdout.write = origWrite;
+      assert.ok(
+        mockAppendFileSync.mock.calls.some((call) =>
+          call[1].includes('fatal: string error'),
+        ),
+      );
+    });
+
+    it('returns empty object when stdin is empty', async () => {
+      mockExistsSync.mockReturnValue(false);
+      mockReadFileSync.mockReturnValue('');
+      const origWrite = process.stdout.write;
+      const messages = [];
+      process.stdout.write = (chunk) => {
+        messages.push(String(chunk));
+        return true;
+      };
+      jest.resetModules();
+      await import('./pre-dispatch-freshness-hook.mjs');
+      await new Promise((r) => setTimeout(r, 200));
+      process.stdout.write = origWrite;
+      const output = JSON.parse(messages[messages.length - 1].trim());
+      assert.strictEqual(output.continue, true);
+    });
+
+    it('parses hook input when stdin is non-empty', async () => {
+      mockExistsSync.mockReturnValue(false);
+      mockReadFileSync.mockReturnValue('{}');
+      const origWrite = process.stdout.write;
+      const messages = [];
+      process.stdout.write = (chunk) => {
+        messages.push(String(chunk));
+        return true;
+      };
+      jest.resetModules();
+      await import('./pre-dispatch-freshness-hook.mjs');
+      await new Promise((r) => setTimeout(r, 200));
+      process.stdout.write = origWrite;
+      const output = JSON.parse(messages[messages.length - 1].trim());
+      assert.strictEqual(output.continue, true);
     });
   });
 });

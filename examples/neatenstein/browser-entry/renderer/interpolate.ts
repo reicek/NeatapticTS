@@ -18,19 +18,22 @@
  * @module
  */
 
-/**
- * Object shape accepted by {@link lerpNeatensteinState}.
- *
- * The generic state is expected to expose own enumerable string keys whose
- * values are finite numbers at runtime.
- */
-type NeatensteinNumericState = Record<string, number>;
+import {
+  INTERP_CURRENT,
+  INTERP_PREVIOUS,
+  MAX_INTERPOLATION_ALPHA,
+  MIN_INTERPOLATION_ALPHA,
+} from './renderer.interpolate.constants';
+import type { NeatensteinNumericState } from './renderer.interpolate.types';
 
-/** Lower bound for interpolation alpha. */
-const MIN_INTERPOLATION_ALPHA = 0;
-
-/** Upper bound for interpolation alpha. */
-const MAX_INTERPOLATION_ALPHA = 1;
+// Re-export constants and types for external consumers.
+export {
+  INTERP_CURRENT,
+  INTERP_PREVIOUS,
+  MAX_INTERPOLATION_ALPHA,
+  MIN_INTERPOLATION_ALPHA,
+} from './renderer.interpolate.constants';
+export type { NeatensteinNumericState } from './renderer.interpolate.types';
 
 /**
  * Clamp an interpolation alpha into the supported blend range.
@@ -194,11 +197,11 @@ export function lerpNeatensteinState<T extends Record<string, number>>(
 
   // Endpoint fast paths still return fresh objects and validate copied fields.
   if (clampedAlpha <= MIN_INTERPOLATION_ALPHA) {
-    return copyFiniteSnapshot(previous, 'previous') as T;
+    return copyFiniteSnapshot(previous, INTERP_PREVIOUS) as T;
   }
 
   if (clampedAlpha >= MAX_INTERPOLATION_ALPHA) {
-    return copyFiniteSnapshot(current, 'current') as T;
+    return copyFiniteSnapshot(current, INTERP_CURRENT) as T;
   }
 
   const result: NeatensteinNumericState = {};
@@ -210,8 +213,12 @@ export function lerpNeatensteinState<T extends Record<string, number>>(
 
     if (hasPreviousValue && hasCurrentValue) {
       // Normal path: both snapshots have the field, so blend linearly.
-      const from = readFiniteSnapshotNumber('previous', key, previous[key]);
-      const to = readFiniteSnapshotNumber('current', key, current[key]);
+      const from = readFiniteSnapshotNumber(
+        INTERP_PREVIOUS,
+        key,
+        previous[key],
+      );
+      const to = readFiniteSnapshotNumber(INTERP_CURRENT, key, current[key]);
 
       result[key] = from + (to - from) * clampedAlpha;
       continue;
@@ -220,13 +227,13 @@ export function lerpNeatensteinState<T extends Record<string, number>>(
     if (hasCurrentValue) {
       // The field was added in the current snapshot. There is no previous value
       // to interpolate from, so use the current finite value directly.
-      result[key] = readFiniteSnapshotNumber('current', key, current[key]);
+      result[key] = readFiniteSnapshotNumber(INTERP_CURRENT, key, current[key]);
       continue;
     }
 
     // The field was removed in the current snapshot. Preserve the previous
     // finite value so the result remains stable for this render frame.
-    result[key] = readFiniteSnapshotNumber('previous', key, previous[key]);
+    result[key] = readFiniteSnapshotNumber(INTERP_PREVIOUS, key, previous[key]);
   }
 
   return result as T;

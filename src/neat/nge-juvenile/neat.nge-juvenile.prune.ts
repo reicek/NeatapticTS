@@ -80,6 +80,7 @@ export function commitPrune(
  * @param candidates - Caller-supplied candidate edges for one prune pass.
  * @param budget - DNA floors and permanent prune exemptions for the module.
  * @returns The highest-priority non-exempt candidate, ordered by wiring cost then edge length.
+ * @throws {NgeJuvenile_MorphError} When no non-exempt prune candidates remain after filtering.
  */
 export function selectPruneCandidate(
   candidates: readonly NgePruneCandidate[],
@@ -125,6 +126,8 @@ export function selectPruneCandidate(
  * @param candidate - Candidate edge selected for dry-run pruning.
  * @param budget - DNA floors and prune exemptions for the module.
  * @returns One dry-run edge-prune delta.
+ * @throws {NgeJuvenile_MorphError} When the candidate edge is permanently cost-exempt.
+ * @throws {NgeJuvenile_BudgetError} When pruning would violate the effective edge floor.
  */
 export function planEdgePrune(
   moduleId: string,
@@ -167,6 +170,7 @@ export function planEdgePrune(
  * @param moduleId - Module receiving the planned compact action.
  * @param budget - DNA floors and current structural counts for the module.
  * @returns One dry-run compact delta.
+ * @throws {NgeJuvenile_BudgetError} When compaction would violate the configured node floor.
  */
 export function planCompact(
   moduleId: string,
@@ -194,6 +198,7 @@ export function planCompact(
  *
  * @param delta - Planned morph delta to validate.
  * @param budget - DNA floors and current structural counts for the module.
+ * @throws {NgeJuvenile_BudgetError} When the planned delta would drop below a structural floor.
  */
 export function validatePruneDelta(
   delta: NgeMorphDelta,
@@ -245,6 +250,7 @@ export function validatePruneDelta(
  * @param config - Resolved juvenile-phase configuration.
  * @param hysteresis - Current prune-side hysteresis state.
  * @returns Zero or more validated dry-run prune deltas in priority order.
+ * @throws {Error} When an unexpected non-budget, non-morph error is raised by a sub-step.
  */
 export function planPruneMorphs(
   moduleId: string,

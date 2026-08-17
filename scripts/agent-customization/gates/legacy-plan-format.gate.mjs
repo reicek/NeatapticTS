@@ -157,13 +157,15 @@ function findNearestHeadingStatus(text, blockIndex) {
   for (let index = lines.length - 1; index >= 0; index--) {
     const match = HEADING_PATTERN.exec(lines[index]);
     if (match) {
-      return match.groups.phaseStatus ?? match.groups.stepStatus ?? null;
+      const status = match.groups.phaseStatus ?? match.groups.stepStatus;
+      return /* istanbul ignore next -- regex guarantees one group is defined */ status;
     }
   }
   return null;
 }
 
 function isLegacyBlock(metadata) {
+  /* istanbul ignore next -- metadata is always an object (phase check at line 81 throws on null/undefined) */
   if (!metadata || typeof metadata !== 'object') return true;
   if (Object.hasOwn(metadata, 'agent') || Object.hasOwn(metadata, 'agent_file'))
     return true;

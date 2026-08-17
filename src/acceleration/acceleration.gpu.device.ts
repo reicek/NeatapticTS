@@ -89,6 +89,61 @@ function trackDevice(device: GPUDevice): void {
  * }
  * ```
  */
+/**
+ * Resolve the required device limits from an adapter's reported limits.
+ *
+ * @param adapter - The WebGPU adapter to read limits from.
+ * @returns A partial limits object suitable for `adapter.requestDevice`.
+ */
+function resolveRequiredLimits(adapter: GPUAdapter): GPUSupportedLimits {
+  const limits: GPUSupportedLimits = {};
+  if (typeof adapter.limits.maxStorageBufferBindingSize === 'number') {
+    limits.maxStorageBufferBindingSize =
+      adapter.limits.maxStorageBufferBindingSize;
+  }
+  if (typeof adapter.limits.maxBufferSize === 'number') {
+    limits.maxBufferSize = adapter.limits.maxBufferSize;
+  }
+  return limits;
+}
+
+/**
+ * Request an adapter and create a device from it, caching the result.
+ *
+ * @param gpuSurface - The `navigator.gpu` surface to request from.
+ * @returns A ready-to-use `GPUDevice`.
+ * @throws Error when no adapter is found or device creation is rejected.
+ */
+async function createGPUDevice(gpuSurface: GPU): Promise<GPUDevice> {
+  try {
+    const adapter = await gpuSurface.requestAdapter({
+      powerPreference: 'high-performance',
+    });
+    if (!adapter) {
+      throw new Error(GPU_ADAPTER_MISSING_MESSAGE);
+    }
+
+    const device = await adapter.requestDevice({
+      requiredLimits: resolveRequiredLimits(adapter),
+    });
+    trackDevice(device);
+    cachedDevice = device;
+    return device;
+  } catch (error) {
+    cachedDevice = null;
+    throw new Error(GPU_DEVICE_REQUEST_FAILED_MESSAGE, { cause: error });
+  }
+}
+
+/**
+ * Asynchronously request a WebGPU device, caching the result so that
+ * repeated calls reuse the same device instance. Concurrent calls share
+ * a single pending request promise to avoid duplicate initialization.
+ * Throws when the device request fails or no suitable adapter is found.
+ *
+ * @returns A promise that resolves to the cached or newly created GPUDevice.
+ * @throws {Error} When WebGPU is unavailable or the device request fails.
+ */
 export async function requestGPUDevice(): Promise<GPUDevice> {
   if (cachedDevice !== null && isDeviceReady(cachedDevice)) {
     return cachedDevice;
@@ -103,35 +158,7 @@ export async function requestGPUDevice(): Promise<GPUDevice> {
     throw new Error(GPU_UNAVAILABLE_MESSAGE);
   }
 
-  const gpuSurface = navigator.gpu;
-
-  pendingRequest = (async (): Promise<GPUDevice> => {
-    try {
-      const adapter = await gpuSurface.requestAdapter({
-        powerPreference: 'high-performance',
-      });
-      if (!adapter) {
-        throw new Error(GPU_ADAPTER_MISSING_MESSAGE);
-      }
-
-      const requiredLimits: GPUSupportedLimits = {};
-      if (typeof adapter.limits.maxStorageBufferBindingSize === 'number') {
-        requiredLimits.maxStorageBufferBindingSize =
-          adapter.limits.maxStorageBufferBindingSize;
-      }
-      if (typeof adapter.limits.maxBufferSize === 'number') {
-        requiredLimits.maxBufferSize = adapter.limits.maxBufferSize;
-      }
-
-      const device = await adapter.requestDevice({ requiredLimits });
-      trackDevice(device);
-      cachedDevice = device;
-      return device;
-    } catch (error) {
-      cachedDevice = null;
-      throw new Error(GPU_DEVICE_REQUEST_FAILED_MESSAGE, { cause: error });
-    }
-  })();
+  pendingRequest = createGPUDevice(navigator.gpu);
 
   try {
     return await pendingRequest;
