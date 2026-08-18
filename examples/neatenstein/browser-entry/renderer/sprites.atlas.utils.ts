@@ -9,7 +9,7 @@
  */
 
 import { ROBOT_SPRITE_FRAMES } from '../../robot-sprite-data.js';
-import { type VoxelSnapshot } from '../../../neatenstein/scripts/snapshot-renderer';
+import { type VoxelSnapshot } from '../shared/snapshot-renderer';
 import {
   type EncodedRobotSpriteFrame,
   decodeRobotSpriteFrame,
@@ -55,11 +55,11 @@ export function resolveDecodedRobotSpriteFrame(
 
 /**
  * Lazily decoded team-color frame cache, keyed by encoded frame reference
- * then by color tuple string.
+ * then by packed numeric color key.
  */
 const teamColorDecodedCache = new Map<
   EncodedRobotSpriteFrame,
-  Map<string, VoxelSnapshot>
+  Map<number, VoxelSnapshot>
 >();
 
 /**
@@ -79,7 +79,10 @@ export function resolveDecodedRobotSpriteFrameWithTeamColor(
     colorMap = new Map();
     teamColorDecodedCache.set(frame, colorMap);
   }
-  const colorKey = `${teamColor[0]},${teamColor[1]},${teamColor[2]}`;
+  const colorKey =
+    ((teamColor[0] & 0xff) << 16) |
+    ((teamColor[1] & 0xff) << 8) |
+    (teamColor[2] & 0xff);
   const cached = colorMap.get(colorKey);
   if (cached !== undefined) {
     return cached;

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Pure bolt-rendering executors extracted from {@link module:./bolt-render}.
  *
  * This module owns the per-item render logic, projection-context resolvers,
@@ -75,6 +75,7 @@ import type {
   MuzzleScreenPosition,
 } from './renderer.bolt.types';
 import { depthTestPulse } from './pulse';
+import { clamp } from '../shared/math-guards.utils';
 
 // Re-export constants and types for external consumers.
 export type {
@@ -86,18 +87,6 @@ export type {
 // ---------------------------------------------------------------------------
 // Private helpers
 // ---------------------------------------------------------------------------
-
-/**
- * Clamp a numeric value to the inclusive range [min, max].
- *
- * @param value - Value to clamp.
- * @param min - Lower bound.
- * @param max - Upper bound.
- * @returns Clamped value.
- */
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
-}
 
 // ---------------------------------------------------------------------------
 // Projection-context resolvers

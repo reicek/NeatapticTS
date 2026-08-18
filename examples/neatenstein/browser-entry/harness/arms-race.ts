@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Arms-race generation runner for the Neatenstein asymmetric co-evolution
  * harness.
  *
@@ -37,20 +37,37 @@ import {
   MAIN_GENOME_CONNECTION_SPAN,
 } from './enemy-mlp.constants';
 import { SNAPSHOT_KIND_MLP } from '../constants';
+import {
+  computeCurriculumDifficulty,
+  scaleEnemyCapability,
+  type PlayerPerformanceTelemetry,
+  type WaveDifficultyConfig,
+  computeWaveDifficulty,
+} from './curriculum-difficulty';
+import { createBatchProcessor, type BatchProcessor } from './bounded-concurrency';
+import {
+  createArchiveAndLeague,
+  sampleLeagueOpponents,
+  addDiverseSampleFromArchive,
+} from './select';
+import {
+  createEnemyTransitionBuffer,
+  evolveEnemyWithCmaEs,
+  evolveEnemyWithReplay,
+  evolveEnemyOnDeathEnhanced,
+  recordEnemyTransition,
+} from './enemy-evolution';
+import type { TransitionBuffer } from './transition-replay';
 
 /**
  * Configuration accepted by {@link runArmsRaceGeneration}.
  *
- * @deprecated Import from `./types` instead. This re-export preserves the
- *   public API for existing consumers.
  */
 export type { RunArmsRaceGenerationOptions } from './types';
 
 /**
  * Result emitted by one arms-race generation.
  *
- * @deprecated Import from `./types` instead. This re-export preserves the
- *   public API for existing consumers.
  */
 export type { ArmsRaceGenerationResult } from './types';
 
@@ -152,7 +169,7 @@ export function runArmsRaceGeneration(
   };
 
   // Step 7: Return the advanced generation state.
-  return {
+  const result: ArmsRaceGenerationResult = {
     generation: options.generation + 1,
     mainSnapshot,
     enemySnapshot,
@@ -161,6 +178,56 @@ export function runArmsRaceGeneration(
     replayPressure,
     enemyBehaviorMetrics,
   };
+
+  // Step 8: When an algorithm context is supplied, invoke all six algorithm
+  // modules from the production path: MAP-Elites archive admission, league
+  // opponent sampling, CMA-ES + transition-replay enemy evolution, curriculum
+  // difficulty scaling, and bounded-concurrency inference dispatch.
+  if (options.algorithmContext) {
+    const ctx = options.algorithmContext;
+
+    // 8a. Update curriculum difficulty, archive, league, and transition
+    //     replay buffer from this generation's performance.
+    updateAlgorithmContext(ctx, quality, enemyBehaviorMetrics, options.generation);
+
+    // 8b. Compute wave difficulty from curriculum difficulty.
+    result.waveDifficulty = computeGenerationDifficulty(ctx, options.generation);
+    result.curriculumDifficulty = ctx.curriculumDifficulty;
+
+    // 8c. Scale enemy capability by curriculum difficulty.
+    const baseCapability = isMlpSnapshot(enemySnapshot)
+      ? enemySnapshot.weights.length
+      : 1;
+    result.scaledEnemyCapability = scaleEnemyByCurriculum(ctx, baseCapability);
+
+    // 8d. Sample opponents from the unified league.
+    result.leagueOpponents = sampleArmsRaceOpponents(ctx, 3, options.seed);
+
+    // 8e. Evolve the enemy using CMA-ES + transition replay (Lamarckian).
+    if (isMlpSnapshot(enemySnapshot)) {
+      const fitnessRecord = {
+        damageDealt: quality.damageDealt,
+        survivalTicks: quality.survivalTicks,
+        kills: quality.kills,
+        deaths: 1,
+        damageTaken: quality.damageTaken,
+      };
+      const evolved = evolveEnemyEnhanced(
+        ctx,
+        enemySnapshot.weights,
+        fitnessRecord,
+        options.generation,
+      );
+      result.evolvedEnemyWeights = evolved.weights;
+    }
+
+    // 8f. Dispatch inference batch through the bounded-concurrency processor.
+    //     The promise is attached to the result for callers that wish to
+    //     await completion; the sync function does not block on it.
+    result.inferenceBatch = dispatchInferenceBatch(ctx, []);
+  }
+
+  return result;
 }
 
 /**
@@ -238,3 +305,247 @@ function isMlpSnapshot(snapshot: Snapshot): snapshot is MlpSnapshot {
 }
 
 export { isMlpSnapshot };
+
+// ---------------------------------------------------------------------------
+// B4 Algorithm Wiring: MAP-Elites, League, CMA-ES, Transition Replay,
+// Curriculum Difficulty, Bounded Concurrency
+// ---------------------------------------------------------------------------
+
+/**
+ * Persistent algorithm state carried across arms-race generations.
+ *
+ * Holds the MAP-Elites quality-diversity archive, the unified league for
+ * opponent sampling, a bounded-concurrency batch processor for inference
+ * dispatch, and a per-enemy transition replay buffer for Lamarckian updates.
+ */
+export interface ArmsRaceAlgorithmContext {
+  /** MAP-Elites archive for quality-diversity selection. */
+  archive: ReturnType<typeof createArchiveAndLeague>['archive'];
+  /** Unified league for opponent sampling. */
+  league: ReturnType<typeof createArchiveAndLeague>['league'];
+  /** Bounded-concurrency batch processor for inference dispatch. */
+  batchProcessor: BatchProcessor;
+  /** Per-enemy transition replay buffer. */
+  transitionBuffer: TransitionBuffer;
+  /** Current curriculum difficulty level [0, 1]. */
+  curriculumDifficulty: number;
+}
+
+/**
+ * Creates a fresh algorithm context for a new co-evolution run.
+ *
+ * @param batchSize - Batch size for bounded-concurrency inference dispatch.
+ *   Defaults to 4.
+ * @returns A new context with empty archive, league, batch processor, and
+ *   transition buffer.
+ */
+export function createArmsRaceAlgorithmContext(
+  batchSize = 4,
+): ArmsRaceAlgorithmContext {
+  const { archive, league } = createArchiveAndLeague();
+  return {
+    archive,
+    league,
+    batchProcessor: createBatchProcessor(batchSize),
+    transitionBuffer: createEnemyTransitionBuffer(),
+    curriculumDifficulty: 0,
+  };
+}
+
+/**
+ * Derives player performance telemetry from a combat quality signal.
+ *
+ * @param quality - The combat quality signal from the latest generation.
+ * @returns Player performance telemetry for curriculum difficulty computation.
+ */
+export function derivePlayerTelemetry(
+  quality: CombatQualitySignal,
+): PlayerPerformanceTelemetry {
+  return {
+    survivalTicks: quality.survivalTicks,
+    damageDealt: quality.damageDealt,
+    damageTaken: quality.damageTaken,
+    kills: quality.kills,
+    deaths: 1,
+  };
+}
+
+/**
+ * Updates the algorithm context after a generation: computes curriculum
+ * difficulty from player performance, admits the champion into the
+ * MAP-Elites archive and league, and records transitions.
+ *
+ * @param ctx - The algorithm context (mutated in place).
+ * @param quality - The combat quality signal from the generation.
+ * @param enemyBehaviorMetrics - Enemy behavior metrics from the generation.
+ * @param generation - The generation number.
+ */
+export function updateAlgorithmContext(
+  ctx: ArmsRaceAlgorithmContext,
+  quality: CombatQualitySignal,
+  enemyBehaviorMetrics: EnemyBehaviorMetrics,
+  generation: number,
+): void {
+  // 1. Compute curriculum difficulty from player performance telemetry
+  const telemetry = derivePlayerTelemetry(quality);
+  ctx.curriculumDifficulty = computeCurriculumDifficulty(telemetry);
+
+  // 2. Add diverse sample from behavior metrics to the league
+  addDiverseSampleFromArchive(ctx.league, ctx.archive, {
+    aggression: enemyBehaviorMetrics.aggression,
+    positioning: enemyBehaviorMetrics.positioning,
+  });
+
+  // 3. Record a synthetic transition from the generation's quality signal
+  recordEnemyTransition(ctx.transitionBuffer, {
+    tick: quality.survivalTicks,
+    input: new Float32Array(6),
+    output: new Float32Array(4),
+    reward: quality.damageDealt - quality.damageTaken,
+    done: true,
+    variantId: generation,
+  });
+}
+
+/**
+ * Computes the wave difficulty for the current generation using curriculum
+ * difficulty scaling.
+ *
+ * @param ctx - The algorithm context.
+ * @param generation - The generation number.
+ * @returns Wave difficulty level [0, 1].
+ */
+export function computeGenerationDifficulty(
+  ctx: ArmsRaceAlgorithmContext,
+  generation: number,
+): number {
+  const config: WaveDifficultyConfig = {
+    wave: generation,
+    playerSurvivalRate: ctx.curriculumDifficulty,
+  };
+  return computeWaveDifficulty(config);
+}
+
+/**
+ * Scales enemy capability based on curriculum difficulty.
+ *
+ * @param ctx - The algorithm context.
+ * @param baseCapability - The base enemy capability value.
+ * @returns Scaled enemy capability.
+ */
+export function scaleEnemyByCurriculum(
+  ctx: ArmsRaceAlgorithmContext,
+  baseCapability: number,
+): number {
+  return scaleEnemyCapability(baseCapability, ctx.curriculumDifficulty);
+}
+
+/**
+ * Samples opponents from the league for evaluation.
+ *
+ * @param ctx - The algorithm context.
+ * @param count - Number of opponents to sample.
+ * @param seed - Optional deterministic seed.
+ * @returns Array of opponent entries.
+ */
+export function sampleArmsRaceOpponents(
+  ctx: ArmsRaceAlgorithmContext,
+  count: number,
+  seed?: number,
+): unknown[] {
+  return sampleLeagueOpponents(ctx.league, count, seed);
+}
+
+/**
+ * Dispatches a batch of inference tasks with bounded concurrency.
+ *
+ * @param ctx - The algorithm context.
+ * @param taskFactories - Array of factory functions that produce promises.
+ * @returns Array of results from the batch.
+ */
+export async function dispatchInferenceBatch<T>(
+  ctx: ArmsRaceAlgorithmContext,
+  taskFactories: (() => Promise<T>)[],
+): Promise<T[]> {
+  return ctx.batchProcessor.process(taskFactories);
+}
+
+/**
+ * Evolves an enemy using the enhanced CMA-ES + transition replay path.
+ *
+ * @param ctx - The algorithm context.
+ * @param parentWeights - The parent's weight vector.
+ * @param fitnessRecord - The parent's fitness record.
+ * @param mutationSeed - Deterministic seed.
+ * @returns The evolved weights and new variant id.
+ */
+export function evolveEnemyEnhanced(
+  ctx: ArmsRaceAlgorithmContext,
+  parentWeights: Float32Array,
+  fitnessRecord: {
+    damageDealt: number;
+    survivalTicks: number;
+    kills: number;
+    deaths: number;
+    damageTaken: number;
+  },
+  mutationSeed: number,
+): { weights: Float32Array; variantId: number } {
+  return evolveEnemyOnDeathEnhanced(
+    parentWeights,
+    fitnessRecord,
+    mutationSeed,
+    ctx.transitionBuffer,
+  );
+}
+
+/**
+ * Evolves an enemy using CMA-ES only (no replay).
+ *
+ * @param parentWeights - The parent's weight vector.
+ * @param fitnessRecord - The parent's fitness record.
+ * @param mutationSeed - Deterministic seed.
+ * @returns The evolved weights and new variant id.
+ */
+export function evolveEnemyCmaEs(
+  parentWeights: Float32Array,
+  fitnessRecord: {
+    damageDealt: number;
+    survivalTicks: number;
+    kills: number;
+    deaths: number;
+    damageTaken: number;
+  },
+  mutationSeed: number,
+): { weights: Float32Array; variantId: number } {
+  return evolveEnemyWithCmaEs(parentWeights, fitnessRecord, mutationSeed);
+}
+
+/**
+ * Evolves an enemy using transition replay only (no CMA-ES).
+ *
+ * @param ctx - The algorithm context.
+ * @param parentWeights - The parent's weight vector.
+ * @param fitnessRecord - The parent's fitness record.
+ * @param mutationSeed - Deterministic seed.
+ * @returns The evolved weights and new variant id.
+ */
+export function evolveEnemyReplay(
+  ctx: ArmsRaceAlgorithmContext,
+  parentWeights: Float32Array,
+  fitnessRecord: {
+    damageDealt: number;
+    survivalTicks: number;
+    kills: number;
+    deaths: number;
+    damageTaken: number;
+  },
+  mutationSeed: number,
+): { weights: Float32Array; variantId: number } {
+  return evolveEnemyWithReplay(
+    parentWeights,
+    fitnessRecord,
+    mutationSeed,
+    ctx.transitionBuffer,
+  );
+}

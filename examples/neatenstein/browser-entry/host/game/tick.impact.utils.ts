@@ -20,12 +20,18 @@ import type { EnemyImpactSpot, ImpactSpot } from './types';
 export function ageImpacts(impacts: ImpactSpot[], dtMs: number): ImpactSpot[] {
   const resolvedDtMs = resolveTickDurationMs(dtMs);
 
-  return impacts
-    .map((impact) => ({
-      ...impact,
-      lifetimeMs: impact.lifetimeMs - resolvedDtMs,
-    }))
-    .filter((impact) => impact.lifetimeMs > 0);
+  // In-place mutation with single-pass compaction (A2 Fix 5).
+  let writeIndex = 0;
+  for (let readIndex = 0; readIndex < impacts.length; readIndex += 1) {
+    const impact = impacts[readIndex];
+    impact.lifetimeMs -= resolvedDtMs;
+    if (impact.lifetimeMs > 0) {
+      impacts[writeIndex] = impact;
+      writeIndex += 1;
+    }
+  }
+  impacts.length = writeIndex;
+  return impacts;
 }
 
 /**
@@ -46,10 +52,16 @@ export function ageEnemyImpacts(
 ): EnemyImpactSpot[] {
   const resolvedDtMs = resolveTickDurationMs(dtMs);
 
-  return impacts
-    .map((impact) => ({
-      ...impact,
-      lifetimeMs: impact.lifetimeMs - resolvedDtMs,
-    }))
-    .filter((impact) => impact.lifetimeMs > 0);
+  // In-place mutation with single-pass compaction (A2 Fix 5).
+  let writeIndex = 0;
+  for (let readIndex = 0; readIndex < impacts.length; readIndex += 1) {
+    const impact = impacts[readIndex];
+    impact.lifetimeMs -= resolvedDtMs;
+    if (impact.lifetimeMs > 0) {
+      impacts[writeIndex] = impact;
+      writeIndex += 1;
+    }
+  }
+  impacts.length = writeIndex;
+  return impacts;
 }

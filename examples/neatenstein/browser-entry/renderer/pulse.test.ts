@@ -1,5 +1,6 @@
 import { describe, expect, it } from '@jest/globals';
 import { NEATENSTEIN_PULSE_MAX_CONCURRENT } from '../constants';
+import { PARK_MILLER_MODULUS } from './renderer.rng.constants';
 import type { NeatensteinPulse } from './pulse';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -135,6 +136,21 @@ describe('Neatenstein floor pulse system', () => {
     expect(depthTestPulse(pulse, zBuffer)).toBe(false);
   });
 
+  it('occludes a pulse at exactly the wall distance so the wall wins ties', async () => {
+    // Arrange: pulse distance equals the stored wall distance exactly.
+    const { depthTestPulse } = await loadModule('./pulse.ts');
+    const pulse = { screenColumn: 0, distance: 5 };
+    const zBuffer = new Float32Array([5]);
+
+    // Act
+    const visible = depthTestPulse(pulse, zBuffer);
+
+    // Assert — fails today: depthTestPulse uses <= (inclusive), so a pulse
+    // at exactly the wall distance is visible. The fix standardizes on
+    // strict < so the wall wins ties, matching clipNeatensteinSpriteSpan.
+    expect(visible).toBe(false);
+  });
+
   it('schedules generation-up audio and pulse on the same sim tick', async () => {
     const {
       emitNeatensteinGenerationUpPulse,
@@ -223,5 +239,82 @@ describe('Neatenstein ambient pulse branch coverage', () => {
     const pulse = emitNeatensteinAmbientPulse(0, 1);
     expect(pulse).not.toBeNull();
     expect(pulse!.travelDirection).toBe(-1);
+  });
+});
+
+describe('LCG seed normalization', () => {
+  it('produces identical computed values for a negative seed and its positive modular equivalent', async () => {
+    const { emitNeatensteinAmbientPulse } = await loadModule('./pulse.ts');
+    const negativeSeedPulse = emitNeatensteinAmbientPulse(0, -500);
+    const positiveSeedPulse = emitNeatensteinAmbientPulse(
+      0,
+      PARK_MILLER_MODULUS - 500,
+    );
+    expect(negativeSeedPulse).not.toBeNull();
+    expect(positiveSeedPulse).not.toBeNull();
+    if (negativeSeedPulse === null || positiveSeedPulse === null) return;
+    expect({
+      worldX: negativeSeedPulse.worldX,
+      worldY: negativeSeedPulse.worldY,
+      axis: negativeSeedPulse.axis,
+      travelDirection: negativeSeedPulse.travelDirection,
+      travelSpeed: negativeSeedPulse.travelSpeed,
+    }).toEqual({
+      worldX: positiveSeedPulse.worldX,
+      worldY: positiveSeedPulse.worldY,
+      axis: positiveSeedPulse.axis,
+      travelDirection: positiveSeedPulse.travelDirection,
+      travelSpeed: positiveSeedPulse.travelSpeed,
+    });
+  });
+
+  it('produces identical computed values for a large negative seed and its positive modular equivalent', async () => {
+    const { emitNeatensteinAmbientPulse } = await loadModule('./pulse.ts');
+    const negativeSeedPulse = emitNeatensteinAmbientPulse(0, -2_147_483_000);
+    const positiveSeedPulse = emitNeatensteinAmbientPulse(0, 647);
+    expect(negativeSeedPulse).not.toBeNull();
+    expect(positiveSeedPulse).not.toBeNull();
+    if (negativeSeedPulse === null || positiveSeedPulse === null) return;
+    expect({
+      worldX: negativeSeedPulse.worldX,
+      worldY: negativeSeedPulse.worldY,
+      axis: negativeSeedPulse.axis,
+      travelDirection: negativeSeedPulse.travelDirection,
+      travelSpeed: negativeSeedPulse.travelSpeed,
+    }).toEqual({
+      worldX: positiveSeedPulse.worldX,
+      worldY: positiveSeedPulse.worldY,
+      axis: positiveSeedPulse.axis,
+      travelDirection: positiveSeedPulse.travelDirection,
+      travelSpeed: positiveSeedPulse.travelSpeed,
+    });
+  });
+});
+
+describe('pooled pulse updates', () => {
+  it('returns the same object reference for a surviving pulse', async () => {
+    const { updateNeatensteinPulses } = await loadModule('./pulse.ts');
+    const pulse = createPulseFixture(12345);
+    const next = updateNeatensteinPulses([pulse], 0);
+    // Fails today: .map() creates a new object, so next[0] !== pulse
+    expect(next[0]).toBe(pulse);
+  });
+
+  it('decrements lifetimeTicks on the original pulse object in place', async () => {
+    const { updateNeatensteinPulses } = await loadModule('./pulse.ts');
+    const pulse = createPulseFixture(12345);
+    const originalLifetime = pulse.lifetimeTicks;
+    updateNeatensteinPulses([pulse], 0);
+    // Fails today: .map() creates a copy, original lifetimeTicks is unchanged
+    expect(pulse.lifetimeTicks).toBe(originalLifetime - 1);
+  });
+
+  it('marks an expired pulse as inactive on the original object', async () => {
+    const { updateNeatensteinPulses } = await loadModule('./pulse.ts');
+    const pulse = createPulseFixture(12345);
+    pulse.lifetimeTicks = 1;
+    updateNeatensteinPulses([pulse], 0);
+    // Fails today: .map() creates a copy with active:false, original stays active:true
+    expect(pulse.active).toBe(false);
   });
 });

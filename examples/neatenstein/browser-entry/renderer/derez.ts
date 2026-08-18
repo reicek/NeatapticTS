@@ -70,6 +70,11 @@ export function voxelToLogical(voxelCoord: number): number {
  * deterministic noise hash, and dissolves the pixel when `noise < t` where
  * `t` is the normalised animation progress (`elapsedMs / durationMs`).
  *
+ * Safety (C4): when `durationMs` is zero or negative the animation is
+ * treated as complete (`t = 1`) so every pixel dissolves. For positive
+ * durations `t` is clamped to `[0, 1]` to prevent overshoot from excess
+ * `elapsedMs`.
+ *
  * At `t = 0` no pixels dissolve (all noise values are `≥ 0`). At `t = 1`
  * every pixel dissolves (all noise values are `< 1`). At intermediate values
  * the pattern is spatially scattered because the hash mixes both axes
@@ -92,6 +97,13 @@ export function shouldDissolvePixel(
   const logicalX = voxelToLogical(voxelX);
   const logicalY = voxelToLogical(voxelY);
   const noise = derezHash(logicalX, logicalY, seed);
-  const t = elapsedMs / durationMs;
+
+  // C4: Guard against zero/negative duration to avoid NaN (0/0) or negative t.
+  // When duration is invalid the animation is complete — dissolve all pixels.
+  const t =
+    durationMs > 0
+      ? Math.max(0, Math.min(1, elapsedMs / durationMs))
+      : 1;
+
   return noise < t;
 }

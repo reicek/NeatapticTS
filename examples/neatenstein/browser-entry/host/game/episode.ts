@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Deterministic episode lifecycle for the Neatenstein host-side simulation.
  *
  * An episode is a single deterministic play-through from a fixed seed to a
@@ -24,6 +24,7 @@ import { createGameState } from './state';
 import { spawnWaveTick } from './waves';
 import type { GameState } from './types';
 import type { CreateEpisodeOptions, Episode } from '../types';
+import { isFiniteNumber } from '../../shared/math-guards.utils';
 
 // Re-export consolidated types so existing imports from this module remain valid.
 export type { CreateEpisodeOptions, Episode } from '../types';
@@ -48,16 +49,6 @@ const EPISODE_STEP_GUARD_MARGIN = 2;
 
 /** Options accepted by {@link createEpisode}. */
 // Type is defined in ../types and re-exported above.
-
-/**
- * Return whether a value is a finite number.
- *
- * @param value - Candidate number.
- * @returns Whether the value is finite.
- */
-function isFiniteNumber(value: number): boolean {
-  return Number.isFinite(value);
-}
 
 /**
  * Resolve a deterministic episode seed.

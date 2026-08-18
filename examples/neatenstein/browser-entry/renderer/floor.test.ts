@@ -22,6 +22,10 @@ import {
   resolveNeatensteinFloorAlpha,
   type NeatensteinFloorCamera,
 } from './floor';
+import type {
+  NeatensteinGridProjectionContext,
+  ProjectedNeatensteinGridPoint,
+} from './renderer.floor.types';
 
 type MockFloorContext = ReturnType<typeof createMockFloorContext>;
 
@@ -872,5 +876,125 @@ describe('strokeNeatensteinGridBands empty-band continue branch', () => {
     expect(() =>
       __testOnlyStrokeNeatensteinGridBands(ctx, bands),
     ).not.toThrow();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// A2 Fix 1 — Floor projection ping-pong scratch
+//
+// projectNeatensteinGridPoint currently returns a fresh
+// ProjectedNeatensteinGridPoint per call (~20K/frame).  The fix adds a
+// projectNeatensteinGridPointInto variant that writes into a caller-provided
+// scratch slot, enabling a ping-pong (two-slot) pattern in
+// appendNeatensteinGridLine so that segment lengths are never zero-length
+// due to shared-single-scratch aliasing.
+// ---------------------------------------------------------------------------
+
+describe('A2 Fix 1: Floor projection ping-pong scratch', () => {
+  it('exports projectNeatensteinGridPointInto as a function', async () => {
+    const mod = (await import('./floor.projection.utils.ts')) as Record<
+      string,
+      unknown
+    >;
+    expect(typeof mod.projectNeatensteinGridPointInto).toBe('function');
+  });
+
+  it('writes into the provided scratch slot and returns the same reference', async () => {
+    const { projectNeatensteinGridPointInto } = (await import(
+      './floor.projection.utils.ts'
+    )) as unknown as {
+      projectNeatensteinGridPointInto: (
+        worldX: number,
+        worldY: number,
+        projection: NeatensteinGridProjectionContext,
+        forCeiling: boolean,
+        scratch: ProjectedNeatensteinGridPoint,
+      ) => ProjectedNeatensteinGridPoint | null;
+    };
+    const focalLength =
+      TEST_CANVAS_HEIGHT / 2 / Math.tan(NEATENSTEIN_FLOOR_FOV_RADIANS / 2);
+    const projection: NeatensteinGridProjectionContext = {
+      width: TEST_CANVAS_WIDTH,
+      height: TEST_CANVAS_HEIGHT,
+      cameraX: 5.5,
+      cameraY: 5.5,
+      cosYaw: 1,
+      sinYaw: 0,
+      focalLength,
+      halfWidth: TEST_CANVAS_WIDTH / 2,
+      horizonY: TEST_CANVAS_HEIGHT * NEATENSTEIN_FLOOR_HORIZON_RATIO,
+      cameraHeight: NEATENSTEIN_FLOOR_CAMERA_HEIGHT_WORLD,
+    };
+    const scratch: ProjectedNeatensteinGridPoint = {
+      x: 0,
+      y: 0,
+      depthRatio: 0,
+      distance: 0,
+    };
+    const result = projectNeatensteinGridPointInto(
+      10,
+      10,
+      projection,
+      false,
+      scratch,
+    );
+    // Must return the SAME scratch object (mutated in place), not a new object.
+    expect(result).toBe(scratch);
+  });
+
+  it('produces nonzero segment lengths for a moving camera with ping-pong scratch', async () => {
+    const { projectNeatensteinGridPointInto } = (await import(
+      './floor.projection.utils.ts'
+    )) as unknown as {
+      projectNeatensteinGridPointInto: (
+        worldX: number,
+        worldY: number,
+        projection: NeatensteinGridProjectionContext,
+        forCeiling: boolean,
+        scratch: ProjectedNeatensteinGridPoint,
+      ) => ProjectedNeatensteinGridPoint | null;
+    };
+    const focalLength =
+      TEST_CANVAS_HEIGHT / 2 / Math.tan(NEATENSTEIN_FLOOR_FOV_RADIANS / 2);
+    const projection: NeatensteinGridProjectionContext = {
+      width: TEST_CANVAS_WIDTH,
+      height: TEST_CANVAS_HEIGHT,
+      cameraX: 5.5,
+      cameraY: 5.5,
+      cosYaw: 1,
+      sinYaw: 0,
+      focalLength,
+      halfWidth: TEST_CANVAS_WIDTH / 2,
+      horizonY: TEST_CANVAS_HEIGHT * NEATENSTEIN_FLOOR_HORIZON_RATIO,
+      cameraHeight: NEATENSTEIN_FLOOR_CAMERA_HEIGHT_WORLD,
+    };
+    // Ping-pong: two separate scratch slots so consecutive projections
+    // don't overwrite each other (the bug with a single shared scratch).
+    const slotA: ProjectedNeatensteinGridPoint = {
+      x: 0,
+      y: 0,
+      depthRatio: 0,
+      distance: 0,
+    };
+    const slotB: ProjectedNeatensteinGridPoint = {
+      x: 0,
+      y: 0,
+      depthRatio: 0,
+      distance: 0,
+    };
+    const r0 = projectNeatensteinGridPointInto(10, 10, projection, false, slotA);
+    const r1 = projectNeatensteinGridPointInto(
+      10.5,
+      10,
+      projection,
+      false,
+      slotB,
+    );
+    expect(r0).not.toBeNull();
+    expect(r1).not.toBeNull();
+    // Segment length between consecutive samples must be nonzero.
+    const dx = r1!.x - r0!.x;
+    const dy = r1!.y - r0!.y;
+    expect(Math.hypot(dx, dy)).toBeGreaterThan(0);
   });
 });

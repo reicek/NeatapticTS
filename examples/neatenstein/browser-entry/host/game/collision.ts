@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Enemy/player contact damage for the Neatenstein host-side simulation.
  *
  * This module owns the melee half of AC-202 and AC-207: any living enemy that
@@ -17,6 +17,7 @@ import {
 import { isInvulnerable } from './state';
 import type { GameState } from './types';
 import type { ContactPosition } from '../types';
+import { isFiniteNumber } from '../../shared/math-guards.utils';
 
 // Re-export consolidated type so existing imports from this module remain valid.
 export type { ContactPosition } from '../types';
@@ -34,16 +35,6 @@ const MIN_PLAYER_HEALTH = 0;
  * The timer is clamped to this value after each tick.
  */
 const MIN_CONTACT_IFRAME_MS = 0;
-
-/**
- * Return whether a number is finite.
- *
- * @param value - Candidate numeric value.
- * @returns Whether the value is finite.
- */
-function isFiniteNumber(value: number): boolean {
-  return Number.isFinite(value);
-}
 
 /**
  * Return whether a world position has finite coordinates.

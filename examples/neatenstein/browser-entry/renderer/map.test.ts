@@ -1,11 +1,85 @@
 import { describe, expect, it } from '@jest/globals';
 import { buildNeatensteinMap, createCollisionMap } from './map';
+import * as mapConstants from './renderer.map.constants';
 
 /** Expected square map dimension for the 120×120 target behavior. */
 const EXPECTED_MAP_SIZE = 120;
 
 /** Deterministic seed used for repeatable map fixtures. */
 const TEST_SEED = 12345;
+
+/**
+ * Count reachable interior floor cells from the center of a generated map.
+ *
+ * Returns both the total number of interior floor cells and the number that
+ * are reachable via 4-directional movement from the center.
+ *
+ * @param map - Flat row-major map grid.
+ * @param side - Width and height of the square grid.
+ * @returns Total and reachable interior floor cell counts.
+ */
+function countReachableInteriorFloorCells(
+  map: Uint8Array,
+  side: number,
+): { total: number; reachable: number } {
+  const center = Math.floor(side / 2);
+  const startIndex = center * side + center;
+
+  const visited = new Uint8Array(side * side);
+  const queue: number[] = [];
+  let queueHead = 0;
+  let reachable = 0;
+
+  if (map[startIndex] === 0) {
+    visited[startIndex] = 1;
+    queue.push(startIndex);
+  }
+
+  while (queueHead < queue.length) {
+    const index = queue[queueHead++];
+    reachable++;
+    const x = index % side;
+    const y = Math.floor(index / side);
+
+    const directions = [
+      [0, -1],
+      [0, 1],
+      [-1, 0],
+      [1, 0],
+    ];
+
+    for (const [dx, dy] of directions) {
+      const nx = x + dx;
+      const ny = y + dy;
+      const neighborIndex = ny * side + nx;
+
+      if (
+        nx < 1 ||
+        nx >= side - 1 ||
+        ny < 1 ||
+        ny >= side - 1 ||
+        visited[neighborIndex] ||
+        map[neighborIndex] !== 0
+      ) {
+        continue;
+      }
+
+      visited[neighborIndex] = 1;
+      queue.push(neighborIndex);
+    }
+  }
+
+  let total = 0;
+  for (let x = 1; x < side - 1; x++) {
+    for (let y = 1; y < side - 1; y++) {
+      if (map[y * side + x] === 0) {
+        total++;
+      }
+    }
+  }
+
+  return { total, reachable };
+}
 
 describe('Neatenstein map generation', () => {
   it('returns a Uint8Array of length 120*120', () => {
@@ -54,6 +128,15 @@ describe('Neatenstein map generation', () => {
     }
 
     expect(allOpen).toBe(true);
+  });
+
+  it('makes every interior floor cell reachable from the center', () => {
+    const map = buildNeatensteinMap(TEST_SEED);
+    const { total, reachable } = countReachableInteriorFloorCells(
+      map,
+      EXPECTED_MAP_SIZE,
+    );
+    expect(total - reachable).toBe(0);
   });
 
   it('produces identical output for the same seed', () => {
@@ -126,5 +209,23 @@ describe('createCollisionMap', () => {
     expect(() => createCollisionMap(flatMap, 0)).toThrow(
       'Invalid map dimensions: expected a square Uint8Array.',
     );
+  });
+});
+
+describe('renderer.map.constants', () => {
+  it('exposes MAZE_CORRIDOR_WIDTH equal to 3', () => {
+    expect(mapConstants).toHaveProperty('MAZE_CORRIDOR_WIDTH', 3);
+  });
+
+  it('exposes MAZE_COARSE_GRID_DIVISOR equal to 4', () => {
+    expect(mapConstants).toHaveProperty('MAZE_COARSE_GRID_DIVISOR', 4);
+  });
+
+  it('exposes MAZE_LOOP_REMOVAL_RATE equal to 0.03', () => {
+    expect(mapConstants).toHaveProperty('MAZE_LOOP_REMOVAL_RATE', 0.03);
+  });
+
+  it('no longer exports INTERIOR_WALL_DENSITY', () => {
+    expect(mapConstants).not.toHaveProperty('INTERIOR_WALL_DENSITY');
   });
 });

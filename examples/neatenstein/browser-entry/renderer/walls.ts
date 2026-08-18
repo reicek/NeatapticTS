@@ -15,7 +15,7 @@
 import {
   clampInt,
   NEATENSTEIN_BACKGROUND_RGB,
-  NEATENSTEIN_RENDER_DISTANCE_CAP,
+  resolveNeatensteinFogFactor,
 } from './framebuffer';
 import { RGBA_CHANNELS, RGBA_OPAQUE_ALPHA } from './renderer.wall.constants';
 import type { ParsedRgb } from './renderer.wall.types';
@@ -75,20 +75,16 @@ function parseHexColor(hex: string): ParsedRgb {
 }
 
 /**
- * Clamp a fog ratio into `[0, 1]`.
+ * Resolve the wall fog factor for a perpendicular wall distance.
  *
- * Non-finite distances are treated as fully fogged so malformed rays fade into
- * the background instead of producing invalid color channels.
+ * Delegates to the shared smoothstep fog function so walls, floor, ceiling,
+ * and sprites all use the same distance-based fog curve.
  *
  * @param perpWallDist - Perpendicular wall distance.
  * @returns Fog interpolation factor where `0` is near and `1` is fully fogged.
  */
 function resolveWallFogFactor(perpWallDist: number): number {
-  if (!Number.isFinite(perpWallDist)) {
-    return 1;
-  }
-
-  return perpWallDist >= NEATENSTEIN_RENDER_DISTANCE_CAP ? 1 : 0;
+  return resolveNeatensteinFogFactor(perpWallDist);
 }
 
 /**
@@ -110,6 +106,32 @@ function resolveFoggedWallColor(base: ParsedRgb, fogT: number): ParsedRgb {
 }
 
 /**
+ * Compute the wall texture coordinate for a DDA wall hit.
+ *
+ * Returns the fractional part of the wall intersection point along the wall
+ * surface, in `[0, 1)`. For an X-side hit (`side === 0`) the wall coordinate is
+ * `posY + perpWallDist * dirY`; for a Y-side hit it is
+ * `posX + perpWallDist * dirX`. This function computes the X-side variant
+ * directly; callers pass the appropriate fixed coordinate and ray-perpendicular
+ * component.
+ *
+ * @param fixedCoord - Camera coordinate perpendicular to the ray direction on
+ *   the hit side (posY for X-side, posX for Y-side).
+ * @param perpWallDist - Perpendicular wall distance from the DDA hit.
+ * @param rayPerp - Ray direction component perpendicular to the hit side
+ *   (dirY for X-side, dirX for Y-side).
+ * @returns Texture coordinate in `[0, 1)` via `fract(wallX)`.
+ */
+export function computeWallTexcoord(
+  fixedCoord: number,
+  perpWallDist: number,
+  rayPerp: number,
+): number {
+  const wallX = fixedCoord + perpWallDist * rayPerp;
+  return wallX - Math.floor(wallX);
+}
+
+/**
  * Write a single neon wall column into the CPU ImageData framebuffer.
  *
  * This function performs no canvas flush. It is the preferred hot-path helper
@@ -121,6 +143,13 @@ function resolveFoggedWallColor(base: ParsedRgb, fogT: number): ParsedRgb {
  * {@link NEATENSTEIN_RENDER_DISTANCE_CAP}. Non-finite distances are treated as
  * fully fogged.
  *
+ * When a `texcoord` in `[0, 1)` is provided (computed via
+ * {@link computeWallTexcoord}), the column is shaded with a subtle vertical
+ * stripe pattern derived from the texcoord. This breaks up the flat colour
+ * without altering the neon hue, preserving the Invariant §3 aesthetic. When
+ * no texcoord is supplied (or the value is outside `[0, 1)`), the column is
+ * flat-shaded as before.
+ *
  * @param framebuffer - Flat RGBA framebuffer.
  * @param framebufferWidth - Framebuffer width in pixels.
  * @param framebufferHeight - Framebuffer height in pixels.
@@ -129,11 +158,13 @@ function resolveFoggedWallColor(base: ParsedRgb, fogT: number): ParsedRgb {
  * @param drawEnd - Bottom row of the wall stripe, exclusive.
  * @param hexColor - Wall color as `#rrggbb`.
  * @param perpWallDist - Perpendicular wall distance.
+ * @param texcoord - Optional wall texture coordinate in `[0, 1)` from
+ *   {@link computeWallTexcoord}. Drives vertical stripe shading.
  * @throws {Error} When `hexColor` is not a valid `#rrggbb` string.
  *
  * @example
  * ```ts
- * writeNeonWallColumn(framebuffer, 640, 480, 12, 120, 340, '#00bfff', 4.5);
+ * writeNeonWallColumn(framebuffer, 640, 480, 12, 120, 340, '#00bfff', 4.5, 0.37);
  * ```
  */
 export function writeNeonWallColumn(
@@ -145,6 +176,7 @@ export function writeNeonWallColumn(
   drawEnd: number,
   hexColor: string,
   perpWallDist: number,
+  texcoord: number = -1,
 ): void {
   if (
     !isPositiveIntegerDimension(framebufferWidth) ||
@@ -165,7 +197,23 @@ export function writeNeonWallColumn(
 
   const baseColor = parseHexColor(hexColor);
   const fogT = resolveWallFogFactor(perpWallDist);
-  const finalColor = resolveFoggedWallColor(baseColor, fogT);
+  const foggedColor = resolveFoggedWallColor(baseColor, fogT);
+
+  // Compute texcoord-driven brightness modulation. A sinusoidal pattern
+  // creates subtle vertical striping along the wall surface, breaking up
+  // the flat colour while preserving the neon hue (Invariant §3).
+  const hasTexcoord = texcoord >= 0 && texcoord < 1;
+  const brightness = hasTexcoord
+    ? 1.0 - 0.10 * (1.0 - Math.cos(texcoord * Math.PI * 4))
+    : 1.0;
+
+  const finalColor = hasTexcoord
+    ? {
+        r: Math.round(foggedColor.r * brightness),
+        g: Math.round(foggedColor.g * brightness),
+        b: Math.round(foggedColor.b * brightness),
+      }
+    : foggedColor;
 
   const clampedStart = clampInt(drawStart, 0, framebufferHeight);
   const clampedEnd = clampInt(drawEnd, 0, framebufferHeight);

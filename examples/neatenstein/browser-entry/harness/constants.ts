@@ -15,7 +15,8 @@
  * avoids redefining it and prevents drift between the game-simulation and
  * harness evaluation paths.
  */
-export { NEATENSTEIN_FIXED_TIMESTEP_MS } from '../host/game/constants';
+import { NEATENSTEIN_FIXED_TIMESTEP_MS } from '../host/game/constants';
+export { NEATENSTEIN_FIXED_TIMESTEP_MS };
 
 /**
  * Number of main-agent variants evaluated in a single generation.
@@ -38,7 +39,7 @@ export const NEATENSTEIN_FITNESS_EPISODE_DURATION_MS = 5000;
  * NEATENSTEIN_FIXED_TIMESTEP_MS)` = 312.
  */
 export const NEATENSTEIN_FITNESS_MAX_EPISODE_TICKS = Math.floor(
-  NEATENSTEIN_FITNESS_EPISODE_DURATION_MS / 16,
+  NEATENSTEIN_FITNESS_EPISODE_DURATION_MS / NEATENSTEIN_FIXED_TIMESTEP_MS,
 ); // 312
 
 /**

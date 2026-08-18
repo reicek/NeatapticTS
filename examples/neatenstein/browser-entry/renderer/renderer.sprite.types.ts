@@ -8,8 +8,8 @@
  * @module
  */
 
-import type { VoxelSnapshot } from '../../../neatenstein/scripts/snapshot-renderer';
-import type { EnemyAnimationState } from '../../../neatenstein/scripts/enemy-animator';
+import type { VoxelSnapshot } from '../shared/snapshot-renderer';
+import type { EnemyAnimationState } from '../shared/enemy-animator';
 
 /**
  * Minimal canvas-like context consumed by the CPU sprite renderer.

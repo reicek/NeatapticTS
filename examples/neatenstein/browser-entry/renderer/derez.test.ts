@@ -217,13 +217,37 @@ describe('NEATENSTEIN_ENEMY_DEATH_COLOR constant', () => {
 describe('DE_REZ duration constants', () => {
   it('ENEMY_CONTROLLER_DE_REZ_DURATION_MS is 700 in enemy-controller.ts', async () => {
     const { ENEMY_CONTROLLER_DE_REZ_DURATION_MS } =
-      await import('../../../neatenstein/scripts/enemy-controller');
+      await import('../shared/enemy-controller');
     expect(ENEMY_CONTROLLER_DE_REZ_DURATION_MS).toBe(700);
   });
 
   it('ENEMY_SPRITE_DEATH_DE_REZ_DURATION_MS is 700 in enemy-sprite.ts (parity)', async () => {
     const { ENEMY_SPRITE_DEATH_DE_REZ_DURATION_MS } =
-      await import('../../../neatenstein/scripts/enemy-sprite');
+      await import('../shared/enemy-sprite');
     expect(ENEMY_SPRITE_DEATH_DE_REZ_DURATION_MS).toBe(700);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Slice C4 — Interpolation Safety (RED phase)
+//
+// These tests define the expected t-clamping and durationMs guard behavior
+// for shouldDissolvePixel. All tests are expected to FAIL until the
+// implementation phase (Step 04) adds clamping and a durationMs > 0 guard.
+// ---------------------------------------------------------------------------
+
+describe('shouldDissolvePixel t-clamping safety (C4)', () => {
+  it('treats animation as complete when durationMs is 0 (no NaN from zero division)', async () => {
+    const { shouldDissolvePixel } = await import('./derez');
+    // Currently: t = 0/0 = NaN → noise < NaN = false (pixel survives)
+    // Expected with guard: durationMs=0 → t=1 → pixel dissolves
+    expect(shouldDissolvePixel(10, 10, 42, 0, 0)).toBe(true);
+  });
+
+  it('treats animation as complete when durationMs is negative', async () => {
+    const { shouldDissolvePixel } = await import('./derez');
+    // Currently: t = 350/(-100) = -3.5 → noise < -3.5 = false (pixel survives)
+    // Expected with guard: durationMs ≤ 0 → t=1 → pixel dissolves
+    expect(shouldDissolvePixel(10, 10, 42, 350, -100)).toBe(true);
   });
 });

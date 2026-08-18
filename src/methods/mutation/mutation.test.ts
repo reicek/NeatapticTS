@@ -1,5 +1,5 @@
 import Activation from '../activation/activation';
-import mutation from './mutation';
+import mutation, { mutateTimeConstant } from './mutation';
 
 describe('mutation', () => {
   describe('given the exported mutation shelf', () => {
@@ -19,6 +19,7 @@ describe('mutation', () => {
           'FFW',
           'MOD_ACTIVATION',
           'MOD_BIAS',
+          'MOD_TIME_CONSTANT',
           'MOD_WEIGHT',
           'REINIT_WEIGHT',
           'SUB_BACK_CONN',
@@ -175,6 +176,7 @@ describe('mutation', () => {
           mutation.BATCH_NORM,
           mutation.ADD_LSTM_NODE,
           mutation.ADD_GRU_NODE,
+          mutation.MOD_TIME_CONSTANT,
         ];
 
         // Act
@@ -208,6 +210,60 @@ describe('mutation', () => {
 
         // Assert
         expect(actualMutationShelf).toStrictEqual(expectedMutationShelf);
+      });
+    });
+  });
+
+  describe('mutateTimeConstant', () => {
+    describe('when called with a seeded rng argument', () => {
+      it('deterministically perturbs the time constant via Box-Muller', () => {
+        // Arrange — rng() => 0.5 for both u1 and u2:
+        //   gaussian = sqrt(-2*ln(0.5)) * cos(2*PI*0.5)
+        //            = sqrt(1.3863) * cos(PI) = 1.1774 * (-1) = -1.1774
+        //   perturbation = -1.1774 * 0.1 = -0.11774
+        //   result = 1 + (-0.11774) = 0.88226
+        const bearer = { timeConstant: 1 };
+
+        // Act
+        mutateTimeConstant(bearer, () => 0.5);
+
+        // Assert
+        expect(bearer.timeConstant).toBeCloseTo(0.882_258_997_748_452_5, 12);
+      });
+    });
+
+    describe('when called with a different seeded rng', () => {
+      it('produces a different deterministic perturbation', () => {
+        // Arrange — rng() => 0.3 for u1, 0.7 for u2:
+        //   gaussian = sqrt(-2*ln(0.3)) * cos(2*PI*0.7)
+        //   ln(0.3) = -1.20397, -2*ln(0.3) = 2.40795, sqrt = 1.55176
+        //   cos(2*PI*0.7) = cos(4.39823) = -0.30902
+        //   gaussian = 1.55176 * (-0.30902) = -0.47952
+        //   perturbation = -0.47952 * 0.1 = -0.047952
+        //   result = 1 + (-0.047952) ≈ 0.95205
+        const bearer = { timeConstant: 1 };
+        let call = 0;
+        const rng = () => (call++ === 0 ? 0.3 : 0.7);
+
+        // Act
+        mutateTimeConstant(bearer, rng);
+
+        // Assert
+        expect(bearer.timeConstant).toBeCloseTo(0.952_048_113_190_304, 12);
+      });
+    });
+
+    describe('when the perturbation would fall below the minimum', () => {
+      it('clamps the time constant to MIN_TIME_CONSTANT', () => {
+        // Arrange — rng() => 0.5 produces a negative perturbation (-0.1177),
+        // so 0.01 + (-0.1177) = -0.1077, clamped to MIN_TIME_CONSTANT (0.01).
+        const bearer = { timeConstant: 0.01 };
+
+        // Act
+        mutateTimeConstant(bearer, () => 0.5);
+
+        // Assert
+        expect(bearer.timeConstant).toBe(0.01);
       });
     });
   });

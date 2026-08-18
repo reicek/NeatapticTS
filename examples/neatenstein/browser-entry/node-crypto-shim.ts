@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Browser-compatible shim for `node:crypto` providing a synchronous SHA-256
  * implementation.
  *
@@ -190,7 +190,6 @@ import type { ShimHash } from './browser-entry.types';
 /**
  * Hash object interface matching the Node.js `crypto.Hash` subset.
  *
- * @deprecated Import from `./browser-entry.types` instead. This re-export
  *   preserves the public API for existing consumers.
  */
 export type { ShimHash } from './browser-entry.types';

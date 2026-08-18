@@ -23,7 +23,7 @@
 import { resolveNeatensteinFogFactor } from './framebuffer';
 import { clipNeatensteinSpriteSpan } from './zbuffer';
 import { ROBOT_SPRITE_FRAMES } from '../../robot-sprite-data.js';
-import { type VoxelSnapshot } from '../../../neatenstein/scripts/snapshot-renderer';
+import { type VoxelSnapshot } from '../shared/snapshot-renderer';
 import {
   resolveCompositeShootWalkFrame,
   resolveDecodedRobotSpriteFrame,
@@ -328,7 +328,9 @@ export function renderNeatensteinSprite(
     );
   }
 
-  ctx.putImageData({ data: framebuffer, width, height }, 0, 0);
+  // Per-sprite putImageData removed (B3.5): callers flush the framebuffer
+  // once after all sprites are drawn. The ctx parameter is retained for API
+  // compatibility.
 }
 
 /**

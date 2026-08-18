@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Weight-only MLP backend for the Neatenstein enemy population.
  *
  * This module materializes a small population of feed-forward enemy variants
@@ -33,18 +33,16 @@ import type {
 import { warmStartTemplate, warmStartWeights } from './enemy-warmstart';
 
 /**
- * Options accepted by {@link createMlpEnemyPopulation}.
+ * Options accepted by {@link createMlpEnemyPopulation} to configure the
+ * deterministic seed and other population parameters.
  *
- * @deprecated Import from `./types` instead. This re-export preserves the
- *   public API for existing consumers.
  */
 export type { CreateMlpEnemyPopulationOptions } from './types';
 
 /**
- * MLP enemy population returned by {@link createMlpEnemyPopulation}.
+ * MLP enemy population returned by {@link createMlpEnemyPopulation}, exposing
+ * variant sampling, champion snapshots, and generation-gated updates.
  *
- * @deprecated Import from `./types` instead. This re-export preserves the
- * public API for existing consumers.
  */
 export type { MlpEnemyPopulation } from './types';
 
@@ -125,13 +123,11 @@ export function guardMlpStructuralMutation(operator: {
 }
 
 /**
- * Ordered output labels for the MLP enemy backend.
+ * Ordered semantic output labels for the MLP enemy backend.
  *
- * The four outputs produced by {@link activateMlp} are mapped to:
- * move, strafe, turn, and fire.
+ * The four outputs produced by {@link activateMlp} are mapped to move, strafe,
+ * turn, and fire so callers can interpret actions by name instead of by index.
  *
- * @deprecated Import `NEATENSTEIN_MLP_OUTPUT_LABELS` from `./enemy-mlp.constants`
- *   instead. This re-export preserves the public API.
  */
 export { NEATENSTEIN_MLP_OUTPUT_LABELS } from './enemy-mlp.constants';
 
@@ -197,7 +193,82 @@ export function activateMlp(
 }
 
 /**
- * Map raw MLP outputs to a labelled action record.
+ * Pooled variant of {@link activateMlp} that reuses ping-pong activation
+ * buffers instead of allocating a new Float32Array per layer per enemy.
+ *
+ * Two module-level activation buffers are used in alternation (ping-pong):
+ * one holds the current layer's activations while the other is filled for the
+ * next layer. Both are reset via `.fill(0)` between calls.
+ *
+ * @param weights - Flat weight vector.
+ * @param inputs - Input activation vector.
+ * @param topology - Layer sizes (defaults to {@link NEATENSTEIN_MLP_TOPOLOGY}).
+ * @returns Output activation vector (the last ping-pong buffer).
+ */
+export function activateMlpPooled(
+  weights: Float32Array,
+  inputs: Float32Array,
+  topology: readonly number[] = NEATENSTEIN_MLP_TOPOLOGY,
+): Float32Array {
+  if (inputs.length !== topology[0]) {
+    throw new Error(
+      `MLP input size ${inputs.length} does not match topology input ${topology[0]}`,
+    );
+  }
+  const expected = countParameters(topology);
+  if (weights.length !== expected) {
+    throw new Error(
+      `MLP weight vector length ${weights.length} does not match expected ${expected}`,
+    );
+  }
+
+  // Ping-pong activation buffers — allocated once, reused across calls.
+  const maxLayerSize = Math.max(...topology);
+  if (pooledActivationA.length < maxLayerSize) {
+    pooledActivationA = new Float32Array(maxLayerSize);
+    pooledActivationB = new Float32Array(maxLayerSize);
+  }
+
+  const bufA = pooledActivationA;
+  const bufB = pooledActivationB;
+  const inputSize = topology[0];
+  bufA.set(inputs.subarray(0, inputSize));
+  let current = bufA;
+  let offset = 0;
+
+  for (let layer = 1; layer < topology.length; layer++) {
+    const inSize = topology[layer - 1];
+    const outSize = topology[layer];
+    const next = layer % 2 === 1 ? bufB : bufA;
+
+    for (let o = 0; o < outSize; o++) {
+      let sum = 0;
+      for (let i = 0; i < inSize; i++) {
+        sum += current[i] * weights[offset + o * inSize + i];
+      }
+      sum += weights[offset + inSize * outSize + o];
+      next[o] = Math.tanh(sum);
+    }
+
+    offset += inSize * outSize + outSize;
+    current = next;
+  }
+
+  return current;
+}
+
+/** Pooled ping-pong activation buffer A. */
+let pooledActivationA: Float32Array = new Float32Array(0);
+
+/** Pooled ping-pong activation buffer B. */
+let pooledActivationB: Float32Array = new Float32Array(0);
+
+/**
+ * Map raw MLP outputs to a labelled enemy action record.
+ *
+ * The returned record pairs each output index with its semantic label, so the
+ * enemy controller can read named actions such as move, strafe, turn, and fire
+ * without hard-coding index positions.
  *
  * @param outputs - Raw output vector from {@link activateMlp}.
  * @param labels - Ordered output labels; defaults to

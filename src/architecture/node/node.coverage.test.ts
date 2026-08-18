@@ -91,6 +91,7 @@ describe('Node', () => {
             mask: 0.75,
             response: 1.5,
             squash: Activation.tanh.name,
+            timeConstant: 1,
             type: 'hidden',
           });
         });
@@ -483,6 +484,48 @@ describe('Node', () => {
             secondGaterCount: 0,
             warningCount: 1,
           });
+        });
+      });
+    });
+
+    describe('applyCtrnnActivation', () => {
+      describe('when integrating a CTRNN step', () => {
+        it('updates state and returns the squashed activation', () => {
+          // Arrange
+          const node = new Node('hidden');
+          node.squash = Activation.identity;
+          node.response = 1;
+          node.mask = 1;
+          node.state = 0;
+          node.timeConstant = 2;
+
+          // Act
+          const activation = node.applyCtrnnActivation(4, 1);
+
+          // Assert
+          // state += (inputSum - state) * (dt / timeConstant) = (4 - 0) * 0.5 = 2
+          expect(node.state).toBe(2);
+          expect(activation).toBe(2);
+        });
+      });
+    });
+
+    describe('fromJSON with a valid timeConstant', () => {
+      describe('when restoring a serialized node', () => {
+        it('preserves the supplied time constant', () => {
+          // Arrange
+          const json = {
+            type: 'hidden',
+            bias: 0,
+            mask: 1,
+            timeConstant: 2.5,
+          } as unknown as Parameters<typeof Node.fromJSON>[0];
+
+          // Act
+          const node = Node.fromJSON(json);
+
+          // Assert
+          expect(node.timeConstant).toBe(2.5);
         });
       });
     });

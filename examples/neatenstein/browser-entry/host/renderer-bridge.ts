@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Host-side renderer bridge for the Neatenstein neon raycasting demo.
  *
  * This module owns the boundary between the main browser thread and the
@@ -41,6 +41,8 @@ import {
   WORKER_MSG_RESIZE,
   WORKER_MSG_SIM_STATE,
 } from './worker-protocol.constants';
+import { isPositiveFiniteDimension } from '../shared/math-guards.utils';
+import { consumeNeatensteinFrameBitmap } from './frame-bitmap-consumer';
 
 // Re-export consolidated types so existing imports from this module remain valid.
 export type {
@@ -52,16 +54,6 @@ export type {
  * Default worker bundle URL used when the caller does not supply one.
  */
 const DEFAULT_WORKER_URL = `/assets/${NEATENSTEIN_WORKER_BUNDLE_FILENAME}`;
-
-/**
- * Return whether a value is usable as a positive render dimension.
- *
- * @param value - Candidate dimension.
- * @returns Whether the value is finite and positive.
- */
-function isPositiveFiniteDimension(value: number): boolean {
-  return Number.isFinite(value) && value > 0;
-}
 
 /**
  * Resolve the initial canvas dimensions the bridge forwards to the worker.
@@ -336,6 +328,19 @@ export function createNeatensteinRendererBridge(
       typeof data.frame.requestId === 'number'
     ) {
       latestRequestId = data.frame.requestId;
+
+      // C1.7: Consume transferred ImageBitmap if present (fallback display
+      // path when commit() is unavailable on the worker canvas). The canvas
+      // was transferred to the worker, so getContext('2d') returns null on
+      // the host — use a no-op drawImage context and close the bitmap.
+      if (data.bitmap instanceof ImageBitmap) {
+        consumeNeatensteinFrameBitmap(
+          data.bitmap,
+          { drawImage: () => {} },
+          canvas.width,
+          canvas.height,
+        );
+      }
 
       if (frameConsumer !== null) {
         frameConsumer(data.frame as unknown as NeatensteinRenderFrame);

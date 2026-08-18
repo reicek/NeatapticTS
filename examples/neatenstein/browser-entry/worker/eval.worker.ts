@@ -32,7 +32,7 @@ import { gameTick } from '../host/game/tick';
 import { NEATENSTEIN_FIXED_TIMESTEP_MS } from '../host/game/constants';
 import type { EpisodeTelemetry } from '../host/game/types';
 import { createEpisode, endEpisode } from '../host/game/episode';
-import { extractSensors } from '../../scripts/enemy-navigation';
+import { extractSensors } from '../shared/enemy-navigation';
 import {
   createFireGateState,
   ENEMY_VISIBLE_SENSOR_INDEX,
@@ -94,7 +94,7 @@ export function runFitnessEpisode(
 
   // P5S1: Episode-local fire-gate state so hysteresis persists across ticks,
   // matching the display worker's module-level fireGateState.
-  const fireGateState = createFireGateState();
+  let fireGateState = createFireGateState();
 
   for (let tick = 0; tick < NEATENSTEIN_FITNESS_MAX_EPISODE_TICKS; tick += 1) {
     const sensors = extractSensors(
@@ -107,10 +107,12 @@ export function runFitnessEpisode(
     const out: number[] = Array.isArray(raw)
       ? raw.map((v) => (typeof v === 'number' && Number.isFinite(v) ? v : 0))
       : new Array<number>(NEATENSTEIN_MAIN_NEAT_OUTPUTS).fill(0);
-    const tickInput = networkOutputToTickInput(out, {
+    const fireGate = {
       state: fireGateState,
       enemyVisible: sensors[ENEMY_VISIBLE_SENSOR_INDEX] ?? 0,
-    });
+    };
+    const tickInput = networkOutputToTickInput(out, fireGate);
+    fireGateState = fireGate.state;
     state = gameTick(
       state,
       tickInput,

@@ -10,7 +10,7 @@
 
 import type { castRayDDAFromFlatMap } from '../renderer/raycast';
 import type { CollisionMap } from '../renderer/map';
-import type { EnemyControllerState } from '../../scripts/enemy-controller';
+import type { EnemyControllerState } from '../shared/enemy-controller';
 import type { FireGateState } from '../harness/neat-io-config';
 import type { GameTickInputSnapshot } from '../host/game/tick';
 import type { GameState } from '../host/game/types';
@@ -35,14 +35,14 @@ export type RaycastHit = ReturnType<typeof castRayDDAFromFlatMap>;
  * executors.
  *
  * Encapsulates the smoothing, fire-gate, and fallback-counter fields that
- * persist between ticks. The `fireGateState` object is mutated in-place by
- * `applyFireGate`; the primitive fields are replaced via the return value of
- * each executor.
+ * persist between ticks. The `fireGateState` object is replaced (not mutated)
+ * by each executor via the return value of `applyFireGate`; the primitive
+ * fields are also replaced via the return value of each executor.
  */
 export interface AutoAiState {
   /** Monotonic tick counter for the fallback auto-mode AI. */
   fallbackTickCounter: number;
-  /** Hysteresis state for the soft fire gate (mutated in-place). */
+  /** Hysteresis state for the soft fire gate (replaced, not mutated). */
   fireGateState: FireGateState;
   /** Smoothed strafe input persisted between ticks. */
   smoothedMoveX: number;
@@ -151,4 +151,82 @@ export interface EvalCompletePayload {
   generation: number;
   /** Serialized champion network JSON (deserialized via `Network.fromJSON`). */
   championNetworkJSON: Record<string, unknown>;
+}
+
+// ---------------------------------------------------------------------------
+// B1: Sim/Render worker split state slices
+// ---------------------------------------------------------------------------
+
+/**
+ * Simulation worker state slice (B1 split).
+ *
+ * The sim worker owns game state, enemy AI, and evaluation delegation.
+ * It never touches the canvas or rendering surfaces.
+ */
+export interface SimWorkerState {
+  /** Deterministic game state maintained and advanced by the sim worker. */
+  gameState: GameState | null;
+  /** Collision map built from the init seed. */
+  collisionMap: CollisionMap | null;
+  /** Enemy AI controller state. */
+  enemyControllerState: EnemyControllerState | null;
+  /** Wave-clear detection flag. */
+  allEnemiesCleared: boolean;
+  /** Previous-tick snapshot of allEnemiesCleared. */
+  prevAllEnemiesCleared: boolean;
+  /** MLP enemy population for champion weight injection. */
+  enemyPopulation: MlpEnemyPopulation | null;
+  /** Launch guard for the hoisted async NEAT evaluation. */
+  pendingGeneration: number | null;
+  /** Champion main-agent network from the most recent arms-race generation. */
+  championMainNetwork: Network | null;
+  /** Input count the current champion network was evolved with. */
+  lastChampionInputCount: number | null;
+  /** Dedicated eval worker. */
+  evalWorker: Worker | null;
+  /** Pending tick input from the most recent input message. */
+  pendingTickInput: GameTickInputSnapshot | null;
+  /** Source of the most recent tick input ('auto' or 'human'). */
+  lastTickInputSource: TickInputSource;
+  /** Monotonic tick counter for the fallback auto-mode AI. */
+  fallbackTickCounter: number;
+  /** Test-only capture of the last fallback input snapshot. */
+  lastFallbackInputForTest: GameTickInputSnapshot | null;
+  /** Hysteresis state for the soft fire gate. */
+  fireGateState: FireGateState;
+}
+
+/**
+ * Render worker state slice (B1 split).
+ *
+ * The render worker owns DDA, framebuffer, canvas, OffscreenCanvas, and
+ * the wall map. It reads enemy state from shared memory written by the sim
+ * worker. Camera/input smoothing fields belong here since they affect
+ * visual presentation, not simulation determinism.
+ */
+export interface RenderWorkerState {
+  /** Active renderer tier ('worker', 'cpu', or 'gpu'). */
+  currentTier: DisplayTier | null;
+  /** Transferred OffscreenCanvas for the worker tier. */
+  workerCanvas: OffscreenCanvas | null;
+  /** 2D context for the worker canvas (lazily initialised). */
+  workerContext: OffscreenCanvasRenderingContext2D | null;
+  /** Most recent render state received from the host. */
+  latestState: NeatensteinRenderState | null;
+  /** Pending resize dimensions received before the canvas is assigned. */
+  pendingResizeDimensions: { width: number; height: number } | null;
+  /** Canonical flat deterministic wall map (shared with sim worker). */
+  wallMap: Uint8Array | null;
+  /** Reusable worker-tier z-buffer. */
+  workerZBuffer: Float32Array | null;
+  /** Active ambient floor and ceiling pulses. */
+  activePulses: NeatensteinPulse[];
+  /** Active enemy sprite positions (read from shared memory). */
+  activeEnemySprites: NeatensteinSprite[];
+  /** Smoothed strafe input (camera/input smoothing — render-side). */
+  smoothedMoveX: number;
+  /** Smoothed forward/back input (camera/input smoothing — render-side). */
+  smoothedMoveY: number;
+  /** Smoothed look-delta (camera/input smoothing — render-side). */
+  smoothedLookDelta: number;
 }

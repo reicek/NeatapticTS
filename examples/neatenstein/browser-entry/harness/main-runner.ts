@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Single main-agent lifecycle runner for the Neatenstein asymmetric
  * co-evolution harness.
  *
@@ -47,7 +47,7 @@ import {
   SNAPSHOT_KIND_MLP,
   SNAPSHOT_KIND_SWARM,
 } from '../constants';
-import { extractSensors } from '../../scripts/enemy-navigation';
+import { extractSensors } from '../shared/enemy-navigation';
 
 import type {
   CombatQualitySignal,
@@ -64,16 +64,12 @@ import type {
 /**
  * Configuration accepted by {@link runMainGeneration}.
  *
- * @deprecated Import from `./types` instead. This re-export preserves the
- *   public API for existing consumers.
  */
 export type { RunMainGenerationOptions } from './types';
 
 /**
  * Result emitted by one main-agent generation.
  *
- * @deprecated Import from `./types` instead. This re-export preserves the
- *   public API for existing consumers.
  */
 export type { MainGenerationResult } from './types';
 
@@ -321,7 +317,7 @@ export function runEpisode(
 
   // P5S1: Soft fire-gate state is episode-local so hysteresis persists across
   // ticks within a single fitness episode, matching the display worker.
-  const fireGateState = createFireGateState();
+  let fireGateState = createFireGateState();
 
   for (let tick = 0; tick < NEATENSTEIN_FITNESS_MAX_EPISODE_TICKS; tick += 1) {
     const sensors = extractSensors(
@@ -334,10 +330,12 @@ export function runEpisode(
     const out: number[] = Array.isArray(raw)
       ? raw.map((v) => (typeof v === 'number' && Number.isFinite(v) ? v : 0))
       : new Array<number>(NEATENSTEIN_MAIN_NEAT_OUTPUTS).fill(0);
-    const tickInput = networkOutputToTickInput(out, {
+    const fireGate = {
       state: fireGateState,
       enemyVisible: sensors[ENEMY_VISIBLE_SENSOR_INDEX] ?? 0,
-    });
+    };
+    const tickInput = networkOutputToTickInput(out, fireGate);
+    fireGateState = fireGate.state;
     state = gameTick(
       state,
       tickInput,

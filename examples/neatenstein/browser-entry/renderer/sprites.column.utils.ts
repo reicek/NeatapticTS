@@ -9,11 +9,12 @@
  * @module
  */
 
-import { clampInt, NEATENSTEIN_BACKGROUND_RGB } from './framebuffer';
+import { NEATENSTEIN_BACKGROUND_RGB } from './framebuffer';
+import { clamp01, clampInt } from '../shared/math-guards.utils';
 import { shouldDissolvePixel } from './derez';
 import { NEATENSTEIN_ENEMY_DEATH_COLOR } from '../constants';
 import { RGBA_CHANNELS } from './renderer.sprite.constants';
-import type { VoxelSnapshot } from '../../../neatenstein/scripts/snapshot-renderer';
+import type { VoxelSnapshot } from '../shared/snapshot-renderer';
 import type { NeatensteinDerezState } from './renderer.sprite.types';
 
 /**
@@ -33,6 +34,10 @@ import type { NeatensteinDerezState } from './renderer.sprite.types';
  * pixels are skipped entirely; surviving pixels are tinted toward
  * {@link NEATENSTEIN_ENEMY_DEATH_COLOR} by a factor of `t * 0.5` where
  * `t` is the normalised animation progress.
+ *
+ * Safety (C4): `t` is clamped to `[0, 1]` via {@link clamp01}. When
+ * `durationMs` is zero or negative the animation is treated as complete
+ * (`t = 1`), matching the hardened {@link shouldDissolvePixel}.
  *
  * @param framebuffer - Flat RGBA framebuffer to write into.
  * @param width - Framebuffer width in pixels.
@@ -79,9 +84,14 @@ export function renderNeatensteinVoxelSpriteColumn(
   const { r: bgR, g: bgG, b: bgB } = NEATENSTEIN_BACKGROUND_RGB;
 
   // Precompute de-rez constants outside the per-pixel loop.
+  // C4: Guard against zero/negative durationMs (NaN from 0/0, negative t)
+  // matching the hardened shouldDissolvePixel. When duration is invalid the
+  // animation is complete — t=1 so all pixels dissolve.
   const derezActive = derezState !== undefined;
   const derezT = derezActive
-    ? derezState!.elapsedMs / derezState!.durationMs
+    ? derezState!.durationMs > 0
+      ? clamp01(derezState!.elapsedMs / derezState!.durationMs)
+      : 1
     : 0;
   const tintFactor = derezT * 0.5;
   const invTint = 1 - tintFactor;

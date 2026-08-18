@@ -171,7 +171,7 @@ describe('Neatenstein harness main-runner', () => {
         .mockReturnValue([0, 0, 0, 1, 0]);
 
       const enemyNavModule =
-        (await import('../../scripts/enemy-navigation')) as unknown as {
+        (await import('../shared/enemy-navigation')) as unknown as {
           extractSensors: jest.Mock;
         };
       jest
@@ -199,7 +199,7 @@ describe('Neatenstein harness main-runner', () => {
         .mockReturnValue([0, 0, 0, 1, 0]);
 
       const enemyNavModule =
-        (await import('../../scripts/enemy-navigation')) as unknown as {
+        (await import('../shared/enemy-navigation')) as unknown as {
           extractSensors: jest.Mock;
         };
       const sensors = new Array(15).fill(0);
@@ -227,7 +227,7 @@ describe('Neatenstein harness main-runner', () => {
         .mockReturnValue([0, 0, 0, 1, 0]);
 
       const enemyNavModule =
-        (await import('../../scripts/enemy-navigation')) as unknown as {
+        (await import('../shared/enemy-navigation')) as unknown as {
           extractSensors: jest.Mock;
         };
       const sensors = new Array(15).fill(0);

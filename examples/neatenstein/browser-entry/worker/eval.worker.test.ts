@@ -9,21 +9,7 @@ import type { Network } from 'neataptic';
  * fire gate through its fitness episode, matching the display worker.
  */
 
-interface MockWorkerGlobal {
-  postMessage: jest.Mock;
-  onmessage: ((event: MessageEvent) => void) | null;
-}
-
-function installMockWorkerGlobal(): MockWorkerGlobal {
-  const self: MockWorkerGlobal = {
-    postMessage: jest.fn(),
-    onmessage: null,
-  };
-  (globalThis as unknown as Record<string, unknown>).self = self;
-  return self;
-}
-
-const workerSelf = installMockWorkerGlobal();
+import { workerSelf } from './display.worker.test-helpers';
 
 describe('Neatenstein eval worker', () => {
   beforeEach(() => {
@@ -34,7 +20,7 @@ describe('Neatenstein eval worker', () => {
   describe('P5S1: fire gate wired through evaluation episodes', () => {
     it('suppresses fire when no enemy is visible', async () => {
       const enemyNavModule =
-        (await import('../../scripts/enemy-navigation')) as unknown as {
+        (await import('../shared/enemy-navigation')) as unknown as {
           extractSensors: jest.Mock;
         };
       jest
@@ -58,7 +44,7 @@ describe('Neatenstein eval worker', () => {
 
     it('allows fire when an enemy is visible', async () => {
       const enemyNavModule =
-        (await import('../../scripts/enemy-navigation')) as unknown as {
+        (await import('../shared/enemy-navigation')) as unknown as {
           extractSensors: jest.Mock;
         };
       const sensors = new Array(15).fill(0);
@@ -146,7 +132,7 @@ describe('Neatenstein eval worker', () => {
       }));
 
       const enemyNavModule =
-        (await import('../../scripts/enemy-navigation')) as unknown as {
+        (await import('../shared/enemy-navigation')) as unknown as {
           extractSensors: jest.Mock;
         };
       const sensors = new Array(15).fill(0);
@@ -174,7 +160,7 @@ describe('Neatenstein eval worker', () => {
       }));
 
       const enemyNavModule =
-        (await import('../../scripts/enemy-navigation')) as unknown as {
+        (await import('../shared/enemy-navigation')) as unknown as {
           extractSensors: jest.Mock;
         };
       const sensors = new Array(15).fill(0);

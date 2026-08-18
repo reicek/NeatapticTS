@@ -281,6 +281,37 @@ Safety: We clip extreme weight / bias magnitudes and guard against NaN/Infinity.
 Parameters:
 - `opts` - Optimizer configuration (see above).
 
+#### applyCtrnnActivation
+
+```ts
+applyCtrnnActivation(
+  inputSum: number,
+  dt: number,
+): number
+```
+
+Applies CTRNN (Continuous Time Recurrent Neural Network) exponential Euler
+integration to advance the node's internal state.
+
+**Scaffolding:** This method is library scaffolding for a future CTRNN
+activation path. It is not yet routed through the standard network
+`activate` / `noTraceActivate` pipeline. The Neatenstein demo uses MLP
+inference (not `Node` objects), so integration is deferred to a later
+step that adds a recurrent activation mode to the network.
+
+Updates `this.state` in place using the formula:
+  `state += (inputSum - state) * (dt / timeConstant)`
+
+Then applies the squash function to compute the new activation. The
+`timeConstant` property controls temporal memory: larger values produce
+slower, more inertial responses.
+
+Parameters:
+- `inputSum` - The weighted sum of inputs (including bias if desired).
+- `dt` - The discrete time step for integration.
+
+Returns: The node's activation after integration.
+
 #### bias
 
 The bias value of the node. Added to the weighted sum of inputs before activation.
@@ -377,7 +408,7 @@ Stores error values calculated during backpropagation.
 
 ```ts
 fromJSON(
-  json: { bias: number; response?: number | undefined; type: string; squash: string; mask: number; },
+  json: { bias: number; response?: number | undefined; timeConstant?: number | undefined; type: string; squash: string | null; mask: number; },
 ): default
 ```
 
@@ -613,10 +644,20 @@ Parameters:
 
 Returns: Nothing.
 
+#### timeConstant
+
+Per-node evolvable time constant for CTRNN (Continuous Time Recurrent Neural Network) formulation.
+
+Controls the speed of temporal integration during activation. A value of 1.0
+gives fast (near-instant) response; larger values introduce slower temporal
+memory. Mutated by the `MOD_TIME_CONSTANT` operator.
+
+Defaults to `1.0`.
+
 #### toJSON
 
 ```ts
-toJSON(): { index: number | undefined; bias: number; response: number; type: string; squash: string | null; mask: number; }
+toJSON(): { index: number | undefined; bias: number; response: number; timeConstant: number; type: string; squash: string | null; mask: number; }
 ```
 
 Converts the node's essential properties to a JSON object for serialization.

@@ -29,7 +29,7 @@ import { castRayDDAFromFlatMap } from '../renderer/raycast';
 import {
   extractSensors,
   findNearestVisibleEnemy,
-} from '../../scripts/enemy-navigation';
+} from '../shared/enemy-navigation';
 import {
   FALLBACK_FIRE_RANGE,
   FALLBACK_FIRE_ANGLE,
@@ -96,10 +96,8 @@ export function buildAutoTickInput(
   // is always populated by the extractSensors vector above.
   const enemyVisible = sensors[ENEMY_VISIBLE_SENSOR_INDEX] ?? 0;
 
-  const tick = networkOutputToTickInput(raw, {
-    state: ai.fireGateState,
-    enemyVisible,
-  });
+  const fireGate = { state: ai.fireGateState, enemyVisible };
+  const tick = networkOutputToTickInput(raw, fireGate);
 
   // P1S1: Apply per-tick accel/decel smoothing to move/look so the AI
   // does not snap from 0 to max in a single tick.
@@ -121,6 +119,7 @@ export function buildAutoTickInput(
     },
     ai: {
       ...ai,
+      fireGateState: fireGate.state,
       smoothedMoveX,
       smoothedMoveY,
       smoothedLookDelta,
@@ -297,12 +296,12 @@ export function buildFallbackAutoTickInput(
   );
 
   // Apply the same hysteresis fire gate used by buildAutoTickInput.
-  const fire = applyFireGate(ai.fireGateState, enemyVisible, rawFire);
+  const fireResult = applyFireGate(ai.fireGateState, enemyVisible, rawFire);
 
   const tickInput: GameTickInputSnapshot = {
     move: { x: smoothedMoveX, y: smoothedMoveY },
     lookDelta: smoothedLookDelta,
-    fire,
+    fire: fireResult.shouldFire,
     dash: false,
   };
 
@@ -310,6 +309,7 @@ export function buildFallbackAutoTickInput(
     tickInput,
     ai: {
       ...ai,
+      fireGateState: fireResult.state,
       fallbackTickCounter,
       smoothedMoveX,
       smoothedMoveY,

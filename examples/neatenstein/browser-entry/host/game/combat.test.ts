@@ -378,13 +378,18 @@ describe('Neatenstein game combat', () => {
       });
 
       it('caps the bolt at max range when the wall ray exceeds the render-distance cap', () => {
+        // Fixture chosen so the DDA ray genuinely exceeds the 30-cell
+        // perpendicular render-distance cap. Position (41.5, 44.5) at angle
+        // 0.71 rad points down a long corridor; minAbsDir ≈ 0.652 gives
+        // maxSteps = ceil(30 / 0.652) = 47, yet no wall is found within 30
+        // perpendicular units, so the bolt expires at max range.
         const base = createGameState({ seed: NEATENSTEIN_TEST_SEED });
         const state: GameState = {
           ...base,
           player: {
             ...base.player,
-            position: { x: 52.5, y: 52.5 },
-            angleRad: 0.5934,
+            position: { x: 41.5, y: 44.5 },
+            angleRad: 0.71,
             ammo: base.player.maxAmmo,
           },
         };

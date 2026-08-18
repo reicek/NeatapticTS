@@ -110,8 +110,9 @@ export function emitNeatensteinAmbientPulse(
 ): NeatensteinPulse | null {
   if (!isAmbientTick(simTick)) return null;
 
-  let state = ((seed + simTick) % PARK_MILLER_MODULUS) * PARK_MILLER_MULTIPLIER;
-  state = state % PARK_MILLER_MODULUS;
+  let state = (((seed + simTick) % PARK_MILLER_MODULUS) + PARK_MILLER_MODULUS) %
+    PARK_MILLER_MODULUS;
+  state = nextLcgState(state);
   state = nextLcgState(state);
 
   const axis: NeatensteinPulseAxis =
@@ -160,8 +161,8 @@ export function emitNeatensteinAmbientPulse(
  *
  * Decrements lifetime, advances each pulse along its grid line by its travel
  * speed, removes pulses that have expired or been marked inactive, and
- * enforces the concurrent pulse ceiling. The returned array is a shallow copy;
- * pulse objects are immutable copies.
+ * enforces the concurrent pulse ceiling. Pulse objects are mutated in place;
+ * the returned array contains references to the surviving original objects.
  *
  * @param pulses - Current active pulses.
  * @param simTick - Current fixed-timestep simulation tick (unused today but
@@ -180,25 +181,23 @@ export function updateNeatensteinPulses(
 ): NeatensteinPulse[] {
   void simTick;
 
-  const next = pulses
-    .map((pulse) => {
-      const lifetimeTicks = pulse.lifetimeTicks - 1;
-      const layerMultiplier =
-        pulse.layer === NEATENSTEIN_PULSE_LAYER_CEILING ? -1 : 1;
-      const delta = pulse.travelDirection * pulse.travelSpeed * layerMultiplier;
-      const worldX = pulse.axis === 'y' ? pulse.worldX + delta : pulse.worldX;
-      const worldY = pulse.axis === 'x' ? pulse.worldY + delta : pulse.worldY;
+  const next: NeatensteinPulse[] = [];
+  for (let i = 0; i < pulses.length; i++) {
+    const pulse = pulses[i];
+    const lifetimeTicks = pulse.lifetimeTicks - 1;
+    const layerMultiplier =
+      pulse.layer === NEATENSTEIN_PULSE_LAYER_CEILING ? -1 : 1;
+    const delta = pulse.travelDirection * pulse.travelSpeed * layerMultiplier;
+    pulse.worldX = pulse.axis === 'y' ? pulse.worldX + delta : pulse.worldX;
+    pulse.worldY = pulse.axis === 'x' ? pulse.worldY + delta : pulse.worldY;
+    pulse.lifetimeTicks = lifetimeTicks;
+    pulse.active = lifetimeTicks > 0;
 
-      return {
-        ...pulse,
-        worldX,
-        worldY,
-        lifetimeTicks,
-        active: lifetimeTicks > 0,
-      };
-    })
-    .filter((pulse) => pulse.active && pulse.lifetimeTicks > 0)
-    .slice(0, NEATENSTEIN_PULSE_MAX_CONCURRENT);
+    if (pulse.active && pulse.lifetimeTicks > 0) {
+      next.push(pulse);
+      if (next.length >= NEATENSTEIN_PULSE_MAX_CONCURRENT) break;
+    }
+  }
 
   return next;
 }
@@ -206,14 +205,15 @@ export function updateNeatensteinPulses(
 /**
  * Depth-test a pulse against the per-column z-buffer.
  *
- * A pulse is visible when the column it projects to stores a wall distance
- * greater than or equal to the pulse distance. This allows pulses that sit on
- * the wall surface (for example wall-impact neon spots) to render while still
- * hiding pulses behind closer walls.
+ * A pulse is visible only when the column it projects to stores a wall
+ * distance strictly greater than the pulse distance. Walls own the exact
+ * tie-break distance, so a pulse that sits at the same depth as a wall is
+ * occluded — the wall wins ties. This matches the sprite span clipper
+ * convention and ensures wall-adjacent pulses do not bleed through the wall.
  *
  * @param pulse - Pulse with a screen column and perpendicular distance.
  * @param zBuffer - Per-column depth buffer filled by the wall pass.
- * @returns `true` when the pulse is not occluded by a closer wall.
+ * @returns `true` when the pulse is not occluded by a closer or co-depth wall.
  *
  * @example
  * ```ts
@@ -229,7 +229,7 @@ export function depthTestPulse(
     Math.min(zBuffer.length - 1, Math.floor(pulse.screenColumn)),
   );
 
-  return pulse.distance <= zBuffer[column];
+  return pulse.distance < zBuffer[column];
 }
 
 /**

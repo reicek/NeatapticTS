@@ -16,29 +16,37 @@
  * @module
  */
 
-import { NEATENSTEIN_RENDER_DISTANCE_CAP } from './framebuffer';
+import {
+  NEATENSTEIN_RENDER_DISTANCE_CAP,
+  NEATENSTEIN_BACKGROUND_RGB,
+  RGBA_CHANNELS,
+} from './framebuffer';
 import {
   appendNeatensteinGridLine,
   createNeatensteinFloorSegmentBands,
 } from './floor.band.utils';
-import { strokeNeatensteinGridBands } from './floor.shade.utils';
+import { strokeNeatensteinGridBands, resolveNeatensteinFloorAlphaFromDistance, parseNeatensteinFloorHexColor } from './floor.shade.utils';
 import {
-  isPositiveFiniteDimension,
   resolveContextCanvasDimension,
   sanitizeNeatensteinFloorCamera,
 } from './floor.projection.utils';
+import { isPositiveFiniteDimension } from '../shared/math-guards.utils';
 import {
   NEATENSTEIN_FLOOR_DEFAULT_WIDTH,
   NEATENSTEIN_FLOOR_DEFAULT_HEIGHT,
   NEATENSTEIN_FLOOR_HORIZON_RATIO,
   NEATENSTEIN_FLOOR_FOV_RADIANS,
   NEATENSTEIN_FLOOR_CAMERA_HEIGHT_WORLD,
+  NEATENSTEIN_FLOOR_GLOW_WIDTH_PX,
+  NEATENSTEIN_FLOOR_LINE_WIDTH_PX,
+  NEATENSTEIN_FLOOR_GLOW_ALPHA_MULTIPLIER,
 } from './renderer.floor.constants';
 import type {
   NeatensteinFloorCamera,
   NeatensteinFloorRenderContext,
   NeatensteinGridProjectionContext,
 } from './renderer.floor.types';
+import { FLAPPY_NEON_PALETTE } from '../../../flappy_bird/constants/constants.palette';
 
 // Re-export previously-public symbols that moved to dedicated files.
 export {
@@ -51,6 +59,39 @@ export {
   NEATENSTEIN_FLOOR_MIN_ALPHA,
   NEATENSTEIN_FLOOR_MAX_ALPHA,
 } from './renderer.floor.constants';
+
+/**
+ * Unconditional flag indicating the per-pixel floor caster is the default
+ * rendering path across all tiers (C1.1).
+ *
+ * When `true`, the per-pixel caster ({@link castNeatensteinFloorPerPixel}) is
+ * the unconditional default. The Canvas 2D line-projection path remains
+ * available as a fallback but is no longer the primary path.
+ */
+export const NEATENSTEIN_PER_PIXEL_FLOOR_UNCONDITIONAL = true as const;
+
+/**
+ * World-space spacing between floor grid lines in world units (C1.1, Invariant §4).
+ *
+ * The procedural floor grid renders lines at integer world coordinates, so the
+ * grid pitch is exactly 1 world unit = 1 map cell. This MUST match the DDA cell
+ * size ({@link NEATENSTEIN_DDA_CELL_SIZE_WORLD}) so walls align to floor lines.
+ */
+export const NEATENSTEIN_FLOOR_GRID_SPACING_WORLD = 1.0 as const;
+
+/**
+ * Predicate that returns whether the per-pixel floor caster is active (C1.1).
+ *
+ * After C1.1 the per-pixel caster is unconditional, so this always returns
+ * `true` regardless of the tier or quality argument.
+ *
+ * @param _tier - Rendering tier label (ignored — per-pixel is unconditional).
+ * @returns Always `true`.
+ */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function isNeatensteinPerPixelFloorActive(_tier?: string): boolean {
+  return NEATENSTEIN_PER_PIXEL_FLOOR_UNCONDITIONAL;
+}
 export type {
   NeatensteinFloorCamera,
   NeatensteinFloorRenderContext,
@@ -68,6 +109,29 @@ export {
  * This fixed range bounds per-frame work independently of map size.
  */
 const NEATENSTEIN_FLOOR_VISIBLE_CELL_RANGE = NEATENSTEIN_RENDER_DISTANCE_CAP;
+
+/**
+ * Pooled depth-banded segment buffers — created once, cleared (`.length = 0`)
+ * each frame. Safe for flat number arrays.
+ */
+const pooledBands = createNeatensteinFloorSegmentBands();
+
+/**
+ * Pooled projection context — mutated in place each frame instead of
+ * allocating a fresh object.
+ */
+const pooledProjection: NeatensteinGridProjectionContext = {
+  width: 0,
+  height: 0,
+  cameraX: 0,
+  cameraY: 0,
+  cosYaw: 1,
+  sinYaw: 0,
+  focalLength: 0,
+  halfWidth: 0,
+  horizonY: 0,
+  cameraHeight: NEATENSTEIN_FLOOR_CAMERA_HEIGHT_WORLD,
+};
 
 /**
  * Draw the world-fixed neon floor grid below the horizon.
@@ -213,6 +277,14 @@ function drawNeatensteinGrid(
   const focalLength =
     canvasHeight / 2 / Math.tan(NEATENSTEIN_FLOOR_FOV_RADIANS / 2);
 
+  // C1.1: Gate per-pixel vs band-based floor. When the per-pixel caster is
+  // active (unconditional after C1.1), this Canvas 2D band-based grid is the
+  // fallback path — the per-pixel caster handles the framebuffer tier via
+  // seedFramebufferProcedurally. When disabled, skip the grid entirely.
+  if (!isNeatensteinPerPixelFloorActive()) {
+    return;
+  }
+
   // If any projection constant somehow becomes invalid, skip the frame rather
   // than writing invalid coordinates into the canvas path.
   if (
@@ -223,20 +295,23 @@ function drawNeatensteinGrid(
     return;
   }
 
-  const projection: NeatensteinGridProjectionContext = {
-    width: canvasWidth,
-    height: canvasHeight,
-    cameraX: safeCamera.x,
-    cameraY: safeCamera.y,
-    cosYaw: Math.cos(safeCamera.yaw),
-    sinYaw: Math.sin(safeCamera.yaw),
-    focalLength,
-    halfWidth,
-    horizonY,
-    cameraHeight: NEATENSTEIN_FLOOR_CAMERA_HEIGHT_WORLD,
-  };
+  const projection = pooledProjection;
+  projection.width = canvasWidth;
+  projection.height = canvasHeight;
+  projection.cameraX = safeCamera.x;
+  projection.cameraY = safeCamera.y;
+  projection.cosYaw = Math.cos(safeCamera.yaw);
+  projection.sinYaw = Math.sin(safeCamera.yaw);
+  projection.focalLength = focalLength;
+  projection.halfWidth = halfWidth;
+  projection.horizonY = horizonY;
+  projection.cameraHeight = NEATENSTEIN_FLOOR_CAMERA_HEIGHT_WORLD;
 
-  const bands = createNeatensteinFloorSegmentBands();
+  // Clear pooled band buffers in place (flat number arrays — safe to truncate).
+  for (let bi = 0; bi < pooledBands.length; bi += 1) {
+    pooledBands[bi].length = 0;
+  }
+  const bands = pooledBands;
   const range = NEATENSTEIN_FLOOR_VISIBLE_CELL_RANGE;
   const minX = Math.floor(safeCamera.x - range);
   const maxX = Math.ceil(safeCamera.x + range);
@@ -277,3 +352,170 @@ function drawNeatensteinGrid(
  * of the empty-band `continue` branch.
  */
 export const __testOnlyStrokeNeatensteinGridBands = strokeNeatensteinGridBands;
+
+/**
+ * Per-pixel floor and ceiling caster for the Neatenstein neon renderer.
+ *
+ * Unlike the line-projection path ({@link drawNeatensteinFloor}), this
+ * function writes each pixel directly into the framebuffer by computing
+ * world coordinates via ray-direction interpolation and detecting grid lines
+ * using `fract(worldCoord)`. This is the CPU equivalent of the GPU
+ * floor-caster shader.
+ *
+ * The framebuffer is first filled with the background color so that ceiling
+ * pixels and far-distance areas are non-zero. Then, for each row below (floor)
+ * and above (ceiling) the horizon, world coordinates are computed per column,
+ * and grid-line pixels are blended with the neon grid color using the unified
+ * smoothstep fog factor alpha (B3.2).
+ *
+ * Halo glow is replicated using `NEATENSTEIN_FLOOR_GLOW_WIDTH_PX` (3px halo)
+ * plus a `NEATENSTEIN_FLOOR_LINE_WIDTH_PX` (1px core), matching the
+ * double-stroke glow method of the line-projection path.
+ *
+ * @param framebuffer - Flat RGBA framebuffer.
+ * @param width - Framebuffer width in pixels.
+ * @param height - Framebuffer height in pixels.
+ * @param projection - Camera projection context (without width/height, which
+ *   are passed as separate parameters).
+ */
+export function castNeatensteinFloorPerPixel(
+  framebuffer: Uint8ClampedArray,
+  width: number,
+  height: number,
+  projection: Omit<NeatensteinGridProjectionContext, 'width' | 'height'>,
+): void {
+  if (
+    !isPositiveFiniteDimension(width) ||
+    !isPositiveFiniteDimension(height)
+  ) {
+    return;
+  }
+
+  const totalPixels = width * height;
+  if (framebuffer.length < totalPixels * RGBA_CHANNELS) {
+    return;
+  }
+
+  const {
+    cameraX,
+    cameraY,
+    cosYaw,
+    sinYaw,
+    focalLength,
+    halfWidth,
+    horizonY,
+    cameraHeight,
+  } = projection;
+
+  if (
+    !Number.isFinite(focalLength) ||
+    focalLength <= 0 ||
+    !Number.isFinite(horizonY)
+  ) {
+    return;
+  }
+
+  // Derive plane scale from shared constants: planeScale * focalLength = halfWidth
+  const planeScale = halfWidth / focalLength;
+
+  // Parse the shared neon grid line color once.
+  const gridColor = parseNeatensteinFloorHexColor(
+    FLAPPY_NEON_PALETTE.groundGridLine,
+  );
+  const gridR =
+    gridColor !== null ? gridColor.r : NEATENSTEIN_BACKGROUND_RGB.r;
+  const gridG =
+    gridColor !== null ? gridColor.g : NEATENSTEIN_BACKGROUND_RGB.g;
+  const gridB =
+    gridColor !== null ? gridColor.b : NEATENSTEIN_BACKGROUND_RGB.b;
+
+  const bgR = NEATENSTEIN_BACKGROUND_RGB.r;
+  const bgG = NEATENSTEIN_BACKGROUND_RGB.g;
+  const bgB = NEATENSTEIN_BACKGROUND_RGB.b;
+
+  // Fill the entire framebuffer with the background color so that ceiling
+  // and far-distance pixels are non-zero.
+  for (let i = 0; i < totalPixels; i += 1) {
+    const o = i * RGBA_CHANNELS;
+    framebuffer[o] = bgR;
+    framebuffer[o + 1] = bgG;
+    framebuffer[o + 2] = bgB;
+    framebuffer[o + 3] = 255;
+  }
+
+  // Render floor (below horizon) and ceiling (above horizon) per-pixel.
+  for (let y = 0; y < height; y += 1) {
+    const isFloor = y > horizonY;
+    const isCeiling = y < horizonY;
+    if (!isFloor && !isCeiling) {
+      continue;
+    }
+
+    // Vertical distance from the horizon in pixels (always > 0 here).
+    const verticalPx = isFloor ? y - horizonY : horizonY - y;
+    if (verticalPx <= 0) {
+      continue;
+    }
+
+    // rowDistance from shared constants:
+    // rowDistance = cameraHeight * focalLength / verticalPx
+    const rowDistance = (cameraHeight * focalLength) / verticalPx;
+    if (
+      !Number.isFinite(rowDistance) ||
+      rowDistance > NEATENSTEIN_RENDER_DISTANCE_CAP
+    ) {
+      continue;
+    }
+
+    // Alpha from the unified smoothstep fog factor (B3.2).
+    const alpha = resolveNeatensteinFloorAlphaFromDistance(rowDistance);
+    if (alpha <= 0) {
+      continue;
+    }
+
+    // World-space size of one screen pixel at this depth.
+    const pixelWorldSize = rowDistance / focalLength;
+    const glowWorldWidth = pixelWorldSize * NEATENSTEIN_FLOOR_GLOW_WIDTH_PX;
+    const coreWorldWidth = pixelWorldSize * NEATENSTEIN_FLOOR_LINE_WIDTH_PX;
+
+    const haloAlpha = alpha * NEATENSTEIN_FLOOR_GLOW_ALPHA_MULTIPLIER;
+
+    for (let x = 0; x < width; x += 1) {
+      // Screen-space offset in [-1, 1].
+      const screenOffset = halfWidth > 0 ? (x - halfWidth) / halfWidth : 0;
+
+      // Ray direction: dir + plane * offset
+      const rayDirX = cosYaw + (-sinYaw * planeScale) * screenOffset;
+      const rayDirY = sinYaw + (cosYaw * planeScale) * screenOffset;
+
+      // World coordinates via ray-direction interpolation.
+      const worldX = cameraX + rowDistance * rayDirX;
+      const worldY = cameraY + rowDistance * rayDirY;
+
+      // Procedural integer grid detection via fract(worldCoord).
+      const fx = worldX - Math.floor(worldX);
+      const fy = worldY - Math.floor(worldY);
+
+      // Distance to nearest grid line on each axis.
+      const distX = Math.min(fx, 1 - fx);
+      const distY = Math.min(fy, 1 - fy);
+      const minDist = Math.min(distX, distY);
+
+      if (minDist > glowWorldWidth) {
+        continue;
+      }
+
+      const o = (y * width + x) * RGBA_CHANNELS;
+
+      // Determine core vs halo and blend accordingly.
+      const isCore = minDist <= coreWorldWidth;
+      const blendAlpha = isCore ? alpha : haloAlpha;
+      const invAlpha = 1 - blendAlpha;
+
+      framebuffer[o] = Math.round(gridR * blendAlpha + bgR * invAlpha);
+      framebuffer[o + 1] = Math.round(gridG * blendAlpha + bgG * invAlpha);
+      framebuffer[o + 2] = Math.round(gridB * blendAlpha + bgB * invAlpha);
+      framebuffer[o + 3] = 255;
+    }
+  }
+}

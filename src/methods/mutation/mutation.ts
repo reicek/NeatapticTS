@@ -210,6 +210,7 @@ export const mutation: {
   BATCH_NORM: MutationConfig;
   ADD_LSTM_NODE: MutationConfig;
   ADD_GRU_NODE: MutationConfig;
+  MOD_TIME_CONSTANT: MutationConfig;
   ALL: MutationConfig[];
   FFW: MutationConfig[];
 } = {
@@ -414,6 +415,33 @@ export const mutation: {
     name: 'ADD_GRU_NODE',
     // Additional config can be added here if needed
   },
+  /**
+   * Modifies the per-node CTRNN time constant by sampling from a Gaussian
+   * distribution N(0, 0.1) and clamping to a positive range.
+   *
+   * Larger time constants introduce slower temporal memory into the neuron's
+   * activation dynamics. The operator is complementary to structural memory
+   * additions (ADD_LSTM_NODE, ADD_GRU_NODE) because it retunes existing nodes
+   * without changing topology.
+   *
+   * The runtime uses this config to decide whether a mutation step should
+   * perturb {@link Node.timeConstant}. The actual perturbation is performed by
+   * {@link mutateTimeConstant}; the activated node then integrates its state
+   * through {@link Node.applyCtrnnActivation}.
+   *
+   * @example
+   * ```ts
+   * const shelf = [...mutation.ALL];
+   * expect(shelf).toContain(mutation.MOD_TIME_CONSTANT);
+   * ```
+   * @see {@link mutateTimeConstant}
+   * @see {@link https://en.wikipedia.org/wiki/Continuous-time_recurrent_neural_network Continuous-time recurrent neural network (Wikipedia)}
+   */
+  MOD_TIME_CONSTANT: {
+    name: 'MOD_TIME_CONSTANT',
+    min: 0.1,
+    max: 10.0,
+  },
   /** Placeholder for the list of all mutation methods. */
   ALL: [],
   /** Placeholder for the list of mutation methods suitable for feedforward networks. */
@@ -445,6 +473,7 @@ mutation.ALL = [
   mutation.BATCH_NORM as MutationConfig,
   mutation.ADD_LSTM_NODE as MutationConfig, // Added
   mutation.ADD_GRU_NODE as MutationConfig, // Added
+  mutation.MOD_TIME_CONSTANT as MutationConfig,
 ];
 
 /**
@@ -470,3 +499,80 @@ mutation.FFW = [
 ];
 
 export default mutation;
+
+/**
+ * Named export of the `MOD_TIME_CONSTANT` config for direct import.
+ *
+ * This operator retunes a node's CTRNN `timeConstant` without changing
+ * topology. Larger values give the neuron slower, more inertial activation
+ * dynamics; smaller values produce near-instant response. It complements
+ * structural memory operators such as `ADD_LSTM_NODE` and `ADD_GRU_NODE`
+ * because it modifies temporal behavior on existing nodes.
+ *
+ * Runtime use: a mutation controller picks `MOD_TIME_CONSTANT` from the shelf;
+ * the actual perturbation is applied by {@link mutateTimeConstant}; the
+ * perturbed node then integrates via `applyCtrnnActivation`.
+ *
+ * @example
+ * ```ts
+ * const broadShelf = mutation.ALL;
+ * expect(broadShelf.map((m) => m.name)).toContain('MOD_TIME_CONSTANT');
+ * ```
+ * @see {@link mutateTimeConstant}
+ * @see {@link https://en.wikipedia.org/wiki/Continuous-time_recurrent_neural_network Continuous-time recurrent neural network (Wikipedia)}
+ */
+export const MOD_TIME_CONSTANT = mutation.MOD_TIME_CONSTANT;
+
+/**
+ * Named export of the `ALL` mutation list for direct import.
+ */
+export const ALL = mutation.ALL;
+
+/**
+ * Named export of the `FFW` mutation list for direct import.
+ */
+export const FFW = mutation.FFW;
+
+/**
+ * Minimal interface for nodes that carry an evolvable `timeConstant` property.
+ */
+interface TimeConstantBearer {
+  timeConstant: number;
+}
+
+/**
+ * Minimum allowable time constant — keeps CTRNN integration stable.
+ */
+const MIN_TIME_CONSTANT = 0.01;
+
+/**
+ * Standard deviation for the time-constant perturbation.
+ */
+const TIME_CONSTANT_SIGMA = 0.1;
+
+/**
+ * Perturbs a node's `timeConstant` by a Gaussian N(0, TIME_CONSTANT_SIGMA)
+ * perturbation drawn from the supplied RNG via the Box-Muller transform,
+ * clamping to a positive minimum so the CTRNN integration remains stable.
+ *
+ * Using the supplied RNG (rather than a deterministic hash) preserves
+ * evolutionary diversity: clone populations with different RNG states produce
+ * different perturbations, while the same RNG state remains reproducible.
+ *
+ * @param node A node instance with a `timeConstant` property.
+ * @param rng Uniform RNG returning values in [0, 1). Defaults to `Math.random`.
+ */
+export function mutateTimeConstant(
+  node: TimeConstantBearer,
+  rng: () => number = Math.random,
+): void {
+  const u1 = Math.max(rng(), 1e-10);
+  const u2 = rng();
+  const gaussianValue =
+    Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+  const perturbation = gaussianValue * TIME_CONSTANT_SIGMA;
+  node.timeConstant = Math.max(
+    MIN_TIME_CONSTANT,
+    node.timeConstant + perturbation,
+  );
+}

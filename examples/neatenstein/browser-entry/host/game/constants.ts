@@ -47,7 +47,7 @@ export const NEATENSTEIN_PLAYER_MAX_HEALTH = 100;
 export const NEATENSTEIN_PLAYER_MAX_AMMO = 50;
 
 /** Maximum number of enemies that can be active at the same time. */
-export const NEATENSTEIN_ENEMY_MAX_CONCURRENT = 8;
+export const NEATENSTEIN_ENEMY_MAX_CONCURRENT = 16;
 
 /** Total number of enemy waves an episode spawns before ending. */
 export const NEATENSTEIN_ENEMY_WAVE_COUNT = 9;

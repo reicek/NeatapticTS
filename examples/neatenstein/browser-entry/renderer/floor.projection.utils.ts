@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Ray-to-floor projection executors extracted from the floor renderer.
  *
  * Contains pure leaf functions that sanitize camera state, resolve canvas
@@ -16,6 +16,8 @@ import type {
   NeatensteinGridProjectionContext,
   ProjectedNeatensteinGridPoint,
 } from './renderer.floor.types';
+import { clamp } from '../shared/math-guards.utils';
+import { isPositiveFiniteDimension } from '../shared/math-guards.utils';
 
 // Re-export previously-public symbols that moved to dedicated files.
 export type {
@@ -23,28 +25,6 @@ export type {
   NeatensteinGridProjectionContext,
   ProjectedNeatensteinGridPoint,
 } from './renderer.floor.types';
-
-/**
- * Clamp a number into the inclusive range `[min, max]`.
- *
- * @param value - Value to clamp.
- * @param min - Lower bound.
- * @param max - Upper bound.
- * @returns Clamped value.
- */
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
-}
-
-/**
- * Return whether a render dimension is finite and drawable.
- *
- * @param value - Candidate width or height.
- * @returns Whether the value is a positive finite number.
- */
-export function isPositiveFiniteDimension(value: number): boolean {
-  return Number.isFinite(value) && value > 0;
-}
 
 /**
  * Sanitize camera values for renderer use.
@@ -145,6 +125,76 @@ export function projectNeatensteinGridPoint(
     depthRatio: clamp(rawDepthRatio, 0, 1),
     distance: camSpaceY,
   };
+}
+
+/**
+ * Project a world-space grid point into a caller-provided scratch slot.
+ *
+ * Identical math to {@link projectNeatensteinGridPoint} but mutates the
+ * `scratch` object in place and returns the same reference, enabling a
+ * ping-pong (two-slot) pattern in {@link appendNeatensteinGridLine} so that
+ * consecutive projections don't overwrite each other.
+ *
+ * @param worldX - World X coordinate.
+ * @param worldY - World Y coordinate.
+ * @param projection - Shared projection constants.
+ * @param forCeiling - Whether to mirror vertically above the horizon.
+ * @param scratch - Caller-provided scratch object to write into.
+ * @returns The same `scratch` reference with updated fields, or `null` if
+ *   culled.
+ */
+export function projectNeatensteinGridPointInto(
+  worldX: number,
+  worldY: number,
+  projection: NeatensteinGridProjectionContext,
+  forCeiling: boolean,
+  scratch: ProjectedNeatensteinGridPoint,
+): ProjectedNeatensteinGridPoint | null {
+  const dx = worldX - projection.cameraX;
+  const dy = worldY - projection.cameraY;
+
+  const camSpaceY = dx * projection.cosYaw + dy * projection.sinYaw;
+
+  if (camSpaceY <= NEATENSTEIN_FLOOR_NEAR_PLANE_EPSILON) {
+    return null;
+  }
+
+  if (camSpaceY > NEATENSTEIN_RENDER_DISTANCE_CAP) {
+    return null;
+  }
+
+  const camSpaceX = -dx * projection.sinYaw + dy * projection.cosYaw;
+  const verticalOffset =
+    (projection.cameraHeight / camSpaceY) * projection.focalLength;
+
+  const screenX =
+    projection.halfWidth + (camSpaceX / camSpaceY) * projection.focalLength;
+
+  const screenY = forCeiling
+    ? projection.horizonY - verticalOffset
+    : projection.horizonY + verticalOffset;
+
+  if (!Number.isFinite(screenX) || !Number.isFinite(screenY)) {
+    return null;
+  }
+
+  const depthDenominator = forCeiling
+    ? projection.horizonY
+    : projection.height - projection.horizonY;
+
+  if (!Number.isFinite(depthDenominator) || depthDenominator <= 0) {
+    return null;
+  }
+
+  const rawDepthRatio = forCeiling
+    ? (projection.horizonY - screenY) / depthDenominator
+    : (screenY - projection.horizonY) / depthDenominator;
+
+  scratch.x = screenX;
+  scratch.y = screenY;
+  scratch.depthRatio = clamp(rawDepthRatio, 0, 1);
+  scratch.distance = camSpaceY;
+  return scratch;
 }
 
 /**

@@ -12,6 +12,7 @@ import {
   NEATENSTEIN_CPU_COLUMN_COUNT,
   NEATENSTEIN_RENDER_FRAME_FORMAT_VERSION,
 } from '../constants';
+import { NEATENSTEIN_ZBUFFER_EMPTY } from './renderer.zbuffer.constants';
 import type {
   NeatensteinRenderFrame,
   NeatensteinRenderState,
@@ -70,7 +71,7 @@ export function buildNeatensteinRenderFrame(
     simTick: state.simTick,
     wallDistances: new Float32Array(columnCount),
     wallSides: new Uint8Array(columnCount),
-    zBuffer: new Float32Array(columnCount),
+    zBuffer: new Float32Array(columnCount).fill(NEATENSTEIN_ZBUFFER_EMPTY),
     enemyScreenX: new Float32Array(columnCount),
     enemyScale: new Float32Array(columnCount),
     projectileScreenX: new Float32Array(columnCount),

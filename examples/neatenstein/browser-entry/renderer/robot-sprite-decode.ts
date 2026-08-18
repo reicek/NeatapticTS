@@ -11,7 +11,7 @@ import {
   ROBOT_SPRITE_PALETTE,
   ROBOT_SPRITE_SCALE,
 } from '../../robot-sprite-data.js';
-import { type VoxelSnapshot } from '../../../neatenstein/scripts/snapshot-renderer';
+import { type VoxelSnapshot } from '../shared/snapshot-renderer';
 import { RGBA_CHANNELS } from '../constants';
 import type { EncodedRobotSpriteFrame } from './renderer.sprite.types';
 

@@ -3,6 +3,7 @@ import type Connection from '../../connection';
 import Layer from '../../layer/layer';
 import Node from '../../node';
 import mutation from '../../../methods/mutation/mutation';
+import { mutateTimeConstant } from '../../../methods/mutation/mutation';
 import { config } from '../../../config';
 import type {
   BackwardCandidateTraversalContext,
@@ -2288,4 +2289,26 @@ export function batchNorm(this: Network): void {
 function enableNodeBatchNorm(node: Node): void {
   const nodeWithBatchNorm = node as unknown as Record<string, unknown>;
   nodeWithBatchNorm[BATCH_NORM_FLAG_KEY] = true;
+}
+
+/**
+ * Mutates the CTRNN time constant on a random non-input node.
+ *
+ * Picks a random mutable (hidden or output) node and perturbs its
+ * `timeConstant` via {@link mutateTimeConstant} using the network's
+ * deterministic RNG.
+ *
+ * @param this - Bound network.
+ * @returns Nothing.
+ */
+export function modTimeConstant(this: Network): void {
+  const targetNode = pickRandomNonInputNode(
+    this,
+    false,
+    asMutationProps(this)._rand,
+  );
+  if (!targetNode) {
+    return;
+  }
+  mutateTimeConstant(targetNode, asMutationProps(this)._rand);
 }

@@ -1,4 +1,4 @@
-/// <reference lib="dom" />
+﻿/// <reference lib="dom" />
 
 /**
  * Browser entrypoint for the Neatenstein neon raycasting demo.
@@ -61,7 +61,6 @@ import type { NeatensteinStart, NeatensteinStop } from './browser-entry.types';
 /**
  * Exported shape expected by the host shell on `window`.
  *
- * @deprecated Import from `./browser-entry.types` instead. This re-export
  *   preserves the public API for existing consumers.
  */
 export type { NeatensteinStart, NeatensteinStop } from './browser-entry.types';

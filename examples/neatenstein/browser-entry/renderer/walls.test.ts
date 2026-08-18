@@ -4,7 +4,6 @@ import { describe, expect, it, jest } from '@jest/globals';
 const loadModule = (path: string): Promise<any> => import(path);
 
 const BACKGROUND_RGB = { r: 6, g: 11, b: 20 };
-const MAX_VIEW_DIST = 20;
 
 function createMockCanvasContext() {
   const globalAlphaSets: number[] = [];
@@ -79,23 +78,24 @@ describe('Neatenstein neon wall column renderer', () => {
     });
   });
 
-  it('preserves original wall color below the cap and fully fogges at the cap (step function)', async () => {
+  it('preserves original wall color below the fog start and fully fogges at the cap', async () => {
     const { writeNeonWallColumn } = await loadModule('./walls.ts');
     const nearBuffer = new Uint8ClampedArray(8 * 8 * 4);
     const midBuffer = new Uint8ClampedArray(8 * 8 * 4);
     const farBuffer = new Uint8ClampedArray(8 * 8 * 4);
     writeNeonWallColumn(nearBuffer, 8, 8, 0, 2, 5, '#00bfff', 1);
-    writeNeonWallColumn(midBuffer, 8, 8, 0, 2, 5, '#00bfff', MAX_VIEW_DIST);
+    // 10 is below the fog start distance (18), so no fog applies.
+    writeNeonWallColumn(midBuffer, 8, 8, 0, 2, 5, '#00bfff', 10);
     writeNeonWallColumn(farBuffer, 8, 8, 0, 2, 5, '#00bfff', 30);
 
     const nearPixel = sampleColumnPixel(nearBuffer, 0, 8);
     const midPixel = sampleColumnPixel(midBuffer, 0, 8);
     const farPixel = sampleColumnPixel(farBuffer, 0, 8);
 
-    // Below 30 cells: no fog, original color preserved (near and mid are the same).
+    // Below the fog start: no fog, original color preserved (near and mid are the same).
     expect(midPixel).toEqual(nearPixel);
 
-    // At 30 cells: fully fogged to background color.
+    // At the cap: fully fogged to background color.
     expect(farPixel).toEqual(BACKGROUND_RGB);
   });
 
@@ -223,5 +223,36 @@ describe('Legacy wall renderer removal', () => {
       await loadModule('./framebuffer.ts');
     const framebuffer = new Uint8ClampedArray(8 * 8 * 4);
     expect(() => resolveNeatensteinFramebufferSize(framebuffer)).toThrow();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// A2 Fix 2 — Wall framebuffer persistence
+//
+// paintWorkerTierWalls currently uses fillStyle/fillRect per column.  The fix
+// moves wall rendering to write directly into a persistent Uint8ClampedArray
+// framebuffer that is allocated once and reused across frames (re-allocated
+// only on canvas resize).
+// ---------------------------------------------------------------------------
+
+describe('A2 Fix 2: Wall framebuffer persistence', () => {
+  it('exports getPersistentWallFramebuffer as a function from render utils', async () => {
+    const mod = await loadModule('../worker/display.worker.render.utils.ts');
+    expect(typeof mod.getPersistentWallFramebuffer).toBe('function');
+  });
+
+  it('returns the same Uint8ClampedArray reference across calls', async () => {
+    const { getPersistentWallFramebuffer } = await loadModule(
+      '../worker/display.worker.render.utils.ts',
+    ) as {
+      getPersistentWallFramebuffer: (
+        width: number,
+        height: number,
+      ) => Uint8ClampedArray;
+    };
+    const a = getPersistentWallFramebuffer(320, 240);
+    const b = getPersistentWallFramebuffer(320, 240);
+    // Same dimensions → same reference (persistent, not re-allocated per call).
+    expect(a).toBe(b);
   });
 });
