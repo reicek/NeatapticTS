@@ -114,7 +114,12 @@ export function materializeFromNgeState(
   const hasRecurrentMotif = state.archetypes.some((archetype) =>
     RECURRENT_MOTIF_TYPES.has(archetype.computationType),
   );
-  wireMaterializationEdges(nodes, state.edgeCount, hasRecurrentMotif, inputCount);
+  wireMaterializationEdges(
+    nodes,
+    state.edgeCount,
+    hasRecurrentMotif,
+    inputCount,
+  );
   return assembleNetworkFromParts(nodes, state.seed);
 }
 
@@ -242,7 +247,10 @@ function wireMaterializationEdges(
   Connection.resetInnovationCounter(1);
 
   for (const [sourceIndex, targetIndex] of selected) {
-    nodes[sourceIndex].connect(nodes[targetIndex], MATERIALIZE_CONNECTION_WEIGHT);
+    nodes[sourceIndex].connect(
+      nodes[targetIndex],
+      MATERIALIZE_CONNECTION_WEIGHT,
+    );
   }
 }
 

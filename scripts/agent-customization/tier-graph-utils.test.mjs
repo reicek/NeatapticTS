@@ -441,9 +441,7 @@ describe('tier-graph-utils coverage', () => {
 
       const inventory = await collectTierInventory({ workspaceRoot: tempDir });
       assert.equal(inventory.summary.total, 2);
-      const nested = inventory.agents.find(
-        (a) => a.name === 'nested-agent',
-      );
+      const nested = inventory.agents.find((a) => a.name === 'nested-agent');
       assert.ok(nested);
       assert.equal(nested.tier, 2);
     });
@@ -460,11 +458,7 @@ describe('tier-graph-utils coverage', () => {
       );
       // Create a non-.agent.md file that should be skipped
       const agentsDir = path.join(tempDir, '.github', 'agents');
-      writeFileSync(
-        path.join(agentsDir, 'README.md'),
-        '# Agents',
-        'utf8',
-      );
+      writeFileSync(path.join(agentsDir, 'README.md'), '# Agents', 'utf8');
 
       const inventory = await collectTierInventory({ workspaceRoot: tempDir });
       assert.equal(inventory.summary.total, 1);

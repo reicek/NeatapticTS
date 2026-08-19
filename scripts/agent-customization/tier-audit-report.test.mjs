@@ -50,7 +50,9 @@ const mockInventory = {
 
 const mockValidation = {
   ok: false,
-  issues: [{ path: '.github/agents/03-red-testing.agent.md', message: 'violation' }],
+  issues: [
+    { path: '.github/agents/03-red-testing.agent.md', message: 'violation' },
+  ],
 };
 
 const mockInventoryEmpty = {
@@ -176,7 +178,9 @@ describe('tier-audit-report', () => {
 
     it('calls printUsage when --help is passed', async () => {
       const origExit = process.exit;
-      process.exit = (code) => { throw new Error(`EXIT:${code}`); };
+      process.exit = (code) => {
+        throw new Error(`EXIT:${code}`);
+      };
       try {
         await import('./tier-audit-report.mjs');
       } catch {
@@ -261,7 +265,11 @@ describe('tier-audit-report', () => {
       await import('./tier-audit-report.mjs');
       process.argv = origArgv;
       console.log = origLog;
-      assert.ok(logs[0].includes('03-red-testing | 1 (Orchestrator) | false | — | missing field'));
+      assert.ok(
+        logs[0].includes(
+          '03-red-testing | 1 (Orchestrator) | false | — | missing field',
+        ),
+      );
     });
 
     it('outputs markdown report with violation message joined by br', async () => {

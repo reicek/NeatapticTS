@@ -119,19 +119,25 @@ describe('runShellFreeCommand', () => {
 
   it('truncates stdout when exceeding maxOutputBytes (single chunk)', async () => {
     const child = createMockChild();
-    const promise = runShellFreeCommand('node -e "big"', { maxOutputBytes: 10 });
+    const promise = runShellFreeCommand('node -e "big"', {
+      maxOutputBytes: 10,
+    });
     await flush();
     child.stdout.emit('data', Buffer.from('a'.repeat(100)));
     child.emit('close', 0);
     const result = await promise;
-    expect(result.stdout.length).toBeLessThanOrEqual(10 + '\n[output truncated]'.length);
+    expect(result.stdout.length).toBeLessThanOrEqual(
+      10 + '\n[output truncated]'.length,
+    );
     expect(result.stdout).toContain('[output truncated]');
     expect(result.truncated.stdout).toBe(true);
   });
 
   it('truncates stdout with multi-chunk: first fits, second triggers else branch', async () => {
     const child = createMockChild();
-    const promise = runShellFreeCommand('node -e "multi"', { maxOutputBytes: 10 });
+    const promise = runShellFreeCommand('node -e "multi"', {
+      maxOutputBytes: 10,
+    });
     await flush();
     // First chunk fits within limit
     child.stdout.emit('data', Buffer.from('12345'));
@@ -147,7 +153,9 @@ describe('runShellFreeCommand', () => {
 
   it('truncates stderr when exceeding maxOutputBytes', async () => {
     const child = createMockChild();
-    const promise = runShellFreeCommand('node -e "bigerr"', { maxOutputBytes: 5 });
+    const promise = runShellFreeCommand('node -e "bigerr"', {
+      maxOutputBytes: 5,
+    });
     await flush();
     child.stderr.emit('data', Buffer.from('x'.repeat(50)));
     child.emit('close', 0);
@@ -158,7 +166,9 @@ describe('runShellFreeCommand', () => {
 
   it('truncates stderr with multi-chunk else branch', async () => {
     const child = createMockChild();
-    const promise = runShellFreeCommand('node -e "multierr"', { maxOutputBytes: 5 });
+    const promise = runShellFreeCommand('node -e "multierr"', {
+      maxOutputBytes: 5,
+    });
     await flush();
     child.stderr.emit('data', Buffer.from('ab'));
     child.stderr.emit('data', Buffer.from('cd'));
@@ -200,7 +210,9 @@ describe('runShellFreeCommand', () => {
 
   it('uses default output limit when maxOutputBytes is 0', async () => {
     const child = createMockChild();
-    const promise = runShellFreeCommand('node -e "test"', { maxOutputBytes: 0 });
+    const promise = runShellFreeCommand('node -e "test"', {
+      maxOutputBytes: 0,
+    });
     await flush();
     child.stdout.emit('data', Buffer.from('small'));
     child.emit('close', 0);
@@ -210,7 +222,9 @@ describe('runShellFreeCommand', () => {
 
   it('uses default output limit when maxOutputBytes is NaN', async () => {
     const child = createMockChild();
-    const promise = runShellFreeCommand('node -e "test"', { maxOutputBytes: NaN });
+    const promise = runShellFreeCommand('node -e "test"', {
+      maxOutputBytes: NaN,
+    });
     await flush();
     child.stdout.emit('data', Buffer.from('small'));
     child.emit('close', 0);
@@ -220,7 +234,9 @@ describe('runShellFreeCommand', () => {
 
   it('uses default output limit when maxOutputBytes is negative', async () => {
     const child = createMockChild();
-    const promise = runShellFreeCommand('node -e "test"', { maxOutputBytes: -1 });
+    const promise = runShellFreeCommand('node -e "test"', {
+      maxOutputBytes: -1,
+    });
     await flush();
     child.stdout.emit('data', Buffer.from('small'));
     child.emit('close', 0);

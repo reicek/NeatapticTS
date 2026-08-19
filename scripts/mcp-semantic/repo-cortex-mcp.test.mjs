@@ -59,62 +59,84 @@ const mockRunParallelQueries = jest.fn();
 const mockRunDocsQualityMetrics = jest.fn();
 
 jest.unstable_mockModule('./tools/search-corpus.mjs', () => ({
-  searchCorpus: mockSearchCorpus, __esModule: true,
+  searchCorpus: mockSearchCorpus,
+  __esModule: true,
 }));
 jest.unstable_mockModule('./tools/search-context.mjs', () => ({
-  searchContext: mockSearchContext, __esModule: true,
+  searchContext: mockSearchContext,
+  __esModule: true,
 }));
 jest.unstable_mockModule('./tools/search-advanced.mjs', () => ({
-  searchAdvanced: mockSearchAdvanced, __esModule: true,
+  searchAdvanced: mockSearchAdvanced,
+  __esModule: true,
 }));
 jest.unstable_mockModule('./tools/load-chunk.mjs', () => ({
-  loadChunk: mockLoadChunk, __esModule: true,
+  loadChunk: mockLoadChunk,
+  __esModule: true,
 }));
 jest.unstable_mockModule('./tools/load-parent-chunk.mjs', () => ({
-  loadParentChunk: mockLoadParentChunk, __esModule: true,
+  loadParentChunk: mockLoadParentChunk,
+  __esModule: true,
 }));
 jest.unstable_mockModule('./tools/load-document.mjs', () => ({
-  loadDocument: mockLoadDocument, __esModule: true,
+  loadDocument: mockLoadDocument,
+  __esModule: true,
 }));
 jest.unstable_mockModule('./tools/freshness-check.mjs', () => ({
-  freshnessCheck: mockFreshnessCheck, __esModule: true,
+  freshnessCheck: mockFreshnessCheck,
+  __esModule: true,
 }));
 jest.unstable_mockModule('./tools/index-stats.mjs', () => ({
-  indexStats: mockIndexStats, __esModule: true,
+  indexStats: mockIndexStats,
+  __esModule: true,
 }));
 jest.unstable_mockModule('./tools/list-families.mjs', () => ({
-  listFamilies: mockListFamilies, __esModule: true,
+  listFamilies: mockListFamilies,
+  __esModule: true,
 }));
 jest.unstable_mockModule('./tools/expand-query.mjs', () => ({
-  expandQueryHandler: mockExpandQueryHandler, __esModule: true,
+  expandQueryHandler: mockExpandQueryHandler,
+  __esModule: true,
 }));
 jest.unstable_mockModule('./tools/submit-feedback.mjs', () => ({
-  submitFeedback: mockSubmitFeedback, __esModule: true,
+  submitFeedback: mockSubmitFeedback,
+  __esModule: true,
 }));
 jest.unstable_mockModule('./tools/traverse-graph.mjs', () => ({
-  traverseGraphHandler: mockTraverseGraphHandler, __esModule: true,
+  traverseGraphHandler: mockTraverseGraphHandler,
+  __esModule: true,
 }));
 jest.unstable_mockModule('./tools/multi-hop-search.mjs', () => ({
-  multiHopSearchHandler: mockMultiHopSearchHandler, __esModule: true,
+  multiHopSearchHandler: mockMultiHopSearchHandler,
+  __esModule: true,
 }));
 jest.unstable_mockModule('./tools/turso-branch.mjs', () => ({
-  tursoBranch: mockTursoBranch, __esModule: true,
+  tursoBranch: mockTursoBranch,
+  __esModule: true,
 }));
 jest.unstable_mockModule('./tools/turso-pitr.mjs', () => ({
-  tursoPitr: mockTursoPitr, __esModule: true,
+  tursoPitr: mockTursoPitr,
+  __esModule: true,
 }));
 jest.unstable_mockModule('./tools/ann-index.mjs', () => ({
-  buildAnnIndex: mockBuildAnnIndex, __esModule: true,
+  buildAnnIndex: mockBuildAnnIndex,
+  __esModule: true,
 }));
 jest.unstable_mockModule('./tools/cortex-db.mjs', () => ({
-  getTursoClient: mockGetTursoClient, __esModule: true,
+  getTursoClient: mockGetTursoClient,
+  __esModule: true,
 }));
 jest.unstable_mockModule('../../rag-index/parallel-search.mjs', () => ({
-  runParallelQueries: mockRunParallelQueries, __esModule: true,
+  runParallelQueries: mockRunParallelQueries,
+  __esModule: true,
 }));
-jest.unstable_mockModule('../../rag-index/docs-quality/docs-quality.metrics.mjs', () => ({
-  runDocsQualityMetrics: mockRunDocsQualityMetrics, __esModule: true,
-}));
+jest.unstable_mockModule(
+  '../../rag-index/docs-quality/docs-quality.metrics.mjs',
+  () => ({
+    runDocsQualityMetrics: mockRunDocsQualityMetrics,
+    __esModule: true,
+  }),
+);
 
 /* ---- Import the module (main() won't run — argv[1] won't match) ---- */
 const { createRepoCortexMcpServer, createRepoCortexTools, runSelfCheck } =
@@ -122,12 +144,24 @@ const { createRepoCortexMcpServer, createRepoCortexTools, runSelfCheck } =
 
 /** All expected tool names from createRepoCortexTools. */
 const EXPECTED_TOOL_NAMES = [
-  'search_corpus', 'search_context', 'search_advanced',
-  'load_chunk', 'load_parent_chunk', 'load_document',
-  'freshness_check', 'index_stats', 'ann_build_index',
-  'list_families', 'scan_code_quality', 'traverse_graph',
-  'expand_query', 'submit_feedback', 'parallel_search',
-  'multi_hop_search', 'turso_branch', 'turso_pitr',
+  'search_corpus',
+  'search_context',
+  'search_advanced',
+  'load_chunk',
+  'load_parent_chunk',
+  'load_document',
+  'freshness_check',
+  'index_stats',
+  'ann_build_index',
+  'list_families',
+  'scan_code_quality',
+  'traverse_graph',
+  'expand_query',
+  'submit_feedback',
+  'parallel_search',
+  'multi_hop_search',
+  'turso_branch',
+  'turso_pitr',
 ];
 
 describe('repo-cortex-mcp', () => {
@@ -144,7 +178,9 @@ describe('repo-cortex-mcp', () => {
     });
     mockCreateSelfCheckReport.mockReset();
     mockCreateSelfCheckReport.mockImplementation((_name, issues, extra) => ({
-      ok: issues.length === 0, issues, ...extra,
+      ok: issues.length === 0,
+      issues,
+      ...extra,
     }));
     mockEmitSelfCheckReport.mockReset();
     mockParseMcpCliArgs.mockReset();
@@ -152,16 +188,31 @@ describe('repo-cortex-mcp', () => {
     mockRunStdioMcpServer.mockReset();
     mockRunStdioMcpServer.mockResolvedValue(undefined);
     mockSelfCheckError.mockReset();
-    mockSelfCheckError.mockImplementation((file, message) => ({ file, message }));
+    mockSelfCheckError.mockImplementation((file, message) => ({
+      file,
+      message,
+    }));
 
     // Reset all tool mocks
     for (const m of [
-      mockSearchCorpus, mockSearchContext, mockSearchAdvanced,
-      mockLoadChunk, mockLoadParentChunk, mockLoadDocument,
-      mockFreshnessCheck, mockIndexStats, mockListFamilies,
-      mockExpandQueryHandler, mockSubmitFeedback, mockTraverseGraphHandler,
-      mockMultiHopSearchHandler, mockTursoBranch, mockTursoPitr,
-      mockBuildAnnIndex, mockGetTursoClient, mockRunParallelQueries,
+      mockSearchCorpus,
+      mockSearchContext,
+      mockSearchAdvanced,
+      mockLoadChunk,
+      mockLoadParentChunk,
+      mockLoadDocument,
+      mockFreshnessCheck,
+      mockIndexStats,
+      mockListFamilies,
+      mockExpandQueryHandler,
+      mockSubmitFeedback,
+      mockTraverseGraphHandler,
+      mockMultiHopSearchHandler,
+      mockTursoBranch,
+      mockTursoPitr,
+      mockBuildAnnIndex,
+      mockGetTursoClient,
+      mockRunParallelQueries,
       mockRunDocsQualityMetrics,
     ]) {
       m.mockReset();
@@ -206,7 +257,11 @@ describe('repo-cortex-mcp', () => {
       const tool = tools.find((t) => t.name === 'search_corpus');
       await tool.handler({ query: 'test' });
       expect(mockSearchCorpus).toHaveBeenCalledWith(
-        expect.objectContaining({ query: 'test', compact: true, databasePath: '/db' }),
+        expect.objectContaining({
+          query: 'test',
+          compact: true,
+          databasePath: '/db',
+        }),
       );
     });
 
@@ -226,7 +281,10 @@ describe('repo-cortex-mcp', () => {
       await tool.handler({ query: 'test' });
       expect(mockSearchContext).toHaveBeenCalledWith(
         expect.objectContaining({
-          query: 'test', compact: true, read_top_result: true, databasePath: '/db',
+          query: 'test',
+          compact: true,
+          read_top_result: true,
+          databasePath: '/db',
         }),
       );
     });
@@ -234,7 +292,11 @@ describe('repo-cortex-mcp', () => {
     it('search_context handler respects explicit compact and read_top_result', async () => {
       const tools = createRepoCortexTools();
       const tool = tools.find((t) => t.name === 'search_context');
-      await tool.handler({ query: 'test', compact: false, read_top_result: false });
+      await tool.handler({
+        query: 'test',
+        compact: false,
+        read_top_result: false,
+      });
       expect(mockSearchContext).toHaveBeenCalledWith(
         expect.objectContaining({ compact: false, read_top_result: false }),
       );
@@ -246,7 +308,11 @@ describe('repo-cortex-mcp', () => {
       const tool = tools.find((t) => t.name === 'search_advanced');
       await tool.handler({ query: 'test' });
       expect(mockSearchAdvanced).toHaveBeenCalledWith(
-        expect.objectContaining({ query: 'test', auto_fallback: true, databasePath: '/db' }),
+        expect.objectContaining({
+          query: 'test',
+          auto_fallback: true,
+          databasePath: '/db',
+        }),
       );
     });
 
@@ -285,7 +351,10 @@ describe('repo-cortex-mcp', () => {
       const tool = tools.find((t) => t.name === 'load_document');
       await tool.handler({ file_path: 'src/test.ts' });
       expect(mockLoadDocument).toHaveBeenCalledWith(
-        expect.objectContaining({ file_path: 'src/test.ts', databasePath: '/db' }),
+        expect.objectContaining({
+          file_path: 'src/test.ts',
+          databasePath: '/db',
+        }),
       );
     });
 
@@ -295,7 +364,10 @@ describe('repo-cortex-mcp', () => {
       const tool = tools.find((t) => t.name === 'freshness_check');
       await tool.handler({ file_path: 'src/test.ts' });
       expect(mockFreshnessCheck).toHaveBeenCalledWith(
-        expect.objectContaining({ file_path: 'src/test.ts', databasePath: '/db' }),
+        expect.objectContaining({
+          file_path: 'src/test.ts',
+          databasePath: '/db',
+        }),
       );
     });
 
@@ -305,7 +377,10 @@ describe('repo-cortex-mcp', () => {
       const tool = tools.find((t) => t.name === 'index_stats');
       await tool.handler({ include_metadata_coverage: true });
       expect(mockIndexStats).toHaveBeenCalledWith(
-        expect.objectContaining({ include_metadata_coverage: true, databasePath: '/db' }),
+        expect.objectContaining({
+          include_metadata_coverage: true,
+          databasePath: '/db',
+        }),
       );
     });
 
@@ -347,7 +422,10 @@ describe('repo-cortex-mcp', () => {
       const tool = tools.find((t) => t.name === 'scan_code_quality');
       await tool.handler({ source_paths: ['src/foo.ts'] });
       expect(mockRunDocsQualityMetrics).toHaveBeenCalledWith(
-        expect.objectContaining({ scope: 'paths', sourcePaths: ['src/foo.ts'] }),
+        expect.objectContaining({
+          scope: 'paths',
+          sourcePaths: ['src/foo.ts'],
+        }),
       );
     });
 
@@ -386,7 +464,9 @@ describe('repo-cortex-mcp', () => {
       const tools = createRepoCortexTools();
       const tool = tools.find((t) => t.name === 'traverse_graph');
       await tool.handler({ seed_names: ['Test'] });
-      expect(mockTraverseGraphHandler).toHaveBeenCalledWith({ seed_names: ['Test'] });
+      expect(mockTraverseGraphHandler).toHaveBeenCalledWith({
+        seed_names: ['Test'],
+      });
     });
 
     /* --- expand_query handler --- */
@@ -403,7 +483,11 @@ describe('repo-cortex-mcp', () => {
       const tool = tools.find((t) => t.name === 'submit_feedback');
       await tool.handler({ chunk_id: 1, signal_type: 'positive' });
       expect(mockSubmitFeedback).toHaveBeenCalledWith(
-        expect.objectContaining({ chunk_id: 1, signal_type: 'positive', databasePath: '/db' }),
+        expect.objectContaining({
+          chunk_id: 1,
+          signal_type: 'positive',
+          databasePath: '/db',
+        }),
       );
     });
 
@@ -424,7 +508,10 @@ describe('repo-cortex-mcp', () => {
     it('parallel_search handler includes errors when present', async () => {
       mockGetTursoClient.mockResolvedValue({});
       const testErrors = [{ query: 0, error: 'fail' }];
-      mockRunParallelQueries.mockResolvedValue({ results: [], errors: testErrors });
+      mockRunParallelQueries.mockResolvedValue({
+        results: [],
+        errors: testErrors,
+      });
       const tools = createRepoCortexTools();
       const tool = tools.find((t) => t.name === 'parallel_search');
       const result = await tool.handler({ queries: [{ sql: 'SELECT 1' }] });
@@ -474,7 +561,8 @@ describe('repo-cortex-mcp', () => {
       await tool.handler({ database_name: 'db', timestamp: '2024-01-01' });
       expect(mockTursoPitr).toHaveBeenCalledWith(
         expect.objectContaining({
-          databaseName: 'db', timestamp: '2024-01-01',
+          databaseName: 'db',
+          timestamp: '2024-01-01',
         }),
       );
     });
@@ -525,7 +613,8 @@ describe('repo-cortex-mcp', () => {
 
     it('returns all_ok=false when a tool handler is missing', async () => {
       mockCreateTool.mockImplementationOnce(() => ({
-        name: 'broken', description: 'no handler',
+        name: 'broken',
+        description: 'no handler',
       }));
       mockSelfCheckError.mockReturnValue({ file: 'test', message: 'broken' });
       const result = await runSelfCheck();

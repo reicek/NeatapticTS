@@ -60,7 +60,12 @@ describe('record-gate-exception', () => {
     mockAppendFile = jest.fn(async () => {});
     mockCountTrailingGateFailures = jest.fn(() => 0);
     mockLoadLearningLogEvents = jest.fn(async () => []);
-    mockLearningLogPath = path.join(REPO_ROOT, '.github', 'ai-learning', 'learning-log.jsonl');
+    mockLearningLogPath = path.join(
+      REPO_ROOT,
+      '.github',
+      'ai-learning',
+      'learning-log.jsonl',
+    );
     originalExitCode = process.exitCode;
     jest.resetModules();
   });
@@ -347,7 +352,14 @@ describe('record-gate-exception', () => {
     console.error = (...args) => logs.push(args.map(String).join(' '));
     try {
       jest.resetModules();
-      process.argv = [process.execPath, GATE_PATH, '--json', '--gate-id=plan-sync', '--agent=01-planning', '--session-id=sess-1'];
+      process.argv = [
+        process.execPath,
+        GATE_PATH,
+        '--json',
+        '--gate-id=plan-sync',
+        '--agent=01-planning',
+        '--session-id=sess-1',
+      ];
       await import('./record-gate-exception.mjs');
       await new Promise((r) => setTimeout(r, 200));
     } finally {

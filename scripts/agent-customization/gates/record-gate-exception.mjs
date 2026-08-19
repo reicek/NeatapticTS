@@ -47,7 +47,8 @@ try {
   process.exitCode = 0;
 } catch (error) {
   const message =
-    error instanceof Error /* istanbul ignore next -- requireNonEmptyField always throws Error */
+    error instanceof
+    Error /* istanbul ignore next -- requireNonEmptyField always throws Error */
       ? error.message
       : String(error);
   if (args.json) {
@@ -117,10 +118,7 @@ function buildExceptionRecord(args) {
 
 function requireNonEmptyField(value, fieldName) {
   /* istanbul ignore next -- value always comes from parseExceptionArgs as a string */
-  const normalizedValue =
-    typeof value === 'string'
-      ? value.trim()
-      : '';
+  const normalizedValue = typeof value === 'string' ? value.trim() : '';
   if (!normalizedValue) {
     throw new Error(`Missing required non-empty --${fieldName} value.`);
   }

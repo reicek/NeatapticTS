@@ -109,8 +109,13 @@ function slice(goal, overrides = {}) {
  * Imports the gate (triggering top-level execution) with the given argv and
  * mock state. Returns the parsed JSON result (if --json) or the raw log lines.
  */
-async function runGate(argv, { plans, queue, parseError, readdirError, readThrow } = {}) {
-  mockReaddirEntries = plans ? Object.keys(plans).map((k) => k.replace('plans/', '')) : [];
+async function runGate(
+  argv,
+  { plans, queue, parseError, readdirError, readThrow } = {},
+) {
+  mockReaddirEntries = plans
+    ? Object.keys(plans).map((k) => k.replace('plans/', ''))
+    : [];
   mockReaddirError = readdirError ?? null;
   mockPlanContents = plans ?? {};
   mockReadThrow = readThrow ?? null;
@@ -216,11 +221,7 @@ describe('step-packet gate', () => {
     ]);
     const result = await runJson({
       plans: { 'plans/test.plans.md': text },
-      queue: [
-        validStep(),
-        validStep(),
-        validStep(),
-      ],
+      queue: [validStep(), validStep(), validStep()],
     });
     assert.equal(result.pass, true);
     assert.equal(result.evidence.blocksChecked.length, 3);
@@ -237,7 +238,9 @@ describe('step-packet gate', () => {
     });
     assert.equal(result.pass, false);
     assert.equal(result.evidence.violations.length, 1);
-    assert.ok(result.evidence.violations[0].parseError.includes('yaml parse boom'));
+    assert.ok(
+      result.evidence.violations[0].parseError.includes('yaml parse boom'),
+    );
   });
 
   // ---- isLegacyBlock ----
@@ -311,13 +314,32 @@ describe('step-packet gate', () => {
     const v = result.evidence.violations;
     assert.equal(result.pass, false);
     // missing acceptance_criteria + placeholder_steps
-    assert.ok(v.some((x) => x.missingField === 'acceptance_criteria' && x.level === 'phase'));
+    assert.ok(
+      v.some(
+        (x) => x.missingField === 'acceptance_criteria' && x.level === 'phase',
+      ),
+    );
     assert.ok(v.some((x) => x.missingField === 'placeholder_steps'));
     assert.ok(v.some((x) => x.invalidField === 'goal' && x.level === 'phase'));
-    assert.ok(v.some((x) => x.invalidField === 'expansion' && x.level === 'phase'));
-    assert.ok(v.some((x) => x.invalidField === 'auto_expand' && x.level === 'phase'));
-    assert.ok(v.some((x) => x.message && x.message.includes('skills must be a non-empty list')));
-    assert.ok(v.some((x) => x.message && x.message.includes('validation must be a non-empty list')));
+    assert.ok(
+      v.some((x) => x.invalidField === 'expansion' && x.level === 'phase'),
+    );
+    assert.ok(
+      v.some((x) => x.invalidField === 'auto_expand' && x.level === 'phase'),
+    );
+    assert.ok(
+      v.some(
+        (x) =>
+          x.message && x.message.includes('skills must be a non-empty list'),
+      ),
+    );
+    assert.ok(
+      v.some(
+        (x) =>
+          x.message &&
+          x.message.includes('validation must be a non-empty list'),
+      ),
+    );
   });
 
   it('records skills non-array violation for phase', async () => {
@@ -326,7 +348,11 @@ describe('step-packet gate', () => {
       plans: { 'plans/test.plans.md': text },
       queue: [validPhase({ skills: 'notarray' })],
     });
-    assert.ok(result.evidence.violations.some((x) => x.message.includes('skills must be a non-empty list')));
+    assert.ok(
+      result.evidence.violations.some((x) =>
+        x.message.includes('skills must be a non-empty list'),
+      ),
+    );
   });
 
   // ---- validateStepBlock: valid ----
@@ -363,7 +389,9 @@ describe('step-packet gate', () => {
     });
     const v = result.evidence.violations;
     assert.ok(v.some((x) => x.legacy === true));
-    assert.ok(v.some((x) => x.message && x.message.includes('Legacy format detected')));
+    assert.ok(
+      v.some((x) => x.message && x.message.includes('Legacy format detected')),
+    );
   });
 
   it('records invalid goal violation', async () => {
@@ -372,7 +400,9 @@ describe('step-packet gate', () => {
       plans: { 'plans/test.plans.md': text },
       queue: [validStep({ goal: 'bogus' })],
     });
-    assert.ok(result.evidence.violations.some((x) => x.invalidField === 'goal'));
+    assert.ok(
+      result.evidence.violations.some((x) => x.invalidField === 'goal'),
+    );
   });
 
   it('records invalid tdd_sequence violation', async () => {
@@ -381,7 +411,9 @@ describe('step-packet gate', () => {
       plans: { 'plans/test.plans.md': text },
       queue: [validStep({ tdd_sequence: 'bogus' })],
     });
-    assert.ok(result.evidence.violations.some((x) => x.invalidField === 'tdd_sequence'));
+    assert.ok(
+      result.evidence.violations.some((x) => x.invalidField === 'tdd_sequence'),
+    );
   });
 
   it('records invalid expansion violation for step', async () => {
@@ -390,31 +422,53 @@ describe('step-packet gate', () => {
       plans: { 'plans/test.plans.md': text },
       queue: [validStep({ expansion: 'bogus' })],
     });
-    assert.ok(result.evidence.violations.some((x) => x.invalidField === 'expansion'));
+    assert.ok(
+      result.evidence.violations.some((x) => x.invalidField === 'expansion'),
+    );
   });
 
   it('records empty skills, validation, and acceptance_criteria violations', async () => {
     const text = planText([yamlBlock('status: WIP')]);
     const result = await runJson({
       plans: { 'plans/test.plans.md': text },
-      queue: [validStep({ skills: [], validation: [], acceptance_criteria: [] })],
+      queue: [
+        validStep({ skills: [], validation: [], acceptance_criteria: [] }),
+      ],
     });
     const v = result.evidence.violations;
-    assert.ok(v.some((x) => x.message.includes('skills must be a non-empty list')));
-    assert.ok(v.some((x) => x.message.includes('validation must be a non-empty list')));
-    assert.ok(v.some((x) => x.message.includes('acceptance_criteria must be a non-empty list')));
+    assert.ok(
+      v.some((x) => x.message.includes('skills must be a non-empty list')),
+    );
+    assert.ok(
+      v.some((x) => x.message.includes('validation must be a non-empty list')),
+    );
+    assert.ok(
+      v.some((x) =>
+        x.message.includes('acceptance_criteria must be a non-empty list'),
+      ),
+    );
   });
 
   it('records non-array skills, validation, and acceptance_criteria violations', async () => {
     const text = planText([yamlBlock('status: WIP')]);
     const result = await runJson({
       plans: { 'plans/test.plans.md': text },
-      queue: [validStep({ skills: 'x', validation: 'x', acceptance_criteria: 'x' })],
+      queue: [
+        validStep({ skills: 'x', validation: 'x', acceptance_criteria: 'x' }),
+      ],
     });
     const v = result.evidence.violations;
-    assert.ok(v.some((x) => x.message.includes('skills must be a non-empty list')));
-    assert.ok(v.some((x) => x.message.includes('validation must be a non-empty list')));
-    assert.ok(v.some((x) => x.message.includes('acceptance_criteria must be a non-empty list')));
+    assert.ok(
+      v.some((x) => x.message.includes('skills must be a non-empty list')),
+    );
+    assert.ok(
+      v.some((x) => x.message.includes('validation must be a non-empty list')),
+    );
+    assert.ok(
+      v.some((x) =>
+        x.message.includes('acceptance_criteria must be a non-empty list'),
+      ),
+    );
   });
 
   // ---- validatePreExecuteHook ----
@@ -423,9 +477,11 @@ describe('step-packet gate', () => {
     const text = planText([yamlBlock('status: WIP')]);
     const result = await runJson({
       plans: { 'plans/test.plans.md': text },
-      queue: [validStep({
-        pre_execute_hook: { tool: 'cortex:search', args: { query: 'foo' } },
-      })],
+      queue: [
+        validStep({
+          pre_execute_hook: { tool: 'cortex:search', args: { query: 'foo' } },
+        }),
+      ],
     });
     assert.equal(result.pass, true);
     assert.equal(result.evidence.preExecuteHooks.length, 1);
@@ -439,12 +495,12 @@ describe('step-packet gate', () => {
     const result = await runJson({
       plans: { 'plans/test.plans.md': text },
       queue: [
-        validStep({ pre_execute_hook: [] }),                 // array → not object
-        validStep({ pre_execute_hook: null }),                // null → not object
-        validStep({ pre_execute_hook: {} }),                  // missing tool
-        validStep({ pre_execute_hook: { tool: 42 } }),        // tool not string
-        validStep({ pre_execute_hook: { tool: '' } }),        // tool empty
-        validStep({ pre_execute_hook: { tool: 'ok' } }),      // missing args
+        validStep({ pre_execute_hook: [] }), // array → not object
+        validStep({ pre_execute_hook: null }), // null → not object
+        validStep({ pre_execute_hook: {} }), // missing tool
+        validStep({ pre_execute_hook: { tool: 42 } }), // tool not string
+        validStep({ pre_execute_hook: { tool: '' } }), // tool empty
+        validStep({ pre_execute_hook: { tool: 'ok' } }), // missing args
         validStep({ pre_execute_hook: { tool: 'ok', args: [] } }), // args array
         validStep({ pre_execute_hook: { tool: 'ok', args: null } }), // args null
       ],
@@ -460,55 +516,79 @@ describe('step-packet gate', () => {
     const text = planText([yamlBlock('status: WIP')]);
     const result = await runJson({
       plans: { 'plans/test.plans.md': text },
-      queue: [validStep({
-        expansion: 'slices',
-        auto_expand: false,
-        tdd_sequence: 'red-green',
-        slices: [slice('red-testing'), slice('implementing'), slice('green-testing')],
-      })],
+      queue: [
+        validStep({
+          expansion: 'slices',
+          auto_expand: false,
+          tdd_sequence: 'red-green',
+          slices: [
+            slice('red-testing'),
+            slice('implementing'),
+            slice('green-testing'),
+          ],
+        }),
+      ],
     });
-    assert.ok(result.evidence.violations.some((x) => x.invalidField === 'auto_expand'));
+    assert.ok(
+      result.evidence.violations.some((x) => x.invalidField === 'auto_expand'),
+    );
   });
 
   it('rejects expansion=slices with missing tdd_sequence', async () => {
     const text = planText([yamlBlock('status: WIP')]);
     const result = await runJson({
       plans: { 'plans/test.plans.md': text },
-      queue: [validStep({
-        expansion: 'slices',
-        auto_expand: true,
-        slices: [slice('red-testing'), slice('implementing'), slice('green-testing')],
-      })],
+      queue: [
+        validStep({
+          expansion: 'slices',
+          auto_expand: true,
+          slices: [
+            slice('red-testing'),
+            slice('implementing'),
+            slice('green-testing'),
+          ],
+        }),
+      ],
     });
-    assert.ok(result.evidence.violations.some((x) => x.missingField === 'tdd_sequence'));
+    assert.ok(
+      result.evidence.violations.some((x) => x.missingField === 'tdd_sequence'),
+    );
   });
 
   it('rejects expansion=slices with empty slices list', async () => {
     const text = planText([yamlBlock('status: WIP')]);
     const result = await runJson({
       plans: { 'plans/test.plans.md': text },
-      queue: [validStep({
-        expansion: 'slices',
-        auto_expand: true,
-        tdd_sequence: 'red-green',
-        slices: [],
-      })],
+      queue: [
+        validStep({
+          expansion: 'slices',
+          auto_expand: true,
+          tdd_sequence: 'red-green',
+          slices: [],
+        }),
+      ],
     });
-    assert.ok(result.evidence.violations.some((x) => x.missingField === 'slices'));
+    assert.ok(
+      result.evidence.violations.some((x) => x.missingField === 'slices'),
+    );
   });
 
   it('rejects expansion=slices with non-array slices', async () => {
     const text = planText([yamlBlock('status: WIP')]);
     const result = await runJson({
       plans: { 'plans/test.plans.md': text },
-      queue: [validStep({
-        expansion: 'slices',
-        auto_expand: true,
-        tdd_sequence: 'red-green',
-        slices: 'notarray',
-      })],
+      queue: [
+        validStep({
+          expansion: 'slices',
+          auto_expand: true,
+          tdd_sequence: 'red-green',
+          slices: 'notarray',
+        }),
+      ],
     });
-    assert.ok(result.evidence.violations.some((x) => x.missingField === 'slices'));
+    assert.ok(
+      result.evidence.violations.some((x) => x.missingField === 'slices'),
+    );
   });
 
   // ---- validateSlices: count violations ----
@@ -525,42 +605,60 @@ describe('step-packet gate', () => {
     const text = planText([yamlBlock('status: WIP')]);
     const result = await runJson({
       plans: { 'plans/test.plans.md': text },
-      queue: [validStep({
-        expansion: 'slices',
-        auto_expand: true,
-        tdd_sequence: 'red-green',
-        slices: slices6,
-      })],
+      queue: [
+        validStep({
+          expansion: 'slices',
+          auto_expand: true,
+          tdd_sequence: 'red-green',
+          slices: slices6,
+        }),
+      ],
     });
-    assert.ok(result.evidence.violations.some((x) => x.message.includes('exceeding the 5-slice')));
+    assert.ok(
+      result.evidence.violations.some((x) =>
+        x.message.includes('exceeding the 5-slice'),
+      ),
+    );
   });
 
   it('rejects green-only with <2 slices', async () => {
     const text = planText([yamlBlock('status: WIP')]);
     const result = await runJson({
       plans: { 'plans/test.plans.md': text },
-      queue: [validStep({
-        expansion: 'slices',
-        auto_expand: true,
-        tdd_sequence: 'green-only',
-        slices: [slice('implementing')],
-      })],
+      queue: [
+        validStep({
+          expansion: 'slices',
+          auto_expand: true,
+          tdd_sequence: 'green-only',
+          slices: [slice('implementing')],
+        }),
+      ],
     });
-    assert.ok(result.evidence.violations.some((x) => x.message.includes('green-only tdd_sequence requires at least 2')));
+    assert.ok(
+      result.evidence.violations.some((x) =>
+        x.message.includes('green-only tdd_sequence requires at least 2'),
+      ),
+    );
   });
 
   it('rejects red-green with <3 slices', async () => {
     const text = planText([yamlBlock('status: WIP')]);
     const result = await runJson({
       plans: { 'plans/test.plans.md': text },
-      queue: [validStep({
-        expansion: 'slices',
-        auto_expand: true,
-        tdd_sequence: 'red-green',
-        slices: [slice('red-testing'), slice('green-testing')],
-      })],
+      queue: [
+        validStep({
+          expansion: 'slices',
+          auto_expand: true,
+          tdd_sequence: 'red-green',
+          slices: [slice('red-testing'), slice('green-testing')],
+        }),
+      ],
     });
-    assert.ok(result.evidence.violations.some((x) => x.message.includes('red-green tdd_sequence requires at least 3')));
+    assert.ok(
+      result.evidence.violations.some((x) =>
+        x.message.includes('red-green tdd_sequence requires at least 3'),
+      ),
+    );
   });
 
   // ---- validateSlices: per-slice validations ----
@@ -569,12 +667,14 @@ describe('step-packet gate', () => {
     const text = planText([yamlBlock('status: WIP')]);
     const result = await runJson({
       plans: { 'plans/test.plans.md': text },
-      queue: [validStep({
-        expansion: 'slices',
-        auto_expand: true,
-        tdd_sequence: 'red-green',
-        slices: [{ slice_id: 's1' }],
-      })],
+      queue: [
+        validStep({
+          expansion: 'slices',
+          auto_expand: true,
+          tdd_sequence: 'red-green',
+          slices: [{ slice_id: 's1' }],
+        }),
+      ],
     });
     const v = result.evidence.violations;
     assert.ok(v.some((x) => x.missingField === 'title' && x.sliceId === 's1'));
@@ -585,57 +685,84 @@ describe('step-packet gate', () => {
     const text = planText([yamlBlock('status: WIP')]);
     const result = await runJson({
       plans: { 'plans/test.plans.md': text },
-      queue: [validStep({
-        expansion: 'slices',
-        auto_expand: true,
-        tdd_sequence: 'red-green',
-        slices: [
-          slice('planning', { slice_id: 's1' }),
-          slice('implementing', { slice_id: 's2' }),
-          slice('green-testing', { slice_id: 's3' }),
-        ],
-      })],
+      queue: [
+        validStep({
+          expansion: 'slices',
+          auto_expand: true,
+          tdd_sequence: 'red-green',
+          slices: [
+            slice('planning', { slice_id: 's1' }),
+            slice('implementing', { slice_id: 's2' }),
+            slice('green-testing', { slice_id: 's3' }),
+          ],
+        }),
+      ],
     });
-    assert.ok(result.evidence.violations.some((x) => x.invalidField === 'goal' && x.sliceId === 's1' && x.message.includes('invalid goal')));
+    assert.ok(
+      result.evidence.violations.some(
+        (x) =>
+          x.invalidField === 'goal' &&
+          x.sliceId === 's1' &&
+          x.message.includes('invalid goal'),
+      ),
+    );
   });
 
   it('rejects wrong position goal for green-only', async () => {
     const text = planText([yamlBlock('status: WIP')]);
     const result = await runJson({
       plans: { 'plans/test.plans.md': text },
-      queue: [validStep({
-        expansion: 'slices',
-        auto_expand: true,
-        tdd_sequence: 'green-only',
-        slices: [
-          slice('green-testing', { slice_id: 's1' }),
-          slice('implementing', { slice_id: 's2' }),
-        ],
-      })],
+      queue: [
+        validStep({
+          expansion: 'slices',
+          auto_expand: true,
+          tdd_sequence: 'green-only',
+          slices: [
+            slice('green-testing', { slice_id: 's1' }),
+            slice('implementing', { slice_id: 's2' }),
+          ],
+        }),
+      ],
     });
-    assert.ok(result.evidence.violations.some((x) => x.expected === 'implementing' && x.sliceId === 's1'));
-    assert.ok(result.evidence.violations.some((x) => x.expected === 'green-testing' && x.sliceId === 's2'));
+    assert.ok(
+      result.evidence.violations.some(
+        (x) => x.expected === 'implementing' && x.sliceId === 's1',
+      ),
+    );
+    assert.ok(
+      result.evidence.violations.some(
+        (x) => x.expected === 'green-testing' && x.sliceId === 's2',
+      ),
+    );
   });
 
   it('rejects wrong position goal for red-green', async () => {
     const text = planText([yamlBlock('status: WIP')]);
     const result = await runJson({
       plans: { 'plans/test.plans.md': text },
-      queue: [validStep({
-        expansion: 'slices',
-        auto_expand: true,
-        tdd_sequence: 'red-green',
-        slices: [
-          slice('implementing', { slice_id: 's1' }),
-          slice('red-testing', { slice_id: 's2' }),
-          slice('implementing', { slice_id: 's3' }),
-        ],
-      })],
+      queue: [
+        validStep({
+          expansion: 'slices',
+          auto_expand: true,
+          tdd_sequence: 'red-green',
+          slices: [
+            slice('implementing', { slice_id: 's1' }),
+            slice('red-testing', { slice_id: 's2' }),
+            slice('implementing', { slice_id: 's3' }),
+          ],
+        }),
+      ],
     });
     const v = result.evidence.violations;
-    assert.ok(v.some((x) => x.expected === 'red-testing' && x.sliceId === 's1'));
-    assert.ok(v.some((x) => x.expected === 'implementing' && x.sliceId === 's2'));
-    assert.ok(v.some((x) => x.expected === 'green-testing' && x.sliceId === 's3'));
+    assert.ok(
+      v.some((x) => x.expected === 'red-testing' && x.sliceId === 's1'),
+    );
+    assert.ok(
+      v.some((x) => x.expected === 'implementing' && x.sliceId === 's2'),
+    );
+    assert.ok(
+      v.some((x) => x.expected === 'green-testing' && x.sliceId === 's3'),
+    );
   });
 
   it('rejects slice with invalid field types', async () => {
@@ -653,49 +780,73 @@ describe('step-packet gate', () => {
     const text = planText([yamlBlock('status: WIP')]);
     const result = await runJson({
       plans: { 'plans/test.plans.md': text },
-      queue: [validStep({
-        expansion: 'slices',
-        auto_expand: true,
-        tdd_sequence: 'red-green',
-        slices: [badSlice, slice('implementing', { slice_id: 's2' }), slice('green-testing', { slice_id: 's3' })],
-      })],
+      queue: [
+        validStep({
+          expansion: 'slices',
+          auto_expand: true,
+          tdd_sequence: 'red-green',
+          slices: [
+            badSlice,
+            slice('implementing', { slice_id: 's2' }),
+            slice('green-testing', { slice_id: 's3' }),
+          ],
+        }),
+      ],
     });
     const v = result.evidence.violations;
     assert.ok(v.some((x) => x.invalidField === 'files_to_change'));
     assert.ok(v.some((x) => x.invalidField === 'acceptance_criteria'));
     assert.ok(v.some((x) => x.invalidField === 'parallelizable'));
     assert.ok(v.some((x) => x.invalidField === 'dependencies'));
-    assert.ok(v.some((x) => x.invalidField === 'estimate_hours' && x.message.includes('must be a number')));
+    assert.ok(
+      v.some(
+        (x) =>
+          x.invalidField === 'estimate_hours' &&
+          x.message.includes('must be a number'),
+      ),
+    );
   });
 
   it('rejects slice with estimate_hours > 4', async () => {
     const text = planText([yamlBlock('status: WIP')]);
     const result = await runJson({
       plans: { 'plans/test.plans.md': text },
-      queue: [validStep({
-        expansion: 'slices',
-        auto_expand: true,
-        tdd_sequence: 'red-green',
-        slices: [
-          slice('red-testing', { slice_id: 's1', estimate_hours: 5 }),
-          slice('implementing', { slice_id: 's2' }),
-          slice('green-testing', { slice_id: 's3' }),
-        ],
-      })],
+      queue: [
+        validStep({
+          expansion: 'slices',
+          auto_expand: true,
+          tdd_sequence: 'red-green',
+          slices: [
+            slice('red-testing', { slice_id: 's1', estimate_hours: 5 }),
+            slice('implementing', { slice_id: 's2' }),
+            slice('green-testing', { slice_id: 's3' }),
+          ],
+        }),
+      ],
     });
-    assert.ok(result.evidence.violations.some((x) => x.invalidField === 'estimate_hours' && x.invalidValue === 5));
+    assert.ok(
+      result.evidence.violations.some(
+        (x) => x.invalidField === 'estimate_hours' && x.invalidValue === 5,
+      ),
+    );
   });
 
   it('handles null/falsy slice entries', async () => {
     const text = planText([yamlBlock('status: WIP')]);
     const result = await runJson({
       plans: { 'plans/test.plans.md': text },
-      queue: [validStep({
-        expansion: 'slices',
-        auto_expand: true,
-        tdd_sequence: 'red-green',
-        slices: [null, slice('implementing', { slice_id: 's2' }), slice('green-testing', { slice_id: 's3' })],
-      })],
+      queue: [
+        validStep({
+          expansion: 'slices',
+          auto_expand: true,
+          tdd_sequence: 'red-green',
+          slices: [
+            null,
+            slice('implementing', { slice_id: 's2' }),
+            slice('green-testing', { slice_id: 's3' }),
+          ],
+        }),
+      ],
     });
     const v = result.evidence.violations;
     // null slice: slice_id defaults to 'slice-0', all keys missing
@@ -706,15 +857,17 @@ describe('step-packet gate', () => {
     const text = planText([yamlBlock('status: WIP')]);
     const result = await runJson({
       plans: { 'plans/test.plans.md': text },
-      queue: [validStep({
-        expansion: 'slices',
-        auto_expand: true,
-        tdd_sequence: 'green-only',
-        slices: [
-          slice('implementing', { slice_id: 's1' }),
-          slice('green-testing', { slice_id: 's2' }),
-        ],
-      })],
+      queue: [
+        validStep({
+          expansion: 'slices',
+          auto_expand: true,
+          tdd_sequence: 'green-only',
+          slices: [
+            slice('implementing', { slice_id: 's1' }),
+            slice('green-testing', { slice_id: 's2' }),
+          ],
+        }),
+      ],
     });
     assert.equal(result.pass, true);
   });
@@ -723,16 +876,18 @@ describe('step-packet gate', () => {
     const text = planText([yamlBlock('status: WIP')]);
     const result = await runJson({
       plans: { 'plans/test.plans.md': text },
-      queue: [validStep({
-        expansion: 'slices',
-        auto_expand: true,
-        tdd_sequence: 'red-green',
-        slices: [
-          slice('red-testing', { slice_id: 's1' }),
-          slice('implementing', { slice_id: 's2' }),
-          slice('green-testing', { slice_id: 's3' }),
-        ],
-      })],
+      queue: [
+        validStep({
+          expansion: 'slices',
+          auto_expand: true,
+          tdd_sequence: 'red-green',
+          slices: [
+            slice('red-testing', { slice_id: 's1' }),
+            slice('implementing', { slice_id: 's2' }),
+            slice('green-testing', { slice_id: 's3' }),
+          ],
+        }),
+      ],
     });
     assert.equal(result.pass, true);
   });
@@ -745,7 +900,11 @@ describe('step-packet gate', () => {
       plans: { 'plans/test.plans.md': text },
       queue: [validStep({ goal: 'red-testing' })],
     });
-    assert.ok(result.evidence.planReadinessWarnings.some((w) => w.goal === 'red-testing'));
+    assert.ok(
+      result.evidence.planReadinessWarnings.some(
+        (w) => w.goal === 'red-testing',
+      ),
+    );
   });
 
   it('emits readiness warning for implementing goal without green-light', async () => {
@@ -754,7 +913,11 @@ describe('step-packet gate', () => {
       plans: { 'plans/test.plans.md': text },
       queue: [validStep({ goal: 'implementing' })],
     });
-    assert.ok(result.evidence.planReadinessWarnings.some((w) => w.goal === 'implementing'));
+    assert.ok(
+      result.evidence.planReadinessWarnings.some(
+        (w) => w.goal === 'implementing',
+      ),
+    );
   });
 
   it('does not emit readiness warning when green-light is present (green-light: true)', async () => {
@@ -790,7 +953,11 @@ describe('step-packet gate', () => {
       plans: { 'plans/test.plans.md': text },
       queue: [validStep({ goal: 'red-testing' })],
     });
-    assert.ok(result.evidence.planReadinessWarnings.some((w) => w.goal === 'red-testing'));
+    assert.ok(
+      result.evidence.planReadinessWarnings.some(
+        (w) => w.goal === 'red-testing',
+      ),
+    );
   });
 
   // ---- Neither step nor phase → missingField=phase ----
@@ -829,15 +996,17 @@ describe('step-packet gate', () => {
     const text = planText([yamlBlock('status: WIP')]);
     const result = await runJson({
       plans: { 'plans/test.plans.md': text },
-      queue: [validStep({
-        agent: '04',
-        goal: 'bogus',
-        tdd_sequence: 'bogus',
-        expansion: 'bogus',
-        skills: [],
-        validation: [],
-        acceptance_criteria: [],
-      })],
+      queue: [
+        validStep({
+          agent: '04',
+          goal: 'bogus',
+          tdd_sequence: 'bogus',
+          expansion: 'bogus',
+          skills: [],
+          validation: [],
+          acceptance_criteria: [],
+        }),
+      ],
     });
     assert.equal(result.pass, false);
     // fixHint should contain various field references

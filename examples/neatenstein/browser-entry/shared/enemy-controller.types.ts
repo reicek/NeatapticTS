@@ -5,11 +5,7 @@
  */
 
 import type { CollisionMap } from '../renderer/map';
-import type {
-  EnemyState,
-  GameState,
-  Vector2,
-} from '../host/game/types';
+import type { EnemyState, GameState, Vector2 } from '../host/game/types';
 import type { DistanceMap } from './enemy-navigation';
 
 /**

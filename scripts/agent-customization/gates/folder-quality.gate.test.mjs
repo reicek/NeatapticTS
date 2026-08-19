@@ -35,7 +35,10 @@ async function importGateMain(argv) {
   const originalLog = console.log;
   const originalStderrWrite = process.stderr.write.bind(process.stderr);
   console.log = (...args) => logs.push(args.map(String).join(' '));
-  process.stderr.write = (chunk) => { stderrChunks.push(String(chunk)); return true; };
+  process.stderr.write = (chunk) => {
+    stderrChunks.push(String(chunk));
+    return true;
+  };
   try {
     jest.resetModules();
     await withArgv([process.execPath, GATE_PATH, ...argv], async () => {
@@ -164,19 +167,27 @@ describe('folder-quality gate', () => {
       const { logs, stderr } = {};
       const originalStderrWrite = process.stderr.write.bind(process.stderr);
       const stderrChunks = [];
-      process.stderr.write = (chunk) => { stderrChunks.push(String(chunk)); return true; };
+      process.stderr.write = (chunk) => {
+        stderrChunks.push(String(chunk));
+        return true;
+      };
       const originalLog = console.log;
       const logChunks = [];
       console.log = (...args) => logChunks.push(args.map(String).join(' '));
       // Force runFolderQualityMetrics to throw a non-Error
       jest.unstable_mockModule('../../folder-quality-metrics.mjs', () => ({
-        runFolderQualityMetrics: async () => { throw 'string error'; },
+        runFolderQualityMetrics: async () => {
+          throw 'string error';
+        },
       }));
       try {
-        await withArgv([process.execPath, GATE_PATH, '--folder=src'], async () => {
-          await import('./folder-quality.gate.mjs');
-          await new Promise((r) => setTimeout(r, 200));
-        });
+        await withArgv(
+          [process.execPath, GATE_PATH, '--folder=src'],
+          async () => {
+            await import('./folder-quality.gate.mjs');
+            await new Promise((r) => setTimeout(r, 200));
+          },
+        );
       } finally {
         console.log = originalLog;
         process.stderr.write = originalStderrWrite;

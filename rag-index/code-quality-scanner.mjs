@@ -35,6 +35,7 @@ const DEFAULT_SCANNER_IGNORE = [
   'src/**/*.test.ts',
   'src/**/*.spec.ts',
   'src/**/__mocks__/*.ts',
+  'src/**/__rag_test__/*.ts',
 ];
 const DOCUMENTATION_OWNER = '06-documenting';
 

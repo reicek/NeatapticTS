@@ -98,7 +98,7 @@ export function lerpNeatensteinAngle(
   const clampedAlpha = clampInterpolationAlpha(alpha);
 
   // Shortest signed angular difference in [-π, π].
-  let delta = ((to - from) % TWO_PI + TWO_PI) % TWO_PI;
+  let delta = (((to - from) % TWO_PI) + TWO_PI) % TWO_PI;
   if (delta > Math.PI) {
     delta -= TWO_PI;
   }

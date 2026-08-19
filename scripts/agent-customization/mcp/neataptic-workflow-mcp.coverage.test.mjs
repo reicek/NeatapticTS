@@ -111,7 +111,14 @@ slices:
           return {
             context: 'Test context from test query response',
             results: [
-              { chunk_id: 'test-1', file_path: 'tests/feature.test.ts', text: 'test content', char_start: 400, char_end: 500, score: 10 },
+              {
+                chunk_id: 'test-1',
+                file_path: 'tests/feature.test.ts',
+                text: 'test content',
+                char_start: 400,
+                char_end: 500,
+                score: 10,
+              },
             ],
             token_count: 100,
           };
@@ -122,34 +129,110 @@ slices:
         if (callIndex === 1) {
           return {
             results: [
-              { chunk_id: 1, file_path: 'src/feature.ts', text: 'feature code', heading_path: 'My Heading', char_start: 0, char_end: 100, score: 100 },
-              { metadata: { file_path: 'tests/feature.test.ts', char_start: 200, char_end: 300, heading_path: 'Section A', context_header: 'Ctx' }, content: 'test code', score: 60 },
-              { file_path: 'scripts/agent-customization/mcp/slice-context-archive.mjs', snippet: 'archive code', char_start: 0, char_end: 50, score: 40 },
-              { chunk_id: 2, truncated: true, file_path: 'tests/dropped.test.ts', text: 'dropped test', score: 90 },
-              { chunk_id: 3, path: 'tests/feature.test.ts', text: 'path test', char_start: 0, char_end: 199, score: 60 },
+              {
+                chunk_id: 1,
+                file_path: 'src/feature.ts',
+                text: 'feature code',
+                heading_path: 'My Heading',
+                char_start: 0,
+                char_end: 100,
+                score: 100,
+              },
+              {
+                metadata: {
+                  file_path: 'tests/feature.test.ts',
+                  char_start: 200,
+                  char_end: 300,
+                  heading_path: 'Section A',
+                  context_header: 'Ctx',
+                },
+                content: 'test code',
+                score: 60,
+              },
+              {
+                file_path:
+                  'scripts/agent-customization/mcp/slice-context-archive.mjs',
+                snippet: 'archive code',
+                char_start: 0,
+                char_end: 50,
+                score: 40,
+              },
+              {
+                chunk_id: 2,
+                truncated: true,
+                file_path: 'tests/dropped.test.ts',
+                text: 'dropped test',
+                score: 90,
+              },
+              {
+                chunk_id: 3,
+                path: 'tests/feature.test.ts',
+                text: 'path test',
+                char_start: 0,
+                char_end: 199,
+                score: 60,
+              },
               { file_path: 12345, text: 'non-string path', score: 5 },
               { chunk_id: 'fallback-1', score: 20 },
               { chunk_id: 'text-chunk', score: 15 },
               { score: 10, char_start: 999 },
-              { metadata: { path: 'tests/other.test.ts' }, text: 'metadata path test', score: 60 },
-              { chunk_id: 'no-path', truncated: true, text: 'no path truncated', score: 30 },
+              {
+                metadata: { path: 'tests/other.test.ts' },
+                text: 'metadata path test',
+                score: 60,
+              },
+              {
+                chunk_id: 'no-path',
+                truncated: true,
+                text: 'no path truncated',
+                score: 30,
+              },
             ],
             context: {
               chunks: [
-                { chunk_id: 1, file_path: 'src/feature.ts', content: 'full feature code', char_start: 0, char_end: 100 },
-                { chunk_id: 'fallback-1', file_path: 'src/fallback.ts', content: 'fallback content', heading_path: 'Assembled Heading', char_start: 0, char_end: 100 },
-                { chunk_id: 'text-chunk', file_path: 'src/text-chunk.ts', text: 'text chunk content', context_header: 'Assembled Context', char_start: 0 },
-                { file_path: 'src/no-id.ts', content: 'no id content', char_start: 0 },
+                {
+                  chunk_id: 1,
+                  file_path: 'src/feature.ts',
+                  content: 'full feature code',
+                  char_start: 0,
+                  char_end: 100,
+                },
+                {
+                  chunk_id: 'fallback-1',
+                  file_path: 'src/fallback.ts',
+                  content: 'fallback content',
+                  heading_path: 'Assembled Heading',
+                  char_start: 0,
+                  char_end: 100,
+                },
+                {
+                  chunk_id: 'text-chunk',
+                  file_path: 'src/text-chunk.ts',
+                  text: 'text chunk content',
+                  context_header: 'Assembled Context',
+                  char_start: 0,
+                },
+                {
+                  file_path: 'src/no-id.ts',
+                  content: 'no id content',
+                  char_start: 0,
+                },
               ],
             },
-            follow_up_refs: [{ tool: 'search_context', reason: 'More context needed' }],
+            follow_up_refs: [
+              { tool: 'search_context', reason: 'More context needed' },
+            ],
             token_count: 500,
           };
         }
         return { results: [], token_count: 50 };
       };
 
-      const result = await callGetSliceContext(planPath, searchContextFn, 'full-slice');
+      const result = await callGetSliceContext(
+        planPath,
+        searchContextFn,
+        'full-slice',
+      );
 
       // buildCompactSliceResponse always sets compact: true in basePayload
       expect(result.slice_id).toBe('full-slice');
@@ -236,7 +319,11 @@ slices:
         return { results: [], token_count: 0 };
       };
 
-      const result = await callGetSliceContext(planPath, searchContextFn, 'tdd-slice');
+      const result = await callGetSliceContext(
+        planPath,
+        searchContextFn,
+        'tdd-slice',
+      );
       expect(result.slice_id).toBe('tdd-slice');
       expect(result.context.text).toBe('');
     } finally {
@@ -278,7 +365,11 @@ slices:
         token_count: 0,
       });
 
-      const result = await callGetSliceContext(planPath, searchContextFn, 'large-context-slice');
+      const result = await callGetSliceContext(
+        planPath,
+        searchContextFn,
+        'large-context-slice',
+      );
       expect(result.slice_id).toBe('large-context-slice');
       expect(result.context.text.length).toBeLessThan(20000);
     } finally {
@@ -292,7 +383,9 @@ slices:
     for (let i = 0; i < 30; i++) {
       const id = `AC-${String(i + 1).padStart(3, '0')}`;
       acLines.push(`      - id: ${id}`);
-      acLines.push(`        text: 'Acceptance criterion ${i + 1} for testing truncation behavior with a long description'`);
+      acLines.push(
+        `        text: 'Acceptance criterion ${i + 1} for testing truncation behavior with a long description'`,
+      );
       acLines.push(`        validation: 'npm test -- criterion-${i + 1}'`);
     }
     const planContent = `
@@ -325,7 +418,11 @@ ${acLines.join('\n')}
     const planPath = await writeTempPlan(planContent);
     try {
       const searchContextFn = async () => ({ results: [], token_count: 0 });
-      const result = await callGetSliceContext(planPath, searchContextFn, 'target-slice');
+      const result = await callGetSliceContext(
+        planPath,
+        searchContextFn,
+        'target-slice',
+      );
       expect(result.slice_id).toBe('target-slice');
       expect(result.truncated).toBe(true);
     } finally {
@@ -363,7 +460,11 @@ ${slicesYaml}
     const planPath = await writeTempPlan(planContent);
     try {
       const searchContextFn = async () => ({ results: [], token_count: 0 });
-      const result = await callGetSliceContext(planPath, searchContextFn, 'compact-slice');
+      const result = await callGetSliceContext(
+        planPath,
+        searchContextFn,
+        'compact-slice',
+      );
       expect(result.slice_id).toBe('compact-slice');
       expect(result.compact).toBe(true);
       expect(result.truncated).toBe(true);
@@ -452,7 +553,11 @@ slices:
     await writeTempLogs(planPath, logsContent);
     try {
       const searchContextFn = async () => ({ results: [], token_count: 0 });
-      const result = await callGetSliceContext(planPath, searchContextFn, 'archived-slice');
+      const result = await callGetSliceContext(
+        planPath,
+        searchContextFn,
+        'archived-slice',
+      );
       expect(result.slice_id).toBe('archived-slice');
       expect(result.goal).toBeNull();
       expect(result.instructions).toContain('GOAL: unspecified');

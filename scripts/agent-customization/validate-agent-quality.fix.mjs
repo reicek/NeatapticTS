@@ -171,7 +171,8 @@ export async function runFix({ json = false } = {}) {
     const role =
       parsed.data?.name ??
       /* istanbul ignore next -- split('/') always returns ≥1 element and replace always returns string */
-      (relativePath.split('/').at(-1)?.replace('.agent.md', '') ?? '');
+      relativePath.split('/').at(-1)?.replace('.agent.md', '') ??
+      '';
     const tier = parsed.data?.tier ?? '';
 
     // Attempt fix: preserve content up to any existing '## Output format' heading

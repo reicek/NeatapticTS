@@ -374,7 +374,7 @@ describe('feedback-core', () => {
 
       // The returned row should be the existing one, not a new insert
       const allRows = await client.execute(
-        'SELECT COUNT(*) as count FROM feedback_events WHERE chunk_id = 1 AND signal_type = \'positive\'',
+        "SELECT COUNT(*) as count FROM feedback_events WHERE chunk_id = 1 AND signal_type = 'positive'",
       );
       expect(Number(allRows.rows[0].count)).toBe(1);
       expect(existingRow).toBeDefined();
@@ -394,7 +394,7 @@ describe('feedback-core', () => {
       });
 
       const allRows = await client.execute(
-        'SELECT COUNT(*) as count FROM feedback_events WHERE chunk_id = 1 AND signal_type = \'positive\'',
+        "SELECT COUNT(*) as count FROM feedback_events WHERE chunk_id = 1 AND signal_type = 'positive'",
       );
       expect(Number(allRows.rows[0].count)).toBe(2);
     });
@@ -412,7 +412,7 @@ describe('feedback-core', () => {
       });
 
       const allRows = await client.execute(
-        'SELECT COUNT(*) as count FROM feedback_events WHERE chunk_id = 1 AND signal_type = \'click\'',
+        "SELECT COUNT(*) as count FROM feedback_events WHERE chunk_id = 1 AND signal_type = 'click'",
       );
       expect(Number(allRows.rows[0].count)).toBe(2);
     });

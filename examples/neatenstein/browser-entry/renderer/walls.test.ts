@@ -242,9 +242,9 @@ describe('A2 Fix 2: Wall framebuffer persistence', () => {
   });
 
   it('returns the same Uint8ClampedArray reference across calls', async () => {
-    const { getPersistentWallFramebuffer } = await loadModule(
+    const { getPersistentWallFramebuffer } = (await loadModule(
       '../worker/display.worker.render.utils.ts',
-    ) as {
+    )) as {
       getPersistentWallFramebuffer: (
         width: number,
         height: number,

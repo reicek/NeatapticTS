@@ -12,7 +12,14 @@
  * @module
  */
 
-import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  jest,
+} from '@jest/globals';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -41,9 +48,7 @@ describe('C2-1: Test harness helpers extracted to shared module', () => {
     );
     // The local function definition should be removed — the file should
     // import from the shared display.worker.test-helpers.ts module instead.
-    expect(content).not.toMatch(
-      /function\s+installMockWorkerGlobal\s*\(/,
-    );
+    expect(content).not.toMatch(/function\s+installMockWorkerGlobal\s*\(/);
   });
 
   it('display-worker-derez.test.ts does not define sendInitMessage locally', () => {
@@ -67,9 +72,7 @@ describe('C2-1: Test harness helpers extracted to shared module', () => {
       join(workerRoot, 'display-worker-derez.test.ts'),
       'utf-8',
     );
-    expect(content).toMatch(
-      /from\s+['"]\.\/display\.worker\.test-helpers['"]/,
-    );
+    expect(content).toMatch(/from\s+['"]\.\/display\.worker\.test-helpers['"]/);
   });
 
   it('eval.worker.test.ts does not define installMockWorkerGlobal locally', () => {
@@ -77,9 +80,7 @@ describe('C2-1: Test harness helpers extracted to shared module', () => {
       join(workerRoot, 'eval.worker.test.ts'),
       'utf-8',
     );
-    expect(content).not.toMatch(
-      /function\s+installMockWorkerGlobal\s*\(/,
-    );
+    expect(content).not.toMatch(/function\s+installMockWorkerGlobal\s*\(/);
   });
 
   it('eval.worker.test.ts imports from display.worker.test-helpers', () => {
@@ -87,9 +88,7 @@ describe('C2-1: Test harness helpers extracted to shared module', () => {
       join(workerRoot, 'eval.worker.test.ts'),
       'utf-8',
     );
-    expect(content).toMatch(
-      /from\s+['"]\.\/display\.worker\.test-helpers['"]/,
-    );
+    expect(content).toMatch(/from\s+['"]\.\/display\.worker\.test-helpers['"]/);
   });
 });
 
@@ -129,20 +128,14 @@ describe('C2-2: Record<string, any> replaced with Record<string, unknown>', () =
 
 describe('C2-3: tick.test.ts mock uses proper typing (no any)', () => {
   it('tick.test.ts does not use (state: any) in mockImplementation', () => {
-    const content = readFileSync(
-      join(hostGameRoot, 'tick.test.ts'),
-      'utf-8',
-    );
+    const content = readFileSync(join(hostGameRoot, 'tick.test.ts'), 'utf-8');
     // The mock at the applyEnemyDamage spy should use a properly typed
     // parameter instead of `any`.
     expect(content).not.toMatch(/\(state:\s*any\)/);
   });
 
   it('tick.test.ts does not have eslint-disable for no-explicit-any on mock', () => {
-    const content = readFileSync(
-      join(hostGameRoot, 'tick.test.ts'),
-      'utf-8',
-    );
+    const content = readFileSync(join(hostGameRoot, 'tick.test.ts'), 'utf-8');
     // The eslint-disable comment for the any-typed mock should be removed
     // once the mock is properly typed.
     expect(content).not.toMatch(
@@ -170,16 +163,12 @@ describe('C2-4: Debug logging in catch blocks', () => {
 
   describe('enemy-controller.move.utils.ts computeMovement catch block', () => {
     it('calls console.debug when MLP activation throws (wrong weight length)', async () => {
-      const { buildNeatensteinMap, createCollisionMap } = await import(
-        './browser-entry/renderer/map'
-      );
-      const { createGameState } = await import(
-        './browser-entry/host/game/state'
-      );
-      const {
-        createEnemyControllerState,
-        updateEnemyController,
-      } = await import('./browser-entry/shared/enemy-controller');
+      const { buildNeatensteinMap, createCollisionMap } =
+        await import('./browser-entry/renderer/map');
+      const { createGameState } =
+        await import('./browser-entry/host/game/state');
+      const { createEnemyControllerState, updateEnemyController } =
+        await import('./browser-entry/shared/enemy-controller');
 
       const base = createGameState({ seed: 1 });
       const flatMap = buildNeatensteinMap(base.seed);
@@ -211,19 +200,14 @@ describe('C2-4: Debug logging in catch blocks', () => {
 
   describe('enemy-controller.move.utils.ts computeMovementFlat catch block', () => {
     it('calls console.debug when MLP activation throws (wrong weight length)', async () => {
-      const { buildNeatensteinMap } = await import(
-        './browser-entry/renderer/map'
-      );
-      const { createCollisionMap } = await import(
-        './browser-entry/renderer/map'
-      );
-      const { createGameState } = await import(
-        './browser-entry/host/game/state'
-      );
-      const {
-        createEnemyControllerState,
-        updateEnemyController,
-      } = await import('./browser-entry/shared/enemy-controller');
+      const { buildNeatensteinMap } =
+        await import('./browser-entry/renderer/map');
+      const { createCollisionMap } =
+        await import('./browser-entry/renderer/map');
+      const { createGameState } =
+        await import('./browser-entry/host/game/state');
+      const { createEnemyControllerState, updateEnemyController } =
+        await import('./browser-entry/shared/enemy-controller');
 
       const base = createGameState({ seed: 1 });
       const flatMap = buildNeatensteinMap(base.seed);
@@ -256,13 +240,8 @@ describe('C2-4: Debug logging in catch blocks', () => {
   describe('display.worker.sim.utils.ts runSimStep catch block', () => {
     it('calls console.debug when buildAutoTickInput throws (network.activate throws)', async () => {
       // Load worker test helpers to set up the mock worker global.
-      const {
-        loadModule,
-        sendInitMessage,
-        sendSimStateMessage,
-      } = await import(
-        './browser-entry/worker/display.worker.test-helpers'
-      );
+      const { loadModule, sendInitMessage, sendSimStateMessage } =
+        await import('./browser-entry/worker/display.worker.test-helpers');
 
       jest.resetModules();
 
@@ -272,19 +251,19 @@ describe('C2-4: Debug logging in catch blocks', () => {
         './browser-entry/worker/display.worker.ts',
       )) as {
         __testOnlySetChampionMainNetwork?(network: unknown): void;
-        __testOnlyInjectTestEnemies?(positions: {
-          x: number;
-          y: number;
-        }[]): unknown[];
+        __testOnlyInjectTestEnemies?(
+          positions: {
+            x: number;
+            y: number;
+          }[],
+        ): unknown[];
         __testOnlyGetLastTickInputSource?(): string;
       };
 
       sendInitMessage('cpu');
 
       // Inject a test enemy so the "hasAliveEnemies" guard passes.
-      workerModule.__testOnlyInjectTestEnemies?.([
-        { x: 10, y: 10 },
-      ]);
+      workerModule.__testOnlyInjectTestEnemies?.([{ x: 10, y: 10 }]);
 
       // Inject a champion network whose activate() throws, triggering
       // the catch block in runSimStep.
@@ -311,16 +290,12 @@ describe('C2-4: Debug logging in catch blocks', () => {
 
   describe('once-per-tick guard', () => {
     it('computeMovement does not spam console.debug on recurrent failures (single tick)', async () => {
-      const { buildNeatensteinMap, createCollisionMap } = await import(
-        './browser-entry/renderer/map'
-      );
-      const { createGameState } = await import(
-        './browser-entry/host/game/state'
-      );
-      const {
-        createEnemyControllerState,
-        updateEnemyController,
-      } = await import('./browser-entry/shared/enemy-controller');
+      const { buildNeatensteinMap, createCollisionMap } =
+        await import('./browser-entry/renderer/map');
+      const { createGameState } =
+        await import('./browser-entry/host/game/state');
+      const { createEnemyControllerState, updateEnemyController } =
+        await import('./browser-entry/shared/enemy-controller');
 
       const base = createGameState({ seed: 1 });
       const flatMap = buildNeatensteinMap(base.seed);

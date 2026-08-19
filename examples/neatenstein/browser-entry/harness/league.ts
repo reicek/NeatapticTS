@@ -162,10 +162,7 @@ export function sampleOpponents(
   count: number,
   seed?: number,
 ): unknown[] {
-  const pool: unknown[] = [
-    ...state.pastChampions,
-    ...state.diverseSamples,
-  ];
+  const pool: unknown[] = [...state.pastChampions, ...state.diverseSamples];
   if (state.currentChampion) {
     pool.push(state.currentChampion);
   }

@@ -45,11 +45,13 @@ async function swallowStderr(fn) {
 describe('validate-agent-graph direct coverage', () => {
   it('main() runs validation and writes JSON report', async () => {
     const { main } = await import('./validate-agent-graph.mjs');
-    const output = (await captureStdout(() =>
-      withArgv([process.execPath, 'dummy', '--json'], () =>
-        swallowStderr(() => main()),
-      ),
-    )).join('');
+    const output = (
+      await captureStdout(() =>
+        withArgv([process.execPath, 'dummy', '--json'], () =>
+          swallowStderr(() => main()),
+        ),
+      )
+    ).join('');
     const parsed = JSON.parse(output.trim());
     assert.equal(typeof parsed.ok, 'boolean');
     process.exitCode = 0;
@@ -57,11 +59,13 @@ describe('validate-agent-graph direct coverage', () => {
 
   it('main() runs validation and writes human-readable report', async () => {
     const { main } = await import('./validate-agent-graph.mjs');
-    const output = (await captureStdout(() =>
-      withArgv([process.execPath, 'dummy'], () =>
-        swallowStderr(() => main()),
-      ),
-    )).join('');
+    const output = (
+      await captureStdout(() =>
+        withArgv([process.execPath, 'dummy'], () =>
+          swallowStderr(() => main()),
+        ),
+      )
+    ).join('');
     assert.ok(output.includes('PASS') || output.includes('FAIL'));
     process.exitCode = 0;
   });
@@ -70,7 +74,9 @@ describe('validate-agent-graph direct coverage', () => {
     const fsSync = await import('node:fs');
     const os = await import('node:os');
     const pathMod = await import('node:path');
-    const tempDir = fsSync.mkdtempSync(pathMod.join(os.tmpdir(), 'agent-graph-fail-'));
+    const tempDir = fsSync.mkdtempSync(
+      pathMod.join(os.tmpdir(), 'agent-graph-fail-'),
+    );
     const agentsDir = pathMod.join(tempDir, '.github', 'agents');
     fsSync.mkdirSync(agentsDir, { recursive: true });
     fsSync.writeFileSync(
@@ -85,7 +91,9 @@ describe('validate-agent-graph direct coverage', () => {
     const originalErr = console.error;
     const stdoutChunks = [];
     process.stdout.write = (chunk) => {
-      stdoutChunks.push(typeof chunk === 'string' ? chunk : chunk.toString('utf8'));
+      stdoutChunks.push(
+        typeof chunk === 'string' ? chunk : chunk.toString('utf8'),
+      );
       return true;
     };
     console.error = () => {};

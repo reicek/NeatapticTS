@@ -257,8 +257,7 @@ describe('Neatenstein display worker', () => {
     // Also mock updateEnemyController to prevent the subsequent call (line 1114)
     // from crashing when it receives null gameState.
     const tickModule = await import('../host/game/tick');
-    const enemyControllerModule =
-      await import('../shared/enemy-controller');
+    const enemyControllerModule = await import('../shared/enemy-controller');
     const gameTickSpy = jest
       .spyOn(tickModule, 'gameTick')
       .mockReturnValue(null as unknown as GameState);
@@ -552,8 +551,7 @@ describe('AC-10.3 coverage iteration 2: uncovered branches', () => {
     expect(beforeCount).toBeGreaterThan(0);
 
     const tickModule = await import('../host/game/tick');
-    const enemyControllerModule =
-      await import('../shared/enemy-controller');
+    const enemyControllerModule = await import('../shared/enemy-controller');
 
     // Mock gameTick to return enemy[0] with health: null, exercising the
     // `(live.health ?? 0)` nullish fallback at display.worker.ts:1100.
@@ -615,8 +613,7 @@ describe('AC-10.3 coverage iteration 2: uncovered branches', () => {
     expect(beforeCount).toBeGreaterThan(0);
 
     const tickModule = await import('../host/game/tick');
-    const enemyControllerModule =
-      await import('../shared/enemy-controller');
+    const enemyControllerModule = await import('../shared/enemy-controller');
 
     // Mock gameTick to return enemy[0] with health: null, exercising the
     // `(live.health ?? 0)` nullish fallback at display.worker.ts:1290.

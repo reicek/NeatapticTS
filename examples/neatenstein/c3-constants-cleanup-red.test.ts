@@ -36,7 +36,10 @@ const sharedRoot = join(browserEntryRoot, 'shared');
 
 describe('C3-1: magic number 16 timestep references canonical constant', () => {
   it('REFERENCE_TIMESTEP_MS is defined in terms of NEATENSTEIN_FIXED_TIMESTEP_MS, not a bare 16 literal', () => {
-    const content = readFileSync(join(browserEntryRoot, 'constants.ts'), 'utf-8');
+    const content = readFileSync(
+      join(browserEntryRoot, 'constants.ts'),
+      'utf-8',
+    );
     const defLine = content
       .split('\n')
       .find((line) => /REFERENCE_TIMESTEP_MS\s*=/.test(line));
@@ -106,7 +109,9 @@ describe('C3-3: tombstone stub files removed', () => {
     );
     // The tombstone notes from the removed stub files must be relocated into
     // the replacement module's JSDoc, naming the retired APIs.
-    expect(content).toMatch(/projectVoxelGunSprite|ProjectedGunVoxel|buildVoxelGun/);
+    expect(content).toMatch(
+      /projectVoxelGunSprite|ProjectedGunVoxel|buildVoxelGun/,
+    );
     expect(content).toMatch(/@deprecated|removed|tombstone/i);
   });
 });

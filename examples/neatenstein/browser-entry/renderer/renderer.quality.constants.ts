@@ -15,7 +15,7 @@
  * rest. The floor/ceiling grid, spark overlay, and z-buffer are always
  * full-resolution (see exemption flags below).
  */
-export const NEATENSTEIN_HALF_RES_DEFAULT_ENABLED = true as const;
+export const NEATENSTEIN_HALF_RES_DEFAULT_ENABLED = false as const;
 
 /**
  * Flag indicating the z-buffer is cast at every column even when half-res is
@@ -57,12 +57,14 @@ export interface NeatensteinHalfResSettings {
  * When half-res is disabled, returns `false`. When enabled, returns an object
  * describing which layers are exempt from decimation.
  */
-export type NeatensteinHalfResConfig = {
-  enabled: true;
-  gridExempt: boolean;
-  sparkExempt: boolean;
-  zbufferFullResolution: boolean;
-} | false;
+export type NeatensteinHalfResConfig =
+  | {
+      enabled: true;
+      gridExempt: boolean;
+      sparkExempt: boolean;
+      zbufferFullResolution: boolean;
+    }
+  | false;
 
 /**
  * Resolve whether half-resolution wall rendering is enabled and which layers
@@ -79,7 +81,8 @@ export type NeatensteinHalfResConfig = {
 export function resolveNeatensteinHalfResEnabled(
   settings: NeatensteinHalfResSettings,
 ): NeatensteinHalfResConfig {
-  const enabled = settings?.halfResEnabled ?? NEATENSTEIN_HALF_RES_DEFAULT_ENABLED;
+  const enabled =
+    settings?.halfResEnabled ?? NEATENSTEIN_HALF_RES_DEFAULT_ENABLED;
 
   if (!enabled) {
     return false;

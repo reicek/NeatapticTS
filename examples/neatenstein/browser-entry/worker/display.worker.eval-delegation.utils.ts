@@ -10,10 +10,7 @@
 
 /// <reference lib="webworker" />
 
-import {
-  EVAL_MSG_EVALUATE,
-  EVAL_MSG_EVAL_COMPLETE,
-} from '../constants';
+import { EVAL_MSG_EVALUATE, EVAL_MSG_EVAL_COMPLETE } from '../constants';
 import { NEATENSTEIN_MAIN_NEAT_INPUTS } from '../harness/neat-io-config';
 import type { MlpSnapshot } from '../harness/types';
 import type {
@@ -47,9 +44,7 @@ export function resolveEvalWorkerUrl(): string | null {
  *
  * @param event - Message event from the eval worker.
  */
-export async function handleEvalComplete(
-  event: MessageEvent,
-): Promise<void> {
+export async function handleEvalComplete(event: MessageEvent): Promise<void> {
   const data = event.data as EvalCompletePayload | null;
   if (
     !data ||

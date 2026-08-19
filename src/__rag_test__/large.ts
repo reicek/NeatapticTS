@@ -167,4 +167,6 @@ export function veryLargeFunction(): string {
 }
 
 /** Small function. */
-export function smallFunc(): number { return 1; }
+export function smallFunc(): number {
+  return 1;
+}

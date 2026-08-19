@@ -37,7 +37,8 @@ jest.unstable_mockModule('node:child_process', () => ({
 }));
 
 jest.unstable_mockModule('../customization-utils.mjs', () => ({
-  parseArgs: (argv) => mockParseArgsResult ?? { json: false, help: false, all: false, plan: null },
+  parseArgs: (argv) =>
+    mockParseArgsResult ?? { json: false, help: false, all: false, plan: null },
   repoRoot: path.resolve(),
 }));
 
@@ -59,7 +60,10 @@ describe('plan-command-lint gate', () => {
   describe('stripInlineComment', () => {
     it('removes inline comment after whitespace #', async () => {
       const { stripInlineComment } = await loadGate();
-      assert.equal(stripInlineComment('jest --config=x # comment'), 'jest --config=x');
+      assert.equal(
+        stripInlineComment('jest --config=x # comment'),
+        'jest --config=x',
+      );
     });
 
     it('returns trimmed string when no comment', async () => {
@@ -203,7 +207,12 @@ describe('plan-command-lint gate', () => {
       const { validateCommand } = await loadGate();
       const context = { helpCache: new Map(), warnings: [] };
       const result = await validateCommand(
-        { raw: 'npx jest', command: 'npx jest', source: 'yaml-list', plan: 'p.md' },
+        {
+          raw: 'npx jest',
+          command: 'npx jest',
+          source: 'yaml-list',
+          plan: 'p.md',
+        },
         context,
       );
       assert.equal(result, null);
@@ -213,7 +222,12 @@ describe('plan-command-lint gate', () => {
       const { validateCommand } = await loadGate();
       const context = { helpCache: new Map(), warnings: [] };
       const result = await validateCommand(
-        { raw: 'python --flag', command: 'python --flag', source: 'yaml-list', plan: 'p.md' },
+        {
+          raw: 'python --flag',
+          command: 'python --flag',
+          source: 'yaml-list',
+          plan: 'p.md',
+        },
         context,
       );
       assert.equal(result, null);
@@ -223,7 +237,12 @@ describe('plan-command-lint gate', () => {
       const { validateCommand } = await loadGate();
       const context = { helpCache: new Map(), warnings: [] };
       const result = await validateCommand(
-        { raw: 'npx --some-flag', command: 'npx --some-flag', source: 'yaml-list', plan: 'p.md' },
+        {
+          raw: 'npx --some-flag',
+          command: 'npx --some-flag',
+          source: 'yaml-list',
+          plan: 'p.md',
+        },
         context,
       );
       assert.equal(result, null);
@@ -233,7 +252,12 @@ describe('plan-command-lint gate', () => {
       const { validateCommand } = await loadGate();
       const context = { helpCache: new Map(), warnings: [] };
       const result = await validateCommand(
-        { raw: 'npm --flag', command: 'npm --flag', source: 'yaml-list', plan: 'p.md' },
+        {
+          raw: 'npm --flag',
+          command: 'npm --flag',
+          source: 'yaml-list',
+          plan: 'p.md',
+        },
         context,
       );
       assert.equal(result, null);
@@ -244,7 +268,12 @@ describe('plan-command-lint gate', () => {
       const { validateCommand } = await loadGate();
       const context = { helpCache: new Map(), warnings: [] };
       const result = await validateCommand(
-        { raw: 'npx jest --config=x --json', command: 'npx jest --config=x --json', source: 'yaml-list', plan: 'p.md' },
+        {
+          raw: 'npx jest --config=x --json',
+          command: 'npx jest --config=x --json',
+          source: 'yaml-list',
+          plan: 'p.md',
+        },
         context,
       );
       assert.equal(result, null);
@@ -255,7 +284,12 @@ describe('plan-command-lint gate', () => {
       const { validateCommand } = await loadGate();
       const context = { helpCache: new Map(), warnings: [] };
       const result = await validateCommand(
-        { raw: 'npx jest --badflag', command: 'npx jest --badflag', source: 'yaml-list', plan: 'p.md' },
+        {
+          raw: 'npx jest --badflag',
+          command: 'npx jest --badflag',
+          source: 'yaml-list',
+          plan: 'p.md',
+        },
         context,
       );
       assert.ok(result);
@@ -268,7 +302,12 @@ describe('plan-command-lint gate', () => {
       const { validateCommand } = await loadGate();
       const context = { helpCache: new Map(), warnings: [] };
       const result = await validateCommand(
-        { raw: 'npx jest --someflag', command: 'npx jest --someflag', source: 'yaml-list', plan: 'p.md' },
+        {
+          raw: 'npx jest --someflag',
+          command: 'npx jest --someflag',
+          source: 'yaml-list',
+          plan: 'p.md',
+        },
         context,
       );
       assert.equal(result, null);
@@ -280,7 +319,12 @@ describe('plan-command-lint gate', () => {
       const { validateCommand } = await loadGate();
       const context = { helpCache: new Map(), warnings: [] };
       const result = await validateCommand(
-        { raw: 'npx --silent jest --silent', command: 'npx --silent jest --silent', source: 'yaml-list', plan: 'p.md' },
+        {
+          raw: 'npx --silent jest --silent',
+          command: 'npx --silent jest --silent',
+          source: 'yaml-list',
+          plan: 'p.md',
+        },
         context,
       );
       assert.equal(result, null);
@@ -291,7 +335,12 @@ describe('plan-command-lint gate', () => {
       const { validateCommand } = await loadGate();
       const context = { helpCache: new Map(), warnings: [] };
       const result = await validateCommand(
-        { raw: 'npx jest --config=foo.json', command: 'npx jest --config=foo.json', source: 'yaml-list', plan: 'p.md' },
+        {
+          raw: 'npx jest --config=foo.json',
+          command: 'npx jest --config=foo.json',
+          source: 'yaml-list',
+          plan: 'p.md',
+        },
         context,
       );
       assert.equal(result, null);
@@ -301,7 +350,10 @@ describe('plan-command-lint gate', () => {
   describe('fetchHelp', () => {
     it('returns cached help on cache hit', async () => {
       const { fetchHelp } = await loadGate();
-      const context = { helpCache: new Map([['jest', 'cached help']]), warnings: [] };
+      const context = {
+        helpCache: new Map([['jest', 'cached help']]),
+        warnings: [],
+      };
       const result = await fetchHelp('jest', context);
       assert.equal(result, 'cached help');
     });
@@ -354,7 +406,9 @@ describe('plan-command-lint gate', () => {
       const context = { warnings: [] };
       const result = await resolvePlanFiles('plans/missing.plans.md', context);
       assert.equal(result.length, 0);
-      assert.ok(context.warnings.some((w) => w.includes('Could not read plan file')));
+      assert.ok(
+        context.warnings.some((w) => w.includes('Could not read plan file')),
+      );
     });
 
     it('returns all plan files when planPath is null', async () => {
@@ -381,7 +435,9 @@ describe('plan-command-lint gate', () => {
       const context = { warnings: [] };
       const result = await resolvePlanFiles(null, context);
       assert.equal(result.length, 0);
-      assert.ok(context.warnings.some((w) => w.includes('Could not list plans')));
+      assert.ok(
+        context.warnings.some((w) => w.includes('Could not list plans')),
+      );
     });
   });
 
@@ -394,7 +450,10 @@ describe('plan-command-lint gate', () => {
       const result = await runPlanCommandLintGate('plans/missing.plans.md');
       assert.equal(result.pass, true);
       assert.ok(result.evidence.note.includes('Plan file not found'));
-      assert.equal(result.fixHint, 'Verify the plan path: plans/missing.plans.md');
+      assert.equal(
+        result.fixHint,
+        'Verify the plan path: plans/missing.plans.md',
+      );
     });
 
     it('passes with note when no plan files found (null path)', async () => {
@@ -482,11 +541,19 @@ describe('plan-command-lint gate', () => {
       }
       const parsed = JSON.parse(logs[0]);
       assert.equal(parsed.pass, true);
-      assert.equal(parsed.evidence.scannedPlans[0], 'plans/orchestration-fixes.plans.md');
+      assert.equal(
+        parsed.evidence.scannedPlans[0],
+        'plans/orchestration-fixes.plans.md',
+      );
     });
 
     it('--plan=path → specific plan', async () => {
-      mockParseArgsResult = { json: true, help: false, all: false, plan: 'plans/my-plan.plans.md' };
+      mockParseArgsResult = {
+        json: true,
+        help: false,
+        all: false,
+        plan: 'plans/my-plan.plans.md',
+      };
       mockReadFile = jest.fn(async () => '- npx jest --help');
       mockExecStdout = '--help  Show help';
       const { main } = await loadGate();
@@ -525,7 +592,12 @@ describe('plan-command-lint gate', () => {
     });
 
     it('text output includes PASS', async () => {
-      mockParseArgsResult = { json: false, help: false, all: false, plan: null };
+      mockParseArgsResult = {
+        json: false,
+        help: false,
+        all: false,
+        plan: null,
+      };
       mockReadFile = jest.fn(async () => '# No commands');
       const { main } = await loadGate();
       const logs = [];
@@ -553,7 +625,12 @@ describe('plan-command-lint gate', () => {
     });
 
     it('text output includes FAIL and fixHint', async () => {
-      mockParseArgsResult = { json: false, help: false, all: false, plan: 'plans/test.plans.md' };
+      mockParseArgsResult = {
+        json: false,
+        help: false,
+        all: false,
+        plan: 'plans/test.plans.md',
+      };
       mockReadFile = jest.fn(async () => '- npx jest --badflag');
       mockExecStdout = '--help  Show help';
       const { main } = await loadGate();
@@ -570,7 +647,12 @@ describe('plan-command-lint gate', () => {
     });
 
     it('text output includes warnings', async () => {
-      mockParseArgsResult = { json: false, help: false, all: false, plan: 'plans/missing.plans.md' };
+      mockParseArgsResult = {
+        json: false,
+        help: false,
+        all: false,
+        plan: 'plans/missing.plans.md',
+      };
       mockReadFile = jest.fn(async () => {
         throw new Error('ENOENT');
       });
@@ -587,7 +669,12 @@ describe('plan-command-lint gate', () => {
     });
 
     it('--plan flag (token form) is detected', async () => {
-      mockParseArgsResult = { json: true, help: false, all: false, plan: 'plans/token.plans.md' };
+      mockParseArgsResult = {
+        json: true,
+        help: false,
+        all: false,
+        plan: 'plans/token.plans.md',
+      };
       mockReadFile = jest.fn(async () => '# No commands');
       const { main } = await loadGate();
       const logs = [];

@@ -273,7 +273,9 @@ export function runSimStep(
       lastTickInputSource = TICK_INPUT_SOURCE_AUTO;
     } catch {
       // If the network activation fails, use the fallback auto AI.
-      console.debug('runSimStep: buildAutoTickInput failed, using fallback auto AI');
+      console.debug(
+        'runSimStep: buildAutoTickInput failed, using fallback auto AI',
+      );
       const fallback = buildFallbackAutoTickInput(gameState, state.wallMap, ai);
       tickInput = fallback.tickInput;
       ai = fallback.ai;
@@ -421,7 +423,11 @@ export function runSimStep(
     // gameTick returned null — clear all controlled enemies.
     survivingEnemies = [];
   } else {
-    for (let index = 0; index < enemyControllerState.enemies.length; index += 1) {
+    for (
+      let index = 0;
+      index < enemyControllerState.enemies.length;
+      index += 1
+    ) {
       const controlled2 = enemyControllerState.enemies[index];
       const live = gameState.enemies[index];
 
@@ -554,7 +560,9 @@ export function runSimStep(
  * @param size - Grid dimension (typically {@link NEATENSTEIN_MAP_SIZE} = 120).
  * @returns A SharedArrayBuffer or Uint8Array of at least `size*size` bytes.
  */
-export function createSharedMapGrid(size: number): SharedArrayBuffer | Uint8Array {
+export function createSharedMapGrid(
+  size: number,
+): SharedArrayBuffer | Uint8Array {
   const byteLength = size * size;
   if (typeof SharedArrayBuffer !== 'undefined') {
     return new SharedArrayBuffer(byteLength);
@@ -602,13 +610,18 @@ export function createSimWorkerState(): SimWorkerState {
  * @returns The Float32Array containing serialized enemy state.
  */
 export function serializeEnemyStateToShared(
-  enemies: { position: { x: number; y: number }; yawRad: number; health: number }[],
+  enemies: {
+    position: { x: number; y: number };
+    yawRad: number;
+    health: number;
+  }[],
   target?: Float32Array,
 ): Float32Array {
   const requiredLength = enemies.length * 4;
-  const buffer = target && target.length >= requiredLength
-    ? target
-    : new Float32Array(requiredLength);
+  const buffer =
+    target && target.length >= requiredLength
+      ? target
+      : new Float32Array(requiredLength);
   for (let i = 0; i < enemies.length; i++) {
     const offset = i * 4;
     const enemy = enemies[i];

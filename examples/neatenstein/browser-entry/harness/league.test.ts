@@ -38,10 +38,9 @@ describe('B4.3+B4.9: Unified league structure', () => {
     });
 
     it('creates an empty league with bounded capacity', () => {
-      const leagueState = (league.createLeague as (...a: unknown[]) => Record<
-        string,
-        unknown
-      >)({ maxPastChampions: 10, maxDiverseSamples: 10 });
+      const leagueState = (
+        league.createLeague as (...a: unknown[]) => Record<string, unknown>
+      )({ maxPastChampions: 10, maxDiverseSamples: 10 });
       expect(leagueState).toBeDefined();
       expect(leagueState.pastChampions).toEqual([]);
       expect(leagueState.diverseSamples).toEqual([]);
@@ -58,10 +57,9 @@ describe('B4.3+B4.9: Unified league structure', () => {
     });
 
     it('moves the current champion to past champions when a new one is added', () => {
-      const leagueState = (league.createLeague as (...a: unknown[]) => Record<
-        string,
-        unknown
-      >)({ maxPastChampions: 10, maxDiverseSamples: 10 });
+      const leagueState = (
+        league.createLeague as (...a: unknown[]) => Record<string, unknown>
+      )({ maxPastChampions: 10, maxDiverseSamples: 10 });
       const championA = {
         weights: makeWeights(1),
         generation: 1,
@@ -88,16 +86,18 @@ describe('B4.3+B4.9: Unified league structure', () => {
     });
 
     it('enforces the past-champion capacity bound (FIFO eviction)', () => {
-      const leagueState = (league.createLeague as (...a: unknown[]) => Record<
-        string,
-        unknown
-      >)({ maxPastChampions: 3, maxDiverseSamples: 10 });
+      const leagueState = (
+        league.createLeague as (...a: unknown[]) => Record<string, unknown>
+      )({ maxPastChampions: 3, maxDiverseSamples: 10 });
       for (let gen = 1; gen <= 5; gen++) {
-        (league.addCurrentChampion as (...a: unknown[]) => unknown)(leagueState, {
-          weights: makeWeights(gen),
-          generation: gen,
-          fitness: gen * 10,
-        });
+        (league.addCurrentChampion as (...a: unknown[]) => unknown)(
+          leagueState,
+          {
+            weights: makeWeights(gen),
+            generation: gen,
+            fitness: gen * 10,
+          },
+        );
       }
       const past = leagueState.pastChampions as Record<string, unknown>[];
       expect(past.length).toBe(3);
@@ -111,10 +111,9 @@ describe('B4.3+B4.9: Unified league structure', () => {
     });
 
     it('stores diverse strategy samples up to capacity', () => {
-      const leagueState = (league.createLeague as (...a: unknown[]) => Record<
-        string,
-        unknown
-      >)({ maxPastChampions: 10, maxDiverseSamples: 5 });
+      const leagueState = (
+        league.createLeague as (...a: unknown[]) => Record<string, unknown>
+      )({ maxPastChampions: 10, maxDiverseSamples: 5 });
       for (let i = 0; i < 7; i++) {
         (league.addDiverseSample as (...a: unknown[]) => unknown)(leagueState, {
           weights: makeWeights(i + 100),
@@ -136,10 +135,9 @@ describe('B4.3+B4.9: Unified league structure', () => {
     });
 
     it('returns a mix of past champions and diverse samples', () => {
-      const leagueState = (league.createLeague as (...a: unknown[]) => Record<
-        string,
-        unknown
-      >)({ maxPastChampions: 10, maxDiverseSamples: 10 });
+      const leagueState = (
+        league.createLeague as (...a: unknown[]) => Record<string, unknown>
+      )({ maxPastChampions: 10, maxDiverseSamples: 10 });
       (league.addCurrentChampion as (...a: unknown[]) => unknown)(leagueState, {
         weights: makeWeights(1),
         generation: 1,
@@ -158,11 +156,9 @@ describe('B4.3+B4.9: Unified league structure', () => {
           movementPattern: 0.5,
         },
       });
-      const opponents = (league.sampleOpponents as (...a: unknown[]) => unknown[])(
-        leagueState,
-        3,
-        42,
-      );
+      const opponents = (
+        league.sampleOpponents as (...a: unknown[]) => unknown[]
+      )(leagueState, 3, 42);
       expect(Array.isArray(opponents)).toBe(true);
       expect(opponents.length).toBeGreaterThan(0);
     });
@@ -174,20 +170,22 @@ describe('B4.3+B4.9: Unified league structure', () => {
     });
 
     it('returns past champions for periodic re-evaluation', () => {
-      const leagueState = (league.createLeague as (...a: unknown[]) => Record<
-        string,
-        unknown
-      >)({ maxPastChampions: 10, maxDiverseSamples: 10 });
+      const leagueState = (
+        league.createLeague as (...a: unknown[]) => Record<string, unknown>
+      )({ maxPastChampions: 10, maxDiverseSamples: 10 });
       for (let gen = 1; gen <= 3; gen++) {
-        (league.addCurrentChampion as (...a: unknown[]) => unknown)(leagueState, {
-          weights: makeWeights(gen),
-          generation: gen,
-          fitness: gen * 10,
-        });
+        (league.addCurrentChampion as (...a: unknown[]) => unknown)(
+          leagueState,
+          {
+            weights: makeWeights(gen),
+            generation: gen,
+            fitness: gen * 10,
+          },
+        );
       }
-      const curriculum = (league.getCurriculumOpponents as (...a: unknown[]) => unknown[])(
-        leagueState,
-      );
+      const curriculum = (
+        league.getCurriculumOpponents as (...a: unknown[]) => unknown[]
+      )(leagueState);
       expect(Array.isArray(curriculum)).toBe(true);
       expect(curriculum.length).toBe(2);
     });

@@ -39,10 +39,7 @@ import {
 } from '../renderer/frame';
 import { NEATENSTEIN_FLOOR_FOV_RADIANS } from '../renderer/floor';
 import { NEATENSTEIN_BACKGROUND_RGB } from '../renderer/framebuffer';
-import {
-  formatRgb,
-  resolveEnemyTeamColor,
-} from './display.worker.color.utils';
+import { formatRgb, resolveEnemyTeamColor } from './display.worker.color.utils';
 import {
   syncWorkerCanvasSize,
   resolveWorkerCanvasColumnCount,
@@ -58,9 +55,7 @@ import {
   fillPackedFrameFields,
   assertRenderCompositingOrderValid,
 } from './display.worker.render.utils';
-import {
-  createDisplayWorkerState,
-} from './display.worker.sim.utils';
+import { createDisplayWorkerState } from './display.worker.sim.utils';
 import {
   handleInitMessage,
   handleSimStateMessage,
@@ -108,10 +103,18 @@ let simTickCounter = 0;
  * test-hooks).  These are plain function declarations (hoisted) so circular
  * imports from modules that call them at module-evaluation time work safely.
  */
-export function getWorkerState(): typeof state { return state; }
-export function setWorkerState(s: typeof state): void { state = s; }
-export function getSimTickCounter(): number { return simTickCounter; }
-export function setSimTickCounter(v: number): void { simTickCounter = v; }
+export function getWorkerState(): typeof state {
+  return state;
+}
+export function setWorkerState(s: typeof state): void {
+  state = s;
+}
+export function getSimTickCounter(): number {
+  return simTickCounter;
+}
+export function setSimTickCounter(v: number): void {
+  simTickCounter = v;
+}
 
 /** Worker clear color matching the dark neon void background. */
 const NEATENSTEIN_WORKER_CLEAR_COLOR = formatRgb(NEATENSTEIN_BACKGROUND_RGB);
@@ -383,7 +386,12 @@ if (typeof self !== 'undefined') {
 
     if (data.type === WORKER_MSG_INIT) {
       handleInitMessage(
-        data as unknown as { tier: unknown; canvas?: OffscreenCanvas; mapSeed?: number; version?: number },
+        data as unknown as {
+          tier: unknown;
+          canvas?: OffscreenCanvas;
+          mapSeed?: number;
+          version?: number;
+        },
       );
       return;
     }

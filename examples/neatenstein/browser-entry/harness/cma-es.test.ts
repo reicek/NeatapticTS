@@ -41,10 +41,9 @@ describe('B4.2: sep-CMA-ES for MLP weight optimization', () => {
     });
 
     it('creates a CMA-ES state with diagonal covariance of size n', () => {
-      const state = (cmaEs.createSepCmaEs as (...a: unknown[]) => Record<
-        string,
-        unknown
-      >)({
+      const state = (
+        cmaEs.createSepCmaEs as (...a: unknown[]) => Record<string, unknown>
+      )({
         dimension: MLP_WEIGHT_COUNT,
         initialMean: makeWeights(),
         populationSize: 8,
@@ -57,10 +56,9 @@ describe('B4.2: sep-CMA-ES for MLP weight optimization', () => {
     });
 
     it('initializes diagonal covariance to 1.0 for all dimensions', () => {
-      const state = (cmaEs.createSepCmaEs as (...a: unknown[]) => Record<
-        string,
-        unknown
-      >)({
+      const state = (
+        cmaEs.createSepCmaEs as (...a: unknown[]) => Record<string, unknown>
+      )({
         dimension: MLP_WEIGHT_COUNT,
         initialMean: makeWeights(),
         populationSize: 8,
@@ -79,19 +77,17 @@ describe('B4.2: sep-CMA-ES for MLP weight optimization', () => {
     });
 
     it('produces a population of candidate weight vectors', () => {
-      const state = (cmaEs.createSepCmaEs as (...a: unknown[]) => Record<
-        string,
-        unknown
-      >)({
+      const state = (
+        cmaEs.createSepCmaEs as (...a: unknown[]) => Record<string, unknown>
+      )({
         dimension: MLP_WEIGHT_COUNT,
         initialMean: makeWeights(),
         populationSize: 8,
         seed: 42,
       });
-      const result = (cmaEs.stepSepCmaEs as (...a: unknown[]) => Record<
-        string,
-        unknown
-      >)(state, sphereFitness);
+      const result = (
+        cmaEs.stepSepCmaEs as (...a: unknown[]) => Record<string, unknown>
+      )(state, sphereFitness);
       const population = result.population as Float32Array[];
       expect(Array.isArray(population)).toBe(true);
       expect(population.length).toBe(8);
@@ -102,19 +98,17 @@ describe('B4.2: sep-CMA-ES for MLP weight optimization', () => {
     });
 
     it('updates the mean toward higher-fitness candidates', () => {
-      const initialState = (cmaEs.createSepCmaEs as (...a: unknown[]) => Record<
-        string,
-        unknown
-      >)({
+      const initialState = (
+        cmaEs.createSepCmaEs as (...a: unknown[]) => Record<string, unknown>
+      )({
         dimension: MLP_WEIGHT_COUNT,
         initialMean: makeWeights(),
         populationSize: 8,
         seed: 42,
       });
-      const result = (cmaEs.stepSepCmaEs as (...a: unknown[]) => Record<
-        string,
-        unknown
-      >)(initialState, sphereFitness);
+      const result = (
+        cmaEs.stepSepCmaEs as (...a: unknown[]) => Record<string, unknown>
+      )(initialState, sphereFitness);
       const newState = result.state as Record<string, unknown>;
       expect(newState).toBeDefined();
       const newMean = newState.mean as Float32Array;
@@ -123,32 +117,28 @@ describe('B4.2: sep-CMA-ES for MLP weight optimization', () => {
     });
 
     it('is deterministic for the same seed and initial state', () => {
-      const stateA = (cmaEs.createSepCmaEs as (...a: unknown[]) => Record<
-        string,
-        unknown
-      >)({
+      const stateA = (
+        cmaEs.createSepCmaEs as (...a: unknown[]) => Record<string, unknown>
+      )({
         dimension: MLP_WEIGHT_COUNT,
         initialMean: makeWeights(),
         populationSize: 8,
         seed: 42,
       });
-      const stateB = (cmaEs.createSepCmaEs as (...a: unknown[]) => Record<
-        string,
-        unknown
-      >)({
+      const stateB = (
+        cmaEs.createSepCmaEs as (...a: unknown[]) => Record<string, unknown>
+      )({
         dimension: MLP_WEIGHT_COUNT,
         initialMean: makeWeights(),
         populationSize: 8,
         seed: 42,
       });
-      const resultA = (cmaEs.stepSepCmaEs as (...a: unknown[]) => Record<
-        string,
-        unknown
-      >)(stateA, sphereFitness);
-      const resultB = (cmaEs.stepSepCmaEs as (...a: unknown[]) => Record<
-        string,
-        unknown
-      >)(stateB, sphereFitness);
+      const resultA = (
+        cmaEs.stepSepCmaEs as (...a: unknown[]) => Record<string, unknown>
+      )(stateA, sphereFitness);
+      const resultB = (
+        cmaEs.stepSepCmaEs as (...a: unknown[]) => Record<string, unknown>
+      )(stateB, sphereFitness);
       const popA = resultA.population as Float32Array[];
       const popB = resultB.population as Float32Array[];
       expect(Array.from(popA[0])).toEqual(Array.from(popB[0]));
@@ -157,10 +147,9 @@ describe('B4.2: sep-CMA-ES for MLP weight optimization', () => {
 
   describe('B4.2: CMA-ES complexity (diagonal only)', () => {
     it('does not store a full n*n covariance matrix', () => {
-      const state = (cmaEs.createSepCmaEs as (...a: unknown[]) => Record<
-        string,
-        unknown
-      >)({
+      const state = (
+        cmaEs.createSepCmaEs as (...a: unknown[]) => Record<string, unknown>
+      )({
         dimension: MLP_WEIGHT_COUNT,
         initialMean: makeWeights(),
         populationSize: 8,

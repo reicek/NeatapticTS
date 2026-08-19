@@ -145,8 +145,7 @@ describe('learning-event gate', () => {
 
   it('uses NEATAPTIC_LEARNING_LOG_PATH env var for custom path', async () => {
     process.env.NEATAPTIC_LEARNING_LOG_PATH = '/custom/learning-log.jsonl';
-    mockReadFileResult =
-      '{"eventType":"custom-event","description":"test"}\n';
+    mockReadFileResult = '{"eventType":"custom-event","description":"test"}\n';
     mockOptions = { json: true, help: false };
     const logs = await importGate(['--json']);
     const parsed = JSON.parse(logs[0]);

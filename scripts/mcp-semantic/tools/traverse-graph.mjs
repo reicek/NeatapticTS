@@ -323,7 +323,10 @@ function resolveByNames(graph, names) {
     const fuzzyMatches = [];
     for (const entity of graph.entities.values()) {
       const qualifiedName = entity.qualified_name.toLowerCase();
-      const entityName = (/* istanbul ignore next -- defensive: name always present */ entity.name ?? '').toLowerCase();
+      const entityName =
+        /* istanbul ignore next -- defensive: name always present */ (
+          entity.name ?? ''
+        ).toLowerCase();
       if (
         qualifiedName.includes(normalized) ||
         entityName.includes(normalized)
@@ -334,8 +337,14 @@ function resolveByNames(graph, names) {
     fuzzyMatches.sort((a, b) => {
       const aQualified = a.qualified_name.toLowerCase();
       const bQualified = b.qualified_name.toLowerCase();
-      const aName = (/* istanbul ignore next -- defensive: name always present */ a.name ?? '').toLowerCase();
-      const bName = (/* istanbul ignore next -- defensive: name always present */ b.name ?? '').toLowerCase();
+      const aName =
+        /* istanbul ignore next -- defensive: name always present */ (
+          a.name ?? ''
+        ).toLowerCase();
+      const bName =
+        /* istanbul ignore next -- defensive: name always present */ (
+          b.name ?? ''
+        ).toLowerCase();
       /* istanbul ignore next -- defensive: exact/prefix/name matches handled by earlier resolution stages */
       const priorityA =
         aQualified === normalized
@@ -389,7 +398,10 @@ function resolveByQuery(graph, query) {
   const matches = [];
   for (const entity of graph.entities.values()) {
     const qualifiedName = entity.qualified_name.toLowerCase();
-    const entityName = (/* istanbul ignore next -- defensive: name always present */ entity.name ?? '').toLowerCase();
+    const entityName =
+      /* istanbul ignore next -- defensive: name always present */ (
+        entity.name ?? ''
+      ).toLowerCase();
     if (
       terms.every(
         (term) => qualifiedName.includes(term) || entityName.includes(term),
@@ -399,7 +411,12 @@ function resolveByQuery(graph, query) {
     }
   }
 
-  matches.sort(/* istanbul ignore next -- defensive: comparator only runs with 2+ matches */ (a, b) => a.qualified_name.length - b.qualified_name.length);
+  matches.sort(
+    /* istanbul ignore next -- defensive: comparator only runs with 2+ matches */ (
+      a,
+      b,
+    ) => a.qualified_name.length - b.qualified_name.length,
+  );
   return matches.slice(0, 5);
 }
 
@@ -639,7 +656,10 @@ function formatEntity(entity, distanceMap) {
     module_path: entity.module_path,
     signature_text: entity.signature_text,
     file_path: entity.file_path,
-    hop_distance: /* istanbul ignore next -- defensive: distanceMap always provided with all entities */ distanceMap?.get(entity.entity_id) ?? 0,
+    hop_distance:
+      /* istanbul ignore next -- defensive: distanceMap always provided with all entities */ distanceMap?.get(
+        entity.entity_id,
+      ) ?? 0,
   };
 }
 

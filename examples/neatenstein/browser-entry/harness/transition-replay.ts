@@ -256,7 +256,9 @@ export interface ReplayUpdateResult {
  * @param config Configuration with weights, buffer, steps, learningRate, and seed.
  * @returns Result containing the updated weights.
  */
-export function runReplayUpdates(config: ReplayUpdateConfig): ReplayUpdateResult {
+export function runReplayUpdates(
+  config: ReplayUpdateConfig,
+): ReplayUpdateResult {
   const { weights, buffer, steps, learningRate, seed } = config;
   const result = new Float32Array(weights);
   const rng = createRng(seed);
@@ -301,7 +303,10 @@ const MAX_HEALTH = 100;
  * @returns Surprise score in (0, 1].
  */
 export function computeDeathSurprise(config: DeathSurpriseConfig): number {
-  const healthRatio = Math.max(0, Math.min(1, config.healthAtDeath / MAX_HEALTH));
+  const healthRatio = Math.max(
+    0,
+    Math.min(1, config.healthAtDeath / MAX_HEALTH),
+  );
   const survivalFactor = Math.exp(-config.survivalTicks / SURVIVAL_TAU);
   const surprise = healthRatio * survivalFactor;
   return Math.max(0, Math.min(1, surprise));
@@ -405,7 +410,9 @@ export interface WarmStartConfig {
  * @param config Configuration with sharedBuffer, steps, learningRate, and seed.
  * @returns Warm-started weight vector.
  */
-export function warmStartFromSharedReplay(config: WarmStartConfig): Float32Array {
+export function warmStartFromSharedReplay(
+  config: WarmStartConfig,
+): Float32Array {
   const { sharedBuffer, steps, learningRate, seed } = config;
   const weights = new Float32Array(MLP_WEIGHT_COUNT);
   const rng = createRng(seed);

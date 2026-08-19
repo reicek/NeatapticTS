@@ -50,8 +50,7 @@ describe('B1: Render compositing order preservation (Invariant §5)', () => {
     // Walls are drawn on top of the floor grid so the wall base sits
     // exactly where the integer floor line projects.
     const order = renderUtilsExports.RENDER_COMPOSITING_ORDER as
-      | string[]
-      | undefined;
+      string[] | undefined;
 
     // This will fail because RENDER_COMPOSITING_ORDER doesn't exist yet.
     expect(order).toBeDefined();
@@ -63,8 +62,7 @@ describe('B1: Render compositing order preservation (Invariant §5)', () => {
   it('render compositing order has sprites after walls and bolts last', () => {
     // B1 contract: sprites → pulses/sparks → bolts (bolts drawn last).
     const order = renderUtilsExports.RENDER_COMPOSITING_ORDER as
-      | string[]
-      | undefined;
+      string[] | undefined;
 
     expect(order).toBeDefined();
     const spritesIdx = order!.indexOf('sprites');
@@ -100,8 +98,7 @@ describe('B1: Map grid sharing contract (Invariant §1)', () => {
     // When the function exists, this will verify the buffer dimensions.
     // For now, this fails because createSharedMapGrid doesn't exist.
     const createFn = simUtilsExports.createSharedMapGrid as
-      | ((size: number) => SharedArrayBuffer | Uint8Array)
-      | undefined;
+      ((size: number) => SharedArrayBuffer | Uint8Array) | undefined;
     expect(createFn).toBeDefined();
 
     const buffer = createFn!(NEATENSTEIN_MAP_SIZE);
@@ -122,9 +119,9 @@ describe('B1: Zero-timestep pass — bolt-spawn state awareness', () => {
     // changed. Currently the skip condition only checks de-rez, enemy
     // count match, and death-state update need — it does NOT check
     // bolt-spawn state.
-    expect(
-      typeof simUtilsExports.__testOnlyGetBoltSpawnStateChanged,
-    ).toBe('function');
+    expect(typeof simUtilsExports.__testOnlyGetBoltSpawnStateChanged).toBe(
+      'function',
+    );
   });
 
   it('zero-timestep pass is NOT skipped when bolt-spawn state changed', () => {
@@ -137,9 +134,9 @@ describe('B1: Zero-timestep pass — bolt-spawn state awareness', () => {
     // (incorrectly skipping the pass).
     //
     // We verify the bolt-spawn state change diagnostic exists first.
-    expect(
-      typeof simUtilsExports.__testOnlyGetBoltSpawnStateChanged,
-    ).toBe('function');
+    expect(typeof simUtilsExports.__testOnlyGetBoltSpawnStateChanged).toBe(
+      'function',
+    );
   });
 });
 

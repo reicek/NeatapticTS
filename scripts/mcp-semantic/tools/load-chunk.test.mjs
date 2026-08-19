@@ -28,7 +28,11 @@ describe('load-chunk', () => {
   afterEach(async () => {
     restoreEnv();
     if (client) {
-      try { await client.close(); } catch { /* noop */ }
+      try {
+        await client.close();
+      } catch {
+        /* noop */
+      }
     }
   });
 
@@ -45,7 +49,10 @@ describe('load-chunk', () => {
     });
 
     it('loads a depth-0 parent chunk', async () => {
-      const result = await loadChunk({ chunk_id: TEST_PARENT_CHUNK_ID, client });
+      const result = await loadChunk({
+        chunk_id: TEST_PARENT_CHUNK_ID,
+        client,
+      });
 
       expect(result.chunk.chunk_id).toBe(TEST_PARENT_CHUNK_ID);
       expect(result.chunk.depth).toBe(0);
@@ -57,7 +64,10 @@ describe('load-chunk', () => {
   describe('next_chunk_id', () => {
     it('returns next_chunk_id when a next chunk exists', async () => {
       // TEST_PARENT_CHUNK_ID (index 0) → TEST_CHUNK_ID (index 1)
-      const result = await loadChunk({ chunk_id: TEST_PARENT_CHUNK_ID, client });
+      const result = await loadChunk({
+        chunk_id: TEST_PARENT_CHUNK_ID,
+        client,
+      });
       expect(result.chunk.next_chunk_id).toBe(TEST_CHUNK_ID);
     });
 
@@ -134,7 +144,7 @@ describe('load-chunk', () => {
       });
 
       const events = await client.execute(
-        'SELECT query_hash FROM feedback_events WHERE signal_type = \'click\' LIMIT 1',
+        "SELECT query_hash FROM feedback_events WHERE signal_type = 'click' LIMIT 1",
       );
       expect(events.rows[0].query_hash).toBe(hash);
     });
@@ -147,7 +157,7 @@ describe('load-chunk', () => {
       });
 
       const events = await client.execute(
-        'SELECT query_hash FROM feedback_events WHERE signal_type = \'click\' LIMIT 1',
+        "SELECT query_hash FROM feedback_events WHERE signal_type = 'click' LIMIT 1",
       );
       // Should be a 64-char hex hash
       expect(events.rows[0].query_hash).toMatch(/^[0-9a-f]{64}$/);
@@ -158,7 +168,17 @@ describe('load-chunk', () => {
       await client.execute({
         sql: `INSERT INTO chunks (chunk_id, doc_id, chunk_index, heading_path, body_text, char_start, char_end, depth, symbol_name)
               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        args: [424243, 500001, 99, 'Test', 'unique no-query chunk', 0, 10, 0, 'UniqueNoQuerySymbol'],
+        args: [
+          424243,
+          500001,
+          99,
+          'Test',
+          'unique no-query chunk',
+          0,
+          10,
+          0,
+          'UniqueNoQuerySymbol',
+        ],
       });
 
       await loadChunk({
@@ -167,7 +187,7 @@ describe('load-chunk', () => {
       });
 
       const events = await client.execute(
-        'SELECT query_hash FROM feedback_events WHERE signal_type = \'click\' AND chunk_id = 424243 LIMIT 1',
+        "SELECT query_hash FROM feedback_events WHERE signal_type = 'click' AND chunk_id = 424243 LIMIT 1",
       );
       expect(events.rows[0].query_hash).toBeNull();
     });
@@ -229,7 +249,10 @@ describe('load-chunk', () => {
               ],
             };
           }
-          if (sql.includes('SELECT c.chunk_id') && sql.includes('chunk_index >')) {
+          if (
+            sql.includes('SELECT c.chunk_id') &&
+            sql.includes('chunk_index >')
+          ) {
             return { rows: [] };
           }
           if (sql.includes('ORDER BY c.chunk_id') && sql.includes('LIMIT 1')) {

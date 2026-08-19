@@ -29,7 +29,11 @@ describe('load-document', () => {
   afterEach(async () => {
     restoreEnv();
     if (client) {
-      try { await client.close(); } catch { /* noop */ }
+      try {
+        await client.close();
+      } catch {
+        /* noop */
+      }
     }
   });
 
@@ -48,7 +52,9 @@ describe('load-document', () => {
 
     it('returns chunks ordered by chunk_index', async () => {
       const result = await loadDocument({ file_path: TEST_FILE_PATH, client });
-      expect(result.chunks[0].chunk_index).toBeLessThan(result.chunks[1].chunk_index);
+      expect(result.chunks[0].chunk_index).toBeLessThan(
+        result.chunks[1].chunk_index,
+      );
     });
 
     it('maps body_text to text via readChunkRow', async () => {
@@ -63,7 +69,15 @@ describe('load-document', () => {
       await client.execute({
         sql: `INSERT INTO documents (doc_id, file_path, doc_family, mtime_ms, file_size, sha256, indexed_at)
               VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        args: [500010, 'src/flat.ts', 'flat-family', 1000, 100, 'sha-flat', 1000],
+        args: [
+          500010,
+          'src/flat.ts',
+          'flat-family',
+          1000,
+          100,
+          'sha-flat',
+          1000,
+        ],
       });
       await client.execute({
         sql: `INSERT INTO chunks (chunk_id, doc_id, chunk_index, heading_path, body_text, char_start, char_end, parent_chunk_id, depth)
@@ -83,12 +97,32 @@ describe('load-document', () => {
       await client.execute({
         sql: `INSERT INTO chunks (chunk_id, doc_id, chunk_index, heading_path, body_text, char_start, char_end, parent_chunk_id, depth)
               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        args: [430001, TEST_DOC_ID, 2, 'Extra0', 'extra0 body', 60, 70, null, 0],
+        args: [
+          430001,
+          TEST_DOC_ID,
+          2,
+          'Extra0',
+          'extra0 body',
+          60,
+          70,
+          null,
+          0,
+        ],
       });
       await client.execute({
         sql: `INSERT INTO chunks (chunk_id, doc_id, chunk_index, heading_path, body_text, char_start, char_end, parent_chunk_id, depth)
               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        args: [430002, TEST_DOC_ID, 3, 'Extra1', 'extra1 body', 70, 80, TEST_PARENT_CHUNK_ID, 1],
+        args: [
+          430002,
+          TEST_DOC_ID,
+          3,
+          'Extra1',
+          'extra1 body',
+          70,
+          80,
+          TEST_PARENT_CHUNK_ID,
+          1,
+        ],
       });
 
       const result = await loadDocument({ file_path: TEST_FILE_PATH, client });
@@ -110,7 +144,8 @@ describe('load-document', () => {
 
   describe('client vs databasePath', () => {
     it('uses getTursoClient when no client provided', async () => {
-      const { setTursoClient, closeTursoClient } = await import('./cortex-db.mjs');
+      const { setTursoClient, closeTursoClient } =
+        await import('./cortex-db.mjs');
       const dbPath = ':memory:test-load-document';
       setTursoClient(dbPath, client);
       try {

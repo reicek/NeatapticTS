@@ -49,10 +49,12 @@ const COLUMN_COUNT = 320;
 const STRIPE_WIDTH = CANVAS_WIDTH / COLUMN_COUNT; // 1.0
 
 /** Standard projection-context constants derived from the canvas. */
-const FOCAL_LENGTH = CANVAS_HEIGHT / 2 / Math.tan(NEATENSTEIN_FLOOR_FOV_RADIANS / 2);
+const FOCAL_LENGTH =
+  CANVAS_HEIGHT / 2 / Math.tan(NEATENSTEIN_FLOOR_FOV_RADIANS / 2);
 const HALF_WIDTH = CANVAS_WIDTH / 2;
 const HORIZON_Y = CANVAS_HEIGHT * NEATENSTEIN_FLOOR_HORIZON_RATIO;
-const PLANE_SCALE = (CANVAS_WIDTH / CANVAS_HEIGHT) * Math.tan(NEATENSTEIN_FLOOR_FOV_RADIANS / 2);
+const PLANE_SCALE =
+  (CANVAS_WIDTH / CANVAS_HEIGHT) * Math.tan(NEATENSTEIN_FLOOR_FOV_RADIANS / 2);
 
 /**
  * Build a `NeatensteinGridProjectionContext` for a given camera pose.
@@ -115,14 +117,15 @@ describe('B3.1 — Wall texture mapping', () => {
   it('exports computeWallTexcoord from walls module', async () => {
     const walls = await import('./walls');
     // RED: computeWallTexcoord does not exist yet — writeNeonWallColumn is flat-shaded.
-    expect(typeof (walls as unknown as Record<string, unknown>).computeWallTexcoord).toBe('function');
+    expect(
+      typeof (walls as unknown as Record<string, unknown>).computeWallTexcoord,
+    ).toBe('function');
   });
 
   it('computeWallTexcoord returns a valid texcoord in [0,1) for an X-side hit', async () => {
     const walls = await import('./walls');
-    const compute = (walls as unknown as Record<string, unknown>).computeWallTexcoord as
-      | ((...args: unknown[]) => number)
-      | undefined;
+    const compute = (walls as unknown as Record<string, unknown>)
+      .computeWallTexcoord as ((...args: unknown[]) => number) | undefined;
     // RED: function does not exist → compute is undefined → TypeError.
     expect(compute).toBeDefined();
     // Wall hit at (15, 8.5), side=0 (X-side), perpWallDist=6.5, dirY=-0.3849
@@ -152,15 +155,16 @@ describe('B3.2 — Floor alpha from unified fog factor', () => {
     const mod = await import('./floor.shade.utils');
     // RED: resolveNeatensteinFloorAlphaFromDistance does not exist yet.
     expect(
-      typeof (mod as unknown as Record<string, unknown>).resolveNeatensteinFloorAlphaFromDistance,
+      typeof (mod as unknown as Record<string, unknown>)
+        .resolveNeatensteinFloorAlphaFromDistance,
     ).toBe('function');
   });
 
   it('returns MAX_ALPHA at FOG_START_DISTANCE (no fog → full alpha)', async () => {
     const mod = await import('./floor.shade.utils');
-    const fn = (mod as unknown as Record<string, unknown>).resolveNeatensteinFloorAlphaFromDistance as
-      | ((d: number) => number)
-      | undefined;
+    const fn = (mod as unknown as Record<string, unknown>)
+      .resolveNeatensteinFloorAlphaFromDistance as
+      ((d: number) => number) | undefined;
     expect(fn).toBeDefined();
     // At FOG_START, fogFactor = 0, so alpha should be MAX_ALPHA.
     const alpha = fn!(NEATENSTEIN_FOG_START_DISTANCE);
@@ -169,9 +173,9 @@ describe('B3.2 — Floor alpha from unified fog factor', () => {
 
   it('returns ~0 at RENDER_DISTANCE_CAP (full fog → invisible)', async () => {
     const mod = await import('./floor.shade.utils');
-    const fn = (mod as unknown as Record<string, unknown>).resolveNeatensteinFloorAlphaFromDistance as
-      | ((d: number) => number)
-      | undefined;
+    const fn = (mod as unknown as Record<string, unknown>)
+      .resolveNeatensteinFloorAlphaFromDistance as
+      ((d: number) => number) | undefined;
     expect(fn).toBeDefined();
     // At CAP, fogFactor = 1, so alpha should be ~0 (grid vanishes into fog).
     const alpha = fn!(NEATENSTEIN_RENDER_DISTANCE_CAP);
@@ -180,9 +184,9 @@ describe('B3.2 — Floor alpha from unified fog factor', () => {
 
   it('uses smoothstep fog factor (not linear interpolation)', async () => {
     const mod = await import('./floor.shade.utils');
-    const fn = (mod as unknown as Record<string, unknown>).resolveNeatensteinFloorAlphaFromDistance as
-      | ((d: number) => number)
-      | undefined;
+    const fn = (mod as unknown as Record<string, unknown>)
+      .resolveNeatensteinFloorAlphaFromDistance as
+      ((d: number) => number) | undefined;
     expect(fn).toBeDefined();
     // At the midpoint, smoothstep gives fogFactor = 0.5 (not 0.5 — smoothstep(0.5) = 0.5).
     // The key assertion: alpha is NOT linear. Linear would give alpha = MAX_ALPHA * (1 - 0.5) = 0.29.
@@ -190,7 +194,9 @@ describe('B3.2 — Floor alpha from unified fog factor', () => {
     // Actually, smoothstep(0.5) = 0.5, so they coincide at the midpoint.
     // Use a non-midpoint distance to distinguish smoothstep from linear.
     const t = 0.25; // 1/4 into the fog range
-    const distance = NEATENSTEIN_FOG_START_DISTANCE + t * (NEATENSTEIN_RENDER_DISTANCE_CAP - NEATENSTEIN_FOG_START_DISTANCE);
+    const distance =
+      NEATENSTEIN_FOG_START_DISTANCE +
+      t * (NEATENSTEIN_RENDER_DISTANCE_CAP - NEATENSTEIN_FOG_START_DISTANCE);
     const expectedFogFactor = t * t * (3 - 2 * t); // smoothstep
     const expectedAlpha = NEATENSTEIN_FLOOR_MAX_ALPHA * (1 - expectedFogFactor);
     const linearAlpha = NEATENSTEIN_FLOOR_MAX_ALPHA * (1 - t);
@@ -238,14 +244,16 @@ describe('B3.4 — NaN edge case fix (sideDistX/Y 0*Infinity guard)', () => {
     // RED: resolveSideDistance does not exist yet.
     // The plan requires: "Initialize sideDistX/Y with Number.POSITIVE_INFINITY
     // guard for near-zero direction." This helper encapsulates the guard.
-    expect(typeof (raycast as unknown as Record<string, unknown>).resolveSideDistance).toBe('function');
+    expect(
+      typeof (raycast as unknown as Record<string, unknown>)
+        .resolveSideDistance,
+    ).toBe('function');
   });
 
   it('resolveSideDistance returns Infinity when deltaDist is Infinity and offset is 0', async () => {
     const raycast = await import('./raycast');
-    const fn = (raycast as unknown as Record<string, unknown>).resolveSideDistance as
-      | ((...args: unknown[]) => number)
-      | undefined;
+    const fn = (raycast as unknown as Record<string, unknown>)
+      .resolveSideDistance as ((...args: unknown[]) => number) | undefined;
     expect(fn).toBeDefined();
     // 0 * Infinity = NaN without the guard; must return Infinity.
     const result = fn!(0, Number.POSITIVE_INFINITY);
@@ -255,9 +263,8 @@ describe('B3.4 — NaN edge case fix (sideDistX/Y 0*Infinity guard)', () => {
 
   it('resolveSideDistance returns offset*deltaDist for finite deltaDist', async () => {
     const raycast = await import('./raycast');
-    const fn = (raycast as unknown as Record<string, unknown>).resolveSideDistance as
-      | ((...args: unknown[]) => number)
-      | undefined;
+    const fn = (raycast as unknown as Record<string, unknown>)
+      .resolveSideDistance as ((...args: unknown[]) => number) | undefined;
     expect(fn).toBeDefined();
     const result = fn!(0.5, 2.0);
     expect(result).toBe(1.0);
@@ -272,7 +279,10 @@ describe('B3.4 — NaN edge case fix (sideDistX/Y 0*Infinity guard)', () => {
     const hit = castRayDDAFromFlatMap(flatMap, 16, 8.0, 8.5, -1e-10, 0.5);
     expect(Number.isNaN(hit.perpWallDist)).toBe(false);
     // perpWallDist should be finite (hit a wall) or Infinity (no hit), never NaN.
-    expect(Number.isFinite(hit.perpWallDist) || hit.perpWallDist === Number.POSITIVE_INFINITY).toBe(true);
+    expect(
+      Number.isFinite(hit.perpWallDist) ||
+        hit.perpWallDist === Number.POSITIVE_INFINITY,
+    ).toBe(true);
   });
 
   it('castRayDDAFromFlatMap does not produce NaN perpWallDist when both dirs are near-zero on grid lines', async () => {
@@ -289,10 +299,13 @@ describe('B3.4 — NaN edge case fix (sideDistX/Y 0*Infinity guard)', () => {
 
 describe('B3.5 — Remove per-sprite putImageData', () => {
   it('renderNeatensteinSprite does not call ctx.putImageData', async () => {
-    const { renderNeatensteinSprite, clipNeatensteinSprite } = await import('./sprites');
+    const { renderNeatensteinSprite, clipNeatensteinSprite } =
+      await import('./sprites');
 
     const FRAME_SIZE = 8;
-    const framebuffer = new Uint8ClampedArray(FRAME_SIZE * FRAME_SIZE * 4).fill(0);
+    const framebuffer = new Uint8ClampedArray(FRAME_SIZE * FRAME_SIZE * 4).fill(
+      0,
+    );
     const zBuffer = new Float32Array(FRAME_SIZE).fill(5); // wall distance > sprite distance
 
     const camera = {
@@ -371,8 +384,7 @@ describe('B3.6 — Shader pipeline alignment contract', () => {
     const shaderMod = await tryImportShader('./shaders/camera-uniform');
     expect(shaderMod).not.toBeNull();
     const createFn = shaderMod!.createNeatensteinCameraUniform as
-      | ((...args: unknown[]) => Record<string, unknown>)
-      | undefined;
+      ((...args: unknown[]) => Record<string, unknown>) | undefined;
     expect(createFn).toBeDefined();
     // Build a uniform with a minimal camera pose.
     const uniform = createFn!({
@@ -418,21 +430,26 @@ describe('B3.7 — Per-pixel floor casting', () => {
     const floor = await import('./floor');
     // RED: castNeatensteinFloorPerPixel does not exist yet — floor.ts uses
     // 80-sample line projection (NEATENSTEIN_FLOOR_LINE_SAMPLES = 80).
-    expect(typeof (floor as unknown as Record<string, unknown>).castNeatensteinFloorPerPixel).toBe('function');
+    expect(
+      typeof (floor as unknown as Record<string, unknown>)
+        .castNeatensteinFloorPerPixel,
+    ).toBe('function');
   });
 
   it('per-pixel caster uses fract(worldCoord) for procedural integer grid', async () => {
     const floor = await import('./floor');
-    const fn = (floor as unknown as Record<string, unknown>).castNeatensteinFloorPerPixel as
-      | ((...args: unknown[]) => unknown)
-      | undefined;
+    const fn = (floor as unknown as Record<string, unknown>)
+      .castNeatensteinFloorPerPixel as
+      ((...args: unknown[]) => unknown) | undefined;
     expect(fn).toBeDefined();
     // Per Invariant §4: floor MUST render a procedural world-space integer grid
     // computed via fract(worldCoord) or equivalent — NOT an arbitrary texture.
     // The function must accept a framebuffer and camera context and produce
     // per-pixel floor pixels with grid lines at 1-unit spacing.
     // RED: function does not exist → fn is undefined → TypeError on call.
-    const framebuffer = new Uint8ClampedArray(CANVAS_WIDTH * CANVAS_HEIGHT * 4).fill(0);
+    const framebuffer = new Uint8ClampedArray(
+      CANVAS_WIDTH * CANVAS_HEIGHT * 4,
+    ).fill(0);
     fn!(framebuffer, CANVAS_WIDTH, CANVAS_HEIGHT, {
       cameraX: 8,
       cameraY: 8,
@@ -455,14 +472,20 @@ describe('B3.7 — Per-pixel floor casting', () => {
     // This is a documentation/contract assertion — the per-pixel caster must
     // exist and use the shared constants.
     const floor = await import('./floor');
-    expect(typeof (floor as unknown as Record<string, unknown>).castNeatensteinFloorPerPixel).toBe('function');
+    expect(
+      typeof (floor as unknown as Record<string, unknown>)
+        .castNeatensteinFloorPerPixel,
+    ).toBe('function');
   });
 
   it('per-pixel caster replicates halo glow (GLOW_WIDTH_PX + 1px core)', async () => {
     // Per B3.6 double-stroke neon glow replication: the CPU per-pixel caster
     // MUST replicate the halo glow (NEATENSTEIN_FLOOR_GLOW_WIDTH_PX = 3 + 1px core).
     const floor = await import('./floor');
-    expect(typeof (floor as unknown as Record<string, unknown>).castNeatensteinFloorPerPixel).toBe('function');
+    expect(
+      typeof (floor as unknown as Record<string, unknown>)
+        .castNeatensteinFloorPerPixel,
+    ).toBe('function');
     // The glow constants must be used by the per-pixel caster.
     expect(NEATENSTEIN_FLOOR_GLOW_WIDTH_PX).toBe(3);
     expect(NEATENSTEIN_FLOOR_LINE_WIDTH_PX).toBe(1);
@@ -494,7 +517,8 @@ describe('Invariant §8 — Floor-wall alignment regression', () => {
     side: number;
   }> {
     const { castRayDDAFromFlatMap } = await import('./raycast');
-    const { projectNeatensteinGridPoint } = await import('./floor.projection.utils');
+    const { projectNeatensteinGridPoint } =
+      await import('./floor.projection.utils');
 
     const cosYaw = Math.cos(yaw);
     const sinYaw = Math.sin(yaw);
@@ -507,10 +531,19 @@ describe('Invariant §8 — Floor-wall alignment regression', () => {
     const rayDirX = dirX + planeX * offset;
     const rayDirY = dirY + planeY * offset;
 
-    const hit = castRayDDAFromFlatMap(flatMap, mapSize, cameraX, cameraY, rayDirX, rayDirY);
+    const hit = castRayDDAFromFlatMap(
+      flatMap,
+      mapSize,
+      cameraX,
+      cameraY,
+      rayDirX,
+      rayDirY,
+    );
 
     if (!Number.isFinite(hit.perpWallDist)) {
-      throw new Error(`Column ${column}: no wall hit (perpWallDist=${hit.perpWallDist})`);
+      throw new Error(
+        `Column ${column}: no wall hit (perpWallDist=${hit.perpWallDist})`,
+      );
     }
 
     // Wall-hit world point: cam + perpWallDist * rayDir
@@ -518,10 +551,17 @@ describe('Invariant §8 — Floor-wall alignment regression', () => {
     const worldHitY = cameraY + hit.perpWallDist * rayDirY;
 
     const ctx = buildProjectionContext(cameraX, cameraY, yaw);
-    const projected = projectNeatensteinGridPoint(worldHitX, worldHitY, ctx, false);
+    const projected = projectNeatensteinGridPoint(
+      worldHitX,
+      worldHitY,
+      ctx,
+      false,
+    );
 
     if (projected === null) {
-      throw new Error(`Column ${column}: projection returned null for world point (${worldHitX}, ${worldHitY})`);
+      throw new Error(
+        `Column ${column}: projection returned null for world point (${worldHitX}, ${worldHitY})`,
+      );
     }
 
     const wallScreenX = column * STRIPE_WIDTH;
@@ -537,20 +577,59 @@ describe('Invariant §8 — Floor-wall alignment regression', () => {
 
   describe('Horizontal (X) alignment', () => {
     // Test several camera poses and columns.
-    const testCases: Array<{ column: number; cameraX: number; cameraY: number; yaw: number; label: string }> = [
-      { column: 160, cameraX: 8.5, cameraY: 8.5, yaw: 0, label: 'center column, yaw=0' },
-      { column: 80, cameraX: 8.5, cameraY: 8.5, yaw: 0, label: 'left column, yaw=0' },
-      { column: 240, cameraX: 8.5, cameraY: 8.5, yaw: 0, label: 'right column, yaw=0' },
-      { column: 160, cameraX: 8.5, cameraY: 8.5, yaw: Math.PI / 4, label: 'center column, yaw=45°' },
+    const testCases: Array<{
+      column: number;
+      cameraX: number;
+      cameraY: number;
+      yaw: number;
+      label: string;
+    }> = [
+      {
+        column: 160,
+        cameraX: 8.5,
+        cameraY: 8.5,
+        yaw: 0,
+        label: 'center column, yaw=0',
+      },
+      {
+        column: 80,
+        cameraX: 8.5,
+        cameraY: 8.5,
+        yaw: 0,
+        label: 'left column, yaw=0',
+      },
+      {
+        column: 240,
+        cameraX: 8.5,
+        cameraY: 8.5,
+        yaw: 0,
+        label: 'right column, yaw=0',
+      },
+      {
+        column: 160,
+        cameraX: 8.5,
+        cameraY: 8.5,
+        yaw: Math.PI / 4,
+        label: 'center column, yaw=45°',
+      },
     ];
 
     for (const tc of testCases) {
       it(`wall column screenX matches projected floor grid point screenX (${tc.label})`, async () => {
         const flatMap = createBorderedFlatMap(16);
-        const result = await castAndAlign(tc.column, tc.cameraX, tc.cameraY, tc.yaw, flatMap, 16);
+        const result = await castAndAlign(
+          tc.column,
+          tc.cameraX,
+          tc.cameraY,
+          tc.yaw,
+          flatMap,
+          16,
+        );
         // Tolerance: ≤ 1 * stripeWidth for JS/fallback tier.
         const tolerance = 1 * STRIPE_WIDTH;
-        expect(Math.abs(result.projectedScreenX - result.wallScreenX)).toBeLessThanOrEqual(tolerance);
+        expect(
+          Math.abs(result.projectedScreenX - result.wallScreenX),
+        ).toBeLessThanOrEqual(tolerance);
       });
     }
   });
@@ -575,7 +654,14 @@ describe('Invariant §8 — Floor-wall alignment regression', () => {
       const rayDirX = dirX + planeX * offset;
       const rayDirY = dirY + planeY * offset;
 
-      const hit = castRayDDAFromFlatMap(flatMap, 16, cameraX, cameraY, rayDirX, rayDirY);
+      const hit = castRayDDAFromFlatMap(
+        flatMap,
+        16,
+        cameraX,
+        cameraY,
+        rayDirX,
+        rayDirY,
+      );
       expect(Number.isFinite(hit.perpWallDist)).toBe(true);
 
       const perpWallDist = hit.perpWallDist;
@@ -586,7 +672,8 @@ describe('Invariant §8 — Floor-wall alignment regression', () => {
 
       // Floor grid line screenY at the same perpWallDist:
       // Use projectNeatensteinGridPoint for a point at (cameraX + perpWallDist, cameraY).
-      const { projectNeatensteinGridPoint } = await import('./floor.projection.utils');
+      const { projectNeatensteinGridPoint } =
+        await import('./floor.projection.utils');
       const ctx = buildProjectionContext(cameraX, cameraY, yaw);
       const worldX = cameraX + perpWallDist * rayDirX;
       const worldY = cameraY + perpWallDist * rayDirY;
@@ -595,7 +682,9 @@ describe('Invariant §8 — Floor-wall alignment regression', () => {
 
       // Tolerance: < 0.5px for shader tiers, ≤ 1px for JS/fallback.
       const tolerance = 1.0;
-      expect(Math.abs(projected!.y - wallBaseScreenY)).toBeLessThanOrEqual(tolerance);
+      expect(Math.abs(projected!.y - wallBaseScreenY)).toBeLessThanOrEqual(
+        tolerance,
+      );
     });
   });
 
@@ -617,7 +706,8 @@ describe('Invariant §8 — Floor-wall alignment regression', () => {
     });
 
     it('updateNeatensteinPulses preserves integer fixedCoord', async () => {
-      const { emitNeatensteinAmbientPulse, updateNeatensteinPulses } = await import('./pulse');
+      const { emitNeatensteinAmbientPulse, updateNeatensteinPulses } =
+        await import('./pulse');
 
       // Emit a pulse and update it several times.
       let pulses: NeatensteinPulse[] = [];
@@ -644,20 +734,26 @@ describe('Invariant §8 — Floor-wall alignment regression', () => {
       const { depthTestPulse } = await import('./pulse');
       const zBuffer = new Float32Array([5.0]);
       // Pulse at distance 5.0 (same as wall) → wall wins tie → not visible.
-      expect(depthTestPulse({ screenColumn: 0, distance: 5.0 }, zBuffer)).toBe(false);
+      expect(depthTestPulse({ screenColumn: 0, distance: 5.0 }, zBuffer)).toBe(
+        false,
+      );
       // Pulse at distance 4.9 (closer than wall) → visible.
-      expect(depthTestPulse({ screenColumn: 0, distance: 4.9 }, zBuffer)).toBe(true);
+      expect(depthTestPulse({ screenColumn: 0, distance: 4.9 }, zBuffer)).toBe(
+        true,
+      );
       // Pulse at distance 5.1 (behind wall) → not visible.
-      expect(depthTestPulse({ screenColumn: 0, distance: 5.1 }, zBuffer)).toBe(false);
+      expect(depthTestPulse({ screenColumn: 0, distance: 5.1 }, zBuffer)).toBe(
+        false,
+      );
     });
   });
 
   describe('Per-pixel caster alignment (RED — caster does not exist yet)', () => {
     it('per-pixel caster screenX matches projectNeatensteinGridPoint', async () => {
       const floor = await import('./floor');
-      const fn = (floor as unknown as Record<string, unknown>).castNeatensteinFloorPerPixel as
-        | ((...args: unknown[]) => unknown)
-        | undefined;
+      const fn = (floor as unknown as Record<string, unknown>)
+        .castNeatensteinFloorPerPixel as
+        ((...args: unknown[]) => unknown) | undefined;
       // RED: castNeatensteinFloorPerPixel does not exist yet.
       expect(fn).toBeDefined();
     });
@@ -675,10 +771,13 @@ describe('Non-Negotiable Invariants (contract guards)', () => {
 
   it('Invariant §2: shared projection constants are not independently re-derivable', () => {
     // focalLength = H/2 / tan(FOV/2)
-    const expectedFocalLength = CANVAS_HEIGHT / 2 / Math.tan(NEATENSTEIN_FLOOR_FOV_RADIANS / 2);
+    const expectedFocalLength =
+      CANVAS_HEIGHT / 2 / Math.tan(NEATENSTEIN_FLOOR_FOV_RADIANS / 2);
     expect(FOCAL_LENGTH).toBeCloseTo(expectedFocalLength, 10);
     // planeScale = (W/H) * tan(FOV/2)
-    const expectedPlaneScale = (CANVAS_WIDTH / CANVAS_HEIGHT) * Math.tan(NEATENSTEIN_FLOOR_FOV_RADIANS / 2);
+    const expectedPlaneScale =
+      (CANVAS_WIDTH / CANVAS_HEIGHT) *
+      Math.tan(NEATENSTEIN_FLOOR_FOV_RADIANS / 2);
     expect(PLANE_SCALE).toBeCloseTo(expectedPlaneScale, 10);
     // planeScale * focalLength = halfWidth (identity)
     expect(PLANE_SCALE * FOCAL_LENGTH).toBeCloseTo(HALF_WIDTH, 5);
@@ -688,7 +787,10 @@ describe('Non-Negotiable Invariants (contract guards)', () => {
     // The per-pixel caster must use fract(worldCoord), not a sampled texture.
     // RED: caster does not exist yet.
     const floor = await import('./floor');
-    expect(typeof (floor as unknown as Record<string, unknown>).castNeatensteinFloorPerPixel).toBe('function');
+    expect(
+      typeof (floor as unknown as Record<string, unknown>)
+        .castNeatensteinFloorPerPixel,
+    ).toBe('function');
   });
 
   it('Invariant §6: step count ≠ perpendicular distance (decoupled constants)', () => {
@@ -703,9 +805,12 @@ describe('Non-Negotiable Invariants (contract guards)', () => {
     // (a) wall color fog, (b) floor grid color fog, (c) floor grid alpha.
     // Verify the fog factor function exists and produces smoothstep.
     expect(resolveNeatensteinFogFactor(NEATENSTEIN_FOG_START_DISTANCE)).toBe(0);
-    expect(resolveNeatensteinFogFactor(NEATENSTEIN_RENDER_DISTANCE_CAP)).toBe(1);
+    expect(resolveNeatensteinFogFactor(NEATENSTEIN_RENDER_DISTANCE_CAP)).toBe(
+      1,
+    );
     // Midpoint: smoothstep(0.5) = 0.5
-    const mid = (NEATENSTEIN_FOG_START_DISTANCE + NEATENSTEIN_RENDER_DISTANCE_CAP) / 2;
+    const mid =
+      (NEATENSTEIN_FOG_START_DISTANCE + NEATENSTEIN_RENDER_DISTANCE_CAP) / 2;
     expect(resolveNeatensteinFogFactor(mid)).toBeCloseTo(0.5, 10);
   });
 

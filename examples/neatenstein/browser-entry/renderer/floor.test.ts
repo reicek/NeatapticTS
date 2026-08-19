@@ -900,17 +900,16 @@ describe('A2 Fix 1: Floor projection ping-pong scratch', () => {
   });
 
   it('writes into the provided scratch slot and returns the same reference', async () => {
-    const { projectNeatensteinGridPointInto } = (await import(
-      './floor.projection.utils.ts'
-    )) as unknown as {
-      projectNeatensteinGridPointInto: (
-        worldX: number,
-        worldY: number,
-        projection: NeatensteinGridProjectionContext,
-        forCeiling: boolean,
-        scratch: ProjectedNeatensteinGridPoint,
-      ) => ProjectedNeatensteinGridPoint | null;
-    };
+    const { projectNeatensteinGridPointInto } =
+      (await import('./floor.projection.utils.ts')) as unknown as {
+        projectNeatensteinGridPointInto: (
+          worldX: number,
+          worldY: number,
+          projection: NeatensteinGridProjectionContext,
+          forCeiling: boolean,
+          scratch: ProjectedNeatensteinGridPoint,
+        ) => ProjectedNeatensteinGridPoint | null;
+      };
     const focalLength =
       TEST_CANVAS_HEIGHT / 2 / Math.tan(NEATENSTEIN_FLOOR_FOV_RADIANS / 2);
     const projection: NeatensteinGridProjectionContext = {
@@ -943,17 +942,16 @@ describe('A2 Fix 1: Floor projection ping-pong scratch', () => {
   });
 
   it('produces nonzero segment lengths for a moving camera with ping-pong scratch', async () => {
-    const { projectNeatensteinGridPointInto } = (await import(
-      './floor.projection.utils.ts'
-    )) as unknown as {
-      projectNeatensteinGridPointInto: (
-        worldX: number,
-        worldY: number,
-        projection: NeatensteinGridProjectionContext,
-        forCeiling: boolean,
-        scratch: ProjectedNeatensteinGridPoint,
-      ) => ProjectedNeatensteinGridPoint | null;
-    };
+    const { projectNeatensteinGridPointInto } =
+      (await import('./floor.projection.utils.ts')) as unknown as {
+        projectNeatensteinGridPointInto: (
+          worldX: number,
+          worldY: number,
+          projection: NeatensteinGridProjectionContext,
+          forCeiling: boolean,
+          scratch: ProjectedNeatensteinGridPoint,
+        ) => ProjectedNeatensteinGridPoint | null;
+      };
     const focalLength =
       TEST_CANVAS_HEIGHT / 2 / Math.tan(NEATENSTEIN_FLOOR_FOV_RADIANS / 2);
     const projection: NeatensteinGridProjectionContext = {
@@ -982,7 +980,13 @@ describe('A2 Fix 1: Floor projection ping-pong scratch', () => {
       depthRatio: 0,
       distance: 0,
     };
-    const r0 = projectNeatensteinGridPointInto(10, 10, projection, false, slotA);
+    const r0 = projectNeatensteinGridPointInto(
+      10,
+      10,
+      projection,
+      false,
+      slotA,
+    );
     const r1 = projectNeatensteinGridPointInto(
       10.5,
       10,

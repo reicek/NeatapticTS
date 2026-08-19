@@ -7,7 +7,10 @@ import { writeFile, mkdir, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { getFreshnessProof, isFreshDocument } from '../../../rag-index/freshness.mjs';
+import {
+  getFreshnessProof,
+  isFreshDocument,
+} from '../../../rag-index/freshness.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const TEMP_DIR = path.join(__dirname, '.freshness-tmp');
@@ -84,11 +87,17 @@ describe('freshness — isFreshDocument', () => {
   });
 
   it('returns false when freshnessProof is null', () => {
-    expect(isFreshDocument({ mtime_ms: 1000, file_size: 2000, sha256: 'abc' }, null)).toBe(false);
+    expect(
+      isFreshDocument({ mtime_ms: 1000, file_size: 2000, sha256: 'abc' }, null),
+    ).toBe(false);
   });
 
   it('uses file_size from freshnessProof when size is absent', () => {
-    const proofWithFileSize = { mtime_ms: 1000, file_size: 2000, sha256: 'abc' };
+    const proofWithFileSize = {
+      mtime_ms: 1000,
+      file_size: 2000,
+      sha256: 'abc',
+    };
     expect(
       isFreshDocument(
         { mtime_ms: 1000, file_size: 2000, sha256: 'abc' },

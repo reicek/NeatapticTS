@@ -46,10 +46,11 @@ describe('B4.4: Transition replay for Lamarckian updates', () => {
     });
 
     it('creates a bounded FIFO buffer with the given capacity', () => {
-      const buffer = (transitionReplay.createTransitionBuffer as (...a: unknown[]) => Record<
-        string,
-        unknown
-      >)(100);
+      const buffer = (
+        transitionReplay.createTransitionBuffer as (
+          ...a: unknown[]
+        ) => Record<string, unknown>
+      )(100);
       expect(buffer).toBeDefined();
       expect(typeof buffer.push).toBe('function');
       expect(typeof buffer.size).toBe('function');
@@ -57,10 +58,11 @@ describe('B4.4: Transition replay for Lamarckian updates', () => {
     });
 
     it('starts empty and grows as transitions are pushed', () => {
-      const buffer = (transitionReplay.createTransitionBuffer as (...a: unknown[]) => Record<
-        string,
-        unknown
-      >)(100);
+      const buffer = (
+        transitionReplay.createTransitionBuffer as (
+          ...a: unknown[]
+        ) => Record<string, unknown>
+      )(100);
       expect((buffer.size as () => number)()).toBe(0);
       (buffer.push as (...a: unknown[]) => void)(
         makeTransition(0, [1, 0, 0, 0, 0, 0], [0, 0, 0, 0], 0.1),
@@ -69,10 +71,11 @@ describe('B4.4: Transition replay for Lamarckian updates', () => {
     });
 
     it('evicts oldest transitions when capacity is exceeded', () => {
-      const buffer = (transitionReplay.createTransitionBuffer as (...a: unknown[]) => Record<
-        string,
-        unknown
-      >)(3);
+      const buffer = (
+        transitionReplay.createTransitionBuffer as (
+          ...a: unknown[]
+        ) => Record<string, unknown>
+      )(3);
       (buffer.push as (...a: unknown[]) => void)(
         makeTransition(0, [1, 0, 0, 0, 0, 0], [0, 0, 0, 0], 0.1),
       );
@@ -95,19 +98,21 @@ describe('B4.4: Transition replay for Lamarckian updates', () => {
     });
 
     it('runs N backprop steps on the transition buffer and returns updated weights', () => {
-      const buffer = (transitionReplay.createTransitionBuffer as (...a: unknown[]) => Record<
-        string,
-        unknown
-      >)(100);
+      const buffer = (
+        transitionReplay.createTransitionBuffer as (
+          ...a: unknown[]
+        ) => Record<string, unknown>
+      )(100);
       for (let i = 0; i < 10; i++) {
         (buffer.push as (...a: unknown[]) => void)(
           makeTransition(i, [0.5, 0.3, 0.2, 0.1, 0.4, 0.6], [1, 0, 0, 0], 0.5),
         );
       }
-      const result = (transitionReplay.runReplayUpdates as (...a: unknown[]) => Record<
-        string,
-        unknown
-      >)({
+      const result = (
+        transitionReplay.runReplayUpdates as (
+          ...a: unknown[]
+        ) => Record<string, unknown>
+      )({
         weights: makeWeights(),
         buffer,
         steps: 5,
@@ -120,20 +125,22 @@ describe('B4.4: Transition replay for Lamarckian updates', () => {
     });
 
     it('produces weights that differ from the input after replay', () => {
-      const buffer = (transitionReplay.createTransitionBuffer as (...a: unknown[]) => Record<
-        string,
-        unknown
-      >)(100);
+      const buffer = (
+        transitionReplay.createTransitionBuffer as (
+          ...a: unknown[]
+        ) => Record<string, unknown>
+      )(100);
       for (let i = 0; i < 10; i++) {
         (buffer.push as (...a: unknown[]) => void)(
           makeTransition(i, [0.5, 0.3, 0.2, 0.1, 0.4, 0.6], [1, 0, 0, 0], 0.5),
         );
       }
       const inputWeights = makeWeights();
-      const result = (transitionReplay.runReplayUpdates as (...a: unknown[]) => Record<
-        string,
-        unknown
-      >)({
+      const result = (
+        transitionReplay.runReplayUpdates as (
+          ...a: unknown[]
+        ) => Record<string, unknown>
+      )({
         weights: new Float32Array(inputWeights),
         buffer,
         steps: 5,
@@ -154,43 +161,47 @@ describe('B4.5: Prioritized death replay by surprise', () => {
     });
 
     it('computes a high surprise for a quick death (low survival ticks)', () => {
-      const surprise = (transitionReplay.computeDeathSurprise as (...a: unknown[]) => number)(
-        { survivalTicks: 5, healthAtDeath: 90, expectedDirection: 0 },
-      );
+      const surprise = (
+        transitionReplay.computeDeathSurprise as (...a: unknown[]) => number
+      )({ survivalTicks: 5, healthAtDeath: 90, expectedDirection: 0 });
       expect(surprise).toBeGreaterThan(0);
       expect(surprise).toBeLessThanOrEqual(1);
     });
 
     it('computes a lower surprise for a long survival with low health at death', () => {
-      const highSurprise = (transitionReplay.computeDeathSurprise as (...a: unknown[]) => number)(
-        { survivalTicks: 5, healthAtDeath: 90, expectedDirection: 0 },
-      );
-      const lowSurprise = (transitionReplay.computeDeathSurprise as (...a: unknown[]) => number)(
-        { survivalTicks: 200, healthAtDeath: 5, expectedDirection: 0 },
-      );
+      const highSurprise = (
+        transitionReplay.computeDeathSurprise as (...a: unknown[]) => number
+      )({ survivalTicks: 5, healthAtDeath: 90, expectedDirection: 0 });
+      const lowSurprise = (
+        transitionReplay.computeDeathSurprise as (...a: unknown[]) => number
+      )({ survivalTicks: 200, healthAtDeath: 5, expectedDirection: 0 });
       expect(lowSurprise).toBeLessThan(highSurprise);
     });
   });
 
   describe('B4.5: replay pressure from surprise', () => {
     it('exports computeReplayPressureFromSurprise as a function', () => {
-      expect(
-        typeof transitionReplay.computeReplayPressureFromSurprise,
-      ).toBe('function');
+      expect(typeof transitionReplay.computeReplayPressureFromSurprise).toBe(
+        'function',
+      );
     });
 
     it('clamps replay pressure to [0, 1]', () => {
-      const pressure = (transitionReplay.computeReplayPressureFromSurprise as (...a: unknown[]) => number)(
-        { surpriseScore: 0.5, maxSurprise: 1.0 },
-      );
+      const pressure = (
+        transitionReplay.computeReplayPressureFromSurprise as (
+          ...a: unknown[]
+        ) => number
+      )({ surpriseScore: 0.5, maxSurprise: 1.0 });
       expect(pressure).toBeGreaterThanOrEqual(0);
       expect(pressure).toBeLessThanOrEqual(1);
     });
 
     it('returns 1.0 when surprise equals max surprise', () => {
-      const pressure = (transitionReplay.computeReplayPressureFromSurprise as (...a: unknown[]) => number)(
-        { surpriseScore: 1.0, maxSurprise: 1.0 },
-      );
+      const pressure = (
+        transitionReplay.computeReplayPressureFromSurprise as (
+          ...a: unknown[]
+        ) => number
+      )({ surpriseScore: 1.0, maxSurprise: 1.0 });
       expect(pressure).toBeCloseTo(1.0, 5);
     });
   });
@@ -203,20 +214,22 @@ describe('B4.6: CERL-style shared replay for main agent', () => {
     });
 
     it('creates a shared buffer that all hero variants contribute to', () => {
-      const shared = (transitionReplay.createSharedReplayBuffer as (...a: unknown[]) => Record<
-        string,
-        unknown
-      >)(200);
+      const shared = (
+        transitionReplay.createSharedReplayBuffer as (
+          ...a: unknown[]
+        ) => Record<string, unknown>
+      )(200);
       expect(shared).toBeDefined();
       expect(typeof shared.push).toBe('function');
       expect(typeof shared.sample).toBe('function');
     });
 
     it('accepts transitions tagged with variantId', () => {
-      const shared = (transitionReplay.createSharedReplayBuffer as (...a: unknown[]) => Record<
-        string,
-        unknown
-      >)(200);
+      const shared = (
+        transitionReplay.createSharedReplayBuffer as (
+          ...a: unknown[]
+        ) => Record<string, unknown>
+      )(200);
       (shared.push as (...a: unknown[]) => void)({
         ...makeTransition(0, [1, 0, 0, 0, 0, 0], [0, 0, 0, 0], 0.1),
         variantId: 3,
@@ -227,23 +240,33 @@ describe('B4.6: CERL-style shared replay for main agent', () => {
 
   describe('B4.6: warm-start from shared replay', () => {
     it('exports warmStartFromSharedReplay as a function', () => {
-      expect(typeof transitionReplay.warmStartFromSharedReplay).toBe('function');
+      expect(typeof transitionReplay.warmStartFromSharedReplay).toBe(
+        'function',
+      );
     });
 
     it('produces warm-started weights from shared replay samples', () => {
-      const shared = (transitionReplay.createSharedReplayBuffer as (...a: unknown[]) => Record<
-        string,
-        unknown
-      >)(200);
+      const shared = (
+        transitionReplay.createSharedReplayBuffer as (
+          ...a: unknown[]
+        ) => Record<string, unknown>
+      )(200);
       for (let i = 0; i < 20; i++) {
         (shared.push as (...a: unknown[]) => void)({
-          ...makeTransition(i, [0.5, 0.3, 0.2, 0.1, 0.4, 0.6], [1, 0, 0, 0], 0.5),
+          ...makeTransition(
+            i,
+            [0.5, 0.3, 0.2, 0.1, 0.4, 0.6],
+            [1, 0, 0, 0],
+            0.5,
+          ),
           variantId: i % 4,
         });
       }
-      const result = (transitionReplay.warmStartFromSharedReplay as (...a: unknown[]) => Float32Array)(
-        { sharedBuffer: shared, steps: 10, learningRate: 0.01, seed: 42 },
-      );
+      const result = (
+        transitionReplay.warmStartFromSharedReplay as (
+          ...a: unknown[]
+        ) => Float32Array
+      )({ sharedBuffer: shared, steps: 10, learningRate: 0.01, seed: 42 });
       expect(result).toBeInstanceOf(Float32Array);
       expect(result.length).toBe(MLP_WEIGHT_COUNT);
     });

@@ -94,9 +94,7 @@ describe('stale-wip-plans gate', () => {
         }
         return '';
       };
-      mockReaddirFn = async () => [
-        { name: 'plan1.md', isFile: () => true },
-      ];
+      mockReaddirFn = async () => [{ name: 'plan1.md', isFile: () => true }];
       mockExtractStatusFn = () => 'DONE';
       const logs = await importGate(['--json']);
       const parsed = JSON.parse(logs[0]);
@@ -110,9 +108,7 @@ describe('stale-wip-plans gate', () => {
         if (filePath.endsWith('plan1.md')) return 'No impl section here.\n';
         return '';
       };
-      mockReaddirFn = async () => [
-        { name: 'plan1.md', isFile: () => true },
-      ];
+      mockReaddirFn = async () => [{ name: 'plan1.md', isFile: () => true }];
       mockExtractStatusFn = () => 'WIP';
       const logs = await importGate(['--json']);
       const parsed = JSON.parse(logs[0]);
@@ -127,9 +123,7 @@ describe('stale-wip-plans gate', () => {
         }
         return '';
       };
-      mockReaddirFn = async () => [
-        { name: 'plan1.md', isFile: () => true },
-      ];
+      mockReaddirFn = async () => [{ name: 'plan1.md', isFile: () => true }];
       mockExtractStatusFn = () => 'WIP';
       const logs = await importGate(['--json']);
       const parsed = JSON.parse(logs[0]);
@@ -149,9 +143,7 @@ describe('stale-wip-plans gate', () => {
         }
         return '';
       };
-      mockReaddirFn = async () => [
-        { name: 'plan1.md', isFile: () => true },
-      ];
+      mockReaddirFn = async () => [{ name: 'plan1.md', isFile: () => true }];
       mockExtractStatusFn = () => 'WIP';
       const logs = await importGate(['--json']);
       const parsed = JSON.parse(logs[0]);
@@ -172,9 +164,7 @@ describe('stale-wip-plans gate', () => {
         }
         return '';
       };
-      mockReaddirFn = async () => [
-        { name: 'plan1.md', isFile: () => true },
-      ];
+      mockReaddirFn = async () => [{ name: 'plan1.md', isFile: () => true }];
       mockExtractStatusFn = () => 'WIP';
       const logs = await importGate(['--json']);
       const parsed = JSON.parse(logs[0]);
@@ -193,9 +183,7 @@ describe('stale-wip-plans gate', () => {
         }
         return '';
       };
-      mockReaddirFn = async () => [
-        { name: 'plan1.md', isFile: () => true },
-      ];
+      mockReaddirFn = async () => [{ name: 'plan1.md', isFile: () => true }];
       mockExtractStatusFn = () => 'WIP';
       const logs = await importGate(['--json']);
       const parsed = JSON.parse(logs[0]);
@@ -208,9 +196,7 @@ describe('stale-wip-plans gate', () => {
         if (filePath.endsWith('plan1.md')) throw new Error('ENOENT');
         return '';
       };
-      mockReaddirFn = async () => [
-        { name: 'plan1.md', isFile: () => true },
-      ];
+      mockReaddirFn = async () => [{ name: 'plan1.md', isFile: () => true }];
       mockExtractStatusFn = () => 'WIP';
       const logs = await importGate(['--json']);
       const parsed = JSON.parse(logs[0]);
@@ -222,9 +208,7 @@ describe('stale-wip-plans gate', () => {
     it('filters out non-plan entries (dirs, .logs.md, README, Roadmap, non-.md)', async () => {
       mockReadFileFn = async (filePath) => {
         if (filePath.endsWith('plan1.md')) {
-          return (
-            '## Implementation phases\n### Phase 1 [DONE]\n'
-          );
+          return '## Implementation phases\n### Phase 1 [DONE]\n';
         }
         return '';
       };
@@ -255,9 +239,7 @@ describe('stale-wip-plans gate', () => {
         }
         return '';
       };
-      mockReaddirFn = async () => [
-        { name: 'plan1.md', isFile: () => true },
-      ];
+      mockReaddirFn = async () => [{ name: 'plan1.md', isFile: () => true }];
       mockExtractStatusFn = () => 'WIP';
       const logs = await importGate(['--json']);
       const parsed = JSON.parse(logs[0]);
@@ -277,9 +259,7 @@ describe('stale-wip-plans gate', () => {
         }
         return '';
       };
-      mockReaddirFn = async () => [
-        { name: 'plan1.md', isFile: () => true },
-      ];
+      mockReaddirFn = async () => [{ name: 'plan1.md', isFile: () => true }];
       mockExtractStatusFn = () => 'WIP';
       const logs = await importGate(['--json']);
       const parsed = JSON.parse(logs[0]);
@@ -311,15 +291,11 @@ describe('stale-wip-plans gate', () => {
     it('emits FAIL text with fixHint and stale plan listing when pass=false', async () => {
       mockReadFileFn = async (filePath) => {
         if (filePath.endsWith('plan1.md')) {
-          return (
-            '## Implementation phases\n### Phase 1 [DONE]\n'
-          );
+          return '## Implementation phases\n### Phase 1 [DONE]\n';
         }
         return '';
       };
-      mockReaddirFn = async () => [
-        { name: 'plan1.md', isFile: () => true },
-      ];
+      mockReaddirFn = async () => [{ name: 'plan1.md', isFile: () => true }];
       mockExtractStatusFn = () => 'WIP';
       const logs = await importGate([]);
       assert.ok(logs.some((l) => l.includes('FAIL')));
@@ -333,15 +309,11 @@ describe('stale-wip-plans gate', () => {
     it('emits JSON with --json when pass=false', async () => {
       mockReadFileFn = async (filePath) => {
         if (filePath.endsWith('plan1.md')) {
-          return (
-            '## Implementation phases\n### Phase 1 [DONE]\n'
-          );
+          return '## Implementation phases\n### Phase 1 [DONE]\n';
         }
         return '';
       };
-      mockReaddirFn = async () => [
-        { name: 'plan1.md', isFile: () => true },
-      ];
+      mockReaddirFn = async () => [{ name: 'plan1.md', isFile: () => true }];
       mockExtractStatusFn = () => 'WIP';
       const logs = await importGate(['--json']);
       const parsed = JSON.parse(logs[0]);

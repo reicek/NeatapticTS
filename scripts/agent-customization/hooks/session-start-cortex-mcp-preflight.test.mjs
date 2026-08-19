@@ -37,20 +37,30 @@ beforeEach(async () => {
 function captureStdout() {
   const output = [];
   const origWrite = process.stdout.write;
-  process.stdout.write = (chunk) => { output.push(String(chunk)); return true; };
+  process.stdout.write = (chunk) => {
+    output.push(String(chunk));
+    return true;
+  };
   return {
     output,
-    restore() { process.stdout.write = origWrite; },
+    restore() {
+      process.stdout.write = origWrite;
+    },
   };
 }
 
 function captureStderr() {
   const output = [];
   const origWrite = process.stderr.write;
-  process.stderr.write = (chunk) => { output.push(String(chunk)); return true; };
+  process.stderr.write = (chunk) => {
+    output.push(String(chunk));
+    return true;
+  };
   return {
     output,
-    restore() { process.stderr.write = origWrite; },
+    restore() {
+      process.stderr.write = origWrite;
+    },
   };
 }
 
@@ -77,7 +87,9 @@ describe('session-start-cortex-mcp-preflight', () => {
       stderr: '',
     });
     mockEnf.resolveSessionId.mockReturnValue('s1');
-    mockEnf.initializeRuntimeContextCarrier.mockResolvedValue({ preparedAction: { actionId: 'a1' } });
+    mockEnf.initializeRuntimeContextCarrier.mockResolvedValue({
+      preparedAction: { actionId: 'a1' },
+    });
 
     await importModule();
 
@@ -86,12 +98,18 @@ describe('session-start-cortex-mcp-preflight', () => {
     const json = JSON.parse(capOut.output[0].trim());
     assert.strictEqual(json.continue, true);
     assert.strictEqual(json.hookSpecificOutput.hookEventName, 'SessionStart');
-    assert.ok(json.hookSpecificOutput.additionalContext.includes('runtime-context=prepared'));
+    assert.ok(
+      json.hookSpecificOutput.additionalContext.includes(
+        'runtime-context=prepared',
+      ),
+    );
   });
 
   it('handles preflight step failure', async () => {
     const origExit = process.exit;
-    process.exit = (code) => { throw new Error(`EXIT:${code}`); };
+    process.exit = (code) => {
+      throw new Error(`EXIT:${code}`);
+    };
     const capErr = captureStderr();
 
     mockChildProc.spawnSync.mockReturnValue({
@@ -104,12 +122,16 @@ describe('session-start-cortex-mcp-preflight', () => {
 
     process.exit = origExit;
     capErr.restore();
-    assert.ok(capErr.output.some((o) => o.includes('session-start-index failed')));
+    assert.ok(
+      capErr.output.some((o) => o.includes('session-start-index failed')),
+    );
   });
 
   it('handles preflight step failure with stdout only', async () => {
     const origExit = process.exit;
-    process.exit = (code) => { throw new Error(`EXIT:${code}`); };
+    process.exit = (code) => {
+      throw new Error(`EXIT:${code}`);
+    };
     const capErr = captureStderr();
 
     mockChildProc.spawnSync.mockReturnValue({
@@ -127,7 +149,9 @@ describe('session-start-cortex-mcp-preflight', () => {
 
   it('handles preflight step failure with no output', async () => {
     const origExit = process.exit;
-    process.exit = (code) => { throw new Error(`EXIT:${code}`); };
+    process.exit = (code) => {
+      throw new Error(`EXIT:${code}`);
+    };
     const capErr = captureStderr();
 
     mockChildProc.spawnSync.mockReturnValue({
@@ -158,12 +182,18 @@ describe('session-start-cortex-mcp-preflight', () => {
 
     capOut.restore();
     const json = JSON.parse(capOut.output[0].trim());
-    assert.ok(json.hookSpecificOutput.additionalContext.includes('runtime-context=initialized'));
+    assert.ok(
+      json.hookSpecificOutput.additionalContext.includes(
+        'runtime-context=initialized',
+      ),
+    );
   });
 
   it('handles main() rejection', async () => {
     const origExit = process.exit;
-    process.exit = (code) => { throw new Error(`EXIT:${code}`); };
+    process.exit = (code) => {
+      throw new Error(`EXIT:${code}`);
+    };
     const capErr = captureStderr();
 
     mockChildProc.spawnSync.mockImplementation(() => {
@@ -174,21 +204,27 @@ describe('session-start-cortex-mcp-preflight', () => {
 
     process.exit = origExit;
     capErr.restore();
-    assert.ok(capErr.output.some((o) => o.includes('runtime context initialization failed')));
+    assert.ok(
+      capErr.output.some((o) =>
+        o.includes('runtime context initialization failed'),
+      ),
+    );
   });
 
   it('parses stdout with ok boolean', async () => {
     const capOut = captureStdout();
 
-    mockChildProc.spawnSync.mockReturnValueOnce({
-      status: 0,
-      stdout: '{"ok": true}',
-      stderr: '',
-    }).mockReturnValueOnce({
-      status: 0,
-      stdout: '{"ok": false}',
-      stderr: '',
-    });
+    mockChildProc.spawnSync
+      .mockReturnValueOnce({
+        status: 0,
+        stdout: '{"ok": true}',
+        stderr: '',
+      })
+      .mockReturnValueOnce({
+        status: 0,
+        stdout: '{"ok": false}',
+        stderr: '',
+      });
     mockEnf.resolveSessionId.mockReturnValue('s1');
     mockEnf.initializeRuntimeContextCarrier.mockResolvedValue({});
 
@@ -233,7 +269,9 @@ describe('session-start-cortex-mcp-preflight', () => {
 
     capOut.restore();
     const json = JSON.parse(capOut.output[0].trim());
-    assert.ok(json.hookSpecificOutput.additionalContext.includes('5 docs / 100 chunks'));
+    assert.ok(
+      json.hookSpecificOutput.additionalContext.includes('5 docs / 100 chunks'),
+    );
   });
 
   it('parses stdout with steps array', async () => {
@@ -241,7 +279,8 @@ describe('session-start-cortex-mcp-preflight', () => {
 
     mockChildProc.spawnSync.mockReturnValue({
       status: 0,
-      stdout: '{"steps": [{"name": "a", "status": "pass"}, {"name": "b", "status": "fail"}]}',
+      stdout:
+        '{"steps": [{"name": "a", "status": "pass"}, {"name": "b", "status": "fail"}]}',
       stderr: '',
     });
     mockEnf.resolveSessionId.mockReturnValue('s1');
@@ -294,7 +333,11 @@ describe('session-start-cortex-mcp-preflight', () => {
 
   it('summarizes null stdout as ok', async () => {
     const capOut = captureStdout();
-    mockChildProc.spawnSync.mockReturnValue({ status: 0, stdout: null, stderr: '' });
+    mockChildProc.spawnSync.mockReturnValue({
+      status: 0,
+      stdout: null,
+      stderr: '',
+    });
     mockEnf.resolveSessionId.mockReturnValue('s1');
     mockEnf.initializeRuntimeContextCarrier.mockResolvedValue({});
     await importModule();
@@ -305,7 +348,11 @@ describe('session-start-cortex-mcp-preflight', () => {
 
   it('summarizes pass:false as fail', async () => {
     const capOut = captureStdout();
-    mockChildProc.spawnSync.mockReturnValue({ status: 0, stdout: '{"pass": false}', stderr: '' });
+    mockChildProc.spawnSync.mockReturnValue({
+      status: 0,
+      stdout: '{"pass": false}',
+      stderr: '',
+    });
     mockEnf.resolveSessionId.mockReturnValue('s1');
     mockEnf.initializeRuntimeContextCarrier.mockResolvedValue({});
     await importModule();
@@ -316,7 +363,11 @@ describe('session-start-cortex-mcp-preflight', () => {
 
   it('summarizes unrecognized JSON fields as ok', async () => {
     const capOut = captureStdout();
-    mockChildProc.spawnSync.mockReturnValue({ status: 0, stdout: '{"unknown": true}', stderr: '' });
+    mockChildProc.spawnSync.mockReturnValue({
+      status: 0,
+      stdout: '{"unknown": true}',
+      stderr: '',
+    });
     mockEnf.resolveSessionId.mockReturnValue('s1');
     mockEnf.initializeRuntimeContextCarrier.mockResolvedValue({});
     await importModule();
@@ -327,9 +378,15 @@ describe('session-start-cortex-mcp-preflight', () => {
 
   it('formats failure with null stderr, stdout, and status', async () => {
     const capErr = captureStderr();
-    mockChildProc.spawnSync.mockReturnValue({ status: null, stdout: null, stderr: null });
+    mockChildProc.spawnSync.mockReturnValue({
+      status: null,
+      stdout: null,
+      stderr: null,
+    });
     await importModule();
     capErr.restore();
-    assert.ok(capErr.output.some((o) => o.includes('exited with status unknown')));
+    assert.ok(
+      capErr.output.some((o) => o.includes('exited with status unknown')),
+    );
   });
 });

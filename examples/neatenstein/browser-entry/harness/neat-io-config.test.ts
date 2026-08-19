@@ -262,7 +262,10 @@ describe('P5S1-fire-gate: networkOutputToTickInput with fire gate', () => {
   it('non-fire outputs are unaffected by fire gate', () => {
     const state = createFireGateState();
     const fireGate = { state, enemyVisible: 0 };
-    const result = networkOutputToTickInput([0.8, -0.6, 0.4, 0.9, 0.7], fireGate);
+    const result = networkOutputToTickInput(
+      [0.8, -0.6, 0.4, 0.9, 0.7],
+      fireGate,
+    );
     // Fire suppressed but move/look/dash are normal
     expect(result.fire).toBe(false);
     expect(result.move.x).toBeCloseTo(Math.tanh(0.8));

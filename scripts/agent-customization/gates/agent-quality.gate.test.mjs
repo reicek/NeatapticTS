@@ -51,7 +51,9 @@ describe('agent-quality gate', () => {
   beforeEach(() => {
     mockReport = {
       ok: true,
-      agents: [{ path: 'a', name: 'a', tier: 1, counts: { errors: 0, warnings: 0 } }],
+      agents: [
+        { path: 'a', name: 'a', tier: 1, counts: { errors: 0, warnings: 0 } },
+      ],
       issues: [],
       counts: { errors: 0, warnings: 0 },
       contractDocument: 'doc',
@@ -99,7 +101,9 @@ describe('agent-quality gate', () => {
     it('returns pass=true when agents have only warnings', async () => {
       mockReport = {
         ok: true,
-        agents: [{ path: 'a', name: 'a', tier: 1, counts: { errors: 0, warnings: 5 } }],
+        agents: [
+          { path: 'a', name: 'a', tier: 1, counts: { errors: 0, warnings: 5 } },
+        ],
         issues: [],
         counts: { errors: 0, warnings: 5 },
         contractDocument: 'doc',
@@ -131,7 +135,9 @@ describe('agent-quality gate', () => {
     it('emits FAIL text with fixHint when pass=false', async () => {
       mockReport = {
         ok: false,
-        agents: [{ path: 'a', name: 'a', tier: 1, counts: { errors: 1, warnings: 0 } }],
+        agents: [
+          { path: 'a', name: 'a', tier: 1, counts: { errors: 1, warnings: 0 } },
+        ],
         issues: [{ message: 'bad' }],
         counts: { errors: 1, warnings: 0 },
         contractDocument: 'doc',
@@ -145,7 +151,9 @@ describe('agent-quality gate', () => {
     it('emits JSON with --json when pass=false', async () => {
       mockReport = {
         ok: false,
-        agents: [{ path: 'a', name: 'a', tier: 1, counts: { errors: 1, warnings: 0 } }],
+        agents: [
+          { path: 'a', name: 'a', tier: 1, counts: { errors: 1, warnings: 0 } },
+        ],
         issues: [{ message: 'bad' }],
         counts: { errors: 1, warnings: 0 },
         contractDocument: 'doc',

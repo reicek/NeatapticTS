@@ -47,7 +47,11 @@ const manifestData = {
   summaryPath: SUMMARY_LEFT,
 };
 writeFileSync(MANIFEST_LEFT, JSON.stringify(manifestData), 'utf8');
-writeFileSync(MANIFEST_RIGHT, JSON.stringify({ ...manifestData, summaryPath: SUMMARY_RIGHT }), 'utf8');
+writeFileSync(
+  MANIFEST_RIGHT,
+  JSON.stringify({ ...manifestData, summaryPath: SUMMARY_RIGHT }),
+  'utf8',
+);
 writeFileSync(SUMMARY_LEFT, JSON.stringify({ evidenceCount: 10 }), 'utf8');
 writeFileSync(SUMMARY_RIGHT, JSON.stringify({ evidenceCount: 5 }), 'utf8');
 
@@ -65,7 +69,12 @@ JSON.parse = function (...args) {
 // Set process.argv so the CLI guard fires during the initial import.
 const originalArgv = process.argv;
 const originalExitCode = process.exitCode;
-process.argv = ['node', COMPARE_MODULE, `--left=${MANIFEST_LEFT}`, `--right=${MANIFEST_RIGHT}`];
+process.argv = [
+  'node',
+  COMPARE_MODULE,
+  `--left=${MANIFEST_LEFT}`,
+  `--right=${MANIFEST_RIGHT}`,
+];
 process.exitCode = 0;
 
 await import('../../../rag-index/docs-quality/docs-quality.compare.mjs');

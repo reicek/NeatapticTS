@@ -142,7 +142,9 @@ type BrowserBenchNetworkFactory = (
   inputCount: number,
   outputCount: number,
 ) => BrowserBenchNetwork;
-type BrowserBenchAsyncBuildProbeRunner = () => Promise<BrowserAsyncBuildRecord[]>;
+type BrowserBenchAsyncBuildProbeRunner = () => Promise<
+  BrowserAsyncBuildRecord[]
+>;
 type BrowserBenchTransferPayloadExporter = (
   network: BrowserBenchNetwork,
 ) => BrowserTransferableNetworkPayload;
@@ -190,14 +192,12 @@ export async function collectBrowserPerformanceMemorySnapshot(
   }
 
   // Step 2: Add the UA-specific memory reading when the browser supports it.
-  const userAgentSpecificMemoryBytes =
-    await performanceApi
-      .measureUserAgentSpecificMemory?.()
-      .then((browserSpecificSnapshot) => browserSpecificSnapshot.bytes)
-      .catch(() => undefined);
+  const userAgentSpecificMemoryBytes = await performanceApi
+    .measureUserAgentSpecificMemory?.()
+    .then((browserSpecificSnapshot) => browserSpecificSnapshot.bytes)
+    .catch(() => undefined);
   if (userAgentSpecificMemoryBytes !== undefined) {
-    memorySnapshot.userAgentSpecificMemoryBytes =
-      userAgentSpecificMemoryBytes;
+    memorySnapshot.userAgentSpecificMemoryBytes = userAgentSpecificMemoryBytes;
   }
 
   return Object.keys(memorySnapshot).length === 0 ? null : memorySnapshot;
@@ -257,7 +257,8 @@ function resolveBrowserBenchHarnessOptions(
     sizes: options.sizes ?? DEFAULT_BENCH_SIZES,
     transferListResolver: options.transferListResolver,
     transferPayloadExporter: options.transferPayloadExporter,
-    transportScenarios: options.transportScenarios ?? DEFAULT_TRANSPORT_SCENARIOS,
+    transportScenarios:
+      options.transportScenarios ?? DEFAULT_TRANSPORT_SCENARIOS,
   };
 }
 
@@ -360,7 +361,8 @@ async function runTransportComparisons(
   for (const transportScenario of options.transportScenarios) {
     const scenarioNetworks = Array.from(
       { length: transportScenario.populationSize },
-      () => buildSyntheticNetwork(transportScenario.connectionBudget, options).net,
+      () =>
+        buildSyntheticNetwork(transportScenario.connectionBudget, options).net,
     );
     comparisonRecords.push(
       await measureTransportScenario(
@@ -418,7 +420,10 @@ async function measureTransportScenario(
       message: transferableBuild.message,
       transferList: transferableBuild.transferList,
       resolveEchoTransferList: (message) => {
-        return resolveGenerationSummaryTransferList(message, transferListResolver);
+        return resolveGenerationSummaryTransferList(
+          message,
+          transferListResolver,
+        );
       },
     });
     transferableBytes = transferableBuild.transferBytes;
@@ -529,7 +534,8 @@ function resolveGenerationSummaryTransferList(
     : [];
   const populationTransferList =
     message.payload.populationNetworkPayloads?.flatMap(
-      (populationNetworkPayload) => transferListResolver(populationNetworkPayload),
+      (populationNetworkPayload) =>
+        transferListResolver(populationNetworkPayload),
     ) ?? [];
 
   return [...bestNetworkTransferList, ...populationTransferList];
@@ -571,7 +577,10 @@ function measureMessageRoundtrip(options: {
     };
 
     try {
-      messageChannel.port1.postMessage(options.message, options.transferList ?? []);
+      messageChannel.port1.postMessage(
+        options.message,
+        options.transferList ?? [],
+      );
     } catch (error) {
       closePorts();
       reject(error);

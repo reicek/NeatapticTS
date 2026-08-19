@@ -101,9 +101,7 @@ export function shouldDissolvePixel(
   // C4: Guard against zero/negative duration to avoid NaN (0/0) or negative t.
   // When duration is invalid the animation is complete — dissolve all pixels.
   const t =
-    durationMs > 0
-      ? Math.max(0, Math.min(1, elapsedMs / durationMs))
-      : 1;
+    durationMs > 0 ? Math.max(0, Math.min(1, elapsedMs / durationMs)) : 1;
 
   return noise < t;
 }

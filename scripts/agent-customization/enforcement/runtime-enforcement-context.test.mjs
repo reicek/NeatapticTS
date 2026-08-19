@@ -26,8 +26,12 @@ function captureConsole() {
   console.log = (...args) => logs.push(args.join(' '));
   console.error = (...args) => errors.push(args.join(' '));
   return {
-    logs, errors,
-    restore() { console.log = origLog; console.error = origError; },
+    logs,
+    errors,
+    restore() {
+      console.log = origLog;
+      console.error = origError;
+    },
   };
 }
 
@@ -35,7 +39,9 @@ async function importModule(argv) {
   const origArgv = process.argv;
   const origExit = process.exit;
   process.argv = ['node', 'runtime-enforcement-context.mjs', ...(argv || [])];
-  process.exit = (code) => { throw new Error(`EXIT:${code}`); };
+  process.exit = (code) => {
+    throw new Error(`EXIT:${code}`);
+  };
   try {
     await import('./runtime-enforcement-context.mjs');
   } catch {
@@ -63,9 +69,17 @@ describe('runtime-enforcement-context', () => {
   it('prepares runtime context with --prepare', async () => {
     const cap = captureConsole();
     mockEnf.resolveSessionId.mockReturnValue('session-123');
-    mockEnf.prepareRuntimeContext.mockResolvedValue({ preparedAction: { actionId: 'a1' } });
+    mockEnf.prepareRuntimeContext.mockResolvedValue({
+      preparedAction: { actionId: 'a1' },
+    });
 
-    await importModule(['--prepare', '--flow-id=f1', '--agent=test', '--tool-name=edit', '--plan=plans/test.md']);
+    await importModule([
+      '--prepare',
+      '--flow-id=f1',
+      '--agent=test',
+      '--tool-name=edit',
+      '--plan=plans/test.md',
+    ]);
 
     cap.restore();
     assert.ok(mockEnf.prepareRuntimeContext.mock.calls.length >= 1);
@@ -88,16 +102,26 @@ describe('runtime-enforcement-context', () => {
     await importModule(['--prepare', '--tool-name=edit']);
 
     assert.ok(mockEnf.inferActionClass.mock.calls.length >= 1);
-    assert.strictEqual(mockEnf.prepareRuntimeContext.mock.calls[0][0].allowedActionClass, 'write');
+    assert.strictEqual(
+      mockEnf.prepareRuntimeContext.mock.calls[0][0].allowedActionClass,
+      'write',
+    );
   });
 
   it('uses explicit --action-class when provided', async () => {
     mockEnf.resolveSessionId.mockReturnValue('s1');
     mockEnf.prepareRuntimeContext.mockResolvedValue({});
 
-    await importModule(['--prepare', '--action-class=execute', '--tool-name=task']);
+    await importModule([
+      '--prepare',
+      '--action-class=execute',
+      '--tool-name=task',
+    ]);
 
-    assert.strictEqual(mockEnf.prepareRuntimeContext.mock.calls[0][0].allowedActionClass, 'execute');
+    assert.strictEqual(
+      mockEnf.prepareRuntimeContext.mock.calls[0][0].allowedActionClass,
+      'execute',
+    );
     assert.strictEqual(mockEnf.inferActionClass.mock.calls.length, 0);
   });
 
@@ -106,8 +130,12 @@ describe('runtime-enforcement-context', () => {
     mockEnf.prepareRuntimeContext.mockResolvedValue({});
 
     await importModule([
-      '--prepare', '--delegator-chain=a,b', '--required-skills=x,y',
-      '--required-specialists=z,w', '--phase=1', '--step=2',
+      '--prepare',
+      '--delegator-chain=a,b',
+      '--required-skills=x,y',
+      '--required-specialists=z,w',
+      '--phase=1',
+      '--step=2',
       '--session-id=custom',
     ]);
 
@@ -124,7 +152,9 @@ describe('runtime-enforcement-context', () => {
     mockEnf.prepareRuntimeContext.mockResolvedValue({});
 
     await importModule([
-      '--prepare', '--tool-name=edit', '--plan=plans/test.md',
+      '--prepare',
+      '--tool-name=edit',
+      '--plan=plans/test.md',
       '--unknown-flag=value',
     ]);
 
@@ -134,7 +164,9 @@ describe('runtime-enforcement-context', () => {
   it('shows runtime context with --show', async () => {
     const cap = captureConsole();
     mockEnf.resolveSessionId.mockReturnValue('s1');
-    mockEnf.readRuntimeContext.mockResolvedValue({ preparedAction: { actionId: 'a1' } });
+    mockEnf.readRuntimeContext.mockResolvedValue({
+      preparedAction: { actionId: 'a1' },
+    });
 
     await importModule(['--show']);
 
@@ -150,7 +182,11 @@ describe('runtime-enforcement-context', () => {
     mockEnf.readRuntimeContext.mockResolvedValue({ carrier: {} });
     mockEnf.diagnosePreparedRuntimeContext.mockReturnValue({ ok: true });
 
-    await importModule(['--diagnose', '--tool-name=edit', '--plan=plans/test.md']);
+    await importModule([
+      '--diagnose',
+      '--tool-name=edit',
+      '--plan=plans/test.md',
+    ]);
 
     cap.restore();
     assert.ok(mockEnf.diagnosePreparedRuntimeContext.mock.calls.length >= 1);
@@ -168,7 +204,10 @@ describe('runtime-enforcement-context', () => {
 
     cap.restore();
     assert.ok(mockEnf.clearPreparedRuntimeContext.mock.calls.length >= 1);
-    assert.strictEqual(mockEnf.clearPreparedRuntimeContext.mock.calls[0][1], 'a1');
+    assert.strictEqual(
+      mockEnf.clearPreparedRuntimeContext.mock.calls[0][1],
+      'a1',
+    );
   });
 
   it('handles error and returns ok=false', async () => {

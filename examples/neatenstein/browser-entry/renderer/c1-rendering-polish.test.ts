@@ -51,7 +51,8 @@ const CANVAS_HEIGHT = 240;
 const COLUMN_COUNT = 320;
 
 /** Standard projection constants derived from the canvas. */
-const FOCAL_LENGTH = CANVAS_HEIGHT / 2 / Math.tan(NEATENSTEIN_FLOOR_FOV_RADIANS / 2);
+const FOCAL_LENGTH =
+  CANVAS_HEIGHT / 2 / Math.tan(NEATENSTEIN_FLOOR_FOV_RADIANS / 2);
 const HALF_WIDTH = CANVAS_WIDTH / 2;
 const HORIZON_Y = CANVAS_HEIGHT * NEATENSTEIN_FLOOR_HORIZON_RATIO;
 
@@ -75,7 +76,10 @@ async function tryImportModule(
 }
 
 /** Read a numeric export from a dynamically-imported module. */
-function readNumber(mod: Record<string, unknown>, key: string): number | undefined {
+function readNumber(
+  mod: Record<string, unknown>,
+  key: string,
+): number | undefined {
   const value = mod[key];
   return typeof value === 'number' ? value : undefined;
 }
@@ -86,7 +90,9 @@ function readFunction(
   key: string,
 ): ((...args: unknown[]) => unknown) | undefined {
   const value = mod[key];
-  return typeof value === 'function' ? (value as (...args: unknown[]) => unknown) : undefined;
+  return typeof value === 'function'
+    ? (value as (...args: unknown[]) => unknown)
+    : undefined;
 }
 
 // ── C1.1 — Per-pixel floor casting (unconditional) ─────────────────────────
@@ -105,7 +111,10 @@ describe('C1.1 — Per-pixel floor casting (unconditional)', () => {
 
   it('exports isNeatensteinPerPixelFloorActive predicate that is true unconditionally', async () => {
     const floor = await import('./floor');
-    const fn = readFunction(floor as unknown as Record<string, unknown>, 'isNeatensteinPerPixelFloorActive');
+    const fn = readFunction(
+      floor as unknown as Record<string, unknown>,
+      'isNeatensteinPerPixelFloorActive',
+    );
     // RED: predicate does not exist yet.
     expect(fn).toBeDefined();
     // Must return true regardless of tier/quality argument (unconditional).
@@ -115,11 +124,17 @@ describe('C1.1 — Per-pixel floor casting (unconditional)', () => {
 
   it('per-pixel caster renders procedural integer grid at exactly 1-unit spacing (Invariant §4)', async () => {
     const floor = await import('./floor');
-    const cast = readFunction(floor as unknown as Record<string, unknown>, 'castNeatensteinFloorPerPixel');
+    const cast = readFunction(
+      floor as unknown as Record<string, unknown>,
+      'castNeatensteinFloorPerPixel',
+    );
     expect(cast).toBeDefined();
     // The grid spacing contract: a helper resolving the world-space grid
     // pitch MUST return exactly 1.0 world unit = 1 map cell.
-    const spacing = readNumber(floor as unknown as Record<string, unknown>, 'NEATENSTEIN_FLOOR_GRID_SPACING_WORLD');
+    const spacing = readNumber(
+      floor as unknown as Record<string, unknown>,
+      'NEATENSTEIN_FLOOR_GRID_SPACING_WORLD',
+    );
     // RED: the explicit grid-spacing constant is not exported yet.
     expect(spacing).toBe(1.0);
   });
@@ -214,8 +229,15 @@ describe('C1.3 — Floor color fog (smooth fog factor on RGB)', () => {
     );
     // RED: function undefined.
     expect(fn).toBeDefined();
-    const result = fn!(GRID_COLOR.r, GRID_COLOR.g, GRID_COLOR.b, NEATENSTEIN_FOG_START_DISTANCE) as {
-      r: number; g: number; b: number;
+    const result = fn!(
+      GRID_COLOR.r,
+      GRID_COLOR.g,
+      GRID_COLOR.b,
+      NEATENSTEIN_FOG_START_DISTANCE,
+    ) as {
+      r: number;
+      g: number;
+      b: number;
     };
     expect(result.r).toBeCloseTo(GRID_COLOR.r, 0);
     expect(result.g).toBeCloseTo(GRID_COLOR.g, 0);
@@ -229,8 +251,15 @@ describe('C1.3 — Floor color fog (smooth fog factor on RGB)', () => {
       'resolveNeatensteinFloorFoggedColor',
     );
     expect(fn).toBeDefined();
-    const result = fn!(GRID_COLOR.r, GRID_COLOR.g, GRID_COLOR.b, NEATENSTEIN_RENDER_DISTANCE_CAP) as {
-      r: number; g: number; b: number;
+    const result = fn!(
+      GRID_COLOR.r,
+      GRID_COLOR.g,
+      GRID_COLOR.b,
+      NEATENSTEIN_RENDER_DISTANCE_CAP,
+    ) as {
+      r: number;
+      g: number;
+      b: number;
     };
     // Full fog → grid color blends fully toward the background void color.
     expect(result.r).toBeCloseTo(NEATENSTEIN_BACKGROUND_RGB.r, 0);
@@ -248,12 +277,19 @@ describe('C1.3 — Floor color fog (smooth fog factor on RGB)', () => {
     // At t = 0.25 into the fog range, smoothstep gives fogFactor = 0.15625,
     // linear would give 0.25. The blended R channel must match smoothstep.
     const t = 0.25;
-    const distance = NEATENSTEIN_FOG_START_DISTANCE + t * (NEATENSTEIN_RENDER_DISTANCE_CAP - NEATENSTEIN_FOG_START_DISTANCE);
+    const distance =
+      NEATENSTEIN_FOG_START_DISTANCE +
+      t * (NEATENSTEIN_RENDER_DISTANCE_CAP - NEATENSTEIN_FOG_START_DISTANCE);
     const expectedFog = t * t * (3 - 2 * t);
-    const expectedR = GRID_COLOR.r + (NEATENSTEIN_BACKGROUND_RGB.r - GRID_COLOR.r) * expectedFog;
-    const linearR = GRID_COLOR.r + (NEATENSTEIN_BACKGROUND_RGB.r - GRID_COLOR.r) * t;
+    const expectedR =
+      GRID_COLOR.r +
+      (NEATENSTEIN_BACKGROUND_RGB.r - GRID_COLOR.r) * expectedFog;
+    const linearR =
+      GRID_COLOR.r + (NEATENSTEIN_BACKGROUND_RGB.r - GRID_COLOR.r) * t;
     const result = fn!(GRID_COLOR.r, GRID_COLOR.g, GRID_COLOR.b, distance) as {
-      r: number; g: number; b: number;
+      r: number;
+      g: number;
+      b: number;
     };
     expect(result.r).toBeCloseTo(expectedR, 1);
     expect(result.r).not.toBeCloseTo(linearR, 1);
@@ -309,7 +345,10 @@ describe('C1.4 — Temporal coherence / half-resolution raycasting', () => {
     // RED: the full-resolution z-buffer constant does not exist yet.
     // Half-res decimation applies ONLY to wall color; the z-buffer MUST be
     // cast at every column so depth occlusion stays exact.
-    const flag = readNumber(mod!, 'NEATENSTEIN_HALF_RES_ZBUFFER_FULL_RESOLUTION');
+    const flag = readNumber(
+      mod!,
+      'NEATENSTEIN_HALF_RES_ZBUFFER_FULL_RESOLUTION',
+    );
     expect(flag).toBe(1);
   });
 
@@ -350,10 +389,20 @@ describe('C1.5 — OffscreenCanvas + transferToImageBitmap present path', () => 
     const fakeCanvas = {
       transferToImageBitmap() {
         calls.push('transferToImageBitmap');
-        return { width: CANVAS_WIDTH, height: CANVAS_HEIGHT, close() { /* noop */ } };
+        return {
+          width: CANVAS_WIDTH,
+          height: CANVAS_HEIGHT,
+          close() {
+            /* noop */
+          },
+        };
       },
       getContext() {
-        return { commit() { calls.push('commit'); } };
+        return {
+          commit() {
+            calls.push('commit');
+          },
+        };
       },
       width: CANVAS_WIDTH,
       height: CANVAS_HEIGHT,
@@ -394,10 +443,11 @@ describe('C1.6 — TAA / MSAA (2× MSAA resolve)', () => {
     expect(fn).toBeDefined();
     // Two sub-samples: pure cyan (0,183,255) and pure teal (10,142,160).
     // 2× MSAA resolve = average → (5, 162.5, 207.5).
-    const result = fn!(
-      { r: 0, g: 183, b: 255 },
-      { r: 10, g: 142, b: 160 },
-    ) as { r: number; g: number; b: number };
+    const result = fn!({ r: 0, g: 183, b: 255 }, { r: 10, g: 142, b: 160 }) as {
+      r: number;
+      g: number;
+      b: number;
+    };
     expect(result.r).toBeCloseTo(5, 0);
     expect(result.g).toBeCloseTo(162.5, 0);
     expect(result.b).toBeCloseTo(207.5, 0);
@@ -517,10 +567,15 @@ describe('Invariant §2 — Shared projection constants across C1 paths', () => 
     // both derive focalLength and planeScale from the shared
     // NEATENSTEIN_FLOOR_* constants, not re-derive them independently.
     const floor = await import('./floor');
-    const cast = readFunction(floor as unknown as Record<string, unknown>, 'castNeatensteinFloorPerPixel');
+    const cast = readFunction(
+      floor as unknown as Record<string, unknown>,
+      'castNeatensteinFloorPerPixel',
+    );
     expect(cast).toBeDefined();
     // The shared focalLength identity: planeScale * focalLength = halfWidth.
-    const planeScale = (CANVAS_WIDTH / CANVAS_HEIGHT) * Math.tan(NEATENSTEIN_FLOOR_FOV_RADIANS / 2);
+    const planeScale =
+      (CANVAS_WIDTH / CANVAS_HEIGHT) *
+      Math.tan(NEATENSTEIN_FLOOR_FOV_RADIANS / 2);
     expect(planeScale * FOCAL_LENGTH).toBeCloseTo(HALF_WIDTH, 5);
     // The MSAA resolve path (C1.6) must also reuse the shared constants.
     const msaaMod = await tryImportModule('./renderer.msaa.constants');
@@ -529,7 +584,9 @@ describe('Invariant §2 — Shared projection constants across C1 paths', () => 
     // RED: MSAA fog blend helper not exported yet.
     expect(msaaFog).toBeDefined();
     // It MUST reuse the shared fog factor (not a re-derived curve).
-    const fogAtStart = resolveNeatensteinFogFactor(NEATENSTEIN_FOG_START_DISTANCE);
+    const fogAtStart = resolveNeatensteinFogFactor(
+      NEATENSTEIN_FOG_START_DISTANCE,
+    );
     expect(fogAtStart).toBeCloseTo(0, 5);
   });
 });

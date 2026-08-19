@@ -909,9 +909,9 @@ describe('merge-coverage-summaries supplementary coverage', () => {
           branches: { total: 1, covered: 1, skipped: 0, pct: 100 },
         },
         [absolutePath]: {
-          lines: { covered: 5, skipped: 0, pct: 50 },       // missing 'total'
-          statements: { total: 10, skipped: 0, pct: 50 },    // missing 'covered'
-          functions: { total: 3, covered: 3, pct: 100 },     // missing 'skipped'
+          lines: { covered: 5, skipped: 0, pct: 50 }, // missing 'total'
+          statements: { total: 10, skipped: 0, pct: 50 }, // missing 'covered'
+          functions: { total: 3, covered: 3, pct: 100 }, // missing 'skipped'
           branches: { total: 4, covered: 4, skipped: 0, pct: 100 },
         },
       }),

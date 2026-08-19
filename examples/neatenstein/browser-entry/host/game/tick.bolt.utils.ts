@@ -187,8 +187,7 @@ export function updateBolts(
       Number.isFinite(bolt.origin.y)
         ? Math.hypot(nextX - bolt.origin.x, nextY - bolt.origin.y)
         : 0;
-    const beyondMaxRange =
-      distanceTraveled >= NEATENSTEIN_BOLT_MAX_RANGE_CELLS;
+    const beyondMaxRange = distanceTraveled >= NEATENSTEIN_BOLT_MAX_RANGE_CELLS;
     const reachedTarget =
       bolt.targetDistance !== undefined &&
       Number.isFinite(bolt.targetDistance) &&

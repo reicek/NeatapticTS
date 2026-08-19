@@ -115,7 +115,9 @@ export function computeMovement(ctx: EnemyUpdateContext): void {
     } catch {
       // Wrong weight length or mismatched input → BFS fallback.
       if (!mlpDebugLoggedThisTick) {
-        console.debug('computeMovement: MLP activation failed, using BFS fallback');
+        console.debug(
+          'computeMovement: MLP activation failed, using BFS fallback',
+        );
         mlpDebugLoggedThisTick = true;
       }
     }
@@ -551,10 +553,14 @@ function applyBfsStallRecovery(
  * typed array that consumers can index directly.
  */
 export const FLAT_DIRECTIONS: Int32Array = new Int32Array([
-  0, -1, // N
-  1, 0, // E
-  0, 1, // S
-  -1, 0, // W
+  0,
+  -1, // N
+  1,
+  0, // E
+  0,
+  1, // S
+  -1,
+  0, // W
 ]);
 
 /** Reusable Int8Array index buffer for flat direction sorting (A2 Fix 8). */
@@ -635,7 +641,9 @@ export function computeMovementFlat(ctx: EnemyUpdateContext): void {
     } catch {
       // Wrong weight length or mismatched input → BFS fallback.
       if (!mlpDebugLoggedThisTick) {
-        console.debug('computeMovementFlat: MLP activation failed, using BFS fallback');
+        console.debug(
+          'computeMovementFlat: MLP activation failed, using BFS fallback',
+        );
         mlpDebugLoggedThisTick = true;
       }
     }

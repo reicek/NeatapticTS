@@ -47,9 +47,8 @@ describe('convergence-tracker gate', () => {
 
   describe('runConvergenceTrackerGate', () => {
     it('passes with iterationCount=0 when no evidence section exists', async () => {
-      const { runConvergenceTrackerGate } = await import(
-        './convergence-tracker.gate.mjs'
-      );
+      const { runConvergenceTrackerGate } =
+        await import('./convergence-tracker.gate.mjs');
       const result = runConvergenceTrackerGate({
         planText: 'no evidence here',
         sliceId: 'A1-impl',
@@ -60,9 +59,8 @@ describe('convergence-tracker gate', () => {
     });
 
     it('passes and resets when a green-pass marker is found', async () => {
-      const { runConvergenceTrackerGate } = await import(
-        './convergence-tracker.gate.mjs'
-      );
+      const { runConvergenceTrackerGate } =
+        await import('./convergence-tracker.gate.mjs');
       const planText = [
         '## Latest validation evidence',
         '- fix-loop: A1-impl iteration 3 status=passed',
@@ -77,9 +75,8 @@ describe('convergence-tracker gate', () => {
     });
 
     it('passes when failed iteration count is within limit (<=4)', async () => {
-      const { runConvergenceTrackerGate } = await import(
-        './convergence-tracker.gate.mjs'
-      );
+      const { runConvergenceTrackerGate } =
+        await import('./convergence-tracker.gate.mjs');
       const planText = [
         '## Latest validation evidence',
         '- fix-loop: A1-impl iteration 1 status=failed',
@@ -95,9 +92,8 @@ describe('convergence-tracker gate', () => {
     });
 
     it('fails and escalates when failed iteration count exceeds 4', async () => {
-      const { runConvergenceTrackerGate } = await import(
-        './convergence-tracker.gate.mjs'
-      );
+      const { runConvergenceTrackerGate } =
+        await import('./convergence-tracker.gate.mjs');
       const planText = [
         '## Latest validation evidence',
         '- fix-loop: A1-impl iteration 1 status=failed',
@@ -117,9 +113,8 @@ describe('convergence-tracker gate', () => {
     });
 
     it('matches case-insensitively (PASSED, Failed)', async () => {
-      const { runConvergenceTrackerGate } = await import(
-        './convergence-tracker.gate.mjs'
-      );
+      const { runConvergenceTrackerGate } =
+        await import('./convergence-tracker.gate.mjs');
       const planText = [
         '## Latest validation evidence',
         '- fix-loop: A1-impl iteration 2 status=PASSED',
@@ -133,9 +128,8 @@ describe('convergence-tracker gate', () => {
     });
 
     it('does not match markers for a different sliceId', async () => {
-      const { runConvergenceTrackerGate } = await import(
-        './convergence-tracker.gate.mjs'
-      );
+      const { runConvergenceTrackerGate } =
+        await import('./convergence-tracker.gate.mjs');
       const planText = [
         '## Latest validation evidence',
         '- fix-loop: B2-impl iteration 5 status=failed',
@@ -149,9 +143,8 @@ describe('convergence-tracker gate', () => {
     });
 
     it('stops at the next heading when extracting the evidence section', async () => {
-      const { runConvergenceTrackerGate } = await import(
-        './convergence-tracker.gate.mjs'
-      );
+      const { runConvergenceTrackerGate } =
+        await import('./convergence-tracker.gate.mjs');
       const planText = [
         '## Latest validation evidence',
         '- fix-loop: A1-impl iteration 1 status=failed',
@@ -167,9 +160,8 @@ describe('convergence-tracker gate', () => {
     });
 
     it('treats markers without bullet prefix as valid', async () => {
-      const { runConvergenceTrackerGate } = await import(
-        './convergence-tracker.gate.mjs'
-      );
+      const { runConvergenceTrackerGate } =
+        await import('./convergence-tracker.gate.mjs');
       const planText = [
         '## Latest validation evidence',
         'fix-loop: A1-impl iteration 1 status=failed',
@@ -188,10 +180,7 @@ describe('convergence-tracker gate', () => {
         throw new Error(`EXIT:${code}`);
       };
       const { main } = await import('./convergence-tracker.gate.mjs');
-      await assert.rejects(
-        () => main(['--help']),
-        /EXIT:0/,
-      );
+      await assert.rejects(() => main(['--help']), /EXIT:0/);
       assert.ok(logs.some((l) => l.includes('convergence-tracker gate')));
     });
 
@@ -252,10 +241,7 @@ describe('convergence-tracker gate', () => {
     it('returns read-error when readWorkspaceFile throws (non-Error)', async () => {
       mockReadError = 'string error';
       const { main } = await import('./convergence-tracker.gate.mjs');
-      const result = await main([
-        '--plan=plans/foo.plans.md',
-        '--slice-id=A1',
-      ]);
+      const result = await main(['--plan=plans/foo.plans.md', '--slice-id=A1']);
       assert.equal(result.pass, false);
       assert.equal(result.evidence.error, 'string error');
     });
@@ -279,8 +265,9 @@ describe('convergence-tracker gate', () => {
     it('delegates and emits FAIL text when iterations exceeded', async () => {
       mockPlanText = [
         '## Latest validation evidence',
-        ...Array.from({ length: 5 }, (_, i) =>
-          `- fix-loop: A1-impl iteration ${i + 1} status=failed`,
+        ...Array.from(
+          { length: 5 },
+          (_, i) => `- fix-loop: A1-impl iteration ${i + 1} status=failed`,
         ),
       ].join('\n');
       const { main } = await import('./convergence-tracker.gate.mjs');

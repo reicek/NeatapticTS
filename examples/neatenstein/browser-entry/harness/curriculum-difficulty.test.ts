@@ -46,9 +46,11 @@ describe('B4.8: Curriculum-based respawn difficulty', () => {
         kills: 5,
         deaths: 0,
       };
-      const difficulty = (curriculumDifficulty.computeCurriculumDifficulty as (...a: unknown[]) => number)(
-        telemetry,
-      );
+      const difficulty = (
+        curriculumDifficulty.computeCurriculumDifficulty as (
+          ...a: unknown[]
+        ) => number
+      )(telemetry);
       expect(difficulty).toBeGreaterThanOrEqual(0);
       expect(difficulty).toBeLessThanOrEqual(1);
     });
@@ -68,12 +70,16 @@ describe('B4.8: Curriculum-based respawn difficulty', () => {
         kills: 0,
         deaths: 3,
       };
-      const strongDifficulty = (curriculumDifficulty.computeCurriculumDifficulty as (...a: unknown[]) => number)(
-        strongPlayer,
-      );
-      const weakDifficulty = (curriculumDifficulty.computeCurriculumDifficulty as (...a: unknown[]) => number)(
-        weakPlayer,
-      );
+      const strongDifficulty = (
+        curriculumDifficulty.computeCurriculumDifficulty as (
+          ...a: unknown[]
+        ) => number
+      )(strongPlayer);
+      const weakDifficulty = (
+        curriculumDifficulty.computeCurriculumDifficulty as (
+          ...a: unknown[]
+        ) => number
+      )(weakPlayer);
       expect(strongDifficulty).toBeGreaterThan(weakDifficulty);
     });
   });
@@ -86,35 +92,39 @@ describe('B4.8: Curriculum-based respawn difficulty', () => {
     it('scales enemy mutation sigma proportional to difficulty', () => {
       const baseSigma = 0.08;
       const highDifficulty = 0.9;
-      const scaled = (curriculumDifficulty.scaleEnemyCapability as (...a: unknown[]) => number)(
-        baseSigma,
-        highDifficulty,
-      );
+      const scaled = (
+        curriculumDifficulty.scaleEnemyCapability as (...a: unknown[]) => number
+      )(baseSigma, highDifficulty);
       expect(scaled).toBeGreaterThan(baseSigma);
     });
 
     it('keeps enemy capability at baseline when difficulty is zero', () => {
       const baseSigma = 0.08;
-      const scaled = (curriculumDifficulty.scaleEnemyCapability as (...a: unknown[]) => number)(
-        baseSigma,
-        0,
-      );
+      const scaled = (
+        curriculumDifficulty.scaleEnemyCapability as (...a: unknown[]) => number
+      )(baseSigma, 0);
       expect(scaled).toBeCloseTo(baseSigma, 5);
     });
   });
 
   describe('B4.8: wave difficulty progression', () => {
     it('exports computeWaveDifficulty as a function', () => {
-      expect(typeof curriculumDifficulty.computeWaveDifficulty).toBe('function');
+      expect(typeof curriculumDifficulty.computeWaveDifficulty).toBe(
+        'function',
+      );
     });
 
     it('increases difficulty across waves when player survives consistently', () => {
-      const wave1 = (curriculumDifficulty.computeWaveDifficulty as (...a: unknown[]) => number)(
-        { wave: 1, playerSurvivalRate: 0.9 },
-      );
-      const wave5 = (curriculumDifficulty.computeWaveDifficulty as (...a: unknown[]) => number)(
-        { wave: 5, playerSurvivalRate: 0.9 },
-      );
+      const wave1 = (
+        curriculumDifficulty.computeWaveDifficulty as (
+          ...a: unknown[]
+        ) => number
+      )({ wave: 1, playerSurvivalRate: 0.9 });
+      const wave5 = (
+        curriculumDifficulty.computeWaveDifficulty as (
+          ...a: unknown[]
+        ) => number
+      )({ wave: 5, playerSurvivalRate: 0.9 });
       expect(wave5).toBeGreaterThan(wave1);
     });
   });

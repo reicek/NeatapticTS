@@ -65,9 +65,7 @@ export function applyBoltImpactResults(
           // First hit: clone the array to avoid mutating the input state's array.
           next = {
             ...next,
-            enemyImpacts: next.enemyImpacts
-              ? [...next.enemyImpacts]
-              : [],
+            enemyImpacts: next.enemyImpacts ? [...next.enemyImpacts] : [],
           };
           impactsOwned = true;
         }

@@ -1741,9 +1741,8 @@ describe('AC-P3S1c-001: lastShotHit flag in gameTick', () => {
 
 describe('A2 Fix 5: In-place mutation (no clone chains)', () => {
   it('updateBolts mutates bolts in place without cloning', async () => {
-    const { updateBolts } = (await import(
-      './tick.bolt.utils.ts'
-    )) as typeof import('./tick.bolt.utils.ts');
+    const { updateBolts } =
+      (await import('./tick.bolt.utils.ts')) as typeof import('./tick.bolt.utils.ts');
     const bolt: BoltState = {
       position: { x: 5, y: 5 },
       direction: { x: 1, y: 0 },
@@ -1760,9 +1759,8 @@ describe('A2 Fix 5: In-place mutation (no clone chains)', () => {
   });
 
   it('ageImpacts mutates impacts in place without cloning', async () => {
-    const { ageImpacts } = (await import(
-      './tick.impact.utils.ts'
-    )) as typeof import('./tick.impact.utils.ts');
+    const { ageImpacts } =
+      (await import('./tick.impact.utils.ts')) as typeof import('./tick.impact.utils.ts');
     const impact = makeImpact(100);
     // dt=16ms → lifetimeMs becomes 84 (still > 0, survives).
     const result = ageImpacts([impact], 16);
@@ -1773,9 +1771,8 @@ describe('A2 Fix 5: In-place mutation (no clone chains)', () => {
   });
 
   it('updateAmmoPickups mutates expired pickups in place without cloning', async () => {
-    const { updateAmmoPickups } = (await import(
-      './tick.pickups.utils.ts'
-    )) as typeof import('./tick.pickups.utils.ts');
+    const { updateAmmoPickups } =
+      (await import('./tick.pickups.utils.ts')) as typeof import('./tick.pickups.utils.ts');
     const state = createGameState({ seed: 1 });
     const pickup: AmmoPickupState = {
       position: { x: 100, y: 100 },

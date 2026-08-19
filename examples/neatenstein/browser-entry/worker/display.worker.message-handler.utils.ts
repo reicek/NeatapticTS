@@ -52,12 +52,10 @@ import type { NeatensteinRenderState } from '../renderer/frame';
  * @param data - Raw message data.
  * @returns `true` when the data is a non-null object with a `type` property.
  */
-export function isWorkerMessage(data: unknown): data is { type: string } & Record<string, unknown> {
-  return (
-    data !== null &&
-    typeof data === 'object' &&
-    'type' in data
-  );
+export function isWorkerMessage(
+  data: unknown,
+): data is { type: string } & Record<string, unknown> {
+  return data !== null && typeof data === 'object' && 'type' in data;
 }
 
 /**
@@ -96,9 +94,12 @@ export function resolveMapSeed(mapSeed: unknown): number {
  * @param data - The init message data (must include `tier`).
  * @param applyResize - Callback to apply a pending canvas resize.
  */
-export function handleInitMessage(
-  data: { tier: unknown; canvas?: OffscreenCanvas; mapSeed?: number; version?: number },
-): void {
+export function handleInitMessage(data: {
+  tier: unknown;
+  canvas?: OffscreenCanvas;
+  mapSeed?: number;
+  version?: number;
+}): void {
   const tier = resolveDisplayTier(data.tier);
   if (tier === null) return;
 
@@ -169,10 +170,7 @@ export function handleSimStateMessage(
 export function handleInputMessage(input: unknown): void {
   const s = getWorkerState();
   const nextInput = inputMessageToTickInput(input);
-  s.pendingTickInput = mergePendingTickInput(
-    s.pendingTickInput,
-    nextInput,
-  );
+  s.pendingTickInput = mergePendingTickInput(s.pendingTickInput, nextInput);
 }
 
 /** Re-export of WORKER_MSG_INIT for the orchestrator. */

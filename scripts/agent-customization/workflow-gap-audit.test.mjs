@@ -48,14 +48,21 @@ function captureConsole() {
   const logs = [];
   const origLog = console.log;
   console.log = (...args) => logs.push(args.join(' '));
-  return { logs, restore() { console.log = origLog; } };
+  return {
+    logs,
+    restore() {
+      console.log = origLog;
+    },
+  };
 }
 
 async function importModule(argv) {
   const origArgv = process.argv;
   const origExit = process.exit;
   process.argv = ['node', 'workflow-gap-audit.mjs', ...(argv || [])];
-  process.exit = (code) => { throw new Error(`EXIT:${code}`); };
+  process.exit = (code) => {
+    throw new Error(`EXIT:${code}`);
+  };
   try {
     await import('./workflow-gap-audit.mjs');
   } catch {
@@ -107,9 +114,24 @@ describe('workflow-gap-audit', () => {
   it('aggregates gate failures from learning log', async () => {
     mockUtils.parseArgs.mockReturnValue({ help: false, json: true });
     const logLines = [
-      JSON.stringify({ eventType: 'gate-exception', gateId: 'cortex-index', agent: 'test-agent', sessionId: 'real-1' }),
-      JSON.stringify({ eventType: 'gate-exception', gateId: 'cortex-index', agent: 'other-agent', sessionId: 'real-2' }),
-      JSON.stringify({ eventType: 'gate-exception', gateId: 'agent-graph', agent: 'test-agent', sessionId: 'real-3' }),
+      JSON.stringify({
+        eventType: 'gate-exception',
+        gateId: 'cortex-index',
+        agent: 'test-agent',
+        sessionId: 'real-1',
+      }),
+      JSON.stringify({
+        eventType: 'gate-exception',
+        gateId: 'cortex-index',
+        agent: 'other-agent',
+        sessionId: 'real-2',
+      }),
+      JSON.stringify({
+        eventType: 'gate-exception',
+        gateId: 'agent-graph',
+        agent: 'test-agent',
+        sessionId: 'real-3',
+      }),
     ].join('\n');
     mockFs.readFile.mockResolvedValue(logLines);
     mockFs.readdir.mockRejectedValue(new Error('ENOENT'));
@@ -128,9 +150,26 @@ describe('workflow-gap-audit', () => {
   it('filters test-session artifacts', async () => {
     mockUtils.parseArgs.mockReturnValue({ help: false, json: true });
     const logLines = [
-      JSON.stringify({ eventType: 'gate-exception', gateId: 'test-gate', agent: 'a', sessionId: 'test-session-001' }),
-      JSON.stringify({ eventType: 'gate-exception', gateId: 'real-gate', agent: 'b', sessionId: 'real-1', exceptionEvidence: { reason: 'real' } }),
-      JSON.stringify({ eventType: 'gate-exception', gateId: 'test-gate2', agent: 'c', sessionId: 'real-2', exceptionEvidence: { reason: 'test-red-phase' } }),
+      JSON.stringify({
+        eventType: 'gate-exception',
+        gateId: 'test-gate',
+        agent: 'a',
+        sessionId: 'test-session-001',
+      }),
+      JSON.stringify({
+        eventType: 'gate-exception',
+        gateId: 'real-gate',
+        agent: 'b',
+        sessionId: 'real-1',
+        exceptionEvidence: { reason: 'real' },
+      }),
+      JSON.stringify({
+        eventType: 'gate-exception',
+        gateId: 'test-gate2',
+        agent: 'c',
+        sessionId: 'real-2',
+        exceptionEvidence: { reason: 'test-red-phase' },
+      }),
     ].join('\n');
     mockFs.readFile.mockResolvedValue(logLines);
     mockFs.readdir.mockRejectedValue(new Error('ENOENT'));
@@ -165,9 +204,21 @@ describe('workflow-gap-audit', () => {
   it('aggregates runtime enforcement evidence', async () => {
     mockUtils.parseArgs.mockReturnValue({ help: false, json: true });
     const logLines = [
-      JSON.stringify({ eventType: 'runtime-action-prepass', actionId: 'a1', sessionId: 's1' }),
-      JSON.stringify({ eventType: 'runtime-action-prepass', actionId: 'a2', sessionId: 's1' }),
-      JSON.stringify({ eventType: 'runtime-action-postpass', actionId: 'a1', sessionId: 's1' }),
+      JSON.stringify({
+        eventType: 'runtime-action-prepass',
+        actionId: 'a1',
+        sessionId: 's1',
+      }),
+      JSON.stringify({
+        eventType: 'runtime-action-prepass',
+        actionId: 'a2',
+        sessionId: 's1',
+      }),
+      JSON.stringify({
+        eventType: 'runtime-action-postpass',
+        actionId: 'a1',
+        sessionId: 's1',
+      }),
       JSON.stringify({ eventType: 'runtime-proof-mismatch', sessionId: 's1' }),
       JSON.stringify({ eventType: 'runtime-action-blocked', sessionId: 's1' }),
     ].join('\n');
@@ -183,14 +234,24 @@ describe('workflow-gap-audit', () => {
     assert.strictEqual(report.runtimeEnforcementEvidence.postActionPasses, 1);
     assert.strictEqual(report.runtimeEnforcementEvidence.proofMismatches, 1);
     assert.strictEqual(report.runtimeEnforcementEvidence.blockedActions, 2);
-    assert.deepStrictEqual(report.runtimeEnforcementEvidence.missingPostActionPairs, ['a2']);
-    assert.deepStrictEqual(report.runtimeEnforcementEvidence.postWithoutPrePairs, []);
+    assert.deepStrictEqual(
+      report.runtimeEnforcementEvidence.missingPostActionPairs,
+      ['a2'],
+    );
+    assert.deepStrictEqual(
+      report.runtimeEnforcementEvidence.postWithoutPrePairs,
+      [],
+    );
   });
 
   it('handles post-action without pre-action', async () => {
     mockUtils.parseArgs.mockReturnValue({ help: false, json: true });
     const logLines = [
-      JSON.stringify({ eventType: 'runtime-action-postpass', actionId: 'x1', sessionId: 's1' }),
+      JSON.stringify({
+        eventType: 'runtime-action-postpass',
+        actionId: 'x1',
+        sessionId: 's1',
+      }),
     ].join('\n');
     mockFs.readFile.mockResolvedValue(logLines);
     mockFs.readdir.mockRejectedValue(new Error('ENOENT'));
@@ -200,7 +261,10 @@ describe('workflow-gap-audit', () => {
 
     cap.restore();
     const report = JSON.parse(cap.logs[0]);
-    assert.deepStrictEqual(report.runtimeEnforcementEvidence.postWithoutPrePairs, ['x1']);
+    assert.deepStrictEqual(
+      report.runtimeEnforcementEvidence.postWithoutPrePairs,
+      ['x1'],
+    );
   });
 
   it('loads flow IDs from flows directory', async () => {
@@ -279,7 +343,9 @@ describe('workflow-gap-audit', () => {
 
   it('handles malformed JSONL lines gracefully', async () => {
     mockUtils.parseArgs.mockReturnValue({ help: false, json: true });
-    mockFs.readFile.mockResolvedValue('not json\n{"eventType":"gate-exception","gateId":"g1","agent":"a","sessionId":"s1"}\n');
+    mockFs.readFile.mockResolvedValue(
+      'not json\n{"eventType":"gate-exception","gateId":"g1","agent":"a","sessionId":"s1"}\n',
+    );
     mockFs.readdir.mockRejectedValue(new Error('ENOENT'));
     const cap = captureConsole();
 
@@ -293,7 +359,12 @@ describe('workflow-gap-audit', () => {
   it('builds recommended actions for gate failures', async () => {
     mockUtils.parseArgs.mockReturnValue({ help: false, json: true });
     const logLines = [
-      JSON.stringify({ eventType: 'gate-exception', gateId: 'my-gate', agent: 'agent-a', sessionId: 's1' }),
+      JSON.stringify({
+        eventType: 'gate-exception',
+        gateId: 'my-gate',
+        agent: 'agent-a',
+        sessionId: 's1',
+      }),
     ].join('\n');
     mockFs.readFile.mockResolvedValue(logLines);
     mockFs.readdir.mockRejectedValue(new Error('ENOENT'));
@@ -303,7 +374,11 @@ describe('workflow-gap-audit', () => {
 
     cap.restore();
     const report = JSON.parse(cap.logs[0]);
-    assert.ok(report.recommendedActions.some((a) => a.includes("Gate 'my-gate' failed")));
+    assert.ok(
+      report.recommendedActions.some((a) =>
+        a.includes("Gate 'my-gate' failed"),
+      ),
+    );
   });
 
   it('builds recommended actions for escalations', async () => {
@@ -335,13 +410,19 @@ describe('workflow-gap-audit', () => {
 
     cap.restore();
     const report = JSON.parse(cap.logs[0]);
-    assert.ok(report.recommendedActions.some((a) => a.includes('proof mismatch')));
+    assert.ok(
+      report.recommendedActions.some((a) => a.includes('proof mismatch')),
+    );
   });
 
   it('builds recommended actions for missing post-action pairs', async () => {
     mockUtils.parseArgs.mockReturnValue({ help: false, json: true });
     const logLines = [
-      JSON.stringify({ eventType: 'runtime-action-prepass', actionId: 'orphan', sessionId: 's1' }),
+      JSON.stringify({
+        eventType: 'runtime-action-prepass',
+        actionId: 'orphan',
+        sessionId: 's1',
+      }),
     ].join('\n');
     mockFs.readFile.mockResolvedValue(logLines);
     mockFs.readdir.mockRejectedValue(new Error('ENOENT'));
@@ -351,13 +432,21 @@ describe('workflow-gap-audit', () => {
 
     cap.restore();
     const report = JSON.parse(cap.logs[0]);
-    assert.ok(report.recommendedActions.some((a) => a.includes('pre-action pass without')));
+    assert.ok(
+      report.recommendedActions.some((a) =>
+        a.includes('pre-action pass without'),
+      ),
+    );
   });
 
   it('builds recommended actions for post-without-pre pairs', async () => {
     mockUtils.parseArgs.mockReturnValue({ help: false, json: true });
     const logLines = [
-      JSON.stringify({ eventType: 'runtime-action-postpass', actionId: 'lonely', sessionId: 's1' }),
+      JSON.stringify({
+        eventType: 'runtime-action-postpass',
+        actionId: 'lonely',
+        sessionId: 's1',
+      }),
     ].join('\n');
     mockFs.readFile.mockResolvedValue(logLines);
     mockFs.readdir.mockRejectedValue(new Error('ENOENT'));
@@ -367,20 +456,29 @@ describe('workflow-gap-audit', () => {
 
     cap.restore();
     const report = JSON.parse(cap.logs[0]);
-    assert.ok(report.recommendedActions.some((a) => a.includes('post-action pass without')));
+    assert.ok(
+      report.recommendedActions.some((a) =>
+        a.includes('post-action pass without'),
+      ),
+    );
   });
 
   it('builds recommended actions for underused flows', async () => {
     mockUtils.parseArgs.mockReturnValue({ help: false, json: true });
     mockFs.readFile.mockRejectedValue(new Error('ENOENT'));
-    mockFs.readdir.mockResolvedValue(['01.unused.flow.yml', '02.also-unused.flow.yml']);
+    mockFs.readdir.mockResolvedValue([
+      '01.unused.flow.yml',
+      '02.also-unused.flow.yml',
+    ]);
     const cap = captureConsole();
 
     await importModule(['--json']);
 
     cap.restore();
     const report = JSON.parse(cap.logs[0]);
-    assert.ok(report.recommendedActions.some((a) => a.includes('zero mention')));
+    assert.ok(
+      report.recommendedActions.some((a) => a.includes('zero mention')),
+    );
   });
 
   it('outputs good-health action when no issues', async () => {
@@ -393,7 +491,9 @@ describe('workflow-gap-audit', () => {
 
     cap.restore();
     const report = JSON.parse(cap.logs[0]);
-    assert.ok(report.recommendedActions.some((a) => a.includes('gate health is good')));
+    assert.ok(
+      report.recommendedActions.some((a) => a.includes('gate health is good')),
+    );
   });
 
   it('handles -h as help alias', async () => {
@@ -446,13 +546,18 @@ describe('workflow-gap-audit', () => {
       mockFs.readFile.mockResolvedValue('');
       mockFs.readdir.mockResolvedValue(['04.scoped-fix.flow.yml']);
       const mockDb = {
-        execute: jest.fn()
+        execute: jest
+          .fn()
           .mockResolvedValueOnce({
             rows: [{ agentName: 'agent-a', sessionCount: 3 }],
           })
           .mockResolvedValueOnce({
             rows: [
-              { sessionId: 's1', agentName: 'agent-a', summary: 'no flow id here' },
+              {
+                sessionId: 's1',
+                agentName: 'agent-a',
+                summary: 'no flow id here',
+              },
             ],
           })
           .mockResolvedValueOnce({
@@ -486,9 +591,7 @@ describe('workflow-gap-audit', () => {
 
     it('builds recommended action for drift sessions', () => {
       const report = JSON.parse(cap.logs[0]);
-      assert.ok(
-        report.recommendedActions.some((a) => a.includes('flow ID')),
-      );
+      assert.ok(report.recommendedActions.some((a) => a.includes('flow ID')));
     });
   });
 
@@ -534,14 +637,13 @@ describe('workflow-gap-audit', () => {
     mockFs.readFile.mockResolvedValue('');
     mockFs.readdir.mockResolvedValue([]);
     const mockDb = {
-      execute: jest.fn()
+      execute: jest
+        .fn()
         .mockResolvedValueOnce({
           rows: [{ agentName: null, sessionCount: 1 }],
         })
         .mockResolvedValueOnce({
-          rows: [
-            { sessionId: 's1', agentName: null, summary: null },
-          ],
+          rows: [{ sessionId: 's1', agentName: null, summary: null }],
         })
         .mockResolvedValueOnce({
           rows: [{ summary: null }],

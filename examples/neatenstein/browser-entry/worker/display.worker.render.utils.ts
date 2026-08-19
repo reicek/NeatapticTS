@@ -74,10 +74,7 @@ import { NEATENSTEIN_MAP_SIZE } from '../constants';
 import { createSharedMapGrid } from './display.worker.sim.utils';
 import { interpolateNeatensteinWallColumn } from '../renderer/interpolate';
 import { resolveNeatensteinHalfResEnabled } from '../renderer/renderer.quality.constants';
-import {
-  resolveNeatensteinMsaaResolvedColumn,
-  resolveNeatensteinMsaaFogBlend,
-} from '../renderer/renderer.msaa.constants';
+import { resolveNeatensteinMsaaFogBlend } from '../renderer/renderer.msaa.constants';
 
 /** RGB tint for X-side wall faces (north/south walls). */
 const NEATENSTEIN_WALL_X_SIDE_RGB = { r: 0, g: 183, b: 255 } as const;
@@ -237,18 +234,11 @@ export function paintWorkerTierWalls(
 
       if (!isCapped) {
         const lineHeight = wallFocalLength / hit.perpWallDist;
-        const drawStart = clamp(
-          (canvasHeight - lineHeight) / 2,
-          0,
-          canvasHeight,
-        );
-        const drawEnd = clamp(
-          (canvasHeight + lineHeight) / 2,
-          0,
-          canvasHeight,
-        );
-
-        // C1.4/C1.5: Determine wall color with half-res interpolation and
+        // Pass raw unclamped drawStart/drawEnd to writeNeonWallColumn, which
+        // handles framebuffer clipping internally. Clamping here distorts the
+        // virtualY texture mapping when walls extend beyond the screen edges.
+        const drawStart = (canvasHeight - lineHeight) / 2;
+        const drawEnd = (canvasHeight + lineHeight) / 2;
         // MSAA resolve. The base RGB is tinted by the hit side; for odd
         // columns when half-res is enabled, the color is interpolated from
         // the previous column. MSAA resolve then averages with the previous
@@ -272,10 +262,7 @@ export function paintWorkerTierWalls(
           currentRgb = { r: interp.r, g: interp.g, b: interp.b };
         }
 
-        const msaaRgb =
-          prevColumnRgb !== null
-            ? resolveNeatensteinMsaaResolvedColumn(currentRgb, prevColumnRgb)
-            : currentRgb;
+        const msaaRgb = currentRgb;
         const resolvedHex = rgbToHex(msaaRgb);
 
         // Write each pixel column in the stripe via writeNeonWallColumn,
@@ -291,6 +278,10 @@ export function paintWorkerTierWalls(
             ? computeWallTexcoord(cameraPositionY, hit.perpWallDist, rayDirY)
             : computeWallTexcoord(cameraPositionX, hit.perpWallDist, rayDirX);
 
+        // Deterministic wall seed from map grid coordinates for procedural
+        // circuit trace generation in the lower 40% of the wall surface.
+        const wallSeed = (hit.mapX * 73856093) ^ (hit.mapY * 19349693);
+
         for (let x = xStart; x < xEnd; x += 1) {
           writeNeonWallColumn(
             framebuffer,
@@ -302,6 +293,7 @@ export function paintWorkerTierWalls(
             resolvedHex,
             hit.perpWallDist,
             texcoord,
+            wallSeed,
           );
         }
         // C1.4/C1.5: Track this column's RGB for the next iteration's
@@ -321,11 +313,7 @@ export function paintWorkerTierWalls(
           0,
           canvasHeight,
         );
-        const drawEnd = clamp(
-          (canvasHeight + lineHeight) / 2,
-          0,
-          canvasHeight,
-        );
+        const drawEnd = clamp((canvasHeight + lineHeight) / 2, 0, canvasHeight);
 
         const featherTopStart = Math.max(0, drawStart - FOG_FEATHER_PX);
         const featherBottomEnd = Math.min(
@@ -473,11 +461,8 @@ export function paintWorkerTierWalls(
         currentRgb = { r: interp.r, g: interp.g, b: interp.b };
       }
 
-      // C1.5: MSAA resolve + fog blend (replaces applyWallFog for MSAA path).
-      const msaaRgb =
-        prevColumnRgb !== null
-          ? resolveNeatensteinMsaaResolvedColumn(currentRgb, prevColumnRgb)
-          : currentRgb;
+      // C1.5: MSAA fog blend (replaces applyWallFog for MSAA path).
+      const msaaRgb = currentRgb;
       const foggedRgb = resolveNeatensteinMsaaFogBlend(
         msaaRgb,
         hit.perpWallDist,
@@ -485,7 +470,12 @@ export function paintWorkerTierWalls(
       );
 
       context.fillStyle = formatRgb(foggedRgb);
-      context.fillRect(xStart, drawStart, stripePixelWidth, drawEnd - drawStart);
+      context.fillRect(
+        xStart,
+        drawStart,
+        stripePixelWidth,
+        drawEnd - drawStart,
+      );
       prevColumnRgb = { r: currentRgb.r, g: currentRgb.g, b: currentRgb.b };
     } else {
       // C1.4/C1.5: No wall color for capped columns — reset prev for MSAA.
@@ -497,7 +487,12 @@ export function paintWorkerTierWalls(
 
       const fogColor = formatRgb(NEATENSTEIN_BACKGROUND_RGB);
       context.fillStyle = fogColor;
-      context.fillRect(xStart, drawStart, stripePixelWidth, drawEnd - drawStart);
+      context.fillRect(
+        xStart,
+        drawStart,
+        stripePixelWidth,
+        drawEnd - drawStart,
+      );
 
       const fogFeatherPixels = FOG_FEATHER_PX;
       const featherTopStart = Math.max(0, drawStart - fogFeatherPixels);
@@ -1219,9 +1214,10 @@ export function assertRenderCompositingOrderValid(): void {
  */
 export function createRenderWorkerState(): RenderWorkerState {
   const gridBuffer = createSharedMapGrid(NEATENSTEIN_MAP_SIZE);
-  const wallMap = gridBuffer instanceof SharedArrayBuffer
-    ? new Uint8Array(gridBuffer)
-    : gridBuffer;
+  const wallMap =
+    gridBuffer instanceof SharedArrayBuffer
+      ? new Uint8Array(gridBuffer)
+      : gridBuffer;
 
   return {
     currentTier: null,

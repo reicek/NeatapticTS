@@ -36,15 +36,31 @@ beforeEach(async () => {
 function captureStdout() {
   const output = [];
   const origWrite = process.stdout.write;
-  process.stdout.write = (chunk) => { output.push(String(chunk)); return true; };
-  return { output, restore() { process.stdout.write = origWrite; } };
+  process.stdout.write = (chunk) => {
+    output.push(String(chunk));
+    return true;
+  };
+  return {
+    output,
+    restore() {
+      process.stdout.write = origWrite;
+    },
+  };
 }
 
 function captureStderr() {
   const output = [];
   const origWrite = process.stderr.write;
-  process.stderr.write = (chunk) => { output.push(String(chunk)); return true; };
-  return { output, restore() { process.stderr.write = origWrite; } };
+  process.stderr.write = (chunk) => {
+    output.push(String(chunk));
+    return true;
+  };
+  return {
+    output,
+    restore() {
+      process.stderr.write = origWrite;
+    },
+  };
 }
 
 async function importModule() {
@@ -71,7 +87,9 @@ describe('refresh-cortex-after-write', () => {
 
   it('continues when no write or substantive tool', async () => {
     const capOut = captureStdout();
-    mockFs.readFileSync.mockReturnValue(JSON.stringify({ tool_name: 'read_file' }));
+    mockFs.readFileSync.mockReturnValue(
+      JSON.stringify({ tool_name: 'read_file' }),
+    );
     mockEnf.isRuntimeContextPreparation.mockReturnValue(false);
     mockEnf.requiresRuntimeProof.mockReturnValue(false);
 
@@ -123,12 +141,16 @@ describe('refresh-cortex-after-write', () => {
     capOut.restore();
     const json = JSON.parse(capOut.output[0].trim());
     assert.strictEqual(json.continue, true);
-    assert.ok(json.hookSpecificOutput.additionalContext.includes('build-index'));
+    assert.ok(
+      json.hookSpecificOutput.additionalContext.includes('build-index'),
+    );
   });
 
   it('runs workflow sync for substantive tools', async () => {
     const capOut = captureStdout();
-    mockFs.readFileSync.mockReturnValue(JSON.stringify({ tool_name: 'powershell' }));
+    mockFs.readFileSync.mockReturnValue(
+      JSON.stringify({ tool_name: 'powershell' }),
+    );
     mockEnf.isRuntimeContextPreparation.mockReturnValue(false);
     mockEnf.requiresRuntimeProof.mockReturnValue(false);
     mockEnf.resolveSessionId.mockReturnValue('s1');
@@ -143,13 +165,19 @@ describe('refresh-cortex-after-write', () => {
 
     capOut.restore();
     const json = JSON.parse(capOut.output[0].trim());
-    assert.ok(json.hookSpecificOutput.additionalContext.includes('workflow-update-sync'));
+    assert.ok(
+      json.hookSpecificOutput.additionalContext.includes(
+        'workflow-update-sync',
+      ),
+    );
   });
 
   it('handles refresh step failure', async () => {
     const origExit = process.exit;
     let exitCode = null;
-    process.exit = (code) => { exitCode = code; };
+    process.exit = (code) => {
+      exitCode = code;
+    };
     const capErr = captureStderr();
 
     mockFs.readFileSync.mockReturnValue(JSON.stringify({ tool_name: 'edit' }));
@@ -177,10 +205,14 @@ describe('refresh-cortex-after-write', () => {
   it('handles workflow sync failure', async () => {
     const origExit = process.exit;
     let exitCode = null;
-    process.exit = (code) => { exitCode = code; };
+    process.exit = (code) => {
+      exitCode = code;
+    };
     const capErr = captureStderr();
 
-    mockFs.readFileSync.mockReturnValue(JSON.stringify({ tool_name: 'powershell' }));
+    mockFs.readFileSync.mockReturnValue(
+      JSON.stringify({ tool_name: 'powershell' }),
+    );
     mockEnf.isRuntimeContextPreparation.mockReturnValue(false);
     mockEnf.requiresRuntimeProof.mockReturnValue(false);
     mockEnf.resolveSessionId.mockReturnValue('s1');
@@ -197,7 +229,9 @@ describe('refresh-cortex-after-write', () => {
     process.exit = origExit;
     capErr.restore();
     assert.ok(exitCode !== null, 'process.exit was called');
-    assert.ok(capErr.output.some((o) => o.includes('workflow-update-sync failed')));
+    assert.ok(
+      capErr.output.some((o) => o.includes('workflow-update-sync failed')),
+    );
   });
 
   it('handles runtime proof requirement - valid', async () => {
@@ -234,14 +268,20 @@ describe('refresh-cortex-after-write', () => {
 
     capOut.restore();
     const json = JSON.parse(capOut.output[0].trim());
-    assert.ok(json.hookSpecificOutput.additionalContext.includes('runtime-enforcement-context=pass'));
+    assert.ok(
+      json.hookSpecificOutput.additionalContext.includes(
+        'runtime-enforcement-context=pass',
+      ),
+    );
     assert.ok(mockEnf.clearPreparedRuntimeContext.mock.calls.length >= 1);
   });
 
   it('handles runtime proof mismatch', async () => {
     const origExit = process.exit;
     let exitCode = null;
-    process.exit = (code) => { exitCode = code; };
+    process.exit = (code) => {
+      exitCode = code;
+    };
     const capErr = captureStderr();
 
     mockFs.readFileSync.mockReturnValue(JSON.stringify({ tool_name: 'edit' }));
@@ -270,13 +310,17 @@ describe('refresh-cortex-after-write', () => {
     process.exit = origExit;
     capErr.restore();
     assert.ok(exitCode !== null, 'process.exit was called');
-    assert.ok(capErr.output.some((o) => o.includes('runtime-enforcement-context')));
+    assert.ok(
+      capErr.output.some((o) => o.includes('runtime-enforcement-context')),
+    );
   });
 
   it('handles runtime proof mismatch without preparedAction', async () => {
     const origExit = process.exit;
     let exitCode = null;
-    process.exit = (code) => { exitCode = code; };
+    process.exit = (code) => {
+      exitCode = code;
+    };
     const capErr = captureStderr();
 
     mockFs.readFileSync.mockReturnValue(JSON.stringify({ tool_name: 'edit' }));
@@ -310,10 +354,14 @@ describe('refresh-cortex-after-write', () => {
   it('handles main() rejection', async () => {
     const origExit = process.exit;
     let exitCode = null;
-    process.exit = (code) => { exitCode = code; };
+    process.exit = (code) => {
+      exitCode = code;
+    };
     const capErr = captureStderr();
 
-    mockFs.readFileSync.mockImplementation(() => { throw new Error('read failed'); });
+    mockFs.readFileSync.mockImplementation(() => {
+      throw new Error('read failed');
+    });
 
     await importModule();
     await new Promise((r) => setTimeout(r, 200));
@@ -321,7 +369,9 @@ describe('refresh-cortex-after-write', () => {
     process.exit = origExit;
     capErr.restore();
     assert.ok(exitCode !== null, 'process.exit was called');
-    assert.ok(capErr.output.some((o) => o.includes('runtime enforcement failed')));
+    assert.ok(
+      capErr.output.some((o) => o.includes('runtime enforcement failed')),
+    );
   });
 
   it('handles toolName via toolName camelCase', async () => {
@@ -345,7 +395,9 @@ describe('refresh-cortex-after-write', () => {
   it('handles refresh step failure with no stderr/stdout', async () => {
     const origExit = process.exit;
     let exitCode = null;
-    process.exit = (code) => { exitCode = code; };
+    process.exit = (code) => {
+      exitCode = code;
+    };
     const capErr = captureStderr();
 
     mockFs.readFileSync.mockReturnValue(JSON.stringify({ tool_name: 'edit' }));
@@ -402,7 +454,9 @@ describe('refresh-cortex-after-write', () => {
 
     capOut.restore();
     const json = JSON.parse(capOut.output[0].trim());
-    assert.ok(json.hookSpecificOutput.additionalContext.includes('3 docs / 50 chunks'));
+    assert.ok(
+      json.hookSpecificOutput.additionalContext.includes('3 docs / 50 chunks'),
+    );
   });
 
   it('parses stdout with steps array', async () => {
@@ -446,7 +500,9 @@ describe('refresh-cortex-after-write', () => {
   it('handles gate exception recorder failure', async () => {
     const origExit = process.exit;
     let exitCode = null;
-    process.exit = (code) => { exitCode = code; };
+    process.exit = (code) => {
+      exitCode = code;
+    };
     const capErr = captureStderr();
 
     mockFs.readFileSync.mockReturnValue(JSON.stringify({ tool_name: 'edit' }));
@@ -454,15 +510,17 @@ describe('refresh-cortex-after-write', () => {
     mockEnf.requiresRuntimeProof.mockReturnValue(false);
     mockEnf.resolveSessionId.mockReturnValue('s1');
     // First call: gate exception recorder (fails), subsequent: refresh step (fails)
-    mockChildProc.spawnSync.mockReturnValueOnce({
-      status: 1,
-      stdout: '',
-      stderr: 'recorder error',
-    }).mockReturnValue({
-      status: 1,
-      stdout: '',
-      stderr: 'step error',
-    });
+    mockChildProc.spawnSync
+      .mockReturnValueOnce({
+        status: 1,
+        stdout: '',
+        stderr: 'recorder error',
+      })
+      .mockReturnValue({
+        status: 1,
+        stdout: '',
+        stderr: 'step error',
+      });
 
     await importModule();
     await new Promise((r) => setTimeout(r, 200));
@@ -470,7 +528,9 @@ describe('refresh-cortex-after-write', () => {
     process.exit = origExit;
     capErr.restore();
     assert.ok(exitCode !== null, 'process.exit was called');
-    assert.ok(capErr.output.some((o) => o.includes('failed to record gate exception')));
+    assert.ok(
+      capErr.output.some((o) => o.includes('failed to record gate exception')),
+    );
   });
 
   it('handles empty stdout as ok', async () => {
@@ -533,7 +593,9 @@ describe('refresh-cortex-after-write', () => {
   it('handles runtime proof with recordRuntimeActionEvent rejection on mismatch path', async () => {
     const origExit = process.exit;
     let exitCode = null;
-    process.exit = (code) => { exitCode = code; };
+    process.exit = (code) => {
+      exitCode = code;
+    };
     const capErr = captureStderr();
 
     mockFs.readFileSync.mockReturnValue(JSON.stringify({ tool_name: 'edit' }));
@@ -606,11 +668,17 @@ describe('refresh-cortex-after-write', () => {
 
   it('collects candidate strings from array fields in hookInput', async () => {
     const capOut = captureStdout();
-    mockFs.readFileSync.mockReturnValue(JSON.stringify({ tool_name: 'edit', tags: ['a', 'b'] }));
+    mockFs.readFileSync.mockReturnValue(
+      JSON.stringify({ tool_name: 'edit', tags: ['a', 'b'] }),
+    );
     mockEnf.isRuntimeContextPreparation.mockReturnValue(false);
     mockEnf.requiresRuntimeProof.mockReturnValue(false);
     mockEnf.resolveSessionId.mockReturnValue('s1');
-    mockChildProc.spawnSync.mockReturnValue({ status: 0, stdout: '{"pass": true}', stderr: '' });
+    mockChildProc.spawnSync.mockReturnValue({
+      status: 0,
+      stdout: '{"pass": true}',
+      stderr: '',
+    });
     await importModule();
     capOut.restore();
     const json = JSON.parse(capOut.output[0].trim());
@@ -619,11 +687,17 @@ describe('refresh-cortex-after-write', () => {
 
   it('collects candidate strings from numeric fields in hookInput', async () => {
     const capOut = captureStdout();
-    mockFs.readFileSync.mockReturnValue(JSON.stringify({ tool_name: 'powershell', count: 5 }));
+    mockFs.readFileSync.mockReturnValue(
+      JSON.stringify({ tool_name: 'powershell', count: 5 }),
+    );
     mockEnf.isRuntimeContextPreparation.mockReturnValue(false);
     mockEnf.requiresRuntimeProof.mockReturnValue(false);
     mockEnf.resolveSessionId.mockReturnValue('s1');
-    mockChildProc.spawnSync.mockReturnValue({ status: 0, stdout: '{"ok": true}', stderr: '' });
+    mockChildProc.spawnSync.mockReturnValue({
+      status: 0,
+      stdout: '{"ok": true}',
+      stderr: '',
+    });
     await importModule();
     capOut.restore();
     const json = JSON.parse(capOut.output[0].trim());
@@ -633,7 +707,9 @@ describe('refresh-cortex-after-write', () => {
   it('summarizes failure and formats failure with null status', async () => {
     const origExit = process.exit;
     let exitCode = null;
-    process.exit = (code) => { exitCode = code; };
+    process.exit = (code) => {
+      exitCode = code;
+    };
     const capErr = captureStderr();
     mockFs.readFileSync.mockReturnValue(JSON.stringify({ tool_name: 'edit' }));
     mockEnf.isRuntimeContextPreparation.mockReturnValue(false);
@@ -656,7 +732,11 @@ describe('refresh-cortex-after-write', () => {
     mockEnf.isRuntimeContextPreparation.mockReturnValue(false);
     mockEnf.requiresRuntimeProof.mockReturnValue(false);
     mockEnf.resolveSessionId.mockReturnValue('s1');
-    mockChildProc.spawnSync.mockReturnValue({ status: 0, stdout: '{"pass": false}', stderr: '' });
+    mockChildProc.spawnSync.mockReturnValue({
+      status: 0,
+      stdout: '{"pass": false}',
+      stderr: '',
+    });
     await importModule();
     capOut.restore();
     const json = JSON.parse(capOut.output[0].trim());
@@ -669,7 +749,11 @@ describe('refresh-cortex-after-write', () => {
     mockEnf.isRuntimeContextPreparation.mockReturnValue(false);
     mockEnf.requiresRuntimeProof.mockReturnValue(false);
     mockEnf.resolveSessionId.mockReturnValue('s1');
-    mockChildProc.spawnSync.mockReturnValue({ status: 0, stdout: '{"unknown": true}', stderr: '' });
+    mockChildProc.spawnSync.mockReturnValue({
+      status: 0,
+      stdout: '{"unknown": true}',
+      stderr: '',
+    });
     await importModule();
     capOut.restore();
     const json = JSON.parse(capOut.output[0].trim());

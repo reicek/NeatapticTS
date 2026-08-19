@@ -1344,9 +1344,9 @@ describe('eval-runner: computeVectorRecall', () => {
   });
 
   it('computes intersection over brute-force top-k', () => {
-    expect(computeVectorRecall([1, 2, 3, 4, 5], [1, 2, 3, 4, 6], 5)).toBeCloseTo(
-      4 / 5,
-    );
+    expect(
+      computeVectorRecall([1, 2, 3, 4, 5], [1, 2, 3, 4, 6], 5),
+    ).toBeCloseTo(4 / 5);
   });
 
   it('returns 1 for perfect overlap', () => {
@@ -1406,7 +1406,11 @@ describe('eval-runner: runRecallBenchmark', () => {
   });
 
   it('handles empty queries list', async () => {
-    const mockClient = { async execute() { return { rows: [] }; } };
+    const mockClient = {
+      async execute() {
+        return { rows: [] };
+      },
+    };
     const mockEmbed = async () => new Float32Array([0.1]);
     const report = await runRecallBenchmark({
       queries: [],
@@ -1448,7 +1452,9 @@ describe('eval-runner: runRecallBenchmark', () => {
       },
     };
     const mockEmbed = async () => new Float32Array([0.1]);
-    mockEmbed.release = async () => { released = true; };
+    mockEmbed.release = async () => {
+      released = true;
+    };
     const report = await runRecallBenchmark({
       queries: [{ query: 'test' }],
       client: mockClient,

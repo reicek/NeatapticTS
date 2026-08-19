@@ -51,9 +51,8 @@ describe('pre-specialist-smoke gate', () => {
 
   describe('runPreSpecialistSmokeGate', () => {
     it('returns standalone descriptor when no changed files', async () => {
-      const { runPreSpecialistSmokeGate } = await import(
-        './pre-specialist-smoke.gate.mjs'
-      );
+      const { runPreSpecialistSmokeGate } =
+        await import('./pre-specialist-smoke.gate.mjs');
       const result = await runPreSpecialistSmokeGate({ changedFiles: [] });
       assert.equal(result.pass, true);
       assert.equal(result.evidence.mode, 'standalone-descriptor');
@@ -61,18 +60,16 @@ describe('pre-specialist-smoke gate', () => {
     });
 
     it('returns standalone descriptor when called with no arguments', async () => {
-      const { runPreSpecialistSmokeGate } = await import(
-        './pre-specialist-smoke.gate.mjs'
-      );
+      const { runPreSpecialistSmokeGate } =
+        await import('./pre-specialist-smoke.gate.mjs');
       const result = await runPreSpecialistSmokeGate();
       assert.equal(result.pass, true);
       assert.equal(result.evidence.mode, 'standalone-descriptor');
     });
 
     it('returns standalone descriptor when changedFiles is undefined', async () => {
-      const { runPreSpecialistSmokeGate } = await import(
-        './pre-specialist-smoke.gate.mjs'
-      );
+      const { runPreSpecialistSmokeGate } =
+        await import('./pre-specialist-smoke.gate.mjs');
       const result = await runPreSpecialistSmokeGate({});
       assert.equal(result.pass, true);
       assert.equal(result.evidence.mode, 'standalone-descriptor');
@@ -80,9 +77,8 @@ describe('pre-specialist-smoke gate', () => {
 
     it('passes when changed files map to no test files', async () => {
       mockDerivedTestFiles = [];
-      const { runPreSpecialistSmokeGate } = await import(
-        './pre-specialist-smoke.gate.mjs'
-      );
+      const { runPreSpecialistSmokeGate } =
+        await import('./pre-specialist-smoke.gate.mjs');
       const result = await runPreSpecialistSmokeGate({
         changedFiles: ['src/foo.md'],
       });
@@ -93,9 +89,8 @@ describe('pre-specialist-smoke gate', () => {
 
     it('passes when runner returns status 0', async () => {
       mockDerivedTestFiles = ['src/foo.test.ts'];
-      const { runPreSpecialistSmokeGate } = await import(
-        './pre-specialist-smoke.gate.mjs'
-      );
+      const { runPreSpecialistSmokeGate } =
+        await import('./pre-specialist-smoke.gate.mjs');
       const result = await runPreSpecialistSmokeGate({
         changedFiles: ['src/foo.ts'],
         runner: async () => ({ status: 0, stdout: 'ok', stderr: '' }),
@@ -106,9 +101,8 @@ describe('pre-specialist-smoke gate', () => {
 
     it('fails when runner returns non-zero status', async () => {
       mockDerivedTestFiles = ['src/foo.test.ts'];
-      const { runPreSpecialistSmokeGate } = await import(
-        './pre-specialist-smoke.gate.mjs'
-      );
+      const { runPreSpecialistSmokeGate } =
+        await import('./pre-specialist-smoke.gate.mjs');
       const result = await runPreSpecialistSmokeGate({
         changedFiles: ['src/foo.ts'],
         runner: async () => ({ status: 1, stdout: 'fail', stderr: 'err' }),
@@ -127,9 +121,8 @@ describe('pre-specialist-smoke gate', () => {
         stdout: JSON.stringify({ status: 0, stdout: 'ok', stderr: '' }),
         stderr: '',
       };
-      const { runPreSpecialistSmokeGate } = await import(
-        './pre-specialist-smoke.gate.mjs'
-      );
+      const { runPreSpecialistSmokeGate } =
+        await import('./pre-specialist-smoke.gate.mjs');
       const result = await runPreSpecialistSmokeGate({
         changedFiles: ['src/foo.ts'],
       });
@@ -144,9 +137,8 @@ describe('pre-specialist-smoke gate', () => {
         stdout: 'not-json',
         stderr: 'some error',
       };
-      const { runPreSpecialistSmokeGate } = await import(
-        './pre-specialist-smoke.gate.mjs'
-      );
+      const { runPreSpecialistSmokeGate } =
+        await import('./pre-specialist-smoke.gate.mjs');
       const result = await runPreSpecialistSmokeGate({
         changedFiles: ['src/foo.ts'],
       });
@@ -161,9 +153,8 @@ describe('pre-specialist-smoke gate', () => {
         stdout: 'garbage',
         stderr: '',
       };
-      const { runPreSpecialistSmokeGate } = await import(
-        './pre-specialist-smoke.gate.mjs'
-      );
+      const { runPreSpecialistSmokeGate } =
+        await import('./pre-specialist-smoke.gate.mjs');
       const result = await runPreSpecialistSmokeGate({
         changedFiles: ['src/foo.ts'],
       });
@@ -178,9 +169,8 @@ describe('pre-specialist-smoke gate', () => {
         stdout: null,
         stderr: null,
       };
-      const { runPreSpecialistSmokeGate } = await import(
-        './pre-specialist-smoke.gate.mjs'
-      );
+      const { runPreSpecialistSmokeGate } =
+        await import('./pre-specialist-smoke.gate.mjs');
       const result = await runPreSpecialistSmokeGate({
         changedFiles: ['src/foo.ts'],
       });
@@ -255,9 +245,7 @@ describe('pre-specialist-smoke gate', () => {
       mockDerivedTestFiles = ['src/foo.test.ts'];
       mockSpawnResult = { status: 1, stdout: 'fail', stderr: 'err' };
       const { main } = await import('./pre-specialist-smoke.gate.mjs');
-      const result = await main([
-        '--changed-files=src/foo.ts',
-      ]);
+      const result = await main(['--changed-files=src/foo.ts']);
       assert.equal(result.pass, false);
       assert.ok(logs.some((l) => l.includes('FAIL')));
       assert.ok(logs.some((l) => l.includes('fixHint:')));

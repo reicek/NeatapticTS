@@ -1341,16 +1341,15 @@ describe('A2 Fix 3: BFS distance map cache', () => {
   });
 
   it('returns the same DistanceMap for the same player-cell and seed', async () => {
-    const { getOrBuildCachedDistanceMap } = (await import(
-      './enemy-navigation.ts'
-    )) as unknown as {
-      getOrBuildCachedDistanceMap: (
-        collisionMap: CollisionMap,
-        playerX: number,
-        playerY: number,
-        mapSeed: number,
-      ) => { distances: Int32Array; size: number };
-    };
+    const { getOrBuildCachedDistanceMap } =
+      (await import('./enemy-navigation.ts')) as unknown as {
+        getOrBuildCachedDistanceMap: (
+          collisionMap: CollisionMap,
+          playerX: number,
+          playerY: number,
+          mapSeed: number,
+        ) => { distances: Int32Array; size: number };
+      };
     const collisionMap = createEmptyCollisionMap();
     const a = getOrBuildCachedDistanceMap(collisionMap, 5, 5, 42);
     const b = getOrBuildCachedDistanceMap(collisionMap, 5, 5, 42);

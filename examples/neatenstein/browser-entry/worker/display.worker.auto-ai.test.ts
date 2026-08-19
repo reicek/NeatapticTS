@@ -338,8 +338,7 @@ describe('P8S1-coverage-closure: display.worker uncovered branches', () => {
 
     // Keep the controller from moving or killing the injected enemy so the
     // fallback AI sees a stable target across 25 ticks.
-    const enemyControllerModule =
-      await import('../shared/enemy-controller');
+    const enemyControllerModule = await import('../shared/enemy-controller');
     const controllerSpy = jest
       .spyOn(enemyControllerModule, 'updateEnemyController')
       .mockImplementation(

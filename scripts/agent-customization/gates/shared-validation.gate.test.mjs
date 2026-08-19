@@ -68,9 +68,8 @@ describe('shared-validation gate', () => {
 
   describe('runSharedValidationGate', () => {
     it('returns standalone descriptor when no changed files', async () => {
-      const { runSharedValidationGate } = await import(
-        './shared-validation.gate.mjs'
-      );
+      const { runSharedValidationGate } =
+        await import('./shared-validation.gate.mjs');
       const result = await runSharedValidationGate({ changedFiles: [] });
       assert.equal(result.pass, true);
       assert.equal(result.evidence.mode, 'standalone-descriptor');
@@ -78,18 +77,16 @@ describe('shared-validation gate', () => {
     });
 
     it('returns standalone descriptor when changedFiles undefined', async () => {
-      const { runSharedValidationGate } = await import(
-        './shared-validation.gate.mjs'
-      );
+      const { runSharedValidationGate } =
+        await import('./shared-validation.gate.mjs');
       const result = await runSharedValidationGate({});
       assert.equal(result.pass, true);
       assert.equal(result.evidence.mode, 'standalone-descriptor');
     });
 
     it('passes and writes artifact when all DI runners pass', async () => {
-      const { runSharedValidationGate } = await import(
-        './shared-validation.gate.mjs'
-      );
+      const { runSharedValidationGate } =
+        await import('./shared-validation.gate.mjs');
       const result = await runSharedValidationGate({
         changedFiles: ['src/foo.ts'],
         testRunner: async () => ({ status: 0, stdout: 't', stderr: '' }),
@@ -103,9 +100,8 @@ describe('shared-validation gate', () => {
     });
 
     it('fails when test runner fails (fixHint mentions tests)', async () => {
-      const { runSharedValidationGate } = await import(
-        './shared-validation.gate.mjs'
-      );
+      const { runSharedValidationGate } =
+        await import('./shared-validation.gate.mjs');
       const result = await runSharedValidationGate({
         changedFiles: ['src/foo.ts'],
         testRunner: async () => ({ status: 1, stdout: '', stderr: '' }),
@@ -117,9 +113,8 @@ describe('shared-validation gate', () => {
     });
 
     it('fails when build runner fails (fixHint mentions build)', async () => {
-      const { runSharedValidationGate } = await import(
-        './shared-validation.gate.mjs'
-      );
+      const { runSharedValidationGate } =
+        await import('./shared-validation.gate.mjs');
       const result = await runSharedValidationGate({
         changedFiles: ['src/foo.ts'],
         testRunner: async () => ({ status: 0, stdout: '', stderr: '' }),
@@ -131,9 +126,8 @@ describe('shared-validation gate', () => {
     });
 
     it('fails when lint runner fails (fixHint mentions lint)', async () => {
-      const { runSharedValidationGate } = await import(
-        './shared-validation.gate.mjs'
-      );
+      const { runSharedValidationGate } =
+        await import('./shared-validation.gate.mjs');
       const result = await runSharedValidationGate({
         changedFiles: ['src/foo.ts'],
         testRunner: async () => ({ status: 0, stdout: '', stderr: '' }),
@@ -145,9 +139,8 @@ describe('shared-validation gate', () => {
     });
 
     it('reports multiple failed runners in fixHint', async () => {
-      const { runSharedValidationGate } = await import(
-        './shared-validation.gate.mjs'
-      );
+      const { runSharedValidationGate } =
+        await import('./shared-validation.gate.mjs');
       const result = await runSharedValidationGate({
         changedFiles: ['src/foo.ts'],
         testRunner: async () => ({ status: 1, stdout: '', stderr: '' }),
@@ -161,9 +154,8 @@ describe('shared-validation gate', () => {
 
     it('writes artifact to custom relative artifactPath and mkdirs when dir missing', async () => {
       mockExistsSync = false;
-      const { runSharedValidationGate } = await import(
-        './shared-validation.gate.mjs'
-      );
+      const { runSharedValidationGate } =
+        await import('./shared-validation.gate.mjs');
       const result = await runSharedValidationGate({
         changedFiles: ['src/foo.ts'],
         artifactPath: 'coverage/custom/art.json',
@@ -177,9 +169,8 @@ describe('shared-validation gate', () => {
     });
 
     it('accepts an absolute artifactPath', async () => {
-      const { runSharedValidationGate } = await import(
-        './shared-validation.gate.mjs'
-      );
+      const { runSharedValidationGate } =
+        await import('./shared-validation.gate.mjs');
       const abs = path.join(REPO_ROOT, 'coverage', 'abs-artifact.json');
       await runSharedValidationGate({
         changedFiles: ['src/foo.ts'],
@@ -195,9 +186,8 @@ describe('shared-validation gate', () => {
   describe('defaultTestRunner', () => {
     it('returns status 0 when no test files selected', async () => {
       mockDerivedTestFiles = [];
-      const { runSharedValidationGate } = await import(
-        './shared-validation.gate.mjs'
-      );
+      const { runSharedValidationGate } =
+        await import('./shared-validation.gate.mjs');
       const result = await runSharedValidationGate({
         changedFiles: ['src/foo.ts'],
         buildRunner: async () => ({ status: 0, stdout: '', stderr: '' }),
@@ -210,9 +200,8 @@ describe('shared-validation gate', () => {
     it('returns status 0 when no existing test files on disk', async () => {
       mockDerivedTestFiles = ['src/missing.test.ts'];
       mockExistsSync = () => false;
-      const { runSharedValidationGate } = await import(
-        './shared-validation.gate.mjs'
-      );
+      const { runSharedValidationGate } =
+        await import('./shared-validation.gate.mjs');
       const result = await runSharedValidationGate({
         changedFiles: ['src/foo.ts'],
         buildRunner: async () => ({ status: 0, stdout: '', stderr: '' }),
@@ -233,9 +222,8 @@ describe('shared-validation gate', () => {
           stderr: '',
         };
       };
-      const { runSharedValidationGate } = await import(
-        './shared-validation.gate.mjs'
-      );
+      const { runSharedValidationGate } =
+        await import('./shared-validation.gate.mjs');
       const result = await runSharedValidationGate({
         changedFiles: ['src/foo.ts'],
         buildRunner: async () => ({ status: 0, stdout: '', stderr: '' }),
@@ -253,9 +241,8 @@ describe('shared-validation gate', () => {
         stdout: JSON.stringify({ status: 7, stdout: 'fail', stderr: '' }),
         stderr: '',
       });
-      const { runSharedValidationGate } = await import(
-        './shared-validation.gate.mjs'
-      );
+      const { runSharedValidationGate } =
+        await import('./shared-validation.gate.mjs');
       const result = await runSharedValidationGate({
         changedFiles: ['src/foo.ts'],
         buildRunner: async () => ({ status: 0, stdout: '', stderr: '' }),
@@ -278,9 +265,8 @@ describe('shared-validation gate', () => {
         }),
         stderr: '',
       });
-      const { runSharedValidationGate } = await import(
-        './shared-validation.gate.mjs'
-      );
+      const { runSharedValidationGate } =
+        await import('./shared-validation.gate.mjs');
       const result = await runSharedValidationGate({
         changedFiles: ['src/foo.ts'],
         buildRunner: async () => ({ status: 0, stdout: '', stderr: '' }),
@@ -297,9 +283,8 @@ describe('shared-validation gate', () => {
         stdout: 'not-json',
         stderr: 'err',
       });
-      const { runSharedValidationGate } = await import(
-        './shared-validation.gate.mjs'
-      );
+      const { runSharedValidationGate } =
+        await import('./shared-validation.gate.mjs');
       const result = await runSharedValidationGate({
         changedFiles: ['src/foo.ts'],
         buildRunner: async () => ({ status: 0, stdout: '', stderr: '' }),
@@ -316,9 +301,8 @@ describe('shared-validation gate', () => {
         stdout: 'garbage',
         stderr: '',
       });
-      const { runSharedValidationGate } = await import(
-        './shared-validation.gate.mjs'
-      );
+      const { runSharedValidationGate } =
+        await import('./shared-validation.gate.mjs');
       const result = await runSharedValidationGate({
         changedFiles: ['src/foo.ts'],
         buildRunner: async () => ({ status: 0, stdout: '', stderr: '' }),
@@ -331,9 +315,8 @@ describe('shared-validation gate', () => {
   describe('defaultBuildRunner', () => {
     it('returns status 0 when build succeeds', async () => {
       mockSpawnResult = () => ({ status: 0, stdout: '', stderr: '' });
-      const { runSharedValidationGate } = await import(
-        './shared-validation.gate.mjs'
-      );
+      const { runSharedValidationGate } =
+        await import('./shared-validation.gate.mjs');
       const result = await runSharedValidationGate({
         changedFiles: ['src/foo.ts'],
         testRunner: async () => ({ status: 0, stdout: '', stderr: '' }),
@@ -343,10 +326,14 @@ describe('shared-validation gate', () => {
     });
 
     it('returns status 1 when build has an error object', async () => {
-      mockSpawnResult = () => ({ status: null, error: new Error('boom'), stdout: '', stderr: '' });
-      const { runSharedValidationGate } = await import(
-        './shared-validation.gate.mjs'
-      );
+      mockSpawnResult = () => ({
+        status: null,
+        error: new Error('boom'),
+        stdout: '',
+        stderr: '',
+      });
+      const { runSharedValidationGate } =
+        await import('./shared-validation.gate.mjs');
       const result = await runSharedValidationGate({
         changedFiles: ['src/foo.ts'],
         testRunner: async () => ({ status: 0, stdout: '', stderr: '' }),
@@ -357,10 +344,14 @@ describe('shared-validation gate', () => {
     });
 
     it('returns status 1 when build exits with signal and no status', async () => {
-      mockSpawnResult = () => ({ status: null, signal: 'SIGTERM', stdout: '', stderr: '' });
-      const { runSharedValidationGate } = await import(
-        './shared-validation.gate.mjs'
-      );
+      mockSpawnResult = () => ({
+        status: null,
+        signal: 'SIGTERM',
+        stdout: '',
+        stderr: '',
+      });
+      const { runSharedValidationGate } =
+        await import('./shared-validation.gate.mjs');
       const result = await runSharedValidationGate({
         changedFiles: ['src/foo.ts'],
         testRunner: async () => ({ status: 0, stdout: '', stderr: '' }),
@@ -372,9 +363,8 @@ describe('shared-validation gate', () => {
 
     it('returns status 0 when build status is null with no error/signal', async () => {
       mockSpawnResult = () => ({ status: null, stdout: '', stderr: '' });
-      const { runSharedValidationGate } = await import(
-        './shared-validation.gate.mjs'
-      );
+      const { runSharedValidationGate } =
+        await import('./shared-validation.gate.mjs');
       const result = await runSharedValidationGate({
         changedFiles: ['src/foo.ts'],
         testRunner: async () => ({ status: 0, stdout: '', stderr: '' }),
@@ -385,9 +375,8 @@ describe('shared-validation gate', () => {
 
     it('returns non-zero status when build fails', async () => {
       mockSpawnResult = () => ({ status: 2, stdout: '', stderr: '' });
-      const { runSharedValidationGate } = await import(
-        './shared-validation.gate.mjs'
-      );
+      const { runSharedValidationGate } =
+        await import('./shared-validation.gate.mjs');
       const result = await runSharedValidationGate({
         changedFiles: ['src/foo.ts'],
         testRunner: async () => ({ status: 0, stdout: '', stderr: '' }),
@@ -401,9 +390,8 @@ describe('shared-validation gate', () => {
   describe('defaultLintRunner', () => {
     it('returns status 0 when lint succeeds', async () => {
       mockSpawnResult = () => ({ status: 0, stdout: '', stderr: '' });
-      const { runSharedValidationGate } = await import(
-        './shared-validation.gate.mjs'
-      );
+      const { runSharedValidationGate } =
+        await import('./shared-validation.gate.mjs');
       const result = await runSharedValidationGate({
         changedFiles: ['src/foo.ts'],
         testRunner: async () => ({ status: 0, stdout: '', stderr: '' }),
@@ -413,10 +401,14 @@ describe('shared-validation gate', () => {
     });
 
     it('returns status 1 when lint has an error object', async () => {
-      mockSpawnResult = () => ({ status: null, error: new Error('lintboom'), stdout: '', stderr: '' });
-      const { runSharedValidationGate } = await import(
-        './shared-validation.gate.mjs'
-      );
+      mockSpawnResult = () => ({
+        status: null,
+        error: new Error('lintboom'),
+        stdout: '',
+        stderr: '',
+      });
+      const { runSharedValidationGate } =
+        await import('./shared-validation.gate.mjs');
       const result = await runSharedValidationGate({
         changedFiles: ['src/foo.ts'],
         testRunner: async () => ({ status: 0, stdout: '', stderr: '' }),
@@ -427,10 +419,14 @@ describe('shared-validation gate', () => {
     });
 
     it('returns status 1 when lint exits with signal', async () => {
-      mockSpawnResult = () => ({ status: null, signal: 'SIGKILL', stdout: '', stderr: '' });
-      const { runSharedValidationGate } = await import(
-        './shared-validation.gate.mjs'
-      );
+      mockSpawnResult = () => ({
+        status: null,
+        signal: 'SIGKILL',
+        stdout: '',
+        stderr: '',
+      });
+      const { runSharedValidationGate } =
+        await import('./shared-validation.gate.mjs');
       const result = await runSharedValidationGate({
         changedFiles: ['src/foo.ts'],
         testRunner: async () => ({ status: 0, stdout: '', stderr: '' }),
@@ -442,9 +438,8 @@ describe('shared-validation gate', () => {
 
     it('returns status 0 when lint status null no error/signal', async () => {
       mockSpawnResult = () => ({ status: null, stdout: '', stderr: '' });
-      const { runSharedValidationGate } = await import(
-        './shared-validation.gate.mjs'
-      );
+      const { runSharedValidationGate } =
+        await import('./shared-validation.gate.mjs');
       const result = await runSharedValidationGate({
         changedFiles: ['src/foo.ts'],
         testRunner: async () => ({ status: 0, stdout: '', stderr: '' }),
@@ -455,9 +450,8 @@ describe('shared-validation gate', () => {
 
     it('returns non-zero status when lint fails', async () => {
       mockSpawnResult = () => ({ status: 4, stdout: '', stderr: '' });
-      const { runSharedValidationGate } = await import(
-        './shared-validation.gate.mjs'
-      );
+      const { runSharedValidationGate } =
+        await import('./shared-validation.gate.mjs');
       const result = await runSharedValidationGate({
         changedFiles: ['src/foo.ts'],
         testRunner: async () => ({ status: 0, stdout: '', stderr: '' }),
@@ -576,9 +570,8 @@ describe('shared-validation gate', () => {
     });
 
     it('runSharedValidationGate() with no args returns standalone descriptor', async () => {
-      const { runSharedValidationGate } = await import(
-        './shared-validation.gate.mjs'
-      );
+      const { runSharedValidationGate } =
+        await import('./shared-validation.gate.mjs');
       const result = await runSharedValidationGate();
       assert.equal(result.pass, true);
     });
@@ -593,9 +586,8 @@ describe('shared-validation gate', () => {
         stdout: JSON.stringify({ status: 0, stdout: 'ok', stderr: '' }),
         stderr: '',
       });
-      const { runSharedValidationGate } = await import(
-        './shared-validation.gate.mjs'
-      );
+      const { runSharedValidationGate } =
+        await import('./shared-validation.gate.mjs');
       const result = await runSharedValidationGate({
         changedFiles: ['src/foo.ts'],
         buildRunner: async () => ({ status: 0, stdout: '', stderr: '' }),
@@ -612,9 +604,8 @@ describe('shared-validation gate', () => {
         stdout: JSON.stringify({ status: null, stdout: '', stderr: '' }),
         stderr: '',
       });
-      const { runSharedValidationGate } = await import(
-        './shared-validation.gate.mjs'
-      );
+      const { runSharedValidationGate } =
+        await import('./shared-validation.gate.mjs');
       const result = await runSharedValidationGate({
         changedFiles: ['src/foo.ts'],
         buildRunner: async () => ({ status: 0, stdout: '', stderr: '' }),
@@ -631,9 +622,8 @@ describe('shared-validation gate', () => {
         stdout: null,
         stderr: null,
       });
-      const { runSharedValidationGate } = await import(
-        './shared-validation.gate.mjs'
-      );
+      const { runSharedValidationGate } =
+        await import('./shared-validation.gate.mjs');
       const result = await runSharedValidationGate({
         changedFiles: ['src/foo.ts'],
         buildRunner: async () => ({ status: 0, stdout: '', stderr: '' }),
@@ -649,9 +639,8 @@ describe('shared-validation gate', () => {
         }
         return { status: 0, stdout: '', stderr: '' };
       };
-      const { runSharedValidationGate } = await import(
-        './shared-validation.gate.mjs'
-      );
+      const { runSharedValidationGate } =
+        await import('./shared-validation.gate.mjs');
       const result = await runSharedValidationGate({
         changedFiles: ['src/foo.ts'],
         testRunner: async () => ({ status: 0, stdout: '', stderr: '' }),
@@ -667,9 +656,8 @@ describe('shared-validation gate', () => {
         }
         return { status: 0, stdout: '', stderr: '' };
       };
-      const { runSharedValidationGate } = await import(
-        './shared-validation.gate.mjs'
-      );
+      const { runSharedValidationGate } =
+        await import('./shared-validation.gate.mjs');
       const result = await runSharedValidationGate({
         changedFiles: ['src/foo.ts'],
         testRunner: async () => ({ status: 0, stdout: '', stderr: '' }),

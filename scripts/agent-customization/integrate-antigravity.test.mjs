@@ -41,24 +41,28 @@ function captureConsole() {
   console.log = (...args) => logs.push(args.join(' '));
   console.error = (...args) => errors.push(args.join(' '));
   return {
-    logs, errors,
-    restore() { console.log = origLog; console.error = origError; },
+    logs,
+    errors,
+    restore() {
+      console.log = origLog;
+      console.error = origError;
+    },
   };
 }
 
 describe('integrate-antigravity', () => {
   it('creates links when destination does not exist', async () => {
     const origExit = process.exit;
-    process.exit = (code) => { throw new Error(`EXIT:${code}`); };
+    process.exit = (code) => {
+      throw new Error(`EXIT:${code}`);
+    };
     const cap = captureConsole();
 
     mockFs.mkdir.mockResolvedValue();
     mockFs.lstat.mockRejectedValue(new Error('ENOENT'));
     mockFs.link.mockResolvedValue();
     mockFs.symlink.mockResolvedValue();
-    mockFs.readdir.mockResolvedValue([
-      'test.agent.md',
-    ]);
+    mockFs.readdir.mockResolvedValue(['test.agent.md']);
 
     await importModule();
 
@@ -72,12 +76,15 @@ describe('integrate-antigravity', () => {
 
   it('skips MCP config when already exists', async () => {
     const origExit = process.exit;
-    process.exit = (code) => { throw new Error(`EXIT:${code}`); };
+    process.exit = (code) => {
+      throw new Error(`EXIT:${code}`);
+    };
     const cap = captureConsole();
 
     mockFs.mkdir.mockResolvedValue();
     // First lstat (mcp_config) succeeds, second (skills) fails
-    mockFs.lstat.mockResolvedValueOnce({ isFile: () => true })
+    mockFs.lstat
+      .mockResolvedValueOnce({ isFile: () => true })
       .mockRejectedValueOnce(new Error('ENOENT'));
     mockFs.symlink.mockResolvedValue();
     mockFs.readdir.mockResolvedValue([]);
@@ -86,17 +93,22 @@ describe('integrate-antigravity', () => {
 
     process.exit = origExit;
     cap.restore();
-    assert.ok(cap.logs.some((l) => l.includes('mcp_config.json already exists')));
+    assert.ok(
+      cap.logs.some((l) => l.includes('mcp_config.json already exists')),
+    );
   });
 
   it('skips skills when already exists', async () => {
     const origExit = process.exit;
-    process.exit = (code) => { throw new Error(`EXIT:${code}`); };
+    process.exit = (code) => {
+      throw new Error(`EXIT:${code}`);
+    };
     const cap = captureConsole();
 
     mockFs.mkdir.mockResolvedValue();
     // First lstat (mcp_config) fails, second (skills) succeeds
-    mockFs.lstat.mockRejectedValueOnce(new Error('ENOENT'))
+    mockFs.lstat
+      .mockRejectedValueOnce(new Error('ENOENT'))
       .mockResolvedValueOnce({ isDirectory: () => true });
     mockFs.link.mockResolvedValue();
     mockFs.readdir.mockResolvedValue([]);
@@ -110,18 +122,19 @@ describe('integrate-antigravity', () => {
 
   it('skips agent when already linked', async () => {
     const origExit = process.exit;
-    process.exit = (code) => { throw new Error(`EXIT:${code}`); };
+    process.exit = (code) => {
+      throw new Error(`EXIT:${code}`);
+    };
     const cap = captureConsole();
 
     mockFs.mkdir.mockResolvedValue();
     mockFs.lstat.mockRejectedValue(new Error('ENOENT'));
     mockFs.link.mockResolvedValue();
     mockFs.symlink.mockResolvedValue();
-    mockFs.readdir.mockResolvedValue([
-      'existing.agent.md',
-    ]);
+    mockFs.readdir.mockResolvedValue(['existing.agent.md']);
     // lstat for destPath (agent) succeeds
-    mockFs.lstat.mockResolvedValueOnce({ isFile: () => true }) // mcp_config
+    mockFs.lstat
+      .mockResolvedValueOnce({ isFile: () => true }) // mcp_config
       .mockRejectedValueOnce(new Error('ENOENT')) // skills
       .mockResolvedValue({ isFile: () => true }); // agent dest
 
@@ -134,7 +147,9 @@ describe('integrate-antigravity', () => {
 
   it('handles error and exits 1', async () => {
     const origExit = process.exit;
-    process.exit = (code) => { throw new Error(`EXIT:${code}`); };
+    process.exit = (code) => {
+      throw new Error(`EXIT:${code}`);
+    };
     const cap = captureConsole();
 
     mockFs.mkdir.mockRejectedValue(new Error('Permission denied'));
@@ -143,14 +158,22 @@ describe('integrate-antigravity', () => {
 
     process.exit = origExit;
     cap.restore();
-    assert.ok(cap.errors.some((e) => e.includes('Error performing integration')));
+    assert.ok(
+      cap.errors.some((e) => e.includes('Error performing integration')),
+    );
   });
 
   it('uses dir symlink type on non-win32 platform', async () => {
     const origPlatform = process.platform;
-    Object.defineProperty(process, 'platform', { value: 'linux', configurable: true, writable: true });
+    Object.defineProperty(process, 'platform', {
+      value: 'linux',
+      configurable: true,
+      writable: true,
+    });
     const origExit = process.exit;
-    process.exit = (code) => { throw new Error(`EXIT:${code}`); };
+    process.exit = (code) => {
+      throw new Error(`EXIT:${code}`);
+    };
     const cap = captureConsole();
 
     mockFs.mkdir.mockResolvedValue();
@@ -162,7 +185,11 @@ describe('integrate-antigravity', () => {
     await importModule();
 
     process.exit = origExit;
-    Object.defineProperty(process, 'platform', { value: origPlatform, configurable: true, writable: true });
+    Object.defineProperty(process, 'platform', {
+      value: origPlatform,
+      configurable: true,
+      writable: true,
+    });
     cap.restore();
     assert.ok(mockFs.symlink.mock.calls.length > 0);
     assert.strictEqual(mockFs.symlink.mock.calls[0][2], 'dir');

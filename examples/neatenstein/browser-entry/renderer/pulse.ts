@@ -110,7 +110,8 @@ export function emitNeatensteinAmbientPulse(
 ): NeatensteinPulse | null {
   if (!isAmbientTick(simTick)) return null;
 
-  let state = (((seed + simTick) % PARK_MILLER_MODULUS) + PARK_MILLER_MODULUS) %
+  let state =
+    (((seed + simTick) % PARK_MILLER_MODULUS) + PARK_MILLER_MODULUS) %
     PARK_MILLER_MODULUS;
   state = nextLcgState(state);
   state = nextLcgState(state);

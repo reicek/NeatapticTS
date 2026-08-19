@@ -44,7 +44,10 @@ import {
   type WaveDifficultyConfig,
   computeWaveDifficulty,
 } from './curriculum-difficulty';
-import { createBatchProcessor, type BatchProcessor } from './bounded-concurrency';
+import {
+  createBatchProcessor,
+  type BatchProcessor,
+} from './bounded-concurrency';
 import {
   createArchiveAndLeague,
   sampleLeagueOpponents,
@@ -188,10 +191,18 @@ export function runArmsRaceGeneration(
 
     // 8a. Update curriculum difficulty, archive, league, and transition
     //     replay buffer from this generation's performance.
-    updateAlgorithmContext(ctx, quality, enemyBehaviorMetrics, options.generation);
+    updateAlgorithmContext(
+      ctx,
+      quality,
+      enemyBehaviorMetrics,
+      options.generation,
+    );
 
     // 8b. Compute wave difficulty from curriculum difficulty.
-    result.waveDifficulty = computeGenerationDifficulty(ctx, options.generation);
+    result.waveDifficulty = computeGenerationDifficulty(
+      ctx,
+      options.generation,
+    );
     result.curriculumDifficulty = ctx.curriculumDifficulty;
 
     // 8c. Scale enemy capability by curriculum difficulty.

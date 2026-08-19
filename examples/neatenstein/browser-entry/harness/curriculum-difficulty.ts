@@ -81,9 +81,15 @@ export interface PlayerPerformanceTelemetry {
 export function computeCurriculumDifficulty(
   telemetry: PlayerPerformanceTelemetry,
 ): number {
-  const survivalScore = clamp01(telemetry.survivalTicks / REFERENCE_SURVIVAL_TICKS);
-  const damageDealtScore = clamp01(telemetry.damageDealt / REFERENCE_DAMAGE_DEALT);
-  const damageTakenScore = clamp01(1 - telemetry.damageTaken / REFERENCE_DAMAGE_TAKEN);
+  const survivalScore = clamp01(
+    telemetry.survivalTicks / REFERENCE_SURVIVAL_TICKS,
+  );
+  const damageDealtScore = clamp01(
+    telemetry.damageDealt / REFERENCE_DAMAGE_DEALT,
+  );
+  const damageTakenScore = clamp01(
+    1 - telemetry.damageTaken / REFERENCE_DAMAGE_TAKEN,
+  );
   const killsScore = clamp01(telemetry.kills / REFERENCE_KILLS);
 
   const difficulty =

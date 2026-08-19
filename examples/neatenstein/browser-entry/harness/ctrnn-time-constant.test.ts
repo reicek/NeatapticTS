@@ -50,9 +50,7 @@ describe('B4.7: Per-node evolvable time constants (CTRNN)', () => {
 
     it('MOD_TIME_CONSTANT is included in the ALL array', () => {
       const all = mutation.ALL as unknown[];
-      const names = all.map(
-        (c) => (c as { name: string }).name,
-      );
+      const names = all.map((c) => (c as { name: string }).name);
       expect(names).toContain('MOD_TIME_CONSTANT');
     });
   });

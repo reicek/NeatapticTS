@@ -85,7 +85,9 @@ describe('expand-query: loadDomainAssociations', () => {
 
   it('returns empty dictionary when file is not found', async () => {
     invalidateDomainAssociationsCache();
-    const result = await loadDomainAssociations('/nonexistent/path/to/file.json');
+    const result = await loadDomainAssociations(
+      '/nonexistent/path/to/file.json',
+    );
     expect(result.version).toBe(1);
     expect(result.associations).toEqual([]);
   });
@@ -128,7 +130,12 @@ describe('expand-query: lookupDomainAssociations', () => {
     const dictionary = {
       version: 1,
       associations: [
-        { term: 'Crossover', expansions: ['recombination'], source: 'test', confidence: 0.8 },
+        {
+          term: 'Crossover',
+          expansions: ['recombination'],
+          source: 'test',
+          confidence: 0.8,
+        },
       ],
     };
     const results = lookupDomainAssociations(['crossover'], dictionary);
@@ -149,24 +156,48 @@ describe('expand-query: lookupDomainAssociations', () => {
 
 describe('expand-query: expansionRelevance', () => {
   it('computes relevance from similarity', () => {
-    const score = expansionRelevance({ similarity: 0.9, frequency: 10, expanded: 'test' });
+    const score = expansionRelevance({
+      similarity: 0.9,
+      frequency: 10,
+      expanded: 'test',
+    });
     expect(score).toBeGreaterThan(0);
   });
 
   it('computes relevance from confidence', () => {
-    const score = expansionRelevance({ confidence: 0.8, frequency: 5, expanded: 'test' });
+    const score = expansionRelevance({
+      confidence: 0.8,
+      frequency: 5,
+      expanded: 'test',
+    });
     expect(score).toBeGreaterThan(0);
   });
 
   it('uses frequency penalty', () => {
-    const lowFreq = expansionRelevance({ similarity: 0.9, frequency: 1, expanded: 'test' });
-    const highFreq = expansionRelevance({ similarity: 0.9, frequency: 1000, expanded: 'test' });
+    const lowFreq = expansionRelevance({
+      similarity: 0.9,
+      frequency: 1,
+      expanded: 'test',
+    });
+    const highFreq = expansionRelevance({
+      similarity: 0.9,
+      frequency: 1000,
+      expanded: 'test',
+    });
     expect(lowFreq).toBeGreaterThan(highFreq);
   });
 
   it('gives length bonus for multi-word expansions', () => {
-    const shortExp = expansionRelevance({ similarity: 0.9, frequency: 1, expanded: 'word' });
-    const longExp = expansionRelevance({ similarity: 0.9, frequency: 1, expanded: 'three word phrase' });
+    const shortExp = expansionRelevance({
+      similarity: 0.9,
+      frequency: 1,
+      expanded: 'word',
+    });
+    const longExp = expansionRelevance({
+      similarity: 0.9,
+      frequency: 1,
+      expanded: 'three word phrase',
+    });
     expect(longExp).toBeGreaterThan(shortExp);
   });
 
@@ -220,11 +251,18 @@ describe('expand-query: selectExpansions', () => {
       { expanded: 'term2', similarity: 0.8, frequency: 3, relevanceScore: 0.7 },
     ];
     const domainExpansions = [
-      { expanded: 'term3', confidence: 0.85, frequency: 1, relevanceScore: 0.75 },
+      {
+        expanded: 'term3',
+        confidence: 0.85,
+        frequency: 1,
+        relevanceScore: 0.75,
+      },
     ];
     const result = selectExpansions(embeddingExpansions, domainExpansions);
     expect(result.length).toBeLessThanOrEqual(MAX_EXPANDED_TERMS);
-    expect(result[0].relevanceScore).toBeGreaterThanOrEqual(result[1]?.relevanceScore ?? 0);
+    expect(result[0].relevanceScore).toBeGreaterThanOrEqual(
+      result[1]?.relevanceScore ?? 0,
+    );
   });
 
   it('computes relevanceScore for candidates missing it', () => {
@@ -238,7 +276,12 @@ describe('expand-query: selectExpansions', () => {
 
   it('filters out candidates below MIN_EXPANSION_RELEVANCE', () => {
     const embeddingExpansions = [
-      { expanded: 'low', similarity: 0.1, frequency: 1000, relevanceScore: 0.1 },
+      {
+        expanded: 'low',
+        similarity: 0.1,
+        frequency: 1000,
+        relevanceScore: 0.1,
+      },
     ];
     const result = selectExpansions(embeddingExpansions, []);
     expect(result).toEqual([]);
@@ -396,7 +439,10 @@ describe('expand-query: findNearestTermsServerSide', () => {
 
 describe('expand-query: expandQuery', () => {
   it('returns identity when expandQuery is false', async () => {
-    const result = await expandQuery({ query: 'NEAT crossover', expandQuery: false });
+    const result = await expandQuery({
+      query: 'NEAT crossover',
+      expandQuery: false,
+    });
     expect(result.expansion.applied).toBe(false);
     expect(result.expandedTerms).toEqual([]);
     expect(result.bm25Query).toBe(null);
@@ -462,9 +508,7 @@ describe('expand-query: expandQuery', () => {
         }
         // brute-force — return terms with very low similarity (high distance)
         return {
-          rows: [
-            { term: 'unrelated', distance: 1.5, frequency: 1 },
-          ],
+          rows: [{ term: 'unrelated', distance: 1.5, frequency: 1 }],
         };
       },
     };
@@ -487,17 +531,20 @@ describe('expand-query: expandQuery', () => {
     const pathMod = await import('node:path');
     const tmpDir = await mkdtemp(pathMod.join(tmpdir(), 'expand-test-'));
     const assocPath = pathMod.join(tmpDir, 'associations.json');
-    await writeFile(assocPath, JSON.stringify({
-      version: 1,
-      associations: [
-        {
-          term: 'crossover',
-          expansions: ['recombination', 'gene swap'],
-          source: 'genetics',
-          confidence: 0.95,
-        },
-      ],
-    }));
+    await writeFile(
+      assocPath,
+      JSON.stringify({
+        version: 1,
+        associations: [
+          {
+            term: 'crossover',
+            expansions: ['recombination', 'gene swap'],
+            source: 'genetics',
+            confidence: 0.95,
+          },
+        ],
+      }),
+    );
     try {
       const mockClient = {
         async execute({ sql }) {

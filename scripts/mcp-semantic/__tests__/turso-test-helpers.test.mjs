@@ -30,7 +30,11 @@ describe('turso-test-helpers', () => {
 
   afterEach(async () => {
     for (const f of TEST_DB_FILES) {
-      try { await unlink(f); } catch { /* noop */ }
+      try {
+        await unlink(f);
+      } catch {
+        /* noop */
+      }
     }
   });
   describe('splitSqlStatements', () => {
@@ -109,7 +113,8 @@ describe('turso-test-helpers', () => {
     });
 
     it('handles lowercase begin/end (case-insensitive)', () => {
-      const sql = 'create trigger tr begin insert into t values(1); end; select 1;';
+      const sql =
+        'create trigger tr begin insert into t values(1); end; select 1;';
       const stmts = splitSqlStatements(sql);
       // The function checks .toUpperCase() so lowercase begin/end should work
       expect(stmts.length).toBeGreaterThanOrEqual(1);
@@ -174,7 +179,9 @@ describe('turso-test-helpers', () => {
         'SELECT * FROM chunks ORDER BY chunk_id',
       );
       expect(chunks.rows).toHaveLength(2);
-      const parent = chunks.rows.find((c) => c.chunk_id === TEST_PARENT_CHUNK_ID);
+      const parent = chunks.rows.find(
+        (c) => c.chunk_id === TEST_PARENT_CHUNK_ID,
+      );
       const child = chunks.rows.find((c) => c.chunk_id === TEST_CHUNK_ID);
       expect(parent).toBeDefined();
       expect(parent.depth).toBe(0);
@@ -202,7 +209,9 @@ describe('turso-test-helpers', () => {
       await insertTestFixtures(client);
       await insertGraphFixtures(client);
 
-      const entities = await client.execute('SELECT * FROM entities ORDER BY entity_id');
+      const entities = await client.execute(
+        'SELECT * FROM entities ORDER BY entity_id',
+      );
       expect(entities.rows).toHaveLength(2);
       const entityA = entities.rows.find((e) => e.entity_id === 900001);
       const entityB = entities.rows.find((e) => e.entity_id === 900002);

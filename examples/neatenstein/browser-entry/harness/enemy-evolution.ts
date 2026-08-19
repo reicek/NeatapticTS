@@ -14,11 +14,7 @@ import seedrandom from 'seedrandom';
 
 import type { FitnessRecord } from './types.ts';
 import { gaussianNoise } from './enemy-warmstart.mlp-math.utils';
-import {
-  createSepCmaEs,
-  stepSepCmaEs,
-  type SepCmaEsState,
-} from './cma-es';
+import { createSepCmaEs, stepSepCmaEs, type SepCmaEsState } from './cma-es';
 import {
   createTransitionBuffer,
   runReplayUpdates,
@@ -308,7 +304,11 @@ export function evolveEnemyWithReplay(
   });
 
   // Step 2: Apply Gaussian perturbation for exploration.
-  const weights = perturbWeights(replayResult.weights, rng, DEFAULT_MUTATION_SIGMA);
+  const weights = perturbWeights(
+    replayResult.weights,
+    rng,
+    DEFAULT_MUTATION_SIGMA,
+  );
   const variantId = deriveVariantId(rng);
 
   return { weights, variantId };

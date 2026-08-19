@@ -529,7 +529,11 @@ function buildBackDisk(map: Map<string, Voxel>, palette: VoxelPalette): void {
   const diskCenterZ = GRID_CENTER_Z + DISK_CENTER_Z_OFFSET;
 
   for (let y = diskCenterY - DISK_RADIUS; y <= diskCenterY + DISK_RADIUS; y++) {
-    for (let z = diskCenterZ - DISK_RADIUS; z <= diskCenterZ + DISK_RADIUS; z++) {
+    for (
+      let z = diskCenterZ - DISK_RADIUS;
+      z <= diskCenterZ + DISK_RADIUS;
+      z++
+    ) {
       const dy = y - diskCenterY;
       const dz = z - diskCenterZ;
       const distance = Math.sqrt(dy * dy + dz * dz);

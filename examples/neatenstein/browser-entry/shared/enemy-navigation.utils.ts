@@ -9,14 +9,8 @@
  * the main module to preserve the `queueBuffer` coupling (AC-060).
  */
 
-import {
-  createCollisionMap,
-  type CollisionMap,
-} from '../renderer/map';
-import {
-  castRayDDAFromFlatMap,
-  hasLineOfSight,
-} from '../renderer/raycast';
+import { createCollisionMap, type CollisionMap } from '../renderer/map';
+import { castRayDDAFromFlatMap, hasLineOfSight } from '../renderer/raycast';
 import { NEATENSTEIN_RENDER_DISTANCE_CAP } from '../renderer/framebuffer';
 import type {
   AmmoPickupState,

@@ -88,7 +88,9 @@ describe('classify-query: hasCodeIdentifiers', () => {
 
 describe('classify-query: hasMultiHopIndicators', () => {
   it('returns true for multi-hop patterns', () => {
-    expect(hasMultiHopIndicators('functions that also call activate')).toBe(true);
+    expect(hasMultiHopIndicators('functions that also call activate')).toBe(
+      true,
+    );
     expect(hasMultiHopIndicators('which also uses slab')).toBe(true);
     expect(hasMultiHopIndicators('call activate and then return')).toBe(true);
     expect(hasMultiHopIndicators('call activate that returns')).toBe(true);
@@ -106,7 +108,9 @@ describe('classify-query: hasMultiHopIndicators', () => {
 
 describe('classify-query: hasCrossFamilyIndicators', () => {
   it('returns true for cross-family keywords', () => {
-    expect(hasCrossFamilyIndicators('relationship between crossover and mutation')).toBe(true);
+    expect(
+      hasCrossFamilyIndicators('relationship between crossover and mutation'),
+    ).toBe(true);
     expect(hasCrossFamilyIndicators('connection between modules')).toBe(true);
     expect(hasCrossFamilyIndicators('between two systems')).toBe(true);
   });
@@ -122,7 +126,9 @@ describe('classify-query: hasCrossFamilyIndicators', () => {
 
 describe('classify-query: hasExploratoryHints', () => {
   it('returns true for exploratory keywords', () => {
-    expect(hasExploratoryHints('how does the training pipeline work')).toBe(true);
+    expect(hasExploratoryHints('how does the training pipeline work')).toBe(
+      true,
+    );
     expect(hasExploratoryHints('explain the mutation algorithm')).toBe(true);
     expect(hasExploratoryHints('overview of the NEAT system')).toBe(true);
     expect(hasExploratoryHints('describe the selection process')).toBe(true);
@@ -188,7 +194,9 @@ describe('classify-query: classifyQuery', () => {
   });
 
   it('classifies multi-hop queries', () => {
-    const result = classifyQuery('functions that call activate and also use slab');
+    const result = classifyQuery(
+      'functions that call activate and also use slab',
+    );
     expect(result.query_class).toBe('multi_hop');
     expect(result.confidence).toBe(0.75);
     expect(result.hints.multi_hop).toBe(true);
@@ -254,28 +262,36 @@ describe('classify-query: classifyForSearchCorpus', () => {
   });
 
   it('returns alpha and family for multi_hop', () => {
-    const result = classifyForSearchCorpus('functions that call activate and also use slab');
+    const result = classifyForSearchCorpus(
+      'functions that call activate and also use slab',
+    );
     expect(result.query_class).toBe('multi_hop');
     expect(result.alpha).toBe(EMBEDDED_ALPHA_DEFAULTS.multi_hop);
     expect(result.family).toBe(EMBEDDED_FAMILY_DEFAULTS.multi_hop);
   });
 
   it('returns alpha and family for cross_boundary', () => {
-    const result = classifyForSearchCorpus('relationship between crossover and mutation');
+    const result = classifyForSearchCorpus(
+      'relationship between crossover and mutation',
+    );
     expect(result.query_class).toBe('cross_boundary');
     expect(result.alpha).toBe(EMBEDDED_ALPHA_DEFAULTS.cross_boundary);
     expect(result.family).toBe(EMBEDDED_FAMILY_DEFAULTS.cross_boundary);
   });
 
   it('returns alpha and family for exploratory', () => {
-    const result = classifyForSearchCorpus('how does the training pipeline work');
+    const result = classifyForSearchCorpus(
+      'how does the training pipeline work',
+    );
     expect(result.query_class).toBe('exploratory');
     expect(result.alpha).toBe(EMBEDDED_ALPHA_DEFAULTS.exploratory);
     expect(result.family).toBe(EMBEDDED_FAMILY_DEFAULTS.exploratory);
   });
 
   it('returns alpha and family for fallback', () => {
-    const result = classifyForSearchCorpus('the quick brown fox jumps over the lazy dog');
+    const result = classifyForSearchCorpus(
+      'the quick brown fox jumps over the lazy dog',
+    );
     expect(result.query_class).toBe('simple_lookup');
     expect(result.alpha).toBe(EMBEDDED_ALPHA_DEFAULTS.simple_lookup);
     expect(result.classification_fallback).toBe(false);

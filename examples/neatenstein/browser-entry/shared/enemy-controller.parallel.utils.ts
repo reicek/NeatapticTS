@@ -132,18 +132,12 @@ export function createEnemyInferencePool(
   const slots: Float32Array[] = [];
 
   // Attempt SharedArrayBuffer allocation (requires cross-origin isolation).
-  if (
-    typeof SharedArrayBuffer !== 'undefined'
-  ) {
+  if (typeof SharedArrayBuffer !== 'undefined') {
     try {
       sharedBuffer = new SharedArrayBuffer(totalByteLength);
       for (let i = 0; i < poolSize; i += 1) {
         slots.push(
-          new Float32Array(
-            sharedBuffer,
-            i * weightByteLength,
-            weightSize,
-          ),
+          new Float32Array(sharedBuffer, i * weightByteLength, weightSize),
         );
       }
     } catch {

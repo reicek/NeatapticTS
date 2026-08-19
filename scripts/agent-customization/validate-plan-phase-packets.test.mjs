@@ -87,7 +87,13 @@ function serializeYamlListItem(obj, indent, lines) {
     return;
   }
   const [firstKey, firstValue] = entries[0];
-  serializeYamlValue(firstKey, firstValue, indent, lines, `${pad}- ${firstKey}:`);
+  serializeYamlValue(
+    firstKey,
+    firstValue,
+    indent,
+    lines,
+    `${pad}- ${firstKey}:`,
+  );
   for (let i = 1; i < entries.length; i++) {
     const [key, value] = entries[i];
     serializeYamlValue(key, value, indent + 2, lines);
@@ -171,17 +177,22 @@ function validPhase(status = 'WIP') {
     headingStatus: status,
     phaseSections: makePhaseSections(status),
     yaml: makeValidPhaseYaml({ status: `[${status}]` }),
-    steps: status === 'PLANNED' ? [] : [
-      {
-        headingStep: 1,
-        headingTitle: 'Step One',
-        headingStatus: status === 'DONE' ? 'DONE' : 'WIP',
-        stepSections: makeStepSections(status === 'DONE' ? 'DONE' : 'WIP'),
-        yaml: makeValidStepYaml({
-          status: `[${status === 'DONE' ? 'DONE' : 'WIP'}]`,
-        }),
-      },
-    ],
+    steps:
+      status === 'PLANNED'
+        ? []
+        : [
+            {
+              headingStep: 1,
+              headingTitle: 'Step One',
+              headingStatus: status === 'DONE' ? 'DONE' : 'WIP',
+              stepSections: makeStepSections(
+                status === 'DONE' ? 'DONE' : 'WIP',
+              ),
+              yaml: makeValidStepYaml({
+                status: `[${status === 'DONE' ? 'DONE' : 'WIP'}]`,
+              }),
+            },
+          ],
   };
 }
 
@@ -235,7 +246,11 @@ describe('validate-plan-phase-packets coverage', () => {
 
     it('reports stale --testPathPattern flags as errors', () => {
       const issuesList = [];
-      validateValidationList(['--testPathPattern=foo', 'valid.ts'], 'ctx', issuesList);
+      validateValidationList(
+        ['--testPathPattern=foo', 'valid.ts'],
+        'ctx',
+        issuesList,
+      );
       assert.ok(
         issuesList.some((i) => i.message.includes('stale --testPathPattern')),
       );
@@ -255,7 +270,11 @@ describe('validate-plan-phase-packets coverage', () => {
 
     it('passes for valid file paths', () => {
       const issuesList = [];
-      validateValidationList(['src/foo.test.ts', 'scripts/bar.mjs'], 'ctx', issuesList);
+      validateValidationList(
+        ['src/foo.test.ts', 'scripts/bar.mjs'],
+        'ctx',
+        issuesList,
+      );
       assert.equal(issuesList.length, 0);
     });
 
@@ -273,14 +292,20 @@ describe('validate-plan-phase-packets coverage', () => {
         '## Implementation phases\n\n## Validation gates\n',
         PLAN_PATH,
       );
-      assert.ok(findIssues(report, 'No implementation phase packets').length > 0);
+      assert.ok(
+        findIssues(report, 'No implementation phase packets').length > 0,
+      );
     });
 
     it('validates a correct WIP phase with one WIP step', async () => {
       const plan = buildPlan([validPhase('WIP')]);
       const report = await validatePlanText(plan, PLAN_PATH);
       const errors = report.issues.filter((i) => i.severity === 'error');
-      assert.equal(errors.length, 0, `Unexpected errors: ${JSON.stringify(errors, null, 2)}`);
+      assert.equal(
+        errors.length,
+        0,
+        `Unexpected errors: ${JSON.stringify(errors, null, 2)}`,
+      );
     });
 
     it('validates a DONE phase without requiring sections', async () => {
@@ -294,7 +319,9 @@ describe('validate-plan-phase-packets coverage', () => {
     it('warns when non-archived plan has 0 WIP phases', async () => {
       const plan = buildPlan([validPhase('DONE')]);
       const report = await validatePlanText(plan, PLAN_PATH);
-      assert.ok(findIssues(report, 'Expected exactly one [WIP] phase').length > 0);
+      assert.ok(
+        findIssues(report, 'Expected exactly one [WIP] phase').length > 0,
+      );
     });
 
     it('warns when non-archived plan has 2 WIP phases', async () => {
@@ -302,18 +329,29 @@ describe('validate-plan-phase-packets coverage', () => {
       const phaseB = {
         ...validPhase('WIP'),
         headingPhase: 'B',
-        yaml: makeValidPhaseYaml({ phase: 'B', status: '[WIP]', next_phase: 'C' }),
+        yaml: makeValidPhaseYaml({
+          phase: 'B',
+          status: '[WIP]',
+          next_phase: 'C',
+        }),
       };
       const plan = buildPlan([phaseA, phaseB]);
       const report = await validatePlanText(plan, PLAN_PATH);
-      assert.ok(findIssues(report, 'Expected exactly one [WIP] phase').length > 0);
+      assert.ok(
+        findIssues(report, 'Expected exactly one [WIP] phase').length > 0,
+      );
     });
 
     it('errors when archived DONE plan has WIP phases', async () => {
-      const plan =
-        '**Status:** [DONE]\n\n' + buildPlan([validPhase('WIP')]);
-      const report = await validatePlanText(plan, 'plans/completed/test.plans.md');
-      const wipIssues = findIssues(report, 'Archived [DONE] plans must not contain [WIP]');
+      const plan = '**Status:** [DONE]\n\n' + buildPlan([validPhase('WIP')]);
+      const report = await validatePlanText(
+        plan,
+        'plans/completed/test.plans.md',
+      );
+      const wipIssues = findIssues(
+        report,
+        'Archived [DONE] plans must not contain [WIP]',
+      );
       assert.ok(wipIssues.length > 0);
     });
 
@@ -323,7 +361,10 @@ describe('validate-plan-phase-packets coverage', () => {
         'plans/completed/test.plans.md',
       );
       // Archived closed plan with no phases should not produce "No phases" error
-      assert.equal(findIssues(report, 'No implementation phase packets').length, 0);
+      assert.equal(
+        findIssues(report, 'No implementation phase packets').length,
+        0,
+      );
     });
 
     it('reports phase label sequence mismatch', async () => {
@@ -332,14 +373,18 @@ describe('validate-plan-phase-packets coverage', () => {
         ...validPhase('WIP'),
         headingPhase: 'C',
         yaml: makeValidPhaseYaml({ phase: 'C', status: '[WIP]' }),
-        steps: [{
-          ...validPhase('WIP').steps[0],
-          yaml: makeValidStepYaml({ phase: 'C', status: '[WIP]' }),
-        }],
+        steps: [
+          {
+            ...validPhase('WIP').steps[0],
+            yaml: makeValidStepYaml({ phase: 'C', status: '[WIP]' }),
+          },
+        ],
       };
       const plan = buildPlan([phaseA, phaseC]);
       const report = await validatePlanText(plan, PLAN_PATH);
-      assert.ok(findIssues(report, 'Expected phase B, found phase C').length > 0);
+      assert.ok(
+        findIssues(report, 'Expected phase B, found phase C').length > 0,
+      );
     });
 
     it('reports missing YAML metadata in non-DONE phase', async () => {
@@ -390,7 +435,8 @@ describe('validate-plan-phase-packets coverage', () => {
         headingStatus: 'WIP',
         phaseSections: makePhaseSections('WIP'),
         yaml: null,
-        rawYaml: '```yaml\nphase: A\ntitle: Test Phase\nstatus: [WIP]\nagent: some-agent\ngoal: planning\n```',
+        rawYaml:
+          '```yaml\nphase: A\ntitle: Test Phase\nstatus: [WIP]\nagent: some-agent\ngoal: planning\n```',
         steps: [],
       };
       const planText = [
@@ -440,7 +486,12 @@ describe('validate-plan-phase-packets coverage', () => {
         headingTitle: 'Test Phase',
         headingStatus: 'WIP',
         phaseSections: makePhaseSections('WIP'),
-        yaml: { phase: 'A', title: 'Test Phase', status: '[WIP]', expansion: 'steps' },
+        yaml: {
+          phase: 'A',
+          title: 'Test Phase',
+          status: '[WIP]',
+          expansion: 'steps',
+        },
         steps: [],
       };
       const plan = buildPlan([phase]);
@@ -456,9 +507,7 @@ describe('validate-plan-phase-packets coverage', () => {
       };
       const plan = buildPlan([phase]);
       const report = await validatePlanText(plan, PLAN_PATH);
-      assert.ok(
-        findIssues(report, 'does not match heading title').length > 0,
-      );
+      assert.ok(findIssues(report, 'does not match heading title').length > 0);
     });
 
     it('reports phase mismatch in metadata', async () => {
@@ -469,9 +518,7 @@ describe('validate-plan-phase-packets coverage', () => {
       };
       const plan = buildPlan([phase]);
       const report = await validatePlanText(plan, PLAN_PATH);
-      assert.ok(
-        findIssues(report, 'does not match heading').length > 0,
-      );
+      assert.ok(findIssues(report, 'does not match heading').length > 0);
     });
 
     it('reports status mismatch in phase metadata', async () => {
@@ -482,9 +529,7 @@ describe('validate-plan-phase-packets coverage', () => {
       };
       const plan = buildPlan([phase]);
       const report = await validatePlanText(plan, PLAN_PATH);
-      assert.ok(
-        findIssues(report, 'does not match heading').length > 0,
-      );
+      assert.ok(findIssues(report, 'does not match heading').length > 0);
     });
 
     it('reports invalid phase goal', async () => {
@@ -521,9 +566,7 @@ describe('validate-plan-phase-packets coverage', () => {
       };
       const plan = buildPlan([phase]);
       const report = await validatePlanText(plan, PLAN_PATH);
-      assert.ok(
-        findIssues(report, 'auto_expand must be false').length > 0,
-      );
+      assert.ok(findIssues(report, 'auto_expand must be false').length > 0);
     });
 
     it('reports invalid mode for phase', async () => {
@@ -535,7 +578,8 @@ describe('validate-plan-phase-packets coverage', () => {
       const plan = buildPlan([phase]);
       const report = await validatePlanText(plan, PLAN_PATH);
       assert.ok(
-        findIssues(report, "mode must be 'fresh-session' or 'perpetual'").length > 0,
+        findIssues(report, "mode must be 'fresh-session' or 'perpetual'")
+          .length > 0,
       );
     });
 
@@ -550,9 +594,7 @@ describe('validate-plan-phase-packets coverage', () => {
       };
       const plan = buildPlan([phase]);
       const report = await validatePlanText(plan, PLAN_PATH);
-      assert.ok(
-        findIssues(report, 'source_of_truth must be').length > 0,
-      );
+      assert.ok(findIssues(report, 'source_of_truth must be').length > 0);
     });
 
     it('reports copy_paste not true for phase', async () => {
@@ -582,7 +624,10 @@ describe('validate-plan-phase-packets coverage', () => {
     it('reports non-array skills for phase', async () => {
       const phase = {
         ...validPhase('WIP'),
-        yaml: { ...makeValidPhaseYaml({ status: '[WIP]' }), skills: 'not-array' },
+        yaml: {
+          ...makeValidPhaseYaml({ status: '[WIP]' }),
+          skills: 'not-array',
+        },
         steps: [],
       };
       const plan = buildPlan([phase]);
@@ -627,7 +672,8 @@ describe('validate-plan-phase-packets coverage', () => {
       const plan = buildPlan([phase]);
       const report = await validatePlanText(plan, PLAN_PATH);
       assert.ok(
-        findIssues(report, 'acceptance_criteria must be a non-empty list').length > 0,
+        findIssues(report, 'acceptance_criteria must be a non-empty list')
+          .length > 0,
       );
     });
 
@@ -640,7 +686,8 @@ describe('validate-plan-phase-packets coverage', () => {
       const plan = buildPlan([phase]);
       const report = await validatePlanText(plan, PLAN_PATH);
       assert.ok(
-        findIssues(report, 'placeholder_steps must be a non-empty list').length > 0,
+        findIssues(report, 'placeholder_steps must be a non-empty list')
+          .length > 0,
       );
     });
 
@@ -655,9 +702,7 @@ describe('validate-plan-phase-packets coverage', () => {
       };
       const plan = buildPlan([phase]);
       const report = await validatePlanText(plan, PLAN_PATH);
-      assert.ok(
-        findIssues(report, 'Missing required section').length > 0,
-      );
+      assert.ok(findIssues(report, 'Missing required section').length > 0);
     });
 
     it('reports forbidden Copy-paste prompt section in phase', async () => {
@@ -685,7 +730,8 @@ describe('validate-plan-phase-packets coverage', () => {
       ].join('\n');
       const report = await validatePlanText(planText, PLAN_PATH);
       assert.ok(
-        findIssues(report, 'must not contain a separate Copy-paste prompt').length > 0,
+        findIssues(report, 'must not contain a separate Copy-paste prompt')
+          .length > 0,
       );
     });
 
@@ -708,9 +754,7 @@ describe('validate-plan-phase-packets coverage', () => {
       };
       const plan = buildPlan([phase]);
       const report = await validatePlanText(plan, PLAN_PATH);
-      assert.ok(
-        findIssues(report, 'must start with Step 01').length > 0,
-      );
+      assert.ok(findIssues(report, 'must start with Step 01').length > 0);
     });
 
     it('reports wrong WIP step count in WIP phase', async () => {
@@ -764,7 +808,8 @@ describe('validate-plan-phase-packets coverage', () => {
       const plan = buildPlan([phase]);
       const report = await validatePlanText(plan, PLAN_PATH);
       assert.ok(
-        findIssues(report, 'Only [WIP] phases may contain [WIP] steps').length > 0,
+        findIssues(report, 'Only [WIP] phases may contain [WIP] steps').length >
+          0,
       );
     });
 
@@ -852,9 +897,7 @@ describe('validate-plan-phase-packets coverage', () => {
         '## Validation gates',
       ].join('\n');
       const report = await validatePlanText(planText, PLAN_PATH);
-      assert.ok(
-        findIssues(report, 'Legacy plan block detected').length > 0,
-      );
+      assert.ok(findIssues(report, 'Legacy plan block detected').length > 0);
     });
 
     it('reports missing step metadata keys', async () => {
@@ -870,7 +913,13 @@ describe('validate-plan-phase-packets coverage', () => {
             headingTitle: 'Step One',
             headingStatus: 'WIP',
             stepSections: makeStepSections('WIP'),
-            yaml: { phase: 'A', step: 1, title: 'Step One', status: '[WIP]', expansion: 'none' },
+            yaml: {
+              phase: 'A',
+              step: 1,
+              title: 'Step One',
+              status: '[WIP]',
+              expansion: 'none',
+            },
           },
         ],
       };
@@ -897,7 +946,9 @@ describe('validate-plan-phase-packets coverage', () => {
       };
       const plan = buildPlan([phase]);
       const report = await validatePlanText(plan, PLAN_PATH);
-      assert.ok(findIssues(report, 'Unexpected metadata key: unknown_key').length > 0);
+      assert.ok(
+        findIssues(report, 'Unexpected metadata key: unknown_key').length > 0,
+      );
     });
 
     it('reports step title mismatch', async () => {
@@ -915,9 +966,7 @@ describe('validate-plan-phase-packets coverage', () => {
       };
       const plan = buildPlan([phase]);
       const report = await validatePlanText(plan, PLAN_PATH);
-      assert.ok(
-        findIssues(report, 'does not match heading title').length > 0,
-      );
+      assert.ok(findIssues(report, 'does not match heading title').length > 0);
     });
 
     it('reports step phase mismatch', async () => {
@@ -935,9 +984,7 @@ describe('validate-plan-phase-packets coverage', () => {
       };
       const plan = buildPlan([phase]);
       const report = await validatePlanText(plan, PLAN_PATH);
-      assert.ok(
-        findIssues(report, 'does not match phase heading').length > 0,
-      );
+      assert.ok(findIssues(report, 'does not match phase heading').length > 0);
     });
 
     it('reports step number mismatch in metadata', async () => {
@@ -955,9 +1002,7 @@ describe('validate-plan-phase-packets coverage', () => {
       };
       const plan = buildPlan([phase]);
       const report = await validatePlanText(plan, PLAN_PATH);
-      assert.ok(
-        findIssues(report, 'does not match step heading').length > 0,
-      );
+      assert.ok(findIssues(report, 'does not match step heading').length > 0);
     });
 
     it('reports step status mismatch', async () => {
@@ -975,9 +1020,7 @@ describe('validate-plan-phase-packets coverage', () => {
       };
       const plan = buildPlan([phase]);
       const report = await validatePlanText(plan, PLAN_PATH);
-      assert.ok(
-        findIssues(report, 'does not match step heading').length > 0,
-      );
+      assert.ok(findIssues(report, 'does not match step heading').length > 0);
     });
 
     it('reports invalid step goal', async () => {
@@ -1016,7 +1059,9 @@ describe('validate-plan-phase-packets coverage', () => {
       };
       const plan = buildPlan([phase]);
       const report = await validatePlanText(plan, PLAN_PATH);
-      assert.ok(findIssues(report, "Invalid tdd_sequence 'bad-sequence'").length > 0);
+      assert.ok(
+        findIssues(report, "Invalid tdd_sequence 'bad-sequence'").length > 0,
+      );
     });
 
     it('reports invalid step mode', async () => {
@@ -1035,7 +1080,8 @@ describe('validate-plan-phase-packets coverage', () => {
       const plan = buildPlan([phase]);
       const report = await validatePlanText(plan, PLAN_PATH);
       assert.ok(
-        findIssues(report, "mode must be 'fresh-session' or 'perpetual'").length > 0,
+        findIssues(report, "mode must be 'fresh-session' or 'perpetual'")
+          .length > 0,
       );
     });
 
@@ -1057,9 +1103,7 @@ describe('validate-plan-phase-packets coverage', () => {
       };
       const plan = buildPlan([phase]);
       const report = await validatePlanText(plan, PLAN_PATH);
-      assert.ok(
-        findIssues(report, 'source_of_truth must be').length > 0,
-      );
+      assert.ok(findIssues(report, 'source_of_truth must be').length > 0);
     });
 
     it('reports step copy_paste not true', async () => {
@@ -1139,7 +1183,8 @@ describe('validate-plan-phase-packets coverage', () => {
       const plan = buildPlan([phase]);
       const report = await validatePlanText(plan, PLAN_PATH);
       assert.ok(
-        findIssues(report, 'acceptance_criteria must be a non-empty list').length > 0,
+        findIssues(report, 'acceptance_criteria must be a non-empty list')
+          .length > 0,
       );
     });
 
@@ -1161,7 +1206,9 @@ describe('validate-plan-phase-packets coverage', () => {
       };
       const plan = buildPlan([phase]);
       const report = await validatePlanText(plan, PLAN_PATH);
-      assert.ok(findIssues(report, "Invalid expansion 'bad-expansion'").length > 0);
+      assert.ok(
+        findIssues(report, "Invalid expansion 'bad-expansion'").length > 0,
+      );
     });
 
     it('reports slices expansion without auto_expand: true', async () => {
@@ -1209,7 +1256,8 @@ describe('validate-plan-phase-packets coverage', () => {
       const plan = buildPlan([phase]);
       const report = await validatePlanText(plan, PLAN_PATH);
       assert.ok(
-        findIssues(report, "Expansion 'slices' requires auto_expand: true").length > 0,
+        findIssues(report, "Expansion 'slices' requires auto_expand: true")
+          .length > 0,
       );
     });
 
@@ -1257,7 +1305,8 @@ describe('validate-plan-phase-packets coverage', () => {
       const plan = buildPlan([phase]);
       const report = await validatePlanText(plan, PLAN_PATH);
       assert.ok(
-        findIssues(report, "Expansion 'slices' requires a tdd_sequence field").length > 0,
+        findIssues(report, "Expansion 'slices' requires a tdd_sequence field")
+          .length > 0,
       );
     });
 
@@ -1283,7 +1332,10 @@ describe('validate-plan-phase-packets coverage', () => {
       const plan = buildPlan([phase]);
       const report = await validatePlanText(plan, PLAN_PATH);
       assert.ok(
-        findIssues(report, "Expansion 'slices' requires a non-empty slices list").length > 0,
+        findIssues(
+          report,
+          "Expansion 'slices' requires a non-empty slices list",
+        ).length > 0,
       );
     });
 
@@ -1419,7 +1471,8 @@ describe('validate-plan-phase-packets coverage', () => {
       const plan = buildPlan([phase]);
       const report = await validatePlanText(plan, PLAN_PATH);
       assert.ok(
-        findIssues(report, 'Slice acceptance_criteria must be a list').length > 0,
+        findIssues(report, 'Slice acceptance_criteria must be a list').length >
+          0,
       );
     });
 
@@ -1571,7 +1624,8 @@ describe('validate-plan-phase-packets coverage', () => {
       const plan = buildPlan([phase]);
       const report = await validatePlanText(plan, PLAN_PATH);
       assert.ok(
-        findIssues(report, "Expected slice 0 goal to be 'red-testing'").length > 0,
+        findIssues(report, "Expected slice 0 goal to be 'red-testing'").length >
+          0,
       );
     });
 
@@ -1609,7 +1663,8 @@ describe('validate-plan-phase-packets coverage', () => {
       const plan = buildPlan([phase]);
       const report = await validatePlanText(plan, PLAN_PATH);
       assert.ok(
-        findIssues(report, "Expected slice 0 goal to be 'implementing'").length > 0,
+        findIssues(report, "Expected slice 0 goal to be 'implementing'")
+          .length > 0,
       );
     });
 
@@ -1658,7 +1713,8 @@ describe('validate-plan-phase-packets coverage', () => {
       const plan = buildPlan([phase]);
       const report = await validatePlanText(plan, PLAN_PATH);
       assert.ok(
-        findIssues(report, "Expected final slice goal to be 'green-testing'").length > 0,
+        findIssues(report, "Expected final slice goal to be 'green-testing'")
+          .length > 0,
       );
     });
 
@@ -1706,8 +1762,8 @@ describe('validate-plan-phase-packets coverage', () => {
       };
       const plan = buildPlan([phase]);
       const report = await validatePlanText(plan, PLAN_PATH);
-      const sliceErrors = report.issues.filter(
-        (i) => i.path.includes('slice-'),
+      const sliceErrors = report.issues.filter((i) =>
+        i.path.includes('slice-'),
       );
       assert.equal(sliceErrors.length, 0);
     });
@@ -1727,9 +1783,7 @@ describe('validate-plan-phase-packets coverage', () => {
       };
       const plan = buildPlan([phase]);
       const report = await validatePlanText(plan, PLAN_PATH);
-      assert.ok(
-        findIssues(report, 'Missing required section').length > 0,
-      );
+      assert.ok(findIssues(report, 'Missing required section').length > 0);
     });
 
     it('reports forbidden Copy-paste prompt in step', async () => {
@@ -1754,7 +1808,8 @@ describe('validate-plan-phase-packets coverage', () => {
       ].join('\n');
       const report = await validatePlanText(planText, PLAN_PATH);
       assert.ok(
-        findIssues(report, 'must not contain a separate Copy-paste prompt').length > 0,
+        findIssues(report, 'must not contain a separate Copy-paste prompt')
+          .length > 0,
       );
     });
 
@@ -1776,9 +1831,7 @@ describe('validate-plan-phase-packets coverage', () => {
       };
       const plan = buildPlan([phase]);
       const report = await validatePlanText(plan, PLAN_PATH);
-      assert.ok(
-        findIssues(report, 'agent_file does not exist').length > 0,
-      );
+      assert.ok(findIssues(report, 'agent_file does not exist').length > 0);
     });
 
     it('reports agent_file that does exist (no error)', async () => {
@@ -1799,10 +1852,7 @@ describe('validate-plan-phase-packets coverage', () => {
       };
       const plan = buildPlan([phase]);
       const report = await validatePlanText(plan, PLAN_PATH);
-      assert.equal(
-        findIssues(report, 'agent_file does not exist').length,
-        0,
-      );
+      assert.equal(findIssues(report, 'agent_file does not exist').length, 0);
     });
 
     it('produces phase summary with goal from WIP step', async () => {
@@ -1846,19 +1896,29 @@ describe('validate-plan-phase-packets coverage', () => {
       const phase1 = {
         ...validPhase('WIP'),
         headingPhase: '1',
-        yaml: makeValidPhaseYaml({ phase: '1', status: '[WIP]', next_phase: '2' }),
-        steps: [{
-          headingStep: 1,
-          headingTitle: 'Step One',
-          headingStatus: 'WIP',
-          stepSections: makeStepSections('WIP'),
-          yaml: makeValidStepYaml({ phase: '1', status: '[WIP]' }),
-        }],
+        yaml: makeValidPhaseYaml({
+          phase: '1',
+          status: '[WIP]',
+          next_phase: '2',
+        }),
+        steps: [
+          {
+            headingStep: 1,
+            headingTitle: 'Step One',
+            headingStatus: 'WIP',
+            stepSections: makeStepSections('WIP'),
+            yaml: makeValidStepYaml({ phase: '1', status: '[WIP]' }),
+          },
+        ],
       };
       const phase2 = {
         ...validPhase('DONE'),
         headingPhase: '2',
-        yaml: makeValidPhaseYaml({ phase: '2', status: '[DONE]', next_phase: '3' }),
+        yaml: makeValidPhaseYaml({
+          phase: '2',
+          status: '[DONE]',
+          next_phase: '3',
+        }),
         steps: [],
       };
       const plan = buildPlan([phase1, phase2]);
@@ -1872,7 +1932,11 @@ describe('validate-plan-phase-packets coverage', () => {
       const phase0 = {
         ...validPhase('DONE'),
         headingPhase: '0',
-        yaml: makeValidPhaseYaml({ phase: '0', status: '[DONE]', next_phase: 'A' }),
+        yaml: makeValidPhaseYaml({
+          phase: '0',
+          status: '[DONE]',
+          next_phase: 'A',
+        }),
         steps: [],
       };
       const phaseA = validPhase('WIP');
@@ -1888,20 +1952,30 @@ describe('validate-plan-phase-packets coverage', () => {
       const phaseA = {
         ...validPhase('DONE'),
         headingPhase: 'Y',
-        yaml: makeValidPhaseYaml({ phase: 'Y', status: '[DONE]', next_phase: 'Z' }),
+        yaml: makeValidPhaseYaml({
+          phase: 'Y',
+          status: '[DONE]',
+          next_phase: 'Z',
+        }),
         steps: [],
       };
       const phaseZ = {
         ...validPhase('WIP'),
         headingPhase: 'Z',
-        yaml: makeValidPhaseYaml({ phase: 'Z', status: '[WIP]', next_phase: 'null' }),
-        steps: [{
-          headingStep: 1,
-          headingTitle: 'Step One',
-          headingStatus: 'WIP',
-          stepSections: makeStepSections('WIP'),
-          yaml: makeValidStepYaml({ phase: 'Z', status: '[WIP]' }),
-        }],
+        yaml: makeValidPhaseYaml({
+          phase: 'Z',
+          status: '[WIP]',
+          next_phase: 'null',
+        }),
+        steps: [
+          {
+            headingStep: 1,
+            headingTitle: 'Step One',
+            headingStatus: 'WIP',
+            stepSections: makeStepSections('WIP'),
+            yaml: makeValidStepYaml({ phase: 'Z', status: '[WIP]' }),
+          },
+        ],
       };
       const plan = buildPlan([phaseA, phaseZ]);
       const report = await validatePlanText(plan, PLAN_PATH);
@@ -1918,20 +1992,24 @@ describe('validate-plan-phase-packets coverage', () => {
         ...validPhase('WIP'),
         headingPhase: 'AB',
         yaml: makeValidPhaseYaml({ phase: 'AB', status: '[WIP]' }),
-        steps: [{
-          headingStep: 1,
-          headingTitle: 'Step One',
-          headingStatus: 'WIP',
-          stepSections: makeStepSections('WIP'),
-          yaml: makeValidStepYaml({ phase: 'AB', status: '[WIP]' }),
-        }],
+        steps: [
+          {
+            headingStep: 1,
+            headingTitle: 'Step One',
+            headingStatus: 'WIP',
+            stepSections: makeStepSections('WIP'),
+            yaml: makeValidStepYaml({ phase: 'AB', status: '[WIP]' }),
+          },
+        ],
       };
       const plan = buildPlan([phaseA, phaseBad]);
       const report = await validatePlanText(plan, PLAN_PATH);
       // getNextPhaseLabel('A') returns 'B', but phase is 'AB'
       // normalizePhaseLabel('AB') = 'AB', expectedPhaseLabel = 'B'
       // So there should be a mismatch error
-      assert.ok(findIssues(report, 'Expected phase B, found phase AB').length > 0);
+      assert.ok(
+        findIssues(report, 'Expected phase B, found phase AB').length > 0,
+      );
     });
 
     it('handles DONE step skipping title and acceptance_criteria', async () => {
@@ -1961,9 +2039,15 @@ describe('validate-plan-phase-packets coverage', () => {
       };
       const plan = buildPlan([phase, validPhase('WIP')]);
       const report = await validatePlanText(plan, PLAN_PATH);
-      const missingKeyErrors = findIssues(report, 'Missing step metadata key: title');
+      const missingKeyErrors = findIssues(
+        report,
+        'Missing step metadata key: title',
+      );
       assert.equal(missingKeyErrors.length, 0);
-      const missingAcErrors = findIssues(report, 'Missing step metadata key: acceptance_criteria');
+      const missingAcErrors = findIssues(
+        report,
+        'Missing step metadata key: acceptance_criteria',
+      );
       assert.equal(missingAcErrors.length, 0);
     });
 
@@ -2012,14 +2096,20 @@ describe('validate-plan-phase-packets coverage', () => {
     it('handles copy_paste as string "true"', async () => {
       const phase = {
         ...validPhase('WIP'),
-        yaml: { ...makeValidPhaseYaml({ status: '[WIP]' }), copy_paste: 'true' },
+        yaml: {
+          ...makeValidPhaseYaml({ status: '[WIP]' }),
+          copy_paste: 'true',
+        },
         steps: [
           {
             headingStep: 1,
             headingTitle: 'Step One',
             headingStatus: 'WIP',
             stepSections: makeStepSections('WIP'),
-            yaml: { ...makeValidStepYaml({ status: '[WIP]' }), copy_paste: 'true' },
+            yaml: {
+              ...makeValidStepYaml({ status: '[WIP]' }),
+              copy_paste: 'true',
+            },
           },
         ],
       };
@@ -2040,9 +2130,7 @@ describe('validate-plan-phase-packets coverage', () => {
       };
       const plan = buildPlan([phase]);
       const report = await validatePlanText(plan, PLAN_PATH);
-      assert.ok(
-        findIssues(report, 'stale --testPathPattern flag').length > 0,
-      );
+      assert.ok(findIssues(report, 'stale --testPathPattern flag').length > 0);
     });
 
     it('handles validation entries that do not look like file paths', async () => {
@@ -2069,9 +2157,7 @@ describe('validate-plan-phase-packets coverage', () => {
       };
       const plan = buildPlan([phase]);
       const report = await validatePlanText(plan, PLAN_PATH);
-      assert.ok(
-        findIssues(report, 'must be a string').length > 0,
-      );
+      assert.ok(findIssues(report, 'must be a string').length > 0);
     });
 
     it('returns phases summary with schema step for step-packet phases', async () => {
@@ -2102,20 +2188,30 @@ describe('validate-plan-phase-packets coverage', () => {
         headingTitle: 'Phase AB',
         headingStatus: 'WIP',
         phaseSections: makePhaseSections('WIP'),
-        yaml: makeValidPhaseYaml({ phase: 'AB', status: '[WIP]', next_phase: 'AC' }),
-        steps: [{
-          headingStep: 1,
-          headingTitle: 'Step One',
-          headingStatus: 'WIP',
-          stepSections: makeStepSections('WIP'),
-          yaml: makeValidStepYaml({ phase: 'AB', status: '[WIP]' }),
-        }],
+        yaml: makeValidPhaseYaml({
+          phase: 'AB',
+          status: '[WIP]',
+          next_phase: 'AC',
+        }),
+        steps: [
+          {
+            headingStep: 1,
+            headingTitle: 'Step One',
+            headingStatus: 'WIP',
+            stepSections: makeStepSections('WIP'),
+            yaml: makeValidStepYaml({ phase: 'AB', status: '[WIP]' }),
+          },
+        ],
       };
       const phaseAC = {
         ...validPhase('DONE'),
         headingPhase: 'AC',
         headingTitle: 'Phase AC',
-        yaml: makeValidPhaseYaml({ phase: 'AC', status: '[DONE]', next_phase: 'AD' }),
+        yaml: makeValidPhaseYaml({
+          phase: 'AC',
+          status: '[DONE]',
+          next_phase: 'AD',
+        }),
       };
       const plan = buildPlan([phaseAB, phaseAC]);
       const report = await validatePlanText(plan, PLAN_PATH);
@@ -2130,7 +2226,11 @@ describe('validate-plan-phase-packets coverage', () => {
         ...validPhase('DONE'),
         headingPhase: 'Z',
         headingTitle: 'Phase Z',
-        yaml: makeValidPhaseYaml({ phase: 'Z', status: '[DONE]', next_phase: 'AA' }),
+        yaml: makeValidPhaseYaml({
+          phase: 'Z',
+          status: '[DONE]',
+          next_phase: 'AA',
+        }),
         steps: [],
       };
       const phaseAA = {
@@ -2158,13 +2258,15 @@ describe('validate-plan-phase-packets coverage', () => {
           status: '[DONE]',
           expansion: 'steps',
         }),
-        steps: [{
-          headingStep: 1,
-          headingTitle: 'Step One',
-          headingStatus: 'DONE',
-          stepSections: makeStepSections('DONE'),
-          yaml: null,
-        }],
+        steps: [
+          {
+            headingStep: 1,
+            headingTitle: 'Step One',
+            headingStatus: 'DONE',
+            stepSections: makeStepSections('DONE'),
+            yaml: null,
+          },
+        ],
       };
       const plan = buildPlan([phase]);
       const report = await validatePlanText(plan, PLAN_PATH);
@@ -2207,13 +2309,15 @@ describe('validate-plan-phase-packets coverage', () => {
           ...makeValidPhaseYaml(),
           copy_paste: "'true'",
         },
-        steps: [{
-          headingStep: 1,
-          headingTitle: 'Step One',
-          headingStatus: 'WIP',
-          stepSections: makeStepSections('WIP'),
-          yaml: makeValidStepYaml(),
-        }],
+        steps: [
+          {
+            headingStep: 1,
+            headingTitle: 'Step One',
+            headingStatus: 'WIP',
+            stepSections: makeStepSections('WIP'),
+            yaml: makeValidStepYaml(),
+          },
+        ],
       };
       const plan = buildPlan([phase]);
       const report = await validatePlanText(plan, PLAN_PATH);
@@ -2245,21 +2349,29 @@ describe('validate-plan-phase-packets coverage', () => {
           acceptance_criteria: ['AC-001: Criterion'],
           placeholder_steps: ['Step 01: Placeholder'],
         },
-        steps: [{
-          headingStep: 1,
-          headingTitle: 'Step One',
-          headingStatus: 'WIP',
-          stepSections: makeStepSections('WIP'),
-          yaml: makeValidStepYaml(),
-        }],
+        steps: [
+          {
+            headingStep: 1,
+            headingTitle: 'Step One',
+            headingStatus: 'WIP',
+            stepSections: makeStepSections('WIP'),
+            yaml: makeValidStepYaml(),
+          },
+        ],
       };
       const plan = buildPlan([phase]);
       const report = await validatePlanText(plan, PLAN_PATH);
       // Missing phase and status keys produce errors, but the code continues
       // to call normalizePhaseLabel(undefined) and stripStatus(undefined)
-      const missingPhaseErrors = findIssues(report, 'Missing phase metadata key: phase');
+      const missingPhaseErrors = findIssues(
+        report,
+        'Missing phase metadata key: phase',
+      );
       assert.ok(missingPhaseErrors.length > 0);
-      const missingStatusErrors = findIssues(report, 'Missing phase metadata key: status');
+      const missingStatusErrors = findIssues(
+        report,
+        'Missing phase metadata key: status',
+      );
       assert.ok(missingStatusErrors.length > 0);
     });
   });

@@ -254,7 +254,7 @@ function buildContext(tokens) {
         ...token,
         phaseToken: currentPhaseToken,
       });
-    /* istanbul ignore else -- only phase/step/yaml token kinds exist */
+      /* istanbul ignore else -- only phase/step/yaml token kinds exist */
     } else {
       if (currentHeadingToken) {
         context.yamlByHeadingToken.set(currentHeadingToken, token);

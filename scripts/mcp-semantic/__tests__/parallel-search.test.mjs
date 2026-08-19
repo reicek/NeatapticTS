@@ -507,7 +507,11 @@ describe('parallel-search.mjs: alpha-blend fusion and edge cases', () => {
   it('runParallelQueries returns empty array for empty queries', async () => {
     const { runParallelQueries } = await import(PARALLEL_SEARCH_PATH);
     const results = await runParallelQueries({
-      client: { async execute() { return { rows: [] }; } },
+      client: {
+        async execute() {
+          return { rows: [] };
+        },
+      },
       queries: [],
     });
     expect(results).toEqual([]);

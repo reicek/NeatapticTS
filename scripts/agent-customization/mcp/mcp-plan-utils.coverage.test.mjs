@@ -15,7 +15,11 @@ import {
 import { MCP_REPO_ROOT } from './mcp-utils.mjs';
 
 const PLANS_DIR = path.join(MCP_REPO_ROOT, 'plans');
-const SESSION_OVERRIDE_PATH = path.join(MCP_REPO_ROOT, 'data', 'mcp-session-override.json');
+const SESSION_OVERRIDE_PATH = path.join(
+  MCP_REPO_ROOT,
+  'data',
+  'mcp-session-override.json',
+);
 const createdFiles = [];
 let originalOverrideContent = null;
 let overrideExisted = false;
@@ -599,7 +603,10 @@ goal: 'implement'
 
 describe('loadActivePlanContext', () => {
   it('loads normal plan with WIP step, slices, and validation', async () => {
-    const planPath = await createPlanFile('test-cov-normal.plans.md', NORMAL_PLAN);
+    const planPath = await createPlanFile(
+      'test-cov-normal.plans.md',
+      NORMAL_PLAN,
+    );
     const ctx = await loadActivePlanContext(planPath);
     expect(ctx.planPath).toContain('test-cov-normal.plans.md');
     expect(ctx.activePhase.number).toBe(1);
@@ -609,9 +616,17 @@ describe('loadActivePlanContext', () => {
     expect(ctx.activeStep.title).toBe('Test Step');
     expect(ctx.activeStep.status).toBe('WIP');
     expect(ctx.activeStep.metadata.agent).toBe('04-implementing');
-    expect(ctx.activeStep.stepObjective).toBe('Implement the feature correctly.');
-    expect(ctx.activeStep.validationCommands).toEqual(['npm test', 'npm run lint']);
-    expect(ctx.activeStep.requiredValidationCommands).toEqual(['npm test', 'npm run lint']);
+    expect(ctx.activeStep.stepObjective).toBe(
+      'Implement the feature correctly.',
+    );
+    expect(ctx.activeStep.validationCommands).toEqual([
+      'npm test',
+      'npm run lint',
+    ]);
+    expect(ctx.activeStep.requiredValidationCommands).toEqual([
+      'npm test',
+      'npm run lint',
+    ]);
     expect(ctx.activeStep.validationCommandsMatch).toBe(true);
     expect(ctx.activeStep.activeSlice).toEqual({
       slice_id: 'S1',
@@ -619,61 +634,91 @@ describe('loadActivePlanContext', () => {
       status: '[WIP]',
       goal: 'Goal 1',
     });
-    expect(ctx.phaseMetadata).toEqual({ expansion: 'steps', auto_expand: false });
+    expect(ctx.phaseMetadata).toEqual({
+      expansion: 'steps',
+      auto_expand: false,
+    });
   });
 
   it('loads phase-only plan with auto_expand=false (no WIP step)', async () => {
-    const planPath = await createPlanFile('test-cov-phase-only.plans.md', PHASE_ONLY_PLAN);
+    const planPath = await createPlanFile(
+      'test-cov-phase-only.plans.md',
+      PHASE_ONLY_PLAN,
+    );
     const ctx = await loadActivePlanContext(planPath);
     expect(ctx.activeStep).toBeNull();
-    expect(ctx.phaseMetadata).toEqual({ expansion: 'steps', auto_expand: false });
+    expect(ctx.phaseMetadata).toEqual({
+      expansion: 'steps',
+      auto_expand: false,
+    });
     expect(ctx.activePhase.number).toBe(2);
   });
 
   it('throws when WIP phase has no WIP step and auto_expand is not false', async () => {
-    const planPath = await createPlanFile('test-cov-no-wip-step.plans.md', NO_WIP_STEP_PLAN);
+    const planPath = await createPlanFile(
+      'test-cov-no-wip-step.plans.md',
+      NO_WIP_STEP_PLAN,
+    );
     await expect(loadActivePlanContext(planPath)).rejects.toThrow(
       'is [WIP] but has no [WIP] step',
     );
   });
 
   it('throws when multiple WIP steps exist', async () => {
-    const planPath = await createPlanFile('test-cov-multi-wip.plans.md', MULTI_WIP_STEP_PLAN);
+    const planPath = await createPlanFile(
+      'test-cov-multi-wip.plans.md',
+      MULTI_WIP_STEP_PLAN,
+    );
     await expect(loadActivePlanContext(planPath)).rejects.toThrow(
       'Expected at most one [WIP] step',
     );
   });
 
   it('throws when no WIP phase exists (all DONE)', async () => {
-    const planPath = await createPlanFile('test-cov-no-wip-phase.plans.md', NO_WIP_PHASE_PLAN);
+    const planPath = await createPlanFile(
+      'test-cov-no-wip-phase.plans.md',
+      NO_WIP_PHASE_PLAN,
+    );
     await expect(loadActivePlanContext(planPath)).rejects.toThrow(
       'Expected exactly one [WIP] phase',
     );
   });
 
   it('throws when multiple WIP phases exist', async () => {
-    const planPath = await createPlanFile('test-cov-two-wip-phases.plans.md', TWO_WIP_PHASES_PLAN);
+    const planPath = await createPlanFile(
+      'test-cov-two-wip-phases.plans.md',
+      TWO_WIP_PHASES_PLAN,
+    );
     await expect(loadActivePlanContext(planPath)).rejects.toThrow(
       'Expected exactly one [WIP] phase',
     );
   });
 
   it('throws when no implementation section exists', async () => {
-    const planPath = await createPlanFile('test-cov-no-impl.plans.md', NO_IMPL_SECTION_PLAN);
+    const planPath = await createPlanFile(
+      'test-cov-no-impl.plans.md',
+      NO_IMPL_SECTION_PLAN,
+    );
     await expect(loadActivePlanContext(planPath)).rejects.toThrow(
       'Expected exactly one [WIP] phase',
     );
   });
 
   it('throws when WIP step has no YAML metadata block', async () => {
-    const planPath = await createPlanFile('test-cov-step-no-yaml.plans.md', STEP_NO_YAML_PLAN);
+    const planPath = await createPlanFile(
+      'test-cov-step-no-yaml.plans.md',
+      STEP_NO_YAML_PLAN,
+    );
     await expect(loadActivePlanContext(planPath)).rejects.toThrow(
       'missing a YAML metadata block',
     );
   });
 
   it('returns planned slice when no WIP slice exists', async () => {
-    const planPath = await createPlanFile('test-cov-planned-slices.plans.md', PLANNED_SLICES_PLAN);
+    const planPath = await createPlanFile(
+      'test-cov-planned-slices.plans.md',
+      PLANNED_SLICES_PLAN,
+    );
     const ctx = await loadActivePlanContext(planPath);
     expect(ctx.activeStep.activeSlice).toEqual({
       slice_id: 'S1',
@@ -684,13 +729,19 @@ describe('loadActivePlanContext', () => {
   });
 
   it('returns null activeSlice when step has no slices', async () => {
-    const planPath = await createPlanFile('test-cov-no-slices.plans.md', NO_SLICES_PLAN);
+    const planPath = await createPlanFile(
+      'test-cov-no-slices.plans.md',
+      NO_SLICES_PLAN,
+    );
     const ctx = await loadActivePlanContext(planPath);
     expect(ctx.activeStep.activeSlice).toBeNull();
   });
 
   it('returns first slice as fallback when all slices are DONE', async () => {
-    const planPath = await createPlanFile('test-cov-done-slices.plans.md', DONE_SLICES_PLAN);
+    const planPath = await createPlanFile(
+      'test-cov-done-slices.plans.md',
+      DONE_SLICES_PLAN,
+    );
     const ctx = await loadActivePlanContext(planPath);
     expect(ctx.activeStep.activeSlice).toEqual({
       slice_id: 'S1',
@@ -701,7 +752,10 @@ describe('loadActivePlanContext', () => {
   });
 
   it('handles step with only one section (no next section match)', async () => {
-    const planPath = await createPlanFile('test-cov-single-section.plans.md', SINGLE_SECTION_PLAN);
+    const planPath = await createPlanFile(
+      'test-cov-single-section.plans.md',
+      SINGLE_SECTION_PLAN,
+    );
     const ctx = await loadActivePlanContext(planPath);
     expect(ctx.activeStep.stepObjective).toBe(
       'This is the only section in the step body.',
@@ -711,7 +765,10 @@ describe('loadActivePlanContext', () => {
   });
 
   it('handles step with empty Step objective followed by Required validation', async () => {
-    const planPath = await createPlanFile('test-cov-empty-objective.plans.md', EMPTY_OBJECTIVE_PLAN);
+    const planPath = await createPlanFile(
+      'test-cov-empty-objective.plans.md',
+      EMPTY_OBJECTIVE_PLAN,
+    );
     const ctx = await loadActivePlanContext(planPath);
     // Step objective is empty (next section starts at index 0 of afterMarker)
     expect(ctx.activeStep.stepObjective).toBe('');
@@ -719,23 +776,33 @@ describe('loadActivePlanContext', () => {
   });
 
   it('detects validation command mismatch (YAML has more than prose)', async () => {
-    const planPath = await createPlanFile('test-cov-val-mismatch.plans.md', VAL_MISMATCH_PLAN);
+    const planPath = await createPlanFile(
+      'test-cov-val-mismatch.plans.md',
+      VAL_MISMATCH_PLAN,
+    );
     const ctx = await loadActivePlanContext(planPath);
-    expect(ctx.activeStep.validationCommands).toEqual(['npm test', 'npm run lint', 'npm run build']);
+    expect(ctx.activeStep.validationCommands).toEqual([
+      'npm test',
+      'npm run lint',
+      'npm run build',
+    ]);
     expect(ctx.activeStep.requiredValidationCommands).toEqual(['npm test']);
     expect(ctx.activeStep.validationCommandsMatch).toBe(false);
   });
 
   it('handles letter-prefixed step identifier', async () => {
-    const planPath = await createPlanFile('test-cov-letter-step.plans.md', LETTER_STEP_PLAN);
+    const planPath = await createPlanFile(
+      'test-cov-letter-step.plans.md',
+      LETTER_STEP_PLAN,
+    );
     const ctx = await loadActivePlanContext(planPath);
     expect(ctx.activeStep.number).toBe('E1');
   });
 
   it('throws ENOENT error for nonexistent plan file', async () => {
-    await expect(loadActivePlanContext('plans/nonexistent-test-file-12345.plans.md')).rejects.toThrow(
-      'Plan file not found',
-    );
+    await expect(
+      loadActivePlanContext('plans/nonexistent-test-file-12345.plans.md'),
+    ).rejects.toThrow('Plan file not found');
   });
 
   it('rethrows non-ENOENT errors (e.g., EISDIR for directory)', async () => {
@@ -744,14 +811,20 @@ describe('loadActivePlanContext', () => {
   });
 
   it('uses null agent when both agent and goal are absent', async () => {
-    const planPath = await createPlanFile('test-cov-no-agent-no-goal.plans.md', NO_AGENT_NO_GOAL_PLAN);
+    const planPath = await createPlanFile(
+      'test-cov-no-agent-no-goal.plans.md',
+      NO_AGENT_NO_GOAL_PLAN,
+    );
     const ctx = await loadActivePlanContext(planPath);
     const snapshot = createWorkflowSnapshot(ctx);
     expect(snapshot.activeStep.agent).toBeNull();
   });
 
   it('handles sparse slices with missing fields (covers ?? fallbacks in pickSliceFields)', async () => {
-    const planPath = await createPlanFile('test-cov-sparse-slices.plans.md', SPARSE_SLICES_PLAN);
+    const planPath = await createPlanFile(
+      'test-cov-sparse-slices.plans.md',
+      SPARSE_SLICES_PLAN,
+    );
     const ctx = await loadActivePlanContext(planPath);
     expect(ctx.activeStep.activeSlice).toEqual({
       slice_id: 'S1',
@@ -762,7 +835,10 @@ describe('loadActivePlanContext', () => {
   });
 
   it('handles slice with missing slice_id (covers ?? fallback for slice_id)', async () => {
-    const planPath = await createPlanFile('test-cov-no-slice-id.plans.md', NO_SLICE_ID_PLAN);
+    const planPath = await createPlanFile(
+      'test-cov-no-slice-id.plans.md',
+      NO_SLICE_ID_PLAN,
+    );
     const ctx = await loadActivePlanContext(planPath);
     expect(ctx.activeStep.activeSlice).toEqual({
       slice_id: '',
@@ -773,27 +849,39 @@ describe('loadActivePlanContext', () => {
   });
 
   it('handles multi-step plan (covers nextStepMatch?.index branch)', async () => {
-    const planPath = await createPlanFile('test-cov-multi-step.plans.md', MULTI_STEP_PLAN);
+    const planPath = await createPlanFile(
+      'test-cov-multi-step.plans.md',
+      MULTI_STEP_PLAN,
+    );
     const ctx = await loadActivePlanContext(planPath);
     expect(ctx.activeStep.number).toBe(2);
     expect(ctx.activeStep.title).toBe('WIP Second');
   });
 
   it('handles multi-phase plan with DONE + WIP (covers nextPhaseMatch?.index branch)', async () => {
-    const planPath = await createPlanFile('test-cov-multi-phase.plans.md', MULTI_PHASE_PLAN);
+    const planPath = await createPlanFile(
+      'test-cov-multi-phase.plans.md',
+      MULTI_PHASE_PLAN,
+    );
     const ctx = await loadActivePlanContext(planPath);
     expect(ctx.activePhase.number).toBe(20);
     expect(ctx.activePhase.title).toBe('WIP Phase');
   });
 
   it('handles non-numeric phase label (covers ternary false branch)', async () => {
-    const planPath = await createPlanFile('test-cov-letter-phase.plans.md', LETTER_PHASE_PLAN);
+    const planPath = await createPlanFile(
+      'test-cov-letter-phase.plans.md',
+      LETTER_PHASE_PLAN,
+    );
     const ctx = await loadActivePlanContext(planPath);
     expect(ctx.activePhase.number).toBe('A');
   });
 
   it('uses null agent in validation snapshot when both agent and goal absent', async () => {
-    const planPath = await createPlanFile('test-cov-no-agent-no-goal2.plans.md', NO_AGENT_NO_GOAL_PLAN);
+    const planPath = await createPlanFile(
+      'test-cov-no-agent-no-goal2.plans.md',
+      NO_AGENT_NO_GOAL_PLAN,
+    );
     const ctx = await loadActivePlanContext(planPath);
     const snapshot = createValidationAllowlistSnapshot(ctx);
     expect(snapshot.activeStep.agent).toBeNull();
@@ -816,7 +904,10 @@ describe('resolveEffectivePlanPath', () => {
 
   it('throws when plan_path resolves outside plans/', async () => {
     await expect(
-      resolveEffectivePlanPath({ plan_path: '../outside.md' }, 'plans/fallback.plans.md'),
+      resolveEffectivePlanPath(
+        { plan_path: '../outside.md' },
+        'plans/fallback.plans.md',
+      ),
     ).rejects.toThrow('plan_path must resolve within plans/');
   });
 
@@ -830,38 +921,58 @@ describe('resolveEffectivePlanPath', () => {
   });
 
   it('uses session override when no plan_path arg', async () => {
-    await writeOverride(JSON.stringify({ plan_path: 'plans/from-override.plans.md' }));
-    const result = await resolveEffectivePlanPath({}, 'plans/fallback.plans.md');
+    await writeOverride(
+      JSON.stringify({ plan_path: 'plans/from-override.plans.md' }),
+    );
+    const result = await resolveEffectivePlanPath(
+      {},
+      'plans/fallback.plans.md',
+    );
     expect(result).toBe('plans/from-override.plans.md');
   });
 
   it('falls back to startup when session override has invalid JSON', async () => {
     await writeOverride('not valid json');
-    const result = await resolveEffectivePlanPath({}, 'plans/fallback.plans.md');
+    const result = await resolveEffectivePlanPath(
+      {},
+      'plans/fallback.plans.md',
+    );
     expect(result).toBe('plans/fallback.plans.md');
   });
 
   it('falls back to startup when plan_path is not a string', async () => {
     await writeOverride(JSON.stringify({ plan_path: 123 }));
-    const result = await resolveEffectivePlanPath({}, 'plans/fallback.plans.md');
+    const result = await resolveEffectivePlanPath(
+      {},
+      'plans/fallback.plans.md',
+    );
     expect(result).toBe('plans/fallback.plans.md');
   });
 
   it('falls back to startup when plan_path is empty/whitespace', async () => {
     await writeOverride(JSON.stringify({ plan_path: '   ' }));
-    const result = await resolveEffectivePlanPath({}, 'plans/fallback.plans.md');
+    const result = await resolveEffectivePlanPath(
+      {},
+      'plans/fallback.plans.md',
+    );
     expect(result).toBe('plans/fallback.plans.md');
   });
 
   it('falls back to startup when session override plan_path is outside plans/', async () => {
     await writeOverride(JSON.stringify({ plan_path: '../outside.md' }));
-    const result = await resolveEffectivePlanPath({}, 'plans/fallback.plans.md');
+    const result = await resolveEffectivePlanPath(
+      {},
+      'plans/fallback.plans.md',
+    );
     expect(result).toBe('plans/fallback.plans.md');
   });
 
   it('falls back to startup when session override file does not exist', async () => {
     await deleteOverride();
-    const result = await resolveEffectivePlanPath({}, 'plans/fallback.plans.md');
+    const result = await resolveEffectivePlanPath(
+      {},
+      'plans/fallback.plans.md',
+    );
     expect(result).toBe('plans/fallback.plans.md');
   });
 
@@ -876,7 +987,10 @@ describe('resolveEffectivePlanPath', () => {
 
 describe('createWorkflowSnapshot', () => {
   it('builds snapshot with activeStep', async () => {
-    const planPath = await createPlanFile('test-cov-normal.plans.md', NORMAL_PLAN);
+    const planPath = await createPlanFile(
+      'test-cov-normal.plans.md',
+      NORMAL_PLAN,
+    );
     const ctx = await loadActivePlanContext(planPath);
     const snapshot = createWorkflowSnapshot(ctx);
     expect(snapshot.scope).toBe('repo-static');
@@ -886,27 +1000,50 @@ describe('createWorkflowSnapshot', () => {
     expect(snapshot.activeStep.number).toBe(1);
     expect(snapshot.activeStep.agent).toBe('04-implementing');
     expect(snapshot.activeStep.agentFile).toBeNull();
-    expect(snapshot.activeStep.objective).toBe('Implement the feature correctly.');
+    expect(snapshot.activeStep.objective).toBe(
+      'Implement the feature correctly.',
+    );
     expect(snapshot.activeStep.nextStep).toBeNull();
-    expect(snapshot.activeStep.validationCommands).toEqual(['npm test', 'npm run lint']);
+    expect(snapshot.activeStep.validationCommands).toEqual([
+      'npm test',
+      'npm run lint',
+    ]);
     expect(snapshot.activeStep.activeSlice.slice_id).toBe('S1');
-    expect(snapshot.phaseMetadata).toEqual({ expansion: 'steps', auto_expand: false });
+    expect(snapshot.phaseMetadata).toEqual({
+      expansion: 'steps',
+      auto_expand: false,
+    });
     expect(snapshot.allowlistAuthority).toBe('active-step.validation');
-    expect(snapshot.sourceBoundary).toEqual(['plan metadata', 'deterministic customization scripts']);
+    expect(snapshot.sourceBoundary).toEqual([
+      'plan metadata',
+      'deterministic customization scripts',
+    ]);
   });
 
   it('builds snapshot with null activeStep (phase-only)', async () => {
-    const planPath = await createPlanFile('test-cov-phase-only.plans.md', PHASE_ONLY_PLAN);
+    const planPath = await createPlanFile(
+      'test-cov-phase-only.plans.md',
+      PHASE_ONLY_PLAN,
+    );
     const ctx = await loadActivePlanContext(planPath);
     const snapshot = createWorkflowSnapshot(ctx);
     expect(snapshot.activeStep).toBeNull();
     expect(snapshot.activePhase.number).toBe(2);
-    expect(snapshot.phaseMetadata).toEqual({ expansion: 'steps', auto_expand: false });
+    expect(snapshot.phaseMetadata).toEqual({
+      expansion: 'steps',
+      auto_expand: false,
+    });
   });
 
   it('uses metadata.goal as agent when agent is absent', async () => {
-    const planContent = NORMAL_PLAN.replace("agent: '04-implementing'", "# agent removed");
-    const planPath = await createPlanFile('test-cov-no-agent.plans.md', planContent);
+    const planContent = NORMAL_PLAN.replace(
+      "agent: '04-implementing'",
+      '# agent removed',
+    );
+    const planPath = await createPlanFile(
+      'test-cov-no-agent.plans.md',
+      planContent,
+    );
     const ctx = await loadActivePlanContext(planPath);
     const snapshot = createWorkflowSnapshot(ctx);
     expect(snapshot.activeStep.agent).toBe('implement feature');
@@ -917,7 +1054,10 @@ describe('createWorkflowSnapshot', () => {
 
 describe('createValidationAllowlistSnapshot', () => {
   it('builds allowlist with activeStep', async () => {
-    const planPath = await createPlanFile('test-cov-normal.plans.md', NORMAL_PLAN);
+    const planPath = await createPlanFile(
+      'test-cov-normal.plans.md',
+      NORMAL_PLAN,
+    );
     const ctx = await loadActivePlanContext(planPath);
     const snapshot = createValidationAllowlistSnapshot(ctx);
     expect(snapshot.scope).toBe('direct-MCP');
@@ -928,12 +1068,18 @@ describe('createValidationAllowlistSnapshot', () => {
     expect(snapshot.activeSlice.slice_id).toBe('S1');
     expect(snapshot.allowlistAuthority).toBe('active-step.validation');
     expect(snapshot.validationCommands).toEqual(['npm test', 'npm run lint']);
-    expect(snapshot.requiredValidationCommands).toEqual(['npm test', 'npm run lint']);
+    expect(snapshot.requiredValidationCommands).toEqual([
+      'npm test',
+      'npm run lint',
+    ]);
     expect(snapshot.validationCommandsMatch).toBe(true);
   });
 
   it('builds allowlist with null activeStep (phase-only)', async () => {
-    const planPath = await createPlanFile('test-cov-phase-only.plans.md', PHASE_ONLY_PLAN);
+    const planPath = await createPlanFile(
+      'test-cov-phase-only.plans.md',
+      PHASE_ONLY_PLAN,
+    );
     const ctx = await loadActivePlanContext(planPath);
     const snapshot = createValidationAllowlistSnapshot(ctx);
     expect(snapshot.activeStep).toBeNull();
@@ -944,8 +1090,14 @@ describe('createValidationAllowlistSnapshot', () => {
   });
 
   it('uses metadata.goal as agent when agent is absent', async () => {
-    const planContent = NORMAL_PLAN.replace("agent: '04-implementing'", "# agent removed");
-    const planPath = await createPlanFile('test-cov-no-agent2.plans.md', planContent);
+    const planContent = NORMAL_PLAN.replace(
+      "agent: '04-implementing'",
+      '# agent removed',
+    );
+    const planPath = await createPlanFile(
+      'test-cov-no-agent2.plans.md',
+      planContent,
+    );
     const ctx = await loadActivePlanContext(planPath);
     const snapshot = createValidationAllowlistSnapshot(ctx);
     expect(snapshot.activeStep.agent).toBe('implement feature');

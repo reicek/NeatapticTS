@@ -76,7 +76,8 @@ export const __testOnlySetEvalWorker = (
 
 /* istanbul ignore next -- test-only introspection hook */
 /** Test-only accessor for the eval worker instance. */
-export const __testOnlyGetEvalWorker = (): unknown => getWorkerState().evalWorker;
+export const __testOnlyGetEvalWorker = (): unknown =>
+  getWorkerState().evalWorker;
 
 /* istanbul ignore next -- test-only hook to inject champion network */
 /** Test-only hook to inject a champion main-agent network for auto-mode testing. */

@@ -20,14 +20,15 @@ import {
 } from './enemy-navigation';
 import { separateEnemies } from './enemy-controller.collision.utils';
 import { isFiniteNumber } from './math-guards.utils';
-import {
-  resolveTimestepMs,
-} from './enemy-controller.state.utils';
+import { resolveTimestepMs } from './enemy-controller.state.utils';
 import { resolveRespawnState } from './enemy-controller.spawn.utils';
 import { handleDeath } from './enemy-controller.death.utils';
 import { handleStun } from './enemy-controller.stun.utils';
 import { resolveFlankState } from './enemy-controller.flank.utils';
-import { computeMovementFlat, resetMlpDebugGuard } from './enemy-controller.move.utils';
+import {
+  computeMovementFlat,
+  resetMlpDebugGuard,
+} from './enemy-controller.move.utils';
 import { resolveFire } from './enemy-controller.fire.utils';
 
 // Re-export parallel inference infrastructure (B1).
@@ -243,7 +244,8 @@ function acquirePooledContext(
   hitscanEvents: HitscanEvent[],
   injectedWeights: Float32Array | undefined,
 ): WritableEnemyUpdateContext {
-  const slot = pooledContextSlots[nextPoolSlotIndex % POOLED_CONTEXT_SLOT_COUNT];
+  const slot =
+    pooledContextSlots[nextPoolSlotIndex % POOLED_CONTEXT_SLOT_COUNT];
   nextPoolSlotIndex += 1;
 
   // Reset all fields on the pooled slot — no new object allocation.
@@ -484,9 +486,7 @@ export function updateEnemyController(
 
   for (let i = 0; i < state.enemies.length; i += 1) {
     const previous = previousByIndex[i];
-    const enemyWeights = perEnemyArr
-      ? perEnemyArr[i]
-      : weights;
+    const enemyWeights = perEnemyArr ? perEnemyArr[i] : weights;
     enemies.push(
       updateControlledEnemy(
         i,

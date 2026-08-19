@@ -10,7 +10,7 @@ Active workstreams and their plan trackers.
 - Neatenstein Firing / Sensor System: `neatenstein-firing-sensor-system.plans.md` — Phases 1-5 [DONE] (archived in `plans/completed/`) — fix NEAT player firing: shared constants, fitness replacement, sensor expansion 12→15, reward redesign, fire gating
 - Neatenstein Hunter Bugfix: `plans/completed/neatenstein-hunter-bugfix.plans.md` — Phase 1 [DONE] (archived in `plans/completed/`) — fix three live hunter bugs: center spin, wall vision, wave spawn at 14 kills
 - Neatenstein Scroll/Ammo: `plans/completed/neatenstein-scroll-ammo.plans.md` — Phases 1-2 [DONE] (archived in `plans/completed/`) — smooth AI scroll/turn with accel/decel and add ammo-pickup path awareness + bonus
-- Neatenstein Ultimate Quality Upgrade: `plans/neatenstein-ultimate-quality-upgrade.plans.md` — Phases A-C [IN PROGRESS] — Phase A [DONE] (all 5 steps); Phase B Step B1 [DONE] (enemy parallelism); comprehensive multi-perspective upgrade: maze generation overhaul, per-frame allocation elimination, NGE hero evolution, enemy NEAT evolution, raycasting bug fixes, enemy parallelism, code quality, shader raycaster, MAP-Elites/CMA-ES, rendering polish
+- Neatenstein Ultimate Quality Upgrade: `plans/completed/neatenstein-ultimate-quality-upgrade.plans.md` — Phases A-C [DONE] (archived in `plans/completed/`) — comprehensive multi-perspective upgrade: maze generation overhaul, per-frame allocation elimination, NGE hero evolution, enemy NEAT evolution, raycasting bug fixes, enemy parallelism, code quality, shader raycaster, MAP-Elites/CMA-ES, rendering polish
 
 ## Standalone Meta-Workflow Lane
 

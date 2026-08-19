@@ -43,10 +43,7 @@ export const NEATENSTEIN_DDA_CELL_SIZE_WORLD = 1.0 as const;
  * @param deltaDist - Distance between successive grid lines on this axis.
  * @returns Side distance, with `Infinity` substituted for any `NaN` result.
  */
-export function resolveSideDistance(
-  offset: number,
-  deltaDist: number,
-): number {
+export function resolveSideDistance(offset: number, deltaDist: number): number {
   const result = offset * deltaDist;
   return Number.isNaN(result) ? Number.POSITIVE_INFINITY : result;
 }

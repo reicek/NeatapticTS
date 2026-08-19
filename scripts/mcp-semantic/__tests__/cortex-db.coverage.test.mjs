@@ -163,7 +163,12 @@ describe('getTursoClient', () => {
 
   it('converts a plain filesystem path to a file: URL', async () => {
     const { getTursoClient, closeTursoClient } = await loadModule();
-    const fsPath = path.join(repoRoot, 'rag-index', 'data', 'test-client.sqlite');
+    const fsPath = path.join(
+      repoRoot,
+      'rag-index',
+      'data',
+      'test-client.sqlite',
+    );
     try {
       const client = await getTursoClient(fsPath);
       expect(typeof client.execute).toBe('function');
@@ -262,9 +267,7 @@ describe('readChunk', () => {
     const { readChunk } = await loadModule();
     const client = await setupTestDb();
     try {
-      await expect(readChunk(client, 99999)).rejects.toThrow(
-        /Chunk not found/,
-      );
+      await expect(readChunk(client, 99999)).rejects.toThrow(/Chunk not found/);
     } finally {
       client.close?.();
     }
@@ -511,9 +514,7 @@ describe('toAbsoluteRepoPath', () => {
 
   it('throws for path traversal', async () => {
     const { toAbsoluteRepoPath } = await loadModule();
-    expect(() => toAbsoluteRepoPath('../../etc/passwd')).toThrow(
-      /repository/,
-    );
+    expect(() => toAbsoluteRepoPath('../../etc/passwd')).toThrow(/repository/);
   });
 });
 

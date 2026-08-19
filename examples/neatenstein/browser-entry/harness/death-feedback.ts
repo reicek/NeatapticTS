@@ -173,7 +173,8 @@ export function computeEnemyBehaviorMetrics(
  */
 function computeAggression(telemetry: EnemyBehaviorTelemetry): number {
   const denominator =
-    telemetry.damageDealt + telemetry.survivalTicks * AGGRESSION_SURVIVAL_SCALAR;
+    telemetry.damageDealt +
+    telemetry.survivalTicks * AGGRESSION_SURVIVAL_SCALAR;
   if (denominator <= 0) {
     return 0;
   }
@@ -200,5 +201,7 @@ function computePositioning(telemetry: EnemyBehaviorTelemetry): number {
  * @returns Movement pattern in [0, 1].
  */
 function computeMovementPattern(telemetry: EnemyBehaviorTelemetry): number {
-  return clamp01(telemetry.dirChangeCount / Math.max(1, telemetry.survivalTicks));
+  return clamp01(
+    telemetry.dirChangeCount / Math.max(1, telemetry.survivalTicks),
+  );
 }

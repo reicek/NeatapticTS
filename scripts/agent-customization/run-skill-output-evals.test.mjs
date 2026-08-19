@@ -9,7 +9,10 @@ jest.unstable_mockModule('./customization-utils.mjs', () => ({
     name,
     ok: issues.length === 0,
     issues,
-    counts: { errors: issues.filter((i) => i.severity === 'error').length, warnings: 0 },
+    counts: {
+      errors: issues.filter((i) => i.severity === 'error').length,
+      warnings: 0,
+    },
     summaryText: `${issues.length === 0 ? 'PASS' : 'FAIL'} ${name}`,
   })),
   writeReport: jest.fn(),
@@ -37,7 +40,9 @@ describe('run-skill-output-evals', () => {
     const origArgv = process.argv;
     const origExit = process.exit;
     process.argv = ['node', 'run-skill-output-evals.mjs', '--help'];
-    process.exit = (code) => { throw new Error(`EXIT:${code}`); };
+    process.exit = (code) => {
+      throw new Error(`EXIT:${code}`);
+    };
     mockUtils.parseArgs.mockReturnValue({ help: true, json: false });
 
     await importModule();
@@ -139,7 +144,9 @@ describe('run-skill-output-evals', () => {
     await importModule();
 
     process.argv = origArgv;
-    const errorCalls = mockUtils.issue.mock.calls.filter((c) => c[0] === 'error');
+    const errorCalls = mockUtils.issue.mock.calls.filter(
+      (c) => c[0] === 'error',
+    );
     assert.ok(errorCalls.length >= 1);
   });
 
@@ -163,7 +170,9 @@ describe('run-skill-output-evals', () => {
     await importModule();
 
     process.argv = origArgv;
-    const warningCalls = mockUtils.issue.mock.calls.filter((c) => c[0] === 'warning');
+    const warningCalls = mockUtils.issue.mock.calls.filter(
+      (c) => c[0] === 'warning',
+    );
     assert.ok(warningCalls.length >= 1);
   });
 
@@ -184,8 +193,17 @@ describe('run-skill-output-evals', () => {
 
   it('uses --input path when provided', async () => {
     const origArgv = process.argv;
-    process.argv = ['node', 'run-skill-output-evals.mjs', '--json', '--input=custom.json'];
-    mockUtils.parseArgs.mockReturnValue({ help: false, json: true, input: 'custom.json' });
+    process.argv = [
+      'node',
+      'run-skill-output-evals.mjs',
+      '--json',
+      '--input=custom.json',
+    ];
+    mockUtils.parseArgs.mockReturnValue({
+      help: false,
+      json: true,
+      input: 'custom.json',
+    });
     mockUtils.readWorkspaceFile.mockResolvedValue(
       JSON.stringify({ evals: [] }),
     );
@@ -193,7 +211,10 @@ describe('run-skill-output-evals', () => {
     await importModule();
 
     process.argv = origArgv;
-    assert.strictEqual(mockUtils.readWorkspaceFile.mock.calls[0][0], 'custom.json');
+    assert.strictEqual(
+      mockUtils.readWorkspaceFile.mock.calls[0][0],
+      'custom.json',
+    );
   });
 
   it('sets exitCode to 1 when errors exist', async () => {

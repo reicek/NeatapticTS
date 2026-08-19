@@ -154,7 +154,8 @@ export function stepSepCmaEs(
   state: SepCmaEsState,
   fitnessFn: (weights: Float32Array) => number,
 ): SepCmaEsStepResult {
-  const { dimension, populationSize, mean, covarianceDiag, sigma, seed } = state;
+  const { dimension, populationSize, mean, covarianceDiag, sigma, seed } =
+    state;
   const rng = createRng(seed + state.generation * 1000003);
   const evolutionPath = state.evolutionPath;
 
@@ -201,8 +202,7 @@ export function stepSepCmaEs(
       varSum += diff * diff;
     }
     const newVar = varSum / eliteCount;
-    newCovDiag[d] =
-      covarianceDiag[d] * (1 - CCOV) + newVar * CCOV;
+    newCovDiag[d] = covarianceDiag[d] * (1 - CCOV) + newVar * CCOV;
     if (newCovDiag[d] < COV_FLOOR) {
       newCovDiag[d] = COV_FLOOR;
     }

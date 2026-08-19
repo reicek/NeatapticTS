@@ -40,21 +40,17 @@ describe('ann-strategy', () => {
     });
 
     it('returns diskann regardless of annThreshold', () => {
-      expect(
-        resolveDenseStrategy({ chunkCount: 10, annThreshold: 5 }),
-      ).toBe('diskann');
+      expect(resolveDenseStrategy({ chunkCount: 10, annThreshold: 5 })).toBe(
+        'diskann',
+      );
     });
 
     it('returns diskann regardless of indexStatus', () => {
-      expect(
-        resolveDenseStrategy({ indexStatus: 'missing' }),
-      ).toBe('diskann');
+      expect(resolveDenseStrategy({ indexStatus: 'missing' })).toBe('diskann');
     });
 
     it('returns diskann regardless of forceStrategy', () => {
-      expect(
-        resolveDenseStrategy({ forceStrategy: 'hnsw' }),
-      ).toBe('diskann');
+      expect(resolveDenseStrategy({ forceStrategy: 'hnsw' })).toBe('diskann');
     });
 
     it('returns diskann with all options provided', () => {
@@ -185,9 +181,9 @@ describe('ann-strategy', () => {
         getQueryResultCache({ embedding: embeddings[0], modelId }),
       ).toBeUndefined();
       // Last entry should exist
-      expect(
-        getQueryResultCache({ embedding: embeddings[3], modelId }),
-      ).toBe('result-3');
+      expect(getQueryResultCache({ embedding: embeddings[3], modelId })).toBe(
+        'result-3',
+      );
     });
 
     it('uses default ttl and maxEntries', () => {

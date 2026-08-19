@@ -118,9 +118,10 @@ describe('Neatenstein derez pruning fix', () => {
 
 describe('A2 Fix 4: Zero-timestep pass conditional skip', () => {
   it('exports __testOnlyGetZeroTimestepPassSkipped as a function from sim utils', async () => {
-    const mod = (await loadModule(
-      './display.worker.sim.utils.ts',
-    )) as Record<string, unknown>;
+    const mod = (await loadModule('./display.worker.sim.utils.ts')) as Record<
+      string,
+      unknown
+    >;
     expect(typeof mod.__testOnlyGetZeroTimestepPassSkipped).toBe('function');
   });
 
@@ -137,9 +138,9 @@ describe('A2 Fix 4: Zero-timestep pass conditional skip', () => {
     // no deaths) so that the enemy count stays stable between the first
     // updateEnemyController call and the skipPass check.
     const tickModule = await import('../host/game/tick');
-    const gameTickSpy = jest.spyOn(tickModule, 'gameTick').mockImplementation(
-      (gameState: GameState) => gameState,
-    );
+    const gameTickSpy = jest
+      .spyOn(tickModule, 'gameTick')
+      .mockImplementation((gameState: GameState) => gameState);
 
     // Send another tick — with gameTick mocked to return unchanged state,
     // the controller count matches the game count, no de-rez completions,
@@ -169,9 +170,10 @@ describe('A2 Fix 4: Zero-timestep pass conditional skip', () => {
 
 describe('A2 Fix 6: De-rez pruning single-pass with Set', () => {
   it('exports __testOnlyGetDeRezPruningUsedSinglePass as a function from sim utils', async () => {
-    const mod = (await loadModule(
-      './display.worker.sim.utils.ts',
-    )) as Record<string, unknown>;
+    const mod = (await loadModule('./display.worker.sim.utils.ts')) as Record<
+      string,
+      unknown
+    >;
     expect(typeof mod.__testOnlyGetDeRezPruningUsedSinglePass).toBe('function');
   });
 
@@ -202,9 +204,10 @@ describe('A2 Fix 6: De-rez pruning single-pass with Set', () => {
 
 describe('A2 Fix 8: runSimStep mutable internal state', () => {
   it('exports __testOnlyGetSimStepCloneCount as a function from sim utils', async () => {
-    const mod = (await loadModule(
-      './display.worker.sim.utils.ts',
-    )) as Record<string, unknown>;
+    const mod = (await loadModule('./display.worker.sim.utils.ts')) as Record<
+      string,
+      unknown
+    >;
     expect(typeof mod.__testOnlyGetSimStepCloneCount).toBe('function');
   });
 });

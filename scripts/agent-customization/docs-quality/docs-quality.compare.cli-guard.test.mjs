@@ -45,7 +45,11 @@ const manifestData = {
   summaryPath: SUMMARY_LEFT,
 };
 writeFileSync(MANIFEST_LEFT, JSON.stringify(manifestData), 'utf8');
-writeFileSync(MANIFEST_RIGHT, JSON.stringify({ ...manifestData, summaryPath: SUMMARY_RIGHT }), 'utf8');
+writeFileSync(
+  MANIFEST_RIGHT,
+  JSON.stringify({ ...manifestData, summaryPath: SUMMARY_RIGHT }),
+  'utf8',
+);
 writeFileSync(SUMMARY_LEFT, JSON.stringify({ evidenceCount: 10 }), 'utf8');
 writeFileSync(SUMMARY_RIGHT, JSON.stringify({ evidenceCount: 5 }), 'utf8');
 
@@ -63,7 +67,13 @@ JSON.parse = function (...args) {
 // (import.meta.url === pathToFileURL(process.argv[1]).href)
 const originalArgv = process.argv;
 const originalExitCode = process.exitCode;
-process.argv = ['node', COMPARE_MODULE, `--left=${MANIFEST_LEFT}`, `--right=${MANIFEST_RIGHT}`, '--json'];
+process.argv = [
+  'node',
+  COMPARE_MODULE,
+  `--left=${MANIFEST_LEFT}`,
+  `--right=${MANIFEST_RIGHT}`,
+  '--json',
+];
 process.exitCode = 0;
 
 // Initial import — NOT inside isolateModulesAsync — so branch coverage is tracked normally.

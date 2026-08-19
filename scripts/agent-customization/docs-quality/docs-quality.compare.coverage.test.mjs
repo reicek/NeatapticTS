@@ -44,9 +44,8 @@ jest.unstable_mockModule('../../../rag-index/cli-utils.mjs', () => ({
 }));
 
 // --- Initial import (covers FALSE branch of CLI guard — process.argv is jest) ---
-const { compareDocsQualityRuns, REASON_CODES } = await import(
-  '../../../rag-index/docs-quality/docs-quality.compare.mjs'
-);
+const { compareDocsQualityRuns, REASON_CODES } =
+  await import('../../../rag-index/docs-quality/docs-quality.compare.mjs');
 // --- End initial import ---
 
 function writeJson(filePath, data) {
@@ -57,8 +56,14 @@ function makeManifest(opts = {}) {
   return {
     metricVersion: opts.metricVersion ?? 2,
     scannerVersion: opts.scannerVersion ?? '2.0.0',
-    thresholdConfig: opts.thresholdConfig ?? { minJsdocWords: 10, complexityThreshold: 10 },
-    scopeConfig: opts.scopeConfig ?? { scopeType: 'src', scopeDigest: 'digest-abc' },
+    thresholdConfig: opts.thresholdConfig ?? {
+      minJsdocWords: 10,
+      complexityThreshold: 10,
+    },
+    scopeConfig: opts.scopeConfig ?? {
+      scopeType: 'src',
+      scopeDigest: 'digest-abc',
+    },
     summaryPath: opts.summaryPath ?? SUMMARY_LEFT,
   };
 }
@@ -92,8 +97,12 @@ describe('docs-quality.compare.mjs coverage', () => {
 
     it('rejects with SCOPE_TYPE_MISMATCH', () => {
       const result = compareDocsQualityRuns({
-        leftManifest: makeManifest({ scopeConfig: { scopeType: 'src', scopeDigest: 'abc' } }),
-        rightManifest: makeManifest({ scopeConfig: { scopeType: 'paths', scopeDigest: 'abc' } }),
+        leftManifest: makeManifest({
+          scopeConfig: { scopeType: 'src', scopeDigest: 'abc' },
+        }),
+        rightManifest: makeManifest({
+          scopeConfig: { scopeType: 'paths', scopeDigest: 'abc' },
+        }),
         leftSummary: makeSummary(),
         rightSummary: makeSummary(),
       });
@@ -103,8 +112,12 @@ describe('docs-quality.compare.mjs coverage', () => {
 
     it('rejects with SCOPE_DIGEST_MISMATCH', () => {
       const result = compareDocsQualityRuns({
-        leftManifest: makeManifest({ scopeConfig: { scopeType: 'src', scopeDigest: 'abc' } }),
-        rightManifest: makeManifest({ scopeConfig: { scopeType: 'src', scopeDigest: 'xyz' } }),
+        leftManifest: makeManifest({
+          scopeConfig: { scopeType: 'src', scopeDigest: 'abc' },
+        }),
+        rightManifest: makeManifest({
+          scopeConfig: { scopeType: 'src', scopeDigest: 'xyz' },
+        }),
         leftSummary: makeSummary(),
         rightSummary: makeSummary(),
       });
@@ -125,8 +138,12 @@ describe('docs-quality.compare.mjs coverage', () => {
 
     it('rejects with THRESHOLD_MISMATCH (minJsdocWords)', () => {
       const result = compareDocsQualityRuns({
-        leftManifest: makeManifest({ thresholdConfig: { minJsdocWords: 10, complexityThreshold: 10 } }),
-        rightManifest: makeManifest({ thresholdConfig: { minJsdocWords: 15, complexityThreshold: 10 } }),
+        leftManifest: makeManifest({
+          thresholdConfig: { minJsdocWords: 10, complexityThreshold: 10 },
+        }),
+        rightManifest: makeManifest({
+          thresholdConfig: { minJsdocWords: 15, complexityThreshold: 10 },
+        }),
         leftSummary: makeSummary(),
         rightSummary: makeSummary(),
       });
@@ -138,8 +155,18 @@ describe('docs-quality.compare.mjs coverage', () => {
       const result = compareDocsQualityRuns({
         leftManifest: makeManifest(),
         rightManifest: makeManifest(),
-        leftSummary: makeSummary({ missingJsdoc: 5, weakJsdoc: 3, highComplexity: 2, evidenceCount: 10 }),
-        rightSummary: makeSummary({ missingJsdoc: 3, weakJsdoc: 1, highComplexity: 1, evidenceCount: 5 }),
+        leftSummary: makeSummary({
+          missingJsdoc: 5,
+          weakJsdoc: 3,
+          highComplexity: 2,
+          evidenceCount: 10,
+        }),
+        rightSummary: makeSummary({
+          missingJsdoc: 3,
+          weakJsdoc: 1,
+          highComplexity: 1,
+          evidenceCount: 5,
+        }),
       });
       expect(result.accepted).toBe(true);
       expect(result.delta.missingJsdoc).toBe(-2);
@@ -147,8 +174,16 @@ describe('docs-quality.compare.mjs coverage', () => {
 
     it('handles missing thresholdConfig (defaults to empty object)', () => {
       const result = compareDocsQualityRuns({
-        leftManifest: { metricVersion: 2, scannerVersion: '2.0.0', scopeConfig: { scopeType: 'src', scopeDigest: 'abc' } },
-        rightManifest: { metricVersion: 2, scannerVersion: '2.0.0', scopeConfig: { scopeType: 'src', scopeDigest: 'abc' } },
+        leftManifest: {
+          metricVersion: 2,
+          scannerVersion: '2.0.0',
+          scopeConfig: { scopeType: 'src', scopeDigest: 'abc' },
+        },
+        rightManifest: {
+          metricVersion: 2,
+          scannerVersion: '2.0.0',
+          scopeConfig: { scopeType: 'src', scopeDigest: 'abc' },
+        },
         leftSummary: makeSummary(),
         rightSummary: makeSummary(),
       });
@@ -179,8 +214,12 @@ describe('docs-quality.compare.mjs coverage', () => {
       const result = compareDocsQualityRuns({
         leftManifest: makeManifest(),
         rightManifest: makeManifest(),
-        leftSummary: { issueBreakdown: { missingJsdoc: 1, weakJsdoc: 2, highComplexity: 3 } },
-        rightSummary: { issueBreakdown: { missingJsdoc: 4, weakJsdoc: 5, highComplexity: 6 } },
+        leftSummary: {
+          issueBreakdown: { missingJsdoc: 1, weakJsdoc: 2, highComplexity: 3 },
+        },
+        rightSummary: {
+          issueBreakdown: { missingJsdoc: 4, weakJsdoc: 5, highComplexity: 6 },
+        },
       });
       expect(result.accepted).toBe(true);
       expect(result.delta.missingJsdoc).toBe(3);
@@ -189,7 +228,9 @@ describe('docs-quality.compare.mjs coverage', () => {
     it('covers ?? fallback branches in normalizeManifest (missing fields)', () => {
       const result = compareDocsQualityRuns({
         leftManifest: { scopeConfig: { scopeType: 'src', scopeDigest: 'abc' } },
-        rightManifest: { scopeConfig: { scopeType: 'src', scopeDigest: 'abc' } },
+        rightManifest: {
+          scopeConfig: { scopeType: 'src', scopeDigest: 'abc' },
+        },
         leftSummary: makeSummary(),
         rightSummary: makeSummary(),
       });
@@ -199,8 +240,18 @@ describe('docs-quality.compare.mjs coverage', () => {
 
     it('covers thresholdConfig fallback to empty object and threshold ?? 0', () => {
       const result = compareDocsQualityRuns({
-        leftManifest: { metricVersion: 2, scannerVersion: '2.0.0', scopeConfig: { scopeType: 'src', scopeDigest: 'abc' }, thresholdConfig: {} },
-        rightManifest: { metricVersion: 2, scannerVersion: '2.0.0', scopeConfig: { scopeType: 'src', scopeDigest: 'abc' }, thresholdConfig: {} },
+        leftManifest: {
+          metricVersion: 2,
+          scannerVersion: '2.0.0',
+          scopeConfig: { scopeType: 'src', scopeDigest: 'abc' },
+          thresholdConfig: {},
+        },
+        rightManifest: {
+          metricVersion: 2,
+          scannerVersion: '2.0.0',
+          scopeConfig: { scopeType: 'src', scopeDigest: 'abc' },
+          thresholdConfig: {},
+        },
         leftSummary: makeSummary(),
         rightSummary: makeSummary(),
       });
@@ -209,8 +260,18 @@ describe('docs-quality.compare.mjs coverage', () => {
 
     it('covers scopeConfig fallback to empty object and scopeType/scopeDigest ?? empty', () => {
       const result = compareDocsQualityRuns({
-        leftManifest: { metricVersion: 2, scannerVersion: '2.0.0', thresholdConfig: { minJsdocWords: 10, complexityThreshold: 10 }, scopeConfig: {} },
-        rightManifest: { metricVersion: 2, scannerVersion: '2.0.0', thresholdConfig: { minJsdocWords: 10, complexityThreshold: 10 }, scopeConfig: {} },
+        leftManifest: {
+          metricVersion: 2,
+          scannerVersion: '2.0.0',
+          thresholdConfig: { minJsdocWords: 10, complexityThreshold: 10 },
+          scopeConfig: {},
+        },
+        rightManifest: {
+          metricVersion: 2,
+          scannerVersion: '2.0.0',
+          thresholdConfig: { minJsdocWords: 10, complexityThreshold: 10 },
+          scopeConfig: {},
+        },
         leftSummary: makeSummary(),
         rightSummary: makeSummary(),
       });
@@ -293,13 +354,23 @@ describe('docs-quality.compare.mjs coverage', () => {
     });
 
     it('compares two runs successfully (text output)', async () => {
-      cliArgs = { help: false, json: false, left: MANIFEST_LEFT, right: MANIFEST_RIGHT };
+      cliArgs = {
+        help: false,
+        json: false,
+        left: MANIFEST_LEFT,
+        right: MANIFEST_RIGHT,
+      };
       writeJson(MANIFEST_LEFT, makeManifest({ summaryPath: SUMMARY_LEFT }));
       writeJson(MANIFEST_RIGHT, makeManifest({ summaryPath: SUMMARY_RIGHT }));
       writeJson(SUMMARY_LEFT, makeSummary({ evidenceCount: 10 }));
       writeJson(SUMMARY_RIGHT, makeSummary({ evidenceCount: 5 }));
 
-      process.argv = ['node', COMPARE_MODULE, `--left=${MANIFEST_LEFT}`, `--right=${MANIFEST_RIGHT}`];
+      process.argv = [
+        'node',
+        COMPARE_MODULE,
+        `--left=${MANIFEST_LEFT}`,
+        `--right=${MANIFEST_RIGHT}`,
+      ];
 
       jest.resetModules();
       await import('../../../rag-index/docs-quality/docs-quality.compare.mjs');
@@ -311,13 +382,24 @@ describe('docs-quality.compare.mjs coverage', () => {
     });
 
     it('outputs json when --json flag is passed', async () => {
-      cliArgs = { help: false, json: true, left: MANIFEST_LEFT, right: MANIFEST_RIGHT };
+      cliArgs = {
+        help: false,
+        json: true,
+        left: MANIFEST_LEFT,
+        right: MANIFEST_RIGHT,
+      };
       writeJson(MANIFEST_LEFT, makeManifest({ summaryPath: SUMMARY_LEFT }));
       writeJson(MANIFEST_RIGHT, makeManifest({ summaryPath: SUMMARY_RIGHT }));
       writeJson(SUMMARY_LEFT, makeSummary({ evidenceCount: 10 }));
       writeJson(SUMMARY_RIGHT, makeSummary({ evidenceCount: 5 }));
 
-      process.argv = ['node', COMPARE_MODULE, `--left=${MANIFEST_LEFT}`, `--right=${MANIFEST_RIGHT}`, '--json'];
+      process.argv = [
+        'node',
+        COMPARE_MODULE,
+        `--left=${MANIFEST_LEFT}`,
+        `--right=${MANIFEST_RIGHT}`,
+        '--json',
+      ];
 
       jest.resetModules();
       await import('../../../rag-index/docs-quality/docs-quality.compare.mjs');
@@ -328,13 +410,29 @@ describe('docs-quality.compare.mjs coverage', () => {
     });
 
     it('sets exitCode to 1 when comparison is rejected', async () => {
-      cliArgs = { help: false, json: false, left: MANIFEST_LEFT, right: MANIFEST_RIGHT };
-      writeJson(MANIFEST_LEFT, makeManifest({ metricVersion: 2, summaryPath: SUMMARY_LEFT }));
-      writeJson(MANIFEST_RIGHT, makeManifest({ metricVersion: 3, summaryPath: SUMMARY_RIGHT }));
+      cliArgs = {
+        help: false,
+        json: false,
+        left: MANIFEST_LEFT,
+        right: MANIFEST_RIGHT,
+      };
+      writeJson(
+        MANIFEST_LEFT,
+        makeManifest({ metricVersion: 2, summaryPath: SUMMARY_LEFT }),
+      );
+      writeJson(
+        MANIFEST_RIGHT,
+        makeManifest({ metricVersion: 3, summaryPath: SUMMARY_RIGHT }),
+      );
       writeJson(SUMMARY_LEFT, makeSummary());
       writeJson(SUMMARY_RIGHT, makeSummary());
 
-      process.argv = ['node', COMPARE_MODULE, `--left=${MANIFEST_LEFT}`, `--right=${MANIFEST_RIGHT}`];
+      process.argv = [
+        'node',
+        COMPARE_MODULE,
+        `--left=${MANIFEST_LEFT}`,
+        `--right=${MANIFEST_RIGHT}`,
+      ];
       process.exitCode = 0;
 
       jest.resetModules();
@@ -361,11 +459,17 @@ describe('docs-quality.compare.mjs coverage', () => {
 
     it('handles read error with Error object (nonexistent files)', async () => {
       cliArgs = {
-        help: false, json: false,
+        help: false,
+        json: false,
         left: path.join(TMP_DIR, 'nonexistent.json'),
         right: path.join(TMP_DIR, 'also.json'),
       };
-      process.argv = ['node', COMPARE_MODULE, `--left=${path.join(TMP_DIR, 'nonexistent.json')}`, `--right=${path.join(TMP_DIR, 'also.json')}`];
+      process.argv = [
+        'node',
+        COMPARE_MODULE,
+        `--left=${path.join(TMP_DIR, 'nonexistent.json')}`,
+        `--right=${path.join(TMP_DIR, 'also.json')}`,
+      ];
 
       jest.resetModules();
       await import('../../../rag-index/docs-quality/docs-quality.compare.mjs');
@@ -375,13 +479,23 @@ describe('docs-quality.compare.mjs coverage', () => {
     });
 
     it('handles non-Error throw from writeJsonOrText (covers String(error) branch)', async () => {
-      cliArgs = { help: false, json: false, left: MANIFEST_LEFT, right: MANIFEST_RIGHT };
+      cliArgs = {
+        help: false,
+        json: false,
+        left: MANIFEST_LEFT,
+        right: MANIFEST_RIGHT,
+      };
       writeJson(MANIFEST_LEFT, makeManifest({ summaryPath: SUMMARY_LEFT }));
       writeJson(MANIFEST_RIGHT, makeManifest({ summaryPath: SUMMARY_RIGHT }));
       writeJson(SUMMARY_LEFT, makeSummary({ evidenceCount: 10 }));
       writeJson(SUMMARY_RIGHT, makeSummary({ evidenceCount: 5 }));
 
-      process.argv = ['node', COMPARE_MODULE, `--left=${MANIFEST_LEFT}`, `--right=${MANIFEST_RIGHT}`];
+      process.argv = [
+        'node',
+        COMPARE_MODULE,
+        `--left=${MANIFEST_LEFT}`,
+        `--right=${MANIFEST_RIGHT}`,
+      ];
       writeJsonThrowNonError = true;
 
       jest.resetModules();
@@ -389,8 +503,9 @@ describe('docs-quality.compare.mjs coverage', () => {
       await new Promise((r) => setTimeout(r, 100));
 
       expect(failCalls.length).toBeGreaterThanOrEqual(1);
-      expect(failCalls[0].message).toBe('non-error string from writeJsonOrText');
+      expect(failCalls[0].message).toBe(
+        'non-error string from writeJsonOrText',
+      );
     });
-
   });
 });

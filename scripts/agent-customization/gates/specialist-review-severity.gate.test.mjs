@@ -119,7 +119,10 @@ describe('specialist-review-severity gate', () => {
       assert.equal(result.severity, 'FULL');
       assert.equal(result.specialistCount, 1);
       assert.deepEqual(result.trivialFiles, ['foo.test.ts']);
-      assert.deepEqual(result.nonTrivialFiles, ['src/bar.ts', 'examples/baz.js']);
+      assert.deepEqual(result.nonTrivialFiles, [
+        'src/bar.ts',
+        'examples/baz.js',
+      ]);
     });
 
     it('throws TypeError for non-array input', async () => {
@@ -149,7 +152,9 @@ describe('specialist-review-severity gate', () => {
     it('prints usage with --help', async () => {
       mockOptions = { json: false, help: true, input: undefined };
       const logs = await importGateMain(['--help']);
-      assert.ok(logs.some((l) => l.includes('specialist-review-severity gate')));
+      assert.ok(
+        logs.some((l) => l.includes('specialist-review-severity gate')),
+      );
       assert.equal(process.exitCode, 0);
     });
 
@@ -187,7 +192,11 @@ describe('specialist-review-severity gate', () => {
     });
 
     it('emits text without --json for FULL severity with non-trivial files listing', async () => {
-      mockOptions = { json: false, help: false, input: 'src/foo.ts,foo.test.ts' };
+      mockOptions = {
+        json: false,
+        help: false,
+        input: 'src/foo.ts,foo.test.ts',
+      };
       const logs = await importGateMain(['--input=src/foo.ts,foo.test.ts']);
       assert.ok(
         logs.some((l) => l.includes('FULL specialist-review-severity gate')),
@@ -214,7 +223,11 @@ describe('specialist-review-severity gate', () => {
     });
 
     it('handles comma-separated input with empty entries (filter Boolean)', async () => {
-      mockOptions = { json: true, help: false, input: 'src/foo.ts,,foo.test.ts' };
+      mockOptions = {
+        json: true,
+        help: false,
+        input: 'src/foo.ts,,foo.test.ts',
+      };
       const logs = await importGateMain([
         '--json',
         '--input=src/foo.ts,,foo.test.ts',

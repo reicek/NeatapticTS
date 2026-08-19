@@ -18,23 +18,13 @@ const fakeFreshness = {
 };
 
 async function importTool() {
-  jest.unstable_mockModule(
-    '../generate-agent-skill-routing-table.mjs',
-    () => ({
-      collectCustomizationRoutingTable: jest
-        .fn()
-        .mockResolvedValue(fakeTable),
-      ROUTING_TABLE_PATH: '.github/agent-skill-routing-table.md',
-    }),
-  );
-  jest.unstable_mockModule(
-    '../gates/routing-table-freshness.gate.mjs',
-    () => ({
-      runRoutingTableFreshnessGate: jest
-        .fn()
-        .mockResolvedValue(fakeFreshness),
-    }),
-  );
+  jest.unstable_mockModule('../generate-agent-skill-routing-table.mjs', () => ({
+    collectCustomizationRoutingTable: jest.fn().mockResolvedValue(fakeTable),
+    ROUTING_TABLE_PATH: '.github/agent-skill-routing-table.md',
+  }));
+  jest.unstable_mockModule('../gates/routing-table-freshness.gate.mjs', () => ({
+    runRoutingTableFreshnessGate: jest.fn().mockResolvedValue(fakeFreshness),
+  }));
   jest.resetModules();
 
   const mod = await import('./customization-routing-table-tool.mjs');
@@ -53,13 +43,11 @@ describe('customization-routing-table-tool.mjs', () => {
         properties: {
           includeRows: {
             type: 'boolean',
-            description:
-              'When false, omit the per-row agent and skill data.',
+            description: 'When false, omit the per-row agent and skill data.',
           },
           includeMarkdown: {
             type: 'boolean',
-            description:
-              'When true, include the full generated markdown body.',
+            description: 'When true, include the full generated markdown body.',
           },
         },
         additionalProperties: false,

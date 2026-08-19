@@ -57,10 +57,9 @@ describe('B4: MAP-Elites Quality-Diversity archive', () => {
     });
 
     it('admits a candidate into an empty cell by fitness', () => {
-      const archive = (mapElites.createMapElitesArchive as () => Record<
-        string,
-        unknown
-      >)();
+      const archive = (
+        mapElites.createMapElitesArchive as () => Record<string, unknown>
+      )();
       const candidate = {
         weights: makeWeights(1),
         fitness: 10,
@@ -77,10 +76,9 @@ describe('B4: MAP-Elites Quality-Diversity archive', () => {
     });
 
     it('replaces a dominated cell when the new candidate has higher fitness', () => {
-      const archive = (mapElites.createMapElitesArchive as () => Record<
-        string,
-        unknown
-      >)();
+      const archive = (
+        mapElites.createMapElitesArchive as () => Record<string, unknown>
+      )();
       const weak = {
         weights: makeWeights(1),
         fitness: 5,
@@ -105,10 +103,9 @@ describe('B4: MAP-Elites Quality-Diversity archive', () => {
     });
 
     it('does not replace a cell when the new candidate has lower fitness', () => {
-      const archive = (mapElites.createMapElitesArchive as () => Record<
-        string,
-        unknown
-      >)();
+      const archive = (
+        mapElites.createMapElitesArchive as () => Record<string, unknown>
+      )();
       const strong = {
         weights: makeWeights(2),
         fitness: 20,
@@ -139,10 +136,9 @@ describe('B4: MAP-Elites Quality-Diversity archive', () => {
     });
 
     it('admits a high-novelty candidate into an empty neighboring cell', () => {
-      const archive = (mapElites.createMapElitesArchive as () => Record<
-        string,
-        unknown
-      >)();
+      const archive = (
+        mapElites.createMapElitesArchive as () => Record<string, unknown>
+      )();
       const candidate = {
         weights: makeWeights(3),
         fitness: 1,
@@ -170,29 +166,30 @@ describe('B4: MAP-Elites Quality-Diversity archive', () => {
     });
 
     it('returns zero for a fresh archive', () => {
-      const archive = (mapElites.createMapElitesArchive as () => Record<
-        string,
-        unknown
-      >)();
-      const count = (mapElites.getArchiveOccupiedCount as (...a: unknown[]) => number)(
-        archive,
-      );
+      const archive = (
+        mapElites.createMapElitesArchive as () => Record<string, unknown>
+      )();
+      const count = (
+        mapElites.getArchiveOccupiedCount as (...a: unknown[]) => number
+      )(archive);
       expect(count).toBe(0);
     });
 
     it('returns occupied count after admitting candidates', () => {
-      const archive = (mapElites.createMapElitesArchive as () => Record<
-        string,
-        unknown
-      >)();
-      (mapElites.addToMapElitesArchive as (...a: unknown[]) => unknown)(archive, {
-        weights: makeWeights(1),
-        fitness: 10,
-        behaviorMetrics: makeMetrics(0.2, 0.5),
-      });
-      const count = (mapElites.getArchiveOccupiedCount as (...a: unknown[]) => number)(
+      const archive = (
+        mapElites.createMapElitesArchive as () => Record<string, unknown>
+      )();
+      (mapElites.addToMapElitesArchive as (...a: unknown[]) => unknown)(
         archive,
+        {
+          weights: makeWeights(1),
+          fitness: 10,
+          behaviorMetrics: makeMetrics(0.2, 0.5),
+        },
       );
+      const count = (
+        mapElites.getArchiveOccupiedCount as (...a: unknown[]) => number
+      )(archive);
       expect(count).toBe(1);
     });
   });
@@ -203,24 +200,28 @@ describe('B4: MAP-Elites Quality-Diversity archive', () => {
     });
 
     it('returns diverse strategy samples from occupied cells', () => {
-      const archive = (mapElites.createMapElitesArchive as () => Record<
-        string,
-        unknown
-      >)();
-      (mapElites.addToMapElitesArchive as (...a: unknown[]) => unknown)(archive, {
-        weights: makeWeights(1),
-        fitness: 10,
-        behaviorMetrics: makeMetrics(0.2, 0.3),
-      });
-      (mapElites.addToMapElitesArchive as (...a: unknown[]) => unknown)(archive, {
-        weights: makeWeights(2),
-        fitness: 15,
-        behaviorMetrics: makeMetrics(0.8, 0.9),
-      });
-      const samples = (mapElites.sampleFromArchive as (...a: unknown[]) => unknown[])(
+      const archive = (
+        mapElites.createMapElitesArchive as () => Record<string, unknown>
+      )();
+      (mapElites.addToMapElitesArchive as (...a: unknown[]) => unknown)(
         archive,
-        2,
+        {
+          weights: makeWeights(1),
+          fitness: 10,
+          behaviorMetrics: makeMetrics(0.2, 0.3),
+        },
       );
+      (mapElites.addToMapElitesArchive as (...a: unknown[]) => unknown)(
+        archive,
+        {
+          weights: makeWeights(2),
+          fitness: 15,
+          behaviorMetrics: makeMetrics(0.8, 0.9),
+        },
+      );
+      const samples = (
+        mapElites.sampleFromArchive as (...a: unknown[]) => unknown[]
+      )(archive, 2);
       expect(Array.isArray(samples)).toBe(true);
       expect(samples.length).toBe(2);
     });

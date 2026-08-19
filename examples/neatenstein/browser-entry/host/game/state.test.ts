@@ -296,7 +296,6 @@ describe('Neatenstein game state', () => {
     });
 
     it('increments player ammo by the given amount', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- restoreAmmo not yet exported; red test
       const mod = (await import('./state.ts')) as Record<string, unknown>;
       const { createGameState } = mod as typeof import('./state.ts');
       const state = createGameState({ seed: 42 });
@@ -312,7 +311,6 @@ describe('Neatenstein game state', () => {
     });
 
     it('clamps restored ammo at maxAmmo', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- restoreAmmo not yet exported; red test
       const mod = (await import('./state.ts')) as Record<string, unknown>;
       const { createGameState } = mod as typeof import('./state.ts');
       const state = createGameState({ seed: 42 });

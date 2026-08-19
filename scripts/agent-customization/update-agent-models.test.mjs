@@ -45,8 +45,12 @@ function captureConsole() {
   console.log = (...args) => logs.push(args.join(' '));
   console.error = (...args) => errors.push(args.join(' '));
   return {
-    logs, errors,
-    restore() { console.log = origLog; console.error = origError; },
+    logs,
+    errors,
+    restore() {
+      console.log = origLog;
+      console.error = origError;
+    },
   };
 }
 
@@ -55,7 +59,9 @@ describe('update-agent-models', () => {
     const origArgv = process.argv;
     const origExit = process.exit;
     process.argv = ['node', 'update-agent-models.mjs', '--help'];
-    process.exit = (code) => { throw new Error(`EXIT:${code}`); };
+    process.exit = (code) => {
+      throw new Error(`EXIT:${code}`);
+    };
     const cap = captureConsole();
 
     await importModule();
@@ -63,14 +69,18 @@ describe('update-agent-models', () => {
     process.argv = origArgv;
     process.exit = origExit;
     cap.restore();
-    assert.ok(cap.logs.some((l) => l.includes('Update or remove agent model strings')));
+    assert.ok(
+      cap.logs.some((l) => l.includes('Update or remove agent model strings')),
+    );
   });
 
   it('errors when --to not provided and not --remove', async () => {
     const origArgv = process.argv;
     const origExit = process.exit;
     process.argv = ['node', 'update-agent-models.mjs', '--from=old'];
-    process.exit = (code) => { throw new Error(`EXIT:${code}`); };
+    process.exit = (code) => {
+      throw new Error(`EXIT:${code}`);
+    };
     const cap = captureConsole();
 
     await importModule();
@@ -78,20 +88,26 @@ describe('update-agent-models', () => {
     process.argv = origArgv;
     process.exit = origExit;
     cap.restore();
-    assert.ok(cap.errors.some((e) => e.includes('--to=<model-string> is required')));
+    assert.ok(
+      cap.errors.some((e) => e.includes('--to=<model-string> is required')),
+    );
   });
 
   it('removes top-level model fields in --remove mode', async () => {
     const origArgv = process.argv;
     const origExit = process.exit;
     process.argv = ['node', 'update-agent-models.mjs', '--remove', '--json'];
-    process.exit = (code) => { throw new Error(`EXIT:${code}`); };
+    process.exit = (code) => {
+      throw new Error(`EXIT:${code}`);
+    };
     const cap = captureConsole();
 
     mockFs.readdir.mockResolvedValue([
       { isFile: () => true, name: 'test.agent.md' },
     ]);
-    mockFs.readFile.mockResolvedValue('---\nname: test\nmodel: old-model\n---\nbody\n  model: keep-indented\n');
+    mockFs.readFile.mockResolvedValue(
+      '---\nname: test\nmodel: old-model\n---\nbody\n  model: keep-indented\n',
+    );
     mockFs.writeFile.mockResolvedValue();
 
     await importModule();
@@ -107,14 +123,24 @@ describe('update-agent-models', () => {
   it('replaces specific model string with --from and --to', async () => {
     const origArgv = process.argv;
     const origExit = process.exit;
-    process.argv = ['node', 'update-agent-models.mjs', '--from=old', '--to=new', '--json'];
-    process.exit = (code) => { throw new Error(`EXIT:${code}`); };
+    process.argv = [
+      'node',
+      'update-agent-models.mjs',
+      '--from=old',
+      '--to=new',
+      '--json',
+    ];
+    process.exit = (code) => {
+      throw new Error(`EXIT:${code}`);
+    };
     const cap = captureConsole();
 
     mockFs.readdir.mockResolvedValue([
       { isFile: () => true, name: 'test.agent.md' },
     ]);
-    mockFs.readFile.mockResolvedValue("---\nname: test\nmodel: 'old'\n---\nbody\n");
+    mockFs.readFile.mockResolvedValue(
+      "---\nname: test\nmodel: 'old'\n---\nbody\n",
+    );
 
     await importModule();
 
@@ -130,14 +156,21 @@ describe('update-agent-models', () => {
   it('replaces ALL model strings when --from omitted', async () => {
     const origArgv = process.argv;
     const origExit = process.exit;
-    process.argv = ['node', 'update-agent-models.mjs', '--to=new-model', '--json'];
-    process.exit = (code) => { throw new Error(`EXIT:${code}`); };
+    process.argv = [
+      'node',
+      'update-agent-models.mjs',
+      '--to=new-model',
+      '--json',
+    ];
+    process.exit = (code) => {
+      throw new Error(`EXIT:${code}`);
+    };
     const cap = captureConsole();
 
     mockFs.readdir.mockResolvedValue([
       { isFile: () => true, name: 'a.agent.md' },
     ]);
-    mockFs.readFile.mockResolvedValue("---\nname: a\nmodel: something\n---\n");
+    mockFs.readFile.mockResolvedValue('---\nname: a\nmodel: something\n---\n');
 
     await importModule();
 
@@ -151,14 +184,22 @@ describe('update-agent-models', () => {
   it('supports --dry-run without writing', async () => {
     const origArgv = process.argv;
     const origExit = process.exit;
-    process.argv = ['node', 'update-agent-models.mjs', '--to=new', '--dry-run', '--json'];
-    process.exit = (code) => { throw new Error(`EXIT:${code}`); };
+    process.argv = [
+      'node',
+      'update-agent-models.mjs',
+      '--to=new',
+      '--dry-run',
+      '--json',
+    ];
+    process.exit = (code) => {
+      throw new Error(`EXIT:${code}`);
+    };
     const cap = captureConsole();
 
     mockFs.readdir.mockResolvedValue([
       { isFile: () => true, name: 'test.agent.md' },
     ]);
-    mockFs.readFile.mockResolvedValue("---\nname: test\nmodel: old\n---\n");
+    mockFs.readFile.mockResolvedValue('---\nname: test\nmodel: old\n---\n');
 
     await importModule();
 
@@ -174,13 +215,15 @@ describe('update-agent-models', () => {
     const origArgv = process.argv;
     const origExit = process.exit;
     process.argv = ['node', 'update-agent-models.mjs', '--to=new', '--json'];
-    process.exit = (code) => { throw new Error(`EXIT:${code}`); };
+    process.exit = (code) => {
+      throw new Error(`EXIT:${code}`);
+    };
     const cap = captureConsole();
 
     mockFs.readdir.mockResolvedValue([
       { isFile: () => true, name: 'test.agent.md' },
     ]);
-    mockFs.readFile.mockResolvedValue("---\nname: test\n---\nno model here\n");
+    mockFs.readFile.mockResolvedValue('---\nname: test\n---\nno model here\n');
 
     await importModule();
 
@@ -195,14 +238,24 @@ describe('update-agent-models', () => {
   it('handles --from as separate arg (not --from=value)', async () => {
     const origArgv = process.argv;
     const origExit = process.exit;
-    process.argv = ['node', 'update-agent-models.mjs', '--from', 'old-val', '--to', 'new-val', '--json'];
-    process.exit = (code) => { throw new Error(`EXIT:${code}`); };
+    process.argv = [
+      'node',
+      'update-agent-models.mjs',
+      '--from',
+      'old-val',
+      '--to',
+      'new-val',
+      '--json',
+    ];
+    process.exit = (code) => {
+      throw new Error(`EXIT:${code}`);
+    };
     const cap = captureConsole();
 
     mockFs.readdir.mockResolvedValue([
       { isFile: () => true, name: 'test.agent.md' },
     ]);
-    mockFs.readFile.mockResolvedValue("---\nname: test\nmodel: old-val\n---\n");
+    mockFs.readFile.mockResolvedValue('---\nname: test\nmodel: old-val\n---\n');
 
     await importModule();
 
@@ -216,14 +269,21 @@ describe('update-agent-models', () => {
   it('prints text output in non-json mode with changes', async () => {
     const origArgv = process.argv;
     const origExit = process.exit;
-    process.argv = ['node', 'update-agent-models.mjs', '--from=old', '--to=new'];
-    process.exit = (code) => { throw new Error(`EXIT:${code}`); };
+    process.argv = [
+      'node',
+      'update-agent-models.mjs',
+      '--from=old',
+      '--to=new',
+    ];
+    process.exit = (code) => {
+      throw new Error(`EXIT:${code}`);
+    };
     const cap = captureConsole();
 
     mockFs.readdir.mockResolvedValue([
       { isFile: () => true, name: 'test.agent.md' },
     ]);
-    mockFs.readFile.mockResolvedValue("---\nname: test\nmodel: old\n---\n");
+    mockFs.readFile.mockResolvedValue('---\nname: test\nmodel: old\n---\n');
     mockFs.writeFile.mockResolvedValue();
 
     await importModule();
@@ -239,7 +299,9 @@ describe('update-agent-models', () => {
     const origArgv = process.argv;
     const origExit = process.exit;
     process.argv = ['node', 'update-agent-models.mjs', '--to=new', '--json'];
-    process.exit = (code) => { throw new Error(`EXIT:${code}`); };
+    process.exit = (code) => {
+      throw new Error(`EXIT:${code}`);
+    };
     const cap = captureConsole();
 
     mockFs.readdir.mockResolvedValue([
@@ -259,14 +321,22 @@ describe('update-agent-models', () => {
   it('handles --dry_run with underscore', async () => {
     const origArgv = process.argv;
     const origExit = process.exit;
-    process.argv = ['node', 'update-agent-models.mjs', '--to=new', '--dry_run', '--json'];
-    process.exit = (code) => { throw new Error(`EXIT:${code}`); };
+    process.argv = [
+      'node',
+      'update-agent-models.mjs',
+      '--to=new',
+      '--dry_run',
+      '--json',
+    ];
+    process.exit = (code) => {
+      throw new Error(`EXIT:${code}`);
+    };
     const cap = captureConsole();
 
     mockFs.readdir.mockResolvedValue([
       { isFile: () => true, name: 'test.agent.md' },
     ]);
-    mockFs.readFile.mockResolvedValue("---\nname: test\nmodel: old\n---\n");
+    mockFs.readFile.mockResolvedValue('---\nname: test\nmodel: old\n---\n');
 
     await importModule();
 
@@ -280,7 +350,9 @@ describe('update-agent-models', () => {
     const origArgv = process.argv;
     const origExit = process.exit;
     process.argv = ['node', 'update-agent-models.mjs', '--to=new', '--json'];
-    process.exit = (code) => { throw new Error(`EXIT:${code}`); };
+    process.exit = (code) => {
+      throw new Error(`EXIT:${code}`);
+    };
     const cap = captureConsole();
 
     mockFs.readdir.mockResolvedValue([]);
@@ -298,7 +370,9 @@ describe('update-agent-models', () => {
     const origArgv = process.argv;
     const origExit = process.exit;
     process.argv = ['node', 'update-agent-models.mjs', '--to'];
-    process.exit = (code) => { throw new Error(`EXIT:${code}`); };
+    process.exit = (code) => {
+      throw new Error(`EXIT:${code}`);
+    };
     const cap = captureConsole();
 
     mockFs.readdir.mockResolvedValue([]);
@@ -308,20 +382,24 @@ describe('update-agent-models', () => {
     process.argv = origArgv;
     process.exit = origExit;
     cap.restore();
-    assert.ok(cap.errors.some((e) => e.includes('--to=<model-string> is required')));
+    assert.ok(
+      cap.errors.some((e) => e.includes('--to=<model-string> is required')),
+    );
   });
 
   it('skips model line already matching target value when --from omitted', async () => {
     const origArgv = process.argv;
     const origExit = process.exit;
     process.argv = ['node', 'update-agent-models.mjs', '--to=new', '--json'];
-    process.exit = (code) => { throw new Error(`EXIT:${code}`); };
+    process.exit = (code) => {
+      throw new Error(`EXIT:${code}`);
+    };
     const cap = captureConsole();
 
     mockFs.readdir.mockResolvedValue([
       { isFile: () => true, name: 'test.agent.md' },
     ]);
-    mockFs.readFile.mockResolvedValue("---\nname: test\nmodel: new\n---\n");
+    mockFs.readFile.mockResolvedValue('---\nname: test\nmodel: new\n---\n');
 
     await importModule();
 
@@ -335,16 +413,24 @@ describe('update-agent-models', () => {
   it('prints text output with skipped and non-skipped files', async () => {
     const origArgv = process.argv;
     const origExit = process.exit;
-    process.argv = ['node', 'update-agent-models.mjs', '--from=old', '--to=new'];
-    process.exit = (code) => { throw new Error(`EXIT:${code}`); };
+    process.argv = [
+      'node',
+      'update-agent-models.mjs',
+      '--from=old',
+      '--to=new',
+    ];
+    process.exit = (code) => {
+      throw new Error(`EXIT:${code}`);
+    };
     const cap = captureConsole();
 
     mockFs.readdir.mockResolvedValue([
       { isFile: () => true, name: 'a.agent.md' },
       { isFile: () => true, name: 'b.agent.md' },
     ]);
-    mockFs.readFile.mockResolvedValueOnce("---\nname: a\nmodel: old\n---\n")
-      .mockResolvedValueOnce("---\nname: b\n---\n");
+    mockFs.readFile
+      .mockResolvedValueOnce('---\nname: a\nmodel: old\n---\n')
+      .mockResolvedValueOnce('---\nname: b\n---\n');
     mockFs.writeFile.mockResolvedValue();
 
     await importModule();
@@ -360,13 +446,15 @@ describe('update-agent-models', () => {
     const origArgv = process.argv;
     const origExit = process.exit;
     process.argv = ['node', 'update-agent-models.mjs', '--to=new'];
-    process.exit = (code) => { throw new Error(`EXIT:${code}`); };
+    process.exit = (code) => {
+      throw new Error(`EXIT:${code}`);
+    };
     const cap = captureConsole();
 
     mockFs.readdir.mockResolvedValue([
       { isFile: () => true, name: 'test.agent.md' },
     ]);
-    mockFs.readFile.mockResolvedValue("---\nname: test\n---\nno model\n");
+    mockFs.readFile.mockResolvedValue('---\nname: test\n---\nno model\n');
 
     await importModule();
 
@@ -381,13 +469,15 @@ describe('update-agent-models', () => {
     const origArgv = process.argv;
     const origExit = process.exit;
     process.argv = ['node', 'update-agent-models.mjs', '--to=new', '--dry-run'];
-    process.exit = (code) => { throw new Error(`EXIT:${code}`); };
+    process.exit = (code) => {
+      throw new Error(`EXIT:${code}`);
+    };
     const cap = captureConsole();
 
     mockFs.readdir.mockResolvedValue([
       { isFile: () => true, name: 'test.agent.md' },
     ]);
-    mockFs.readFile.mockResolvedValue("---\nname: test\nmodel: old\n---\n");
+    mockFs.readFile.mockResolvedValue('---\nname: test\nmodel: old\n---\n');
 
     await importModule();
 

@@ -124,7 +124,9 @@ describe('B1: Enemy count scaling', () => {
     // B1 contract: the pool must support 16-32 enemies (currently 8).
     // POOLED_CONTEXT_SLOT_COUNT = 8 is hardcoded and not exported.
     // B1 must export an ENEMY_INFERENCE_POOL_SIZE constant ≥ 16.
-    expect(enemyControllerExports.ENEMY_INFERENCE_POOL_SIZE).toBeGreaterThanOrEqual(16);
+    expect(
+      enemyControllerExports.ENEMY_INFERENCE_POOL_SIZE,
+    ).toBeGreaterThanOrEqual(16);
   });
 });
 
@@ -136,17 +138,15 @@ describe('B1: SAB-backed parallel inference', () => {
   it('exports a function to create a SAB-backed enemy inference pool', () => {
     // B1 contract: Neatenstein uses SharedInferenceWorker with SAB-backed
     // weight slots as the PRIMARY inference path for 16-32 enemies.
-    expect(
-      typeof enemyControllerExports.createEnemyInferencePool,
-    ).toBe('function');
+    expect(typeof enemyControllerExports.createEnemyInferencePool).toBe(
+      'function',
+    );
   });
 
   it('exports a function to load per-enemy weights into SAB slots', () => {
     // B1 contract: each enemy owns a weight slot in the SAB. Weights are
     // copied into SAB slots at respawn time.
-    expect(
-      typeof enemyControllerExports.loadEnemyWeightSlots,
-    ).toBe('function');
+    expect(typeof enemyControllerExports.loadEnemyWeightSlots).toBe('function');
   });
 });
 
@@ -159,9 +159,9 @@ describe('B1: Determinism under async inference', () => {
     // B1 contract: each enemy's inference result is tagged with
     // (simTick, enemyIndex) so results can be collected and applied
     // deterministically regardless of completion order.
-    expect(
-      typeof enemyControllerExports.dispatchParallelInference,
-    ).toBe('function');
+    expect(typeof enemyControllerExports.dispatchParallelInference).toBe(
+      'function',
+    );
   });
 
   it('same seed produces same enemy positions regardless of inference completion order', () => {
@@ -175,9 +175,9 @@ describe('B1: Determinism under async inference', () => {
     // Currently updateEnemyController is synchronous and deterministic,
     // but B1 introduces async inference. The test calls the new
     // dispatchParallelInference function which doesn't exist yet.
-    expect(
-      typeof enemyControllerExports.dispatchParallelInference,
-    ).toBe('function');
+    expect(typeof enemyControllerExports.dispatchParallelInference).toBe(
+      'function',
+    );
   });
 });
 
@@ -190,9 +190,9 @@ describe('B1: Inference barrier', () => {
     // B1 contract: the sim tick does NOT advance until ALL enemy inference
     // results for that tick are collected (barrier). This prevents partial
     // state updates from creating nondeterministic behavior.
-    expect(
-      typeof enemyControllerExports.awaitInferenceBarrier,
-    ).toBe('function');
+    expect(typeof enemyControllerExports.awaitInferenceBarrier).toBe(
+      'function',
+    );
   });
 });
 
@@ -206,8 +206,8 @@ describe('B1: Tiered inference fallback', () => {
     // For 16-32 enemies: SAB is primary.
     // For small N (≤8) or when SAB unavailable: InferenceChannel fallback.
     // When neither is available: inline activation.
-    expect(
-      typeof enemyControllerExports.resolveInferenceStrategy,
-    ).toBe('function');
+    expect(typeof enemyControllerExports.resolveInferenceStrategy).toBe(
+      'function',
+    );
   });
 });

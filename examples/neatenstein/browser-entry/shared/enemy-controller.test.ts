@@ -1,17 +1,10 @@
 import { describe, expect, it } from '@jest/globals';
 
 import type { CollisionMap } from '../renderer/map';
-import {
-  buildNeatensteinMap,
-  createCollisionMap,
-} from '../renderer/map';
+import { buildNeatensteinMap, createCollisionMap } from '../renderer/map';
 import { NEATENSTEIN_MAP_SIZE } from '../constants';
 import { createGameState } from '../host/game/state';
-import type {
-  EnemyState,
-  GameState,
-  Vector2,
-} from '../host/game/types';
+import type { EnemyState, GameState, Vector2 } from '../host/game/types';
 import {
   createEnemyControllerState,
   ENEMY_CONTROLLER_DE_REZ_DURATION_MS,
@@ -3172,16 +3165,18 @@ describe('enemy controller (index renumbering after de-rez compaction)', () => {
 
 describe('A2 Fix 8: Pooled activation buffers and flat movement arrays', () => {
   it('exports activateMlpPooled as a function from enemy-mlp', async () => {
-    const mod = (await import(
-      '../harness/enemy-mlp.ts'
-    )) as Record<string, unknown>;
+    const mod = (await import('../harness/enemy-mlp.ts')) as Record<
+      string,
+      unknown
+    >;
     expect(typeof mod.activateMlpPooled).toBe('function');
   });
 
   it('exports computeMovementFlat as a function from enemy-controller.move.utils', async () => {
-    const mod = (await import(
-      './enemy-controller.move.utils.ts'
-    )) as Record<string, unknown>;
+    const mod = (await import('./enemy-controller.move.utils.ts')) as Record<
+      string,
+      unknown
+    >;
     expect(typeof mod.computeMovementFlat).toBe('function');
   });
 

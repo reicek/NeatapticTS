@@ -97,7 +97,11 @@ describe('B2-S1: browser-entry/shared/ layer eliminates bidirectional boundary',
       const lines = content.split('\n');
       for (const line of lines) {
         // Match imports referencing the scripts/ directory by path
-        if (/from\s+['"][^'"]*scripts\/(enemy-|snapshot-renderer|voxel-)/.test(line)) {
+        if (
+          /from\s+['"][^'"]*scripts\/(enemy-|snapshot-renderer|voxel-)/.test(
+            line,
+          )
+        ) {
           reverseImports.push(relative(neatensteinRoot, file));
           break;
         }
@@ -113,19 +117,28 @@ describe('B2-S1: browser-entry/shared/ layer eliminates bidirectional boundary',
 
 describe('B2-S2: display.worker.ts test hooks extraction', () => {
   it('display.worker.test-hooks.ts file exists in worker/', () => {
-    expect(existsSync(join(workerRoot, 'display.worker.test-hooks.ts'))).toBe(true);
+    expect(existsSync(join(workerRoot, 'display.worker.test-hooks.ts'))).toBe(
+      true,
+    );
   });
 
   it('display.worker.message-handler.utils.ts file exists in worker/', () => {
-    expect(existsSync(join(workerRoot, 'display.worker.message-handler.utils.ts'))).toBe(true);
+    expect(
+      existsSync(join(workerRoot, 'display.worker.message-handler.utils.ts')),
+    ).toBe(true);
   });
 
   it('display.worker.eval-delegation.utils.ts file exists in worker/', () => {
-    expect(existsSync(join(workerRoot, 'display.worker.eval-delegation.utils.ts'))).toBe(true);
+    expect(
+      existsSync(join(workerRoot, 'display.worker.eval-delegation.utils.ts')),
+    ).toBe(true);
   });
 
   it('display.worker.ts no longer exports __testOnly* symbols', () => {
-    const content = readFileSync(join(workerRoot, 'display.worker.ts'), 'utf-8');
+    const content = readFileSync(
+      join(workerRoot, 'display.worker.ts'),
+      'utf-8',
+    );
     expect(content).not.toMatch(/export\s+(?:const|function)\s+__testOnly/);
   });
 
@@ -140,8 +153,7 @@ describe('B2-S2: display.worker.ts test hooks extraction', () => {
     }
     expect(mod).toBeDefined();
     const injectFn = mod?.__testOnlyInjectTestEnemies as
-      | ((positions: { x: number; y: number }[]) => unknown)
-      | undefined;
+      ((positions: { x: number; y: number }[]) => unknown) | undefined;
     expect(injectFn).toBeDefined();
     const result = injectFn?.([{ x: 1, y: 2 }]);
     expect(Array.isArray(result)).toBe(true);
@@ -149,7 +161,9 @@ describe('B2-S2: display.worker.ts test hooks extraction', () => {
 
   it('display.worker.message-handler.ts orchestrator file exists in worker/', () => {
     // SOLID pattern: orchestrator (no .utils suffix) calling executor (.utils.ts)
-    expect(existsSync(join(workerRoot, 'display.worker.message-handler.ts'))).toBe(true);
+    expect(
+      existsSync(join(workerRoot, 'display.worker.message-handler.ts')),
+    ).toBe(true);
   });
 
   it('extracted render module preserves compositing order comment as invariant', () => {
@@ -157,7 +171,10 @@ describe('B2-S2: display.worker.ts test hooks extraction', () => {
     // order as a non-negotiable invariant: floor -> ceiling -> walls ->
     // sprites -> pulses/sparks -> bolts.  Check the message-handler orchestrator
     // (which delegates render calls) for this declaration.
-    const orchestratorPath = join(workerRoot, 'display.worker.message-handler.ts');
+    const orchestratorPath = join(
+      workerRoot,
+      'display.worker.message-handler.ts',
+    );
     if (!existsSync(orchestratorPath)) {
       // Orchestrator does not exist yet — fail.
       expect(existsSync(orchestratorPath)).toBe(true);
@@ -243,15 +260,21 @@ describe('B2-S4: consolidated math guards in shared/math-guards.utils.ts', () =>
 
 describe('B2-S5: split display.worker.test.ts into focused test files', () => {
   it('display.worker.init.test.ts exists', () => {
-    expect(existsSync(join(workerRoot, 'display.worker.init.test.ts'))).toBe(true);
+    expect(existsSync(join(workerRoot, 'display.worker.init.test.ts'))).toBe(
+      true,
+    );
   });
 
   it('display.worker.sim.test.ts exists', () => {
-    expect(existsSync(join(workerRoot, 'display.worker.sim.test.ts'))).toBe(true);
+    expect(existsSync(join(workerRoot, 'display.worker.sim.test.ts'))).toBe(
+      true,
+    );
   });
 
   it('display.worker.render.test.ts exists', () => {
-    expect(existsSync(join(workerRoot, 'display.worker.render.test.ts'))).toBe(true);
+    expect(existsSync(join(workerRoot, 'display.worker.render.test.ts'))).toBe(
+      true,
+    );
   });
 
   it('display.worker.eval-delegation.test.ts exists', () => {
@@ -261,7 +284,9 @@ describe('B2-S5: split display.worker.test.ts into focused test files', () => {
   });
 
   it('display.worker.auto-ai.test.ts exists', () => {
-    expect(existsSync(join(workerRoot, 'display.worker.auto-ai.test.ts'))).toBe(true);
+    expect(existsSync(join(workerRoot, 'display.worker.auto-ai.test.ts'))).toBe(
+      true,
+    );
   });
 });
 
@@ -287,10 +312,7 @@ describe('B2-S6: quick wins', () => {
   });
 
   it('harness/constants.ts uses NEATENSTEIN_FIXED_TIMESTEP_MS instead of literal 16', () => {
-    const content = readFileSync(
-      join(harnessRoot, 'constants.ts'),
-      'utf-8',
-    );
+    const content = readFileSync(join(harnessRoot, 'constants.ts'), 'utf-8');
     // The literal "16" should not appear in a division expression
     expect(content).not.toMatch(/\/\s*16\b/);
     // The constant should be used instead

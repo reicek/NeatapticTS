@@ -45,9 +45,8 @@ jest.unstable_mockModule('./search-corpus.mjs', () => ({
   __esModule: true,
 }));
 
-const { searchAdvanced, searchAdvancedTool } = await import(
-  './search-advanced.mjs'
-);
+const { searchAdvanced, searchAdvancedTool } =
+  await import('./search-advanced.mjs');
 
 /**
  * Build a mock search result row.
@@ -107,7 +106,11 @@ describe('search-advanced', () => {
   afterEach(async () => {
     restoreEnv();
     if (client) {
-      try { await client.close(); } catch { /* noop */ }
+      try {
+        await client.close();
+      } catch {
+        /* noop */
+      }
     }
   });
 
@@ -348,9 +351,7 @@ describe('search-advanced', () => {
 
     it('does NOT filter for non-code_specific classes by default', async () => {
       mockSearchCorpus.mockResolvedValue({
-        results: [
-          mockResult({ chunk_id: 1, family: 'readme' }),
-        ],
+        results: [mockResult({ chunk_id: 1, family: 'readme' })],
         dense_state: 'cold',
       });
 
@@ -553,7 +554,9 @@ describe('search-advanced', () => {
   describe('follow_up_refs', () => {
     it('builds follow_up_refs with load_chunk and search_advanced', async () => {
       mockSearchCorpus.mockResolvedValue({
-        results: [mockResult({ chunk_id: TEST_PARENT_CHUNK_ID, doc_id: 500001 })],
+        results: [
+          mockResult({ chunk_id: TEST_PARENT_CHUNK_ID, doc_id: 500001 }),
+        ],
         dense_state: 'cold',
       });
 
@@ -608,7 +611,11 @@ describe('search-advanced', () => {
         strategy: { family: null },
       });
 
-      const result = await searchAdvanced({ query: 'test', client, rerank_candidates_count: 20 });
+      const result = await searchAdvanced({
+        query: 'test',
+        client,
+        rerank_candidates_count: 20,
+      });
 
       expect(result.rerank_candidates_count).toBe(20);
     });

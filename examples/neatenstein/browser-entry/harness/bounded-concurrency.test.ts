@@ -58,10 +58,11 @@ describe('B4.11: Bounded concurrency for enemy inference at scale', () => {
         Promise.resolve(2),
         Promise.resolve(3),
       ];
-      const results = await (boundedConcurrency.runBoundedConcurrency as (...a: unknown[]) => Promise<unknown[]>)(
-        tasks,
-        2,
-      );
+      const results = await (
+        boundedConcurrency.runBoundedConcurrency as (
+          ...a: unknown[]
+        ) => Promise<unknown[]>
+      )(tasks, 2);
       expect(Array.isArray(results)).toBe(true);
       expect(results).toEqual([1, 2, 3]);
     });
@@ -77,22 +78,22 @@ describe('B4.11: Bounded concurrency for enemy inference at scale', () => {
       // concurrency runner calls them lazily and the concurrency limit is
       // actually enforced. Pre-starting via `.map(f => f())` would bypass
       // the limiter since all promises are already in flight.
-      await (boundedConcurrency.runBoundedConcurrency as (...a: unknown[]) => Promise<unknown[]>)(
-        taskFactories,
-        3,
-      );
+      await (
+        boundedConcurrency.runBoundedConcurrency as (
+          ...a: unknown[]
+        ) => Promise<unknown[]>
+      )(taskFactories, 3);
       expect(maxConcurrent).toBeLessThanOrEqual(3);
     });
 
     it('processes more tasks than the concurrency limit without dropping any', async () => {
       resetConcurrencyTracking();
-      const tasks = Array.from({ length: 20 }, (_, i) =>
-        Promise.resolve(i),
-      );
-      const results = await (boundedConcurrency.runBoundedConcurrency as (...a: unknown[]) => Promise<unknown[]>)(
-        tasks,
-        4,
-      );
+      const tasks = Array.from({ length: 20 }, (_, i) => Promise.resolve(i));
+      const results = await (
+        boundedConcurrency.runBoundedConcurrency as (
+          ...a: unknown[]
+        ) => Promise<unknown[]>
+      )(tasks, 4);
       expect(results.length).toBe(20);
     });
   });
@@ -103,10 +104,11 @@ describe('B4.11: Bounded concurrency for enemy inference at scale', () => {
     });
 
     it('creates a batch processor with the given batch size', () => {
-      const processor = (boundedConcurrency.createBatchProcessor as (...a: unknown[]) => Record<
-        string,
-        unknown
-      >)(4);
+      const processor = (
+        boundedConcurrency.createBatchProcessor as (
+          ...a: unknown[]
+        ) => Record<string, unknown>
+      )(4);
       expect(processor).toBeDefined();
       expect(typeof processor.process).toBe('function');
     });

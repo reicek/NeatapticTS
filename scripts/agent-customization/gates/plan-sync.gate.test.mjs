@@ -115,9 +115,7 @@ describe('plan-sync gate', () => {
         if (filePath.endsWith('plan1.md')) return 'Status: [DONE]';
         return '';
       };
-      mockReaddirFn = async () => [
-        { name: 'plan1.md', isFile: () => true },
-      ];
+      mockReaddirFn = async () => [{ name: 'plan1.md', isFile: () => true }];
       mockExtractStatusFn = () => 'DONE';
       const logs = await importGate(['--json']);
       const parsed = JSON.parse(logs[0]);
@@ -133,9 +131,7 @@ describe('plan-sync gate', () => {
         if (filePath.endsWith('plan1.md')) return 'Status: [WIP]';
         return '';
       };
-      mockReaddirFn = async () => [
-        { name: 'plan1.md', isFile: () => true },
-      ];
+      mockReaddirFn = async () => [{ name: 'plan1.md', isFile: () => true }];
       mockExtractStatusFn = () => 'WIP';
       const logs = await importGate(['--json']);
       const parsed = JSON.parse(logs[0]);
@@ -151,9 +147,7 @@ describe('plan-sync gate', () => {
         if (filePath.endsWith('plan1.md')) return 'Status: [WIP]';
         return '';
       };
-      mockReaddirFn = async () => [
-        { name: 'plan1.md', isFile: () => true },
-      ];
+      mockReaddirFn = async () => [{ name: 'plan1.md', isFile: () => true }];
       mockExtractStatusFn = () => 'WIP';
       const logs = await importGate(['--json']);
       const parsed = JSON.parse(logs[0]);
@@ -169,9 +163,7 @@ describe('plan-sync gate', () => {
         if (filePath.endsWith('plan1.md')) return 'Status: [WIP]';
         return '';
       };
-      mockReaddirFn = async () => [
-        { name: 'plan1.md', isFile: () => true },
-      ];
+      mockReaddirFn = async () => [{ name: 'plan1.md', isFile: () => true }];
       mockExtractStatusFn = () => 'WIP';
       const logs = await importGate(['--json']);
       const parsed = JSON.parse(logs[0]);
@@ -186,9 +178,7 @@ describe('plan-sync gate', () => {
         if (filePath.endsWith('plan1.md')) throw new Error('ENOENT');
         return '';
       };
-      mockReaddirFn = async () => [
-        { name: 'plan1.md', isFile: () => true },
-      ];
+      mockReaddirFn = async () => [{ name: 'plan1.md', isFile: () => true }];
       const logs = await importGate(['--json']);
       const parsed = JSON.parse(logs[0]);
       assert.equal(parsed.pass, true);

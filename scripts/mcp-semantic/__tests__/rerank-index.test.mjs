@@ -13,7 +13,9 @@ import { tmpdir } from 'node:os';
 jest.unstable_mockModule('onnxruntime-node', () => ({
   InferenceSession: {
     create: async () => {
-      throw new Error('Mocked: onnxruntime-node is not available in test environment');
+      throw new Error(
+        'Mocked: onnxruntime-node is not available in test environment',
+      );
     },
   },
   Tensor: class MockTensor {},
@@ -50,14 +52,24 @@ afterEach(async () => {
 
 describe('rerank-index: normalizeRerankCandidates', () => {
   it('returns default when value is null/undefined', () => {
-    expect(normalizeRerankCandidates(null)).toBe(DEFAULT_RERANKER_CANDIDATES_COUNT);
-    expect(normalizeRerankCandidates(undefined)).toBe(DEFAULT_RERANKER_CANDIDATES_COUNT);
+    expect(normalizeRerankCandidates(null)).toBe(
+      DEFAULT_RERANKER_CANDIDATES_COUNT,
+    );
+    expect(normalizeRerankCandidates(undefined)).toBe(
+      DEFAULT_RERANKER_CANDIDATES_COUNT,
+    );
   });
 
   it('returns default for non-finite values', () => {
-    expect(normalizeRerankCandidates(NaN)).toBe(DEFAULT_RERANKER_CANDIDATES_COUNT);
-    expect(normalizeRerankCandidates(Infinity)).toBe(DEFAULT_RERANKER_CANDIDATES_COUNT);
-    expect(normalizeRerankCandidates('abc')).toBe(DEFAULT_RERANKER_CANDIDATES_COUNT);
+    expect(normalizeRerankCandidates(NaN)).toBe(
+      DEFAULT_RERANKER_CANDIDATES_COUNT,
+    );
+    expect(normalizeRerankCandidates(Infinity)).toBe(
+      DEFAULT_RERANKER_CANDIDATES_COUNT,
+    );
+    expect(normalizeRerankCandidates('abc')).toBe(
+      DEFAULT_RERANKER_CANDIDATES_COUNT,
+    );
   });
 
   it('clamps to [1, 200]', () => {

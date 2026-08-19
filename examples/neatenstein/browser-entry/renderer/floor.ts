@@ -25,7 +25,11 @@ import {
   appendNeatensteinGridLine,
   createNeatensteinFloorSegmentBands,
 } from './floor.band.utils';
-import { strokeNeatensteinGridBands, resolveNeatensteinFloorAlphaFromDistance, parseNeatensteinFloorHexColor } from './floor.shade.utils';
+import {
+  strokeNeatensteinGridBands,
+  resolveNeatensteinFloorAlphaFromDistance,
+  parseNeatensteinFloorHexColor,
+} from './floor.shade.utils';
 import {
   resolveContextCanvasDimension,
   sanitizeNeatensteinFloorCamera,
@@ -384,10 +388,7 @@ export function castNeatensteinFloorPerPixel(
   height: number,
   projection: Omit<NeatensteinGridProjectionContext, 'width' | 'height'>,
 ): void {
-  if (
-    !isPositiveFiniteDimension(width) ||
-    !isPositiveFiniteDimension(height)
-  ) {
+  if (!isPositiveFiniteDimension(width) || !isPositiveFiniteDimension(height)) {
     return;
   }
 
@@ -422,12 +423,9 @@ export function castNeatensteinFloorPerPixel(
   const gridColor = parseNeatensteinFloorHexColor(
     FLAPPY_NEON_PALETTE.groundGridLine,
   );
-  const gridR =
-    gridColor !== null ? gridColor.r : NEATENSTEIN_BACKGROUND_RGB.r;
-  const gridG =
-    gridColor !== null ? gridColor.g : NEATENSTEIN_BACKGROUND_RGB.g;
-  const gridB =
-    gridColor !== null ? gridColor.b : NEATENSTEIN_BACKGROUND_RGB.b;
+  const gridR = gridColor !== null ? gridColor.r : NEATENSTEIN_BACKGROUND_RGB.r;
+  const gridG = gridColor !== null ? gridColor.g : NEATENSTEIN_BACKGROUND_RGB.g;
+  const gridB = gridColor !== null ? gridColor.b : NEATENSTEIN_BACKGROUND_RGB.b;
 
   const bgR = NEATENSTEIN_BACKGROUND_RGB.r;
   const bgG = NEATENSTEIN_BACKGROUND_RGB.g;
@@ -485,8 +483,8 @@ export function castNeatensteinFloorPerPixel(
       const screenOffset = halfWidth > 0 ? (x - halfWidth) / halfWidth : 0;
 
       // Ray direction: dir + plane * offset
-      const rayDirX = cosYaw + (-sinYaw * planeScale) * screenOffset;
-      const rayDirY = sinYaw + (cosYaw * planeScale) * screenOffset;
+      const rayDirX = cosYaw + -sinYaw * planeScale * screenOffset;
+      const rayDirY = sinYaw + cosYaw * planeScale * screenOffset;
 
       // World coordinates via ray-direction interpolation.
       const worldX = cameraX + rowDistance * rayDirX;

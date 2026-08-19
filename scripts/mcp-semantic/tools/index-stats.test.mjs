@@ -9,9 +9,8 @@ import {
   createEnvIsolation,
 } from '../__tests__/turso-test-helpers.mjs';
 
-const { indexStats, FEEDBACK_WEIGHT, FEEDBACK_HALF_LIFE_DAYS } = await import(
-  './index-stats.mjs'
-);
+const { indexStats, FEEDBACK_WEIGHT, FEEDBACK_HALF_LIFE_DAYS } =
+  await import('./index-stats.mjs');
 
 describe('index-stats', () => {
   const { saveEnv, restoreEnv } = createEnvIsolation();
@@ -26,7 +25,11 @@ describe('index-stats', () => {
   afterEach(async () => {
     restoreEnv();
     if (client) {
-      try { await client.close(); } catch { /* noop */ }
+      try {
+        await client.close();
+      } catch {
+        /* noop */
+      }
     }
   });
 
@@ -86,7 +89,9 @@ describe('index-stats', () => {
       expect(result.metadata_coverage.documents.arch_layer).toBeDefined();
       expect(result.metadata_coverage.documents.arch_layer.total).toBe(1);
       expect(result.metadata_coverage.documents.arch_layer.percent).toBe(100);
-      expect(result.metadata_coverage.documents.arch_layer.distribution).toEqual({
+      expect(
+        result.metadata_coverage.documents.arch_layer.distribution,
+      ).toEqual({
         network: 1,
       });
     });
@@ -106,12 +111,30 @@ describe('index-stats', () => {
       await client.execute({
         sql: `INSERT INTO feedback_events (event_id, chunk_id, signal_type, signal_strength, query_hash, agent_id, context, created_at)
               VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        args: ['evt-1', 424242, 'click', 0.1, null, null, null, '2024-01-01T00:00:00.000Z'],
+        args: [
+          'evt-1',
+          424242,
+          'click',
+          0.1,
+          null,
+          null,
+          null,
+          '2024-01-01T00:00:00.000Z',
+        ],
       });
       await client.execute({
         sql: `INSERT INTO feedback_events (event_id, chunk_id, signal_type, signal_strength, query_hash, agent_id, context, created_at)
               VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        args: ['evt-2', 424242, 'positive', 1.0, null, null, null, '2024-01-02T00:00:00.000Z'],
+        args: [
+          'evt-2',
+          424242,
+          'positive',
+          1.0,
+          null,
+          null,
+          null,
+          '2024-01-02T00:00:00.000Z',
+        ],
       });
 
       // Insert a feedback score
@@ -191,7 +214,10 @@ describe('index-stats', () => {
       const mockClient = {
         async execute(sqlOrObj) {
           const sql = typeof sqlOrObj === 'string' ? sqlOrObj : sqlOrObj.sql;
-          if (sql.includes('SELECT COUNT(*)') && sql.includes('FROM documents')) {
+          if (
+            sql.includes('SELECT COUNT(*)') &&
+            sql.includes('FROM documents')
+          ) {
             return { rows: [{ count: 10 }] };
           }
           if (sql.includes('SELECT COUNT(*)') && sql.includes('FROM chunks')) {
@@ -209,7 +235,10 @@ describe('index-stats', () => {
           if (sql.includes('signal_type')) {
             return { rows: [] };
           }
-          if (sql.includes('COUNT(DISTINCT chunk_id)') && sql.includes('feedback_scores')) {
+          if (
+            sql.includes('COUNT(DISTINCT chunk_id)') &&
+            sql.includes('feedback_scores')
+          ) {
             return { rows: [{ count: 0 }] };
           }
           if (sql.includes('AVG(feedback_boost)')) {

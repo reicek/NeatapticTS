@@ -103,7 +103,8 @@ export function resolveNeatensteinFogFactor(distance: number): number {
     return 0;
   }
 
-  const range = NEATENSTEIN_RENDER_DISTANCE_CAP - NEATENSTEIN_FOG_START_DISTANCE;
+  const range =
+    NEATENSTEIN_RENDER_DISTANCE_CAP - NEATENSTEIN_FOG_START_DISTANCE;
   const t = (distance - NEATENSTEIN_FOG_START_DISTANCE) / range;
 
   // Smoothstep: t * t * (3 - 2 * t) for a C1-continuous transition.

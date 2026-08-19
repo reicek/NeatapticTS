@@ -69,7 +69,9 @@ async function importModule(argv) {
   const origArgv = process.argv;
   const origExit = process.exit;
   process.argv = ['node', 'migrate-plan-format.mjs', ...(argv || [])];
-  process.exit = (code) => { throw new Error(`EXIT:${code}`); };
+  process.exit = (code) => {
+    throw new Error(`EXIT:${code}`);
+  };
   try {
     await import('./migrate-plan-format.mjs');
   } catch {
@@ -139,7 +141,9 @@ describe('migrate-plan-format', () => {
   it('writes error when no --plan and no --all', async () => {
     mockUtils.parseArgs.mockReturnValue({ help: false });
     let reportArg;
-    mockUtils.writeReport.mockImplementation((r) => { reportArg = r; });
+    mockUtils.writeReport.mockImplementation((r) => {
+      reportArg = r;
+    });
 
     await importModule([]);
 
@@ -148,12 +152,19 @@ describe('migrate-plan-format', () => {
   });
 
   it('migrates single plan file with active phase (no existing YAML)', async () => {
-    mockUtils.parseArgs.mockReturnValue({ help: false, plan: 'plans/test.plans.md' });
+    mockUtils.parseArgs.mockReturnValue({
+      help: false,
+      plan: 'plans/test.plans.md',
+    });
     mockFs.readFile.mockResolvedValue(PLAN_WITH_ACTIVE_PHASE);
     let writeCalled = false;
-    mockFs.writeFile.mockImplementation(() => { writeCalled = true; });
+    mockFs.writeFile.mockImplementation(() => {
+      writeCalled = true;
+    });
     let reportArg;
-    mockUtils.writeReport.mockImplementation((r) => { reportArg = r; });
+    mockUtils.writeReport.mockImplementation((r) => {
+      reportArg = r;
+    });
 
     await importModule(['--plan=plans/test.plans.md']);
 
@@ -163,12 +174,20 @@ describe('migrate-plan-format', () => {
   });
 
   it('migrates with --dry-run (no file write)', async () => {
-    mockUtils.parseArgs.mockReturnValue({ help: false, plan: 'plans/test.plans.md', 'dry-run': true });
+    mockUtils.parseArgs.mockReturnValue({
+      help: false,
+      plan: 'plans/test.plans.md',
+      'dry-run': true,
+    });
     mockFs.readFile.mockResolvedValue(PLAN_WITH_ACTIVE_PHASE);
     let writeCalled = false;
-    mockFs.writeFile.mockImplementation(() => { writeCalled = true; });
+    mockFs.writeFile.mockImplementation(() => {
+      writeCalled = true;
+    });
     let reportArg;
-    mockUtils.writeReport.mockImplementation((r) => { reportArg = r; });
+    mockUtils.writeReport.mockImplementation((r) => {
+      reportArg = r;
+    });
 
     await importModule(['--plan=plans/test.plans.md', '--dry-run']);
 
@@ -178,12 +197,20 @@ describe('migrate-plan-format', () => {
   });
 
   it('migrates with --dry_run underscore variant', async () => {
-    mockUtils.parseArgs.mockReturnValue({ help: false, plan: 'plans/test.plans.md', dry_run: true });
+    mockUtils.parseArgs.mockReturnValue({
+      help: false,
+      plan: 'plans/test.plans.md',
+      dry_run: true,
+    });
     mockFs.readFile.mockResolvedValue(PLAN_WITH_ACTIVE_PHASE);
     let writeCalled = false;
-    mockFs.writeFile.mockImplementation(() => { writeCalled = true; });
+    mockFs.writeFile.mockImplementation(() => {
+      writeCalled = true;
+    });
     let reportArg;
-    mockUtils.writeReport.mockImplementation((r) => { reportArg = r; });
+    mockUtils.writeReport.mockImplementation((r) => {
+      reportArg = r;
+    });
 
     await importModule(['--plan=plans/test.plans.md', '--dry_run']);
 
@@ -192,10 +219,15 @@ describe('migrate-plan-format', () => {
   });
 
   it('handles read error on plan file', async () => {
-    mockUtils.parseArgs.mockReturnValue({ help: false, plan: 'plans/missing.plans.md' });
+    mockUtils.parseArgs.mockReturnValue({
+      help: false,
+      plan: 'plans/missing.plans.md',
+    });
     mockFs.readFile.mockRejectedValue(new Error('ENOENT'));
     let reportArg;
-    mockUtils.writeReport.mockImplementation((r) => { reportArg = r; });
+    mockUtils.writeReport.mockImplementation((r) => {
+      reportArg = r;
+    });
 
     await importModule(['--plan=plans/missing.plans.md']);
 
@@ -207,15 +239,20 @@ describe('migrate-plan-format', () => {
     mockUtils.parseArgs.mockReturnValue({ help: false, all: true });
     mockFs.readdir.mockImplementation((dir) => {
       if (dir.includes('plans') && dir.includes('completed')) return [];
-      if (dir.includes('plans')) return ['plan1.plans.md', 'plan2.plans.md', 'not-a-plan.txt'];
+      if (dir.includes('plans'))
+        return ['plan1.plans.md', 'plan2.plans.md', 'not-a-plan.txt'];
       return [];
     });
     mockFs.stat.mockResolvedValue({ isFile: () => true });
     mockFs.readFile.mockResolvedValue(PLAN_WITH_ACTIVE_PHASE);
     let writeCalls = 0;
-    mockFs.writeFile.mockImplementation(() => { writeCalls++; });
+    mockFs.writeFile.mockImplementation(() => {
+      writeCalls++;
+    });
     let reportArg;
-    mockUtils.writeReport.mockImplementation((r) => { reportArg = r; });
+    mockUtils.writeReport.mockImplementation((r) => {
+      reportArg = r;
+    });
 
     await importModule(['--all']);
 
@@ -227,7 +264,9 @@ describe('migrate-plan-format', () => {
     mockUtils.parseArgs.mockReturnValue({ help: false, all: true });
     mockFs.readdir.mockRejectedValue(new Error('ENOENT'));
     let reportArg;
-    mockUtils.writeReport.mockImplementation((r) => { reportArg = r; });
+    mockUtils.writeReport.mockImplementation((r) => {
+      reportArg = r;
+    });
 
     await importModule(['--all']);
 
@@ -247,7 +286,9 @@ describe('migrate-plan-format', () => {
     mockFs.stat.mockResolvedValue({ isFile: () => true });
     mockFs.readFile.mockResolvedValue(PLAN_DONE);
     let reportArg;
-    mockUtils.writeReport.mockImplementation((r) => { reportArg = r; });
+    mockUtils.writeReport.mockImplementation((r) => {
+      reportArg = r;
+    });
 
     await importModule(['--all']);
 
@@ -264,7 +305,9 @@ describe('migrate-plan-format', () => {
     });
     mockFs.stat.mockResolvedValue({ isFile: () => false });
     let reportArg;
-    mockUtils.writeReport.mockImplementation((r) => { reportArg = r; });
+    mockUtils.writeReport.mockImplementation((r) => {
+      reportArg = r;
+    });
 
     await importModule(['--all']);
 
@@ -272,10 +315,15 @@ describe('migrate-plan-format', () => {
   });
 
   it('handles DONE phase (no YAML needed)', async () => {
-    mockUtils.parseArgs.mockReturnValue({ help: false, plan: 'plans/done.plans.md' });
+    mockUtils.parseArgs.mockReturnValue({
+      help: false,
+      plan: 'plans/done.plans.md',
+    });
     mockFs.readFile.mockResolvedValue(PLAN_DONE);
     let reportArg;
-    mockUtils.writeReport.mockImplementation((r) => { reportArg = r; });
+    mockUtils.writeReport.mockImplementation((r) => {
+      reportArg = r;
+    });
 
     await importModule(['--plan=plans/done.plans.md']);
 
@@ -283,10 +331,15 @@ describe('migrate-plan-format', () => {
   });
 
   it('handles phase with existing YAML that needs rewriting', async () => {
-    mockUtils.parseArgs.mockReturnValue({ help: false, plan: 'plans/test.plans.md' });
+    mockUtils.parseArgs.mockReturnValue({
+      help: false,
+      plan: 'plans/test.plans.md',
+    });
     mockFs.readFile.mockResolvedValue(PLAN_WITH_YAML);
     let reportArg;
-    mockUtils.writeReport.mockImplementation((r) => { reportArg = r; });
+    mockUtils.writeReport.mockImplementation((r) => {
+      reportArg = r;
+    });
 
     await importModule(['--plan=plans/test.plans.md']);
 
@@ -294,10 +347,15 @@ describe('migrate-plan-format', () => {
   });
 
   it('handles step with existing YAML', async () => {
-    mockUtils.parseArgs.mockReturnValue({ help: false, plan: 'plans/test.plans.md' });
+    mockUtils.parseArgs.mockReturnValue({
+      help: false,
+      plan: 'plans/test.plans.md',
+    });
     mockFs.readFile.mockResolvedValue(PLAN_WITH_STEP_AND_YAML);
     let reportArg;
-    mockUtils.writeReport.mockImplementation((r) => { reportArg = r; });
+    mockUtils.writeReport.mockImplementation((r) => {
+      reportArg = r;
+    });
 
     await importModule(['--plan=plans/test.plans.md']);
 
@@ -306,10 +364,15 @@ describe('migrate-plan-format', () => {
 
   it('handles WIP status phase', async () => {
     const planWip = `# Test Plan\n\n### Phase A — Setup [WIP]\n\n#### Step 1: Do something [WIP]\n`;
-    mockUtils.parseArgs.mockReturnValue({ help: false, plan: 'plans/test.plans.md' });
+    mockUtils.parseArgs.mockReturnValue({
+      help: false,
+      plan: 'plans/test.plans.md',
+    });
     mockFs.readFile.mockResolvedValue(planWip);
     let reportArg;
-    mockUtils.writeReport.mockImplementation((r) => { reportArg = r; });
+    mockUtils.writeReport.mockImplementation((r) => {
+      reportArg = r;
+    });
 
     await importModule(['--plan=plans/test.plans.md']);
 
@@ -318,10 +381,15 @@ describe('migrate-plan-format', () => {
 
   it('handles letter-prefixed step labels (E1)', async () => {
     const planLetter = `# Test Plan\n\n### Phase A — Setup [PLANNED]\n\n#### Step E1: Extra step [PLANNED]\n`;
-    mockUtils.parseArgs.mockReturnValue({ help: false, plan: 'plans/test.plans.md' });
+    mockUtils.parseArgs.mockReturnValue({
+      help: false,
+      plan: 'plans/test.plans.md',
+    });
     mockFs.readFile.mockResolvedValue(planLetter);
     let reportArg;
-    mockUtils.writeReport.mockImplementation((r) => { reportArg = r; });
+    mockUtils.writeReport.mockImplementation((r) => {
+      reportArg = r;
+    });
 
     await importModule(['--plan=plans/test.plans.md']);
 
@@ -330,10 +398,15 @@ describe('migrate-plan-format', () => {
 
   it('handles step with no digits (NaN step number)', async () => {
     const planNoDigits = `# Test Plan\n\n### Phase A — Setup [PLANNED]\n\n#### Step abc: No digits [PLANNED]\n`;
-    mockUtils.parseArgs.mockReturnValue({ help: false, plan: 'plans/test.plans.md' });
+    mockUtils.parseArgs.mockReturnValue({
+      help: false,
+      plan: 'plans/test.plans.md',
+    });
     mockFs.readFile.mockResolvedValue(planNoDigits);
     let reportArg;
-    mockUtils.writeReport.mockImplementation((r) => { reportArg = r; });
+    mockUtils.writeReport.mockImplementation((r) => {
+      reportArg = r;
+    });
 
     await importModule(['--plan=plans/test.plans.md']);
 
@@ -342,10 +415,15 @@ describe('migrate-plan-format', () => {
 
   it('handles plan with only steps (no phases)', async () => {
     const planStepsOnly = `# Test Plan\n\n#### Step 1: First step [PLANNED]\n\n#### Step 2: Second step [PLANNED]\n`;
-    mockUtils.parseArgs.mockReturnValue({ help: false, plan: 'plans/test.plans.md' });
+    mockUtils.parseArgs.mockReturnValue({
+      help: false,
+      plan: 'plans/test.plans.md',
+    });
     mockFs.readFile.mockResolvedValue(planStepsOnly);
     let reportArg;
-    mockUtils.writeReport.mockImplementation((r) => { reportArg = r; });
+    mockUtils.writeReport.mockImplementation((r) => {
+      reportArg = r;
+    });
 
     await importModule(['--plan=plans/test.plans.md']);
 
@@ -365,10 +443,15 @@ describe('migrate-plan-format', () => {
 
 #### Step 1: Build step [WIP]
 `;
-    mockUtils.parseArgs.mockReturnValue({ help: false, plan: 'plans/test.plans.md' });
+    mockUtils.parseArgs.mockReturnValue({
+      help: false,
+      plan: 'plans/test.plans.md',
+    });
     mockFs.readFile.mockResolvedValue(planMulti);
     let reportArg;
-    mockUtils.writeReport.mockImplementation((r) => { reportArg = r; });
+    mockUtils.writeReport.mockImplementation((r) => {
+      reportArg = r;
+    });
 
     await importModule(['--plan=plans/test.plans.md']);
 
@@ -377,11 +460,18 @@ describe('migrate-plan-format', () => {
   });
 
   it('handles YAML block with parse error', async () => {
-    mockUtils.parsePlanYamlBlock.mockImplementation(() => { throw new Error('YAML parse error'); });
-    mockUtils.parseArgs.mockReturnValue({ help: false, plan: 'plans/test.plans.md' });
+    mockUtils.parsePlanYamlBlock.mockImplementation(() => {
+      throw new Error('YAML parse error');
+    });
+    mockUtils.parseArgs.mockReturnValue({
+      help: false,
+      plan: 'plans/test.plans.md',
+    });
     mockFs.readFile.mockResolvedValue(PLAN_WITH_YAML);
     let reportArg;
-    mockUtils.writeReport.mockImplementation((r) => { reportArg = r; });
+    mockUtils.writeReport.mockImplementation((r) => {
+      reportArg = r;
+    });
 
     await importModule(['--plan=plans/test.plans.md']);
 
@@ -391,10 +481,15 @@ describe('migrate-plan-format', () => {
   it('handles plan with existing YAML that matches generated (no change)', async () => {
     // Use a fully conforming YAML block for a DONE phase - won't be rewritten
     const planConforming = `# Test Plan\n\n### Phase A — Done [DONE]\n\n\`\`\`yaml\nphase: A\ntitle: Done\nstatus: [DONE]\n\`\`\`\n`;
-    mockUtils.parseArgs.mockReturnValue({ help: false, plan: 'plans/test.plans.md' });
+    mockUtils.parseArgs.mockReturnValue({
+      help: false,
+      plan: 'plans/test.plans.md',
+    });
     mockFs.readFile.mockResolvedValue(planConforming);
     let reportArg;
-    mockUtils.writeReport.mockImplementation((r) => { reportArg = r; });
+    mockUtils.writeReport.mockImplementation((r) => {
+      reportArg = r;
+    });
 
     await importModule(['--plan=plans/test.plans.md']);
 
@@ -403,10 +498,15 @@ describe('migrate-plan-format', () => {
 
   it('handles YAML block before any heading (orphan yaml)', async () => {
     const planOrphanYaml = `# Test Plan\n\n\`\`\`yaml\nsome: yaml\n\`\`\`\n\n### Phase A — Setup [PLANNED]\n`;
-    mockUtils.parseArgs.mockReturnValue({ help: false, plan: 'plans/test.plans.md' });
+    mockUtils.parseArgs.mockReturnValue({
+      help: false,
+      plan: 'plans/test.plans.md',
+    });
     mockFs.readFile.mockResolvedValue(planOrphanYaml);
     let reportArg;
-    mockUtils.writeReport.mockImplementation((r) => { reportArg = r; });
+    mockUtils.writeReport.mockImplementation((r) => {
+      reportArg = r;
+    });
 
     await importModule(['--plan=plans/test.plans.md']);
 
@@ -415,10 +515,15 @@ describe('migrate-plan-format', () => {
 
   it('handles step with existing agent field for goal inference', async () => {
     const planWithAgent = `# Test Plan\n\n### Phase A — Setup [PLANNED]\n\n#### Step 1: Do something [PLANNED]\n\n\`\`\`yaml\nphase: A\nstep: 1\ntitle: Do something\nstatus: [PLANNED]\nagent: 03-red-testing\n\`\`\`\n`;
-    mockUtils.parseArgs.mockReturnValue({ help: false, plan: 'plans/test.plans.md' });
+    mockUtils.parseArgs.mockReturnValue({
+      help: false,
+      plan: 'plans/test.plans.md',
+    });
     mockFs.readFile.mockResolvedValue(planWithAgent);
     let reportArg;
-    mockUtils.writeReport.mockImplementation((r) => { reportArg = r; });
+    mockUtils.writeReport.mockImplementation((r) => {
+      reportArg = r;
+    });
 
     await importModule(['--plan=plans/test.plans.md']);
 
@@ -427,10 +532,15 @@ describe('migrate-plan-format', () => {
 
   it('handles step with existing goal field', async () => {
     const planWithGoal = `# Test Plan\n\n### Phase A — Setup [PLANNED]\n\n#### Step 1: Do something [PLANNED]\n\n\`\`\`yaml\nphase: A\nstep: 1\ntitle: Do something\nstatus: [PLANNED]\ngoal: researching\n\`\`\`\n`;
-    mockUtils.parseArgs.mockReturnValue({ help: false, plan: 'plans/test.plans.md' });
+    mockUtils.parseArgs.mockReturnValue({
+      help: false,
+      plan: 'plans/test.plans.md',
+    });
     mockFs.readFile.mockResolvedValue(planWithGoal);
     let reportArg;
-    mockUtils.writeReport.mockImplementation((r) => { reportArg = r; });
+    mockUtils.writeReport.mockImplementation((r) => {
+      reportArg = r;
+    });
 
     await importModule(['--plan=plans/test.plans.md']);
 
@@ -439,10 +549,15 @@ describe('migrate-plan-format', () => {
 
   it('handles step with unknown agent (defaults to implementing)', async () => {
     const planUnknownAgent = `# Test Plan\n\n### Phase A — Setup [PLANNED]\n\n#### Step 1: Do something [PLANNED]\n\n\`\`\`yaml\nphase: A\nstep: 1\ntitle: Do something\nstatus: [PLANNED]\nagent: unknown-agent\n\`\`\`\n`;
-    mockUtils.parseArgs.mockReturnValue({ help: false, plan: 'plans/test.plans.md' });
+    mockUtils.parseArgs.mockReturnValue({
+      help: false,
+      plan: 'plans/test.plans.md',
+    });
     mockFs.readFile.mockResolvedValue(planUnknownAgent);
     let reportArg;
-    mockUtils.writeReport.mockImplementation((r) => { reportArg = r; });
+    mockUtils.writeReport.mockImplementation((r) => {
+      reportArg = r;
+    });
 
     await importModule(['--plan=plans/test.plans.md']);
 
@@ -451,10 +566,15 @@ describe('migrate-plan-format', () => {
 
   it('handles step with expansion: slices in existing YAML', async () => {
     const planWithSlices = `# Test Plan\n\n### Phase A — Setup [PLANNED]\n\n#### Step 1: Do something [PLANNED]\n\n\`\`\`yaml\nphase: A\nstep: 1\ntitle: Do something\nstatus: [PLANNED]\nexpansion: slices\n\`\`\`\n`;
-    mockUtils.parseArgs.mockReturnValue({ help: false, plan: 'plans/test.plans.md' });
+    mockUtils.parseArgs.mockReturnValue({
+      help: false,
+      plan: 'plans/test.plans.md',
+    });
     mockFs.readFile.mockResolvedValue(planWithSlices);
     let reportArg;
-    mockUtils.writeReport.mockImplementation((r) => { reportArg = r; });
+    mockUtils.writeReport.mockImplementation((r) => {
+      reportArg = r;
+    });
 
     await importModule(['--plan=plans/test.plans.md']);
 
@@ -463,10 +583,15 @@ describe('migrate-plan-format', () => {
 
   it('handles step with expansion: none in existing YAML', async () => {
     const planWithNone = `# Test Plan\n\n### Phase A — Setup [PLANNED]\n\n#### Step 1: Do something [PLANNED]\n\n\`\`\`yaml\nphase: A\nstep: 1\ntitle: Do something\nstatus: [PLANNED]\nexpansion: none\n\`\`\`\n`;
-    mockUtils.parseArgs.mockReturnValue({ help: false, plan: 'plans/test.plans.md' });
+    mockUtils.parseArgs.mockReturnValue({
+      help: false,
+      plan: 'plans/test.plans.md',
+    });
     mockFs.readFile.mockResolvedValue(planWithNone);
     let reportArg;
-    mockUtils.writeReport.mockImplementation((r) => { reportArg = r; });
+    mockUtils.writeReport.mockImplementation((r) => {
+      reportArg = r;
+    });
 
     await importModule(['--plan=plans/test.plans.md']);
 
@@ -475,10 +600,15 @@ describe('migrate-plan-format', () => {
 
   it('handles step with tdd_sequence red-green', async () => {
     const planWithTdd = `# Test Plan\n\n### Phase A — Setup [PLANNED]\n\n#### Step 1: Do something [PLANNED]\n\n\`\`\`yaml\nphase: A\nstep: 1\ntitle: Do something\nstatus: [PLANNED]\ntdd_sequence: red-green\n\`\`\`\n`;
-    mockUtils.parseArgs.mockReturnValue({ help: false, plan: 'plans/test.plans.md' });
+    mockUtils.parseArgs.mockReturnValue({
+      help: false,
+      plan: 'plans/test.plans.md',
+    });
     mockFs.readFile.mockResolvedValue(planWithTdd);
     let reportArg;
-    mockUtils.writeReport.mockImplementation((r) => { reportArg = r; });
+    mockUtils.writeReport.mockImplementation((r) => {
+      reportArg = r;
+    });
 
     await importModule(['--plan=plans/test.plans.md']);
 
@@ -487,10 +617,15 @@ describe('migrate-plan-format', () => {
 
   it('handles step with tdd_sequence green-only', async () => {
     const planWithGreen = `# Test Plan\n\n### Phase A — Setup [PLANNED]\n\n#### Step 1: Do something [PLANNED]\n\n\`\`\`yaml\nphase: A\nstep: 1\ntitle: Do something\nstatus: [PLANNED]\ntdd_sequence: green-only\n\`\`\`\n`;
-    mockUtils.parseArgs.mockReturnValue({ help: false, plan: 'plans/test.plans.md' });
+    mockUtils.parseArgs.mockReturnValue({
+      help: false,
+      plan: 'plans/test.plans.md',
+    });
     mockFs.readFile.mockResolvedValue(planWithGreen);
     let reportArg;
-    mockUtils.writeReport.mockImplementation((r) => { reportArg = r; });
+    mockUtils.writeReport.mockImplementation((r) => {
+      reportArg = r;
+    });
 
     await importModule(['--plan=plans/test.plans.md']);
 
@@ -517,14 +652,21 @@ describe('migrate-plan-format', () => {
         }
       }
       result.expansion = 'slices';
-      result.slices = [{ slice_id: 'test-slice', dependencies: 'not-an-array' }];
+      result.slices = [
+        { slice_id: 'test-slice', dependencies: 'not-an-array' },
+      ];
       return result;
     });
     const planWithSlicesArr = `# Test Plan\n\n### Phase A — Setup [PLANNED]\n\n#### Step 1: Do something [PLANNED]\n\n\`\`\`yaml\nphase: A\nstep: 1\ntitle: Do something\nstatus: [PLANNED]\nexpansion: slices\nslices:\n  - slice_id: test-slice\n\`\`\`\n`;
-    mockUtils.parseArgs.mockReturnValue({ help: false, plan: 'plans/test.plans.md' });
+    mockUtils.parseArgs.mockReturnValue({
+      help: false,
+      plan: 'plans/test.plans.md',
+    });
     mockFs.readFile.mockResolvedValue(planWithSlicesArr);
     let reportArg;
-    mockUtils.writeReport.mockImplementation((r) => { reportArg = r; });
+    mockUtils.writeReport.mockImplementation((r) => {
+      reportArg = r;
+    });
 
     await importModule(['--plan=plans/test.plans.md']);
 
@@ -554,10 +696,15 @@ describe('migrate-plan-format', () => {
       return result;
     });
     const planWithSpec = `# Test Plan\n\n### Phase A — Setup [PLANNED]\n\n#### Step 1: Do something [PLANNED]\n\n\`\`\`yaml\nphase: A\nstep: 1\ntitle: Do something\nstatus: [PLANNED]\nspecialists:\n  - test-specialist\n\`\`\`\n`;
-    mockUtils.parseArgs.mockReturnValue({ help: false, plan: 'plans/test.plans.md' });
+    mockUtils.parseArgs.mockReturnValue({
+      help: false,
+      plan: 'plans/test.plans.md',
+    });
     mockFs.readFile.mockResolvedValue(planWithSpec);
     let reportArg;
-    mockUtils.writeReport.mockImplementation((r) => { reportArg = r; });
+    mockUtils.writeReport.mockImplementation((r) => {
+      reportArg = r;
+    });
 
     await importModule(['--plan=plans/test.plans.md']);
 
@@ -566,10 +713,15 @@ describe('migrate-plan-format', () => {
 
   it('handles step 1 with no goal (defaults to planning)', async () => {
     const planStep1 = `# Test Plan\n\n#### Step 1: First step [PLANNED]\n`;
-    mockUtils.parseArgs.mockReturnValue({ help: false, plan: 'plans/test.plans.md' });
+    mockUtils.parseArgs.mockReturnValue({
+      help: false,
+      plan: 'plans/test.plans.md',
+    });
     mockFs.readFile.mockResolvedValue(planStep1);
     let reportArg;
-    mockUtils.writeReport.mockImplementation((r) => { reportArg = r; });
+    mockUtils.writeReport.mockImplementation((r) => {
+      reportArg = r;
+    });
 
     await importModule(['--plan=plans/test.plans.md']);
 
@@ -599,10 +751,15 @@ describe('migrate-plan-format', () => {
       return result;
     });
     const planWithSkills = `# Test Plan\n\n### Phase A — Setup [PLANNED]\n\n#### Step 1: Do something [PLANNED]\n\n\`\`\`yaml\nphase: A\nstep: 1\ntitle: Do something\nstatus: [PLANNED]\nskills:\n  - custom-skill\n\`\`\`\n`;
-    mockUtils.parseArgs.mockReturnValue({ help: false, plan: 'plans/test.plans.md' });
+    mockUtils.parseArgs.mockReturnValue({
+      help: false,
+      plan: 'plans/test.plans.md',
+    });
     mockFs.readFile.mockResolvedValue(planWithSkills);
     let reportArg;
-    mockUtils.writeReport.mockImplementation((r) => { reportArg = r; });
+    mockUtils.writeReport.mockImplementation((r) => {
+      reportArg = r;
+    });
 
     await importModule(['--plan=plans/test.plans.md']);
 
@@ -632,10 +789,15 @@ describe('migrate-plan-format', () => {
       return result;
     });
     const planWithStrSkills = `# Test Plan\n\n### Phase A — Setup [PLANNED]\n\n#### Step 1: Do something [PLANNED]\n\n\`\`\`yaml\nphase: A\nstep: 1\ntitle: Do something\nstatus: [PLANNED]\nskills: custom-skill-string\n\`\`\`\n`;
-    mockUtils.parseArgs.mockReturnValue({ help: false, plan: 'plans/test.plans.md' });
+    mockUtils.parseArgs.mockReturnValue({
+      help: false,
+      plan: 'plans/test.plans.md',
+    });
     mockFs.readFile.mockResolvedValue(planWithStrSkills);
     let reportArg;
-    mockUtils.writeReport.mockImplementation((r) => { reportArg = r; });
+    mockUtils.writeReport.mockImplementation((r) => {
+      reportArg = r;
+    });
 
     await importModule(['--plan=plans/test.plans.md']);
 
@@ -665,10 +827,15 @@ describe('migrate-plan-format', () => {
       return result;
     });
     const planWithVal = `# Test Plan\n\n### Phase A — Setup [PLANNED]\n\n#### Step 1: Do something [PLANNED]\n\n\`\`\`yaml\nphase: A\nstep: 1\ntitle: Do something\nstatus: [PLANNED]\nvalidation:\n  - custom-validate.sh\n\`\`\`\n`;
-    mockUtils.parseArgs.mockReturnValue({ help: false, plan: 'plans/test.plans.md' });
+    mockUtils.parseArgs.mockReturnValue({
+      help: false,
+      plan: 'plans/test.plans.md',
+    });
     mockFs.readFile.mockResolvedValue(planWithVal);
     let reportArg;
-    mockUtils.writeReport.mockImplementation((r) => { reportArg = r; });
+    mockUtils.writeReport.mockImplementation((r) => {
+      reportArg = r;
+    });
 
     await importModule(['--plan=plans/test.plans.md']);
 
@@ -698,10 +865,15 @@ describe('migrate-plan-format', () => {
       return result;
     });
     const planWithAc = `# Test Plan\n\n### Phase A — Setup [PLANNED]\n\n#### Step 1: Do something [PLANNED]\n\n\`\`\`yaml\nphase: A\nstep: 1\ntitle: Do something\nstatus: [PLANNED]\nacceptance_criteria:\n  - Custom criteria\n\`\`\`\n`;
-    mockUtils.parseArgs.mockReturnValue({ help: false, plan: 'plans/test.plans.md' });
+    mockUtils.parseArgs.mockReturnValue({
+      help: false,
+      plan: 'plans/test.plans.md',
+    });
     mockFs.readFile.mockResolvedValue(planWithAc);
     let reportArg;
-    mockUtils.writeReport.mockImplementation((r) => { reportArg = r; });
+    mockUtils.writeReport.mockImplementation((r) => {
+      reportArg = r;
+    });
 
     await importModule(['--plan=plans/test.plans.md']);
 
@@ -731,11 +903,16 @@ describe('migrate-plan-format', () => {
       return result;
     });
     const planWithSot = `# Test Plan\n\n### Phase A — Setup [PLANNED]\n\n\`\`\`yaml\nphase: A\ntitle: Setup\nstatus: [PLANNED]\nsource_of_truth: plans/custom.plans.md\n\`\`\`\n`;
-    mockUtils.parseArgs.mockReturnValue({ help: false, plan: 'plans/test.plans.md' });
+    mockUtils.parseArgs.mockReturnValue({
+      help: false,
+      plan: 'plans/test.plans.md',
+    });
     mockFs.readFile.mockResolvedValue(planWithSot);
     mockUtils.normalizePath.mockImplementation((p) => `normalized:${p}`);
     let reportArg;
-    mockUtils.writeReport.mockImplementation((r) => { reportArg = r; });
+    mockUtils.writeReport.mockImplementation((r) => {
+      reportArg = r;
+    });
 
     await importModule(['--plan=plans/test.plans.md']);
 
@@ -765,10 +942,15 @@ describe('migrate-plan-format', () => {
       return result;
     });
     const planWithCp = `# Test Plan\n\n### Phase A — Setup [PLANNED]\n\n\`\`\`yaml\nphase: A\ntitle: Setup\nstatus: [PLANNED]\ncopy_paste: false\n\`\`\`\n`;
-    mockUtils.parseArgs.mockReturnValue({ help: false, plan: 'plans/test.plans.md' });
+    mockUtils.parseArgs.mockReturnValue({
+      help: false,
+      plan: 'plans/test.plans.md',
+    });
     mockFs.readFile.mockResolvedValue(planWithCp);
     let reportArg;
-    mockUtils.writeReport.mockImplementation((r) => { reportArg = r; });
+    mockUtils.writeReport.mockImplementation((r) => {
+      reportArg = r;
+    });
 
     await importModule(['--plan=plans/test.plans.md']);
 
@@ -798,10 +980,15 @@ describe('migrate-plan-format', () => {
       return result;
     });
     const planWithCpTrue = `# Test Plan\n\n### Phase A — Setup [PLANNED]\n\n\`\`\`yaml\nphase: A\ntitle: Setup\nstatus: [PLANNED]\ncopy_paste: true\n\`\`\`\n`;
-    mockUtils.parseArgs.mockReturnValue({ help: false, plan: 'plans/test.plans.md' });
+    mockUtils.parseArgs.mockReturnValue({
+      help: false,
+      plan: 'plans/test.plans.md',
+    });
     mockFs.readFile.mockResolvedValue(planWithCpTrue);
     let reportArg;
-    mockUtils.writeReport.mockImplementation((r) => { reportArg = r; });
+    mockUtils.writeReport.mockImplementation((r) => {
+      reportArg = r;
+    });
 
     await importModule(['--plan=plans/test.plans.md']);
 
@@ -831,10 +1018,15 @@ describe('migrate-plan-format', () => {
       return result;
     });
     const planWithMode = `# Test Plan\n\n### Phase A — Setup [PLANNED]\n\n\`\`\`yaml\nphase: A\ntitle: Setup\nstatus: [PLANNED]\nmode: custom-mode\n\`\`\`\n`;
-    mockUtils.parseArgs.mockReturnValue({ help: false, plan: 'plans/test.plans.md' });
+    mockUtils.parseArgs.mockReturnValue({
+      help: false,
+      plan: 'plans/test.plans.md',
+    });
     mockFs.readFile.mockResolvedValue(planWithMode);
     let reportArg;
-    mockUtils.writeReport.mockImplementation((r) => { reportArg = r; });
+    mockUtils.writeReport.mockImplementation((r) => {
+      reportArg = r;
+    });
 
     await importModule(['--plan=plans/test.plans.md']);
 
@@ -864,10 +1056,15 @@ describe('migrate-plan-format', () => {
       return result;
     });
     const planWithNext = `# Test Plan\n\n### Phase A — Setup [PLANNED]\n\n\`\`\`yaml\nphase: A\ntitle: Setup\nstatus: [PLANNED]\nnext_phase: Custom Next Phase\n\`\`\`\n`;
-    mockUtils.parseArgs.mockReturnValue({ help: false, plan: 'plans/test.plans.md' });
+    mockUtils.parseArgs.mockReturnValue({
+      help: false,
+      plan: 'plans/test.plans.md',
+    });
     mockFs.readFile.mockResolvedValue(planWithNext);
     let reportArg;
-    mockUtils.writeReport.mockImplementation((r) => { reportArg = r; });
+    mockUtils.writeReport.mockImplementation((r) => {
+      reportArg = r;
+    });
 
     await importModule(['--plan=plans/test.plans.md']);
 
@@ -897,10 +1094,15 @@ describe('migrate-plan-format', () => {
       return result;
     });
     const planWithPs = `# Test Plan\n\n### Phase A — Setup [PLANNED]\n\n\`\`\`yaml\nphase: A\ntitle: Setup\nstatus: [PLANNED]\nplaceholder_steps:\n  - Step 01 — Custom\n\`\`\`\n`;
-    mockUtils.parseArgs.mockReturnValue({ help: false, plan: 'plans/test.plans.md' });
+    mockUtils.parseArgs.mockReturnValue({
+      help: false,
+      plan: 'plans/test.plans.md',
+    });
     mockFs.readFile.mockResolvedValue(planWithPs);
     let reportArg;
-    mockUtils.writeReport.mockImplementation((r) => { reportArg = r; });
+    mockUtils.writeReport.mockImplementation((r) => {
+      reportArg = r;
+    });
 
     await importModule(['--plan=plans/test.plans.md']);
 
@@ -930,10 +1132,15 @@ describe('migrate-plan-format', () => {
       return result;
     });
     const planWithNextStep = `# Test Plan\n\n### Phase A — Setup [PLANNED]\n\n#### Step 1: Do something [PLANNED]\n\n\`\`\`yaml\nphase: A\nstep: 1\ntitle: Do something\nstatus: [PLANNED]\nnext_step: Custom Next Step\n\`\`\`\n`;
-    mockUtils.parseArgs.mockReturnValue({ help: false, plan: 'plans/test.plans.md' });
+    mockUtils.parseArgs.mockReturnValue({
+      help: false,
+      plan: 'plans/test.plans.md',
+    });
     mockFs.readFile.mockResolvedValue(planWithNextStep);
     let reportArg;
-    mockUtils.writeReport.mockImplementation((r) => { reportArg = r; });
+    mockUtils.writeReport.mockImplementation((r) => {
+      reportArg = r;
+    });
 
     await importModule(['--plan=plans/test.plans.md']);
 
@@ -963,10 +1170,15 @@ describe('migrate-plan-format', () => {
       return result;
     });
     const planStepNoPhase = `# Test Plan\n\n#### Step 1: Orphan step [PLANNED]\n\n\`\`\`yaml\nstep: 1\ntitle: Orphan step\nstatus: [PLANNED]\nphase: Z\n\`\`\`\n`;
-    mockUtils.parseArgs.mockReturnValue({ help: false, plan: 'plans/test.plans.md' });
+    mockUtils.parseArgs.mockReturnValue({
+      help: false,
+      plan: 'plans/test.plans.md',
+    });
     mockFs.readFile.mockResolvedValue(planStepNoPhase);
     let reportArg;
-    mockUtils.writeReport.mockImplementation((r) => { reportArg = r; });
+    mockUtils.writeReport.mockImplementation((r) => {
+      reportArg = r;
+    });
 
     await importModule(['--plan=plans/test.plans.md']);
 
@@ -974,10 +1186,15 @@ describe('migrate-plan-format', () => {
   });
 
   it('handles empty plan file', async () => {
-    mockUtils.parseArgs.mockReturnValue({ help: false, plan: 'plans/empty.plans.md' });
+    mockUtils.parseArgs.mockReturnValue({
+      help: false,
+      plan: 'plans/empty.plans.md',
+    });
     mockFs.readFile.mockResolvedValue('');
     let reportArg;
-    mockUtils.writeReport.mockImplementation((r) => { reportArg = r; });
+    mockUtils.writeReport.mockImplementation((r) => {
+      reportArg = r;
+    });
 
     await importModule(['--plan=plans/empty.plans.md']);
 
@@ -985,10 +1202,15 @@ describe('migrate-plan-format', () => {
   });
 
   it('handles plan with only text (no headings)', async () => {
-    mockUtils.parseArgs.mockReturnValue({ help: false, plan: 'plans/text.plans.md' });
+    mockUtils.parseArgs.mockReturnValue({
+      help: false,
+      plan: 'plans/text.plans.md',
+    });
     mockFs.readFile.mockResolvedValue('Just some text\nNo headings here\n');
     let reportArg;
-    mockUtils.writeReport.mockImplementation((r) => { reportArg = r; });
+    mockUtils.writeReport.mockImplementation((r) => {
+      reportArg = r;
+    });
 
     await importModule(['--plan=plans/text.plans.md']);
 
@@ -996,7 +1218,10 @@ describe('migrate-plan-format', () => {
   });
 
   it('handles writeFile error', async () => {
-    mockUtils.parseArgs.mockReturnValue({ help: false, plan: 'plans/test.plans.md' });
+    mockUtils.parseArgs.mockReturnValue({
+      help: false,
+      plan: 'plans/test.plans.md',
+    });
     mockFs.readFile.mockResolvedValue(PLAN_WITH_ACTIVE_PHASE);
     mockFs.writeFile.mockRejectedValue(new Error('write failed'));
 
@@ -1013,10 +1238,15 @@ describe('migrate-plan-format', () => {
       specialists: { custom: 'value' },
     }));
     const planWithObjSpec = `# Test Plan\n\n### Phase A — Setup [PLANNED]\n\n#### Step 1: Do something [PLANNED]\n\n\`\`\`yaml\nphase: A\nstep: 1\ntitle: Do something\nstatus: [PLANNED]\nexpansion: slices\nspecialists:\n  custom: value\n\`\`\`\n`;
-    mockUtils.parseArgs.mockReturnValue({ help: false, plan: 'plans/test.plans.md' });
+    mockUtils.parseArgs.mockReturnValue({
+      help: false,
+      plan: 'plans/test.plans.md',
+    });
     mockFs.readFile.mockResolvedValue(planWithObjSpec);
     let reportArg;
-    mockUtils.writeReport.mockImplementation((r) => { reportArg = r; });
+    mockUtils.writeReport.mockImplementation((r) => {
+      reportArg = r;
+    });
 
     await importModule(['--plan=plans/test.plans.md']);
 
@@ -1030,10 +1260,15 @@ describe('migrate-plan-format', () => {
       slices: [{}, { slice_id: 'test-slice' }],
     }));
     const planWithEmptySlice = `# Test Plan\n\n### Phase A — Setup [PLANNED]\n\n#### Step 1: Do something [PLANNED]\n\n\`\`\`yaml\nphase: A\nstep: 1\ntitle: Do something\nstatus: [PLANNED]\nexpansion: slices\nslices:\n\`\`\`\n`;
-    mockUtils.parseArgs.mockReturnValue({ help: false, plan: 'plans/test.plans.md' });
+    mockUtils.parseArgs.mockReturnValue({
+      help: false,
+      plan: 'plans/test.plans.md',
+    });
     mockFs.readFile.mockResolvedValue(planWithEmptySlice);
     let reportArg;
-    mockUtils.writeReport.mockImplementation((r) => { reportArg = r; });
+    mockUtils.writeReport.mockImplementation((r) => {
+      reportArg = r;
+    });
 
     await importModule(['--plan=plans/test.plans.md']);
 
@@ -1046,10 +1281,15 @@ describe('migrate-plan-format', () => {
       goal: 'implementing',
     }));
     const planText = `# Test Plan\n\n### Phase A — Setup [PLANNED]\n\n#### Step 1: Do something [PLANNED]\n\n\`\`\`yaml\nphase: A\nstep: 1\ntitle: Do something\nstatus: [PLANNED]\nexpansion: slices\n\`\`\`\n`;
-    mockUtils.parseArgs.mockReturnValue({ help: false, plan: 'plans/test.plans.md' });
+    mockUtils.parseArgs.mockReturnValue({
+      help: false,
+      plan: 'plans/test.plans.md',
+    });
     mockFs.readFile.mockResolvedValue(planText);
     let reportArg;
-    mockUtils.writeReport.mockImplementation((r) => { reportArg = r; });
+    mockUtils.writeReport.mockImplementation((r) => {
+      reportArg = r;
+    });
 
     // Temporarily augment Object.keys so the metadata object produced by
     // buildStepMetadata/buildPhaseMetadata includes an unknown key. This
@@ -1081,10 +1321,15 @@ describe('migrate-plan-format', () => {
 
   it('handles consecutive yaml blocks (exercises findHeadingForYamlToken false branch)', async () => {
     const planWithConsecutiveYaml = `# Test Plan\n\n### Phase A — Setup [PLANNED]\n\n\`\`\`yaml\nphase: A\ntitle: Setup\nstatus: [PLANNED]\ngoal: planning\nexpansion: steps\n\`\`\`\n\n\`\`\`yaml\nextra: data\n\`\`\`\n`;
-    mockUtils.parseArgs.mockReturnValue({ help: false, plan: 'plans/test.plans.md' });
+    mockUtils.parseArgs.mockReturnValue({
+      help: false,
+      plan: 'plans/test.plans.md',
+    });
     mockFs.readFile.mockResolvedValue(planWithConsecutiveYaml);
     let reportArg;
-    mockUtils.writeReport.mockImplementation((r) => { reportArg = r; });
+    mockUtils.writeReport.mockImplementation((r) => {
+      reportArg = r;
+    });
 
     await importModule(['--plan=plans/test.plans.md']);
 
@@ -1098,10 +1343,15 @@ describe('migrate-plan-format', () => {
       slices: 'not-an-array',
     }));
     const planWithBadSlices = `# Test Plan\n\n### Phase A — Setup [PLANNED]\n\n#### Step 1: Do something [PLANNED]\n\n\`\`\`yaml\nphase: A\nstep: 1\ntitle: Do something\nstatus: [PLANNED]\nexpansion: slices\nslices: not-an-array\n\`\`\`\n`;
-    mockUtils.parseArgs.mockReturnValue({ help: false, plan: 'plans/test.plans.md' });
+    mockUtils.parseArgs.mockReturnValue({
+      help: false,
+      plan: 'plans/test.plans.md',
+    });
     mockFs.readFile.mockResolvedValue(planWithBadSlices);
     let reportArg;
-    mockUtils.writeReport.mockImplementation((r) => { reportArg = r; });
+    mockUtils.writeReport.mockImplementation((r) => {
+      reportArg = r;
+    });
 
     await importModule(['--plan=plans/test.plans.md']);
 
@@ -1115,10 +1365,15 @@ describe('migrate-plan-format', () => {
       slices: ['string-entry', { slice_id: 'valid-slice' }],
     }));
     const planWithBadSliceEntry = `# Test Plan\n\n### Phase A — Setup [PLANNED]\n\n#### Step 1: Do something [PLANNED]\n\n\`\`\`yaml\nphase: A\nstep: 1\ntitle: Do something\nstatus: [PLANNED]\nexpansion: slices\nslices:\n\`\`\`\n`;
-    mockUtils.parseArgs.mockReturnValue({ help: false, plan: 'plans/test.plans.md' });
+    mockUtils.parseArgs.mockReturnValue({
+      help: false,
+      plan: 'plans/test.plans.md',
+    });
     mockFs.readFile.mockResolvedValue(planWithBadSliceEntry);
     let reportArg;
-    mockUtils.writeReport.mockImplementation((r) => { reportArg = r; });
+    mockUtils.writeReport.mockImplementation((r) => {
+      reportArg = r;
+    });
 
     await importModule(['--plan=plans/test.plans.md']);
 
@@ -1130,10 +1385,15 @@ describe('migrate-plan-format', () => {
     // to boolean true, which exercises the `if (value === true || value === false)`
     // branch in coerceBoolean.
     const planWithBoolCopyPaste = `# Test Plan\n\n### Phase A — Setup [PLANNED]\n\n#### Step 1: Do something [PLANNED]\n\n\`\`\`yaml\nphase: A\nstep: 1\ntitle: Do something\nstatus: [PLANNED]\ngoal: implementing\ncopy_paste: true\n\`\`\`\n`;
-    mockUtils.parseArgs.mockReturnValue({ help: false, plan: 'plans/test.plans.md' });
+    mockUtils.parseArgs.mockReturnValue({
+      help: false,
+      plan: 'plans/test.plans.md',
+    });
     mockFs.readFile.mockResolvedValue(planWithBoolCopyPaste);
     let reportArg;
-    mockUtils.writeReport.mockImplementation((r) => { reportArg = r; });
+    mockUtils.writeReport.mockImplementation((r) => {
+      reportArg = r;
+    });
 
     await importModule(['--plan=plans/test.plans.md']);
 

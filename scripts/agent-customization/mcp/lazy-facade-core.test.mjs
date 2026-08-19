@@ -25,7 +25,8 @@ jest.unstable_mockModule('node:process', () => ({
   exitCode: undefined,
 }));
 
-const { createLazyFacade, runFacadeMain, resolveSpawnCommand } = await import('./lazy-facade-core.mjs');
+const { createLazyFacade, runFacadeMain, resolveSpawnCommand } =
+  await import('./lazy-facade-core.mjs');
 const mcpUtils = await import('./mcp-utils.mjs');
 const childProcess = await import('node:child_process');
 const fs = await import('node:fs');
@@ -56,7 +57,9 @@ function makeRouterSnapshot() {
 function fakeChild() {
   const handlers = {};
   const stdout = new EventEmitter();
-  stdout.on = jest.fn((ev, cb) => { handlers.data = cb; });
+  stdout.on = jest.fn((ev, cb) => {
+    handlers.data = cb;
+  });
   stdout.pipe = jest.fn();
   stdout.removeAllListeners = jest.fn();
   const stderr = new EventEmitter();
@@ -66,7 +69,9 @@ function fakeChild() {
     stdin: { write: jest.fn() },
     stdout,
     stderr,
-    on: jest.fn((ev, cb) => { handlers[ev] = cb; }),
+    on: jest.fn((ev, cb) => {
+      handlers[ev] = cb;
+    }),
     kill: jest.fn(),
     _handlers: handlers,
   };
@@ -94,40 +99,65 @@ describe('createLazyFacade', () => {
 
   it('handles initialize', async () => {
     const facade = createLazyFacade(baseConfig);
-    const res = await facade.dispatch({ jsonrpc: '2.0', id: 1, method: 'initialize' });
+    const res = await facade.dispatch({
+      jsonrpc: '2.0',
+      id: 1,
+      method: 'initialize',
+    });
     assert.strictEqual(res.result.serverInfo.name, 'test-facade');
     assert.strictEqual(res.id, 1);
   });
 
   it('handles notifications/initialized', async () => {
     const facade = createLazyFacade(baseConfig);
-    const res = await facade.dispatch({ jsonrpc: '2.0', method: 'notifications/initialized' });
+    const res = await facade.dispatch({
+      jsonrpc: '2.0',
+      method: 'notifications/initialized',
+    });
     assert.strictEqual(res.result, null);
   });
 
   it('handles ping', async () => {
     const facade = createLazyFacade(baseConfig);
-    const res = await facade.dispatch({ jsonrpc: '2.0', id: 2, method: 'ping' });
+    const res = await facade.dispatch({
+      jsonrpc: '2.0',
+      id: 2,
+      method: 'ping',
+    });
     assert.deepStrictEqual(res.result, {});
   });
 
   it('handles tools/list', async () => {
     fs.readFileSync.mockReturnValue(makeSnapshot([{ name: 'tool1' }]));
     const facade = createLazyFacade(baseConfig);
-    const res = await facade.dispatch({ jsonrpc: '2.0', id: 3, method: 'tools/list' });
+    const res = await facade.dispatch({
+      jsonrpc: '2.0',
+      id: 3,
+      method: 'tools/list',
+    });
     assert.deepStrictEqual(res.result.tools, [{ name: 'tool1' }]);
   });
 
   it('handles tools/list with null snapshot', async () => {
-    fs.readFileSync.mockImplementation(() => { throw new Error('ENOENT'); });
+    fs.readFileSync.mockImplementation(() => {
+      throw new Error('ENOENT');
+    });
     const facade = createLazyFacade(baseConfig);
-    const res = await facade.dispatch({ jsonrpc: '2.0', id: 3, method: 'tools/list' });
+    const res = await facade.dispatch({
+      jsonrpc: '2.0',
+      id: 3,
+      method: 'tools/list',
+    });
     assert.deepStrictEqual(res.result.tools, []);
   });
 
   it('throws for unknown method', async () => {
     const facade = createLazyFacade(baseConfig);
-    const res = await facade.dispatch({ jsonrpc: '2.0', id: 4, method: 'unknown/method' });
+    const res = await facade.dispatch({
+      jsonrpc: '2.0',
+      id: 4,
+      method: 'unknown/method',
+    });
     assert.strictEqual(res.error.code, -32601);
     assert.ok(res.error.message.includes('Unsupported method'));
   });
@@ -136,10 +166,14 @@ describe('createLazyFacade', () => {
     const localHandler = jest.fn(() => ({ result: 'local-ok' }));
     const facade = createLazyFacade({
       ...baseConfig,
-      localTools: [{ name: 'local-tool', description: 'Local', handler: localHandler }],
+      localTools: [
+        { name: 'local-tool', description: 'Local', handler: localHandler },
+      ],
     });
     const res = await facade.dispatch({
-      jsonrpc: '2.0', id: 5, method: 'tools/call',
+      jsonrpc: '2.0',
+      id: 5,
+      method: 'tools/call',
       params: { name: 'local-tool', arguments: { foo: 'bar' } },
     });
     assert.strictEqual(localHandler.mock.calls[0][0].foo, 'bar');
@@ -149,7 +183,9 @@ describe('createLazyFacade', () => {
   it('handles tools/call with unknown tool name', async () => {
     const facade = createLazyFacade(baseConfig);
     const res = await facade.dispatch({
-      jsonrpc: '2.0', id: 6, method: 'tools/call',
+      jsonrpc: '2.0',
+      id: 6,
+      method: 'tools/call',
       params: { name: 'wrong-tool', arguments: {} },
     });
     assert.strictEqual(res.result.isError, true);
@@ -159,7 +195,9 @@ describe('createLazyFacade', () => {
   it('handles tools/call with router tool but no operation', async () => {
     const facade = createLazyFacade(baseConfig);
     const res = await facade.dispatch({
-      jsonrpc: '2.0', id: 7, method: 'tools/call',
+      jsonrpc: '2.0',
+      id: 7,
+      method: 'tools/call',
       params: { name: 'test-facade', arguments: {} },
     });
     assert.strictEqual(res.result.isError, true);
@@ -176,20 +214,41 @@ describe('createLazyFacade', () => {
       const msg = JSON.parse(line);
       if (msg.method === 'initialize') {
         process.nextTick(() => {
-          child._handlers.data(Buffer.from(JSON.stringify({ jsonrpc: '2.0', id: msg.id, result: { protocolVersion: '2024-11-05' } }) + '\n'));
+          child._handlers.data(
+            Buffer.from(
+              JSON.stringify({
+                jsonrpc: '2.0',
+                id: msg.id,
+                result: { protocolVersion: '2024-11-05' },
+              }) + '\n',
+            ),
+          );
           // notifications/initialized has no id, no response
         });
       } else if (msg.method === 'tools/call') {
         process.nextTick(() => {
-          child._handlers.data(Buffer.from(JSON.stringify({ jsonrpc: '2.0', id: msg.id, result: { content: [{ type: 'text', text: 'hello' }] } }) + '\n'));
+          child._handlers.data(
+            Buffer.from(
+              JSON.stringify({
+                jsonrpc: '2.0',
+                id: msg.id,
+                result: { content: [{ type: 'text', text: 'hello' }] },
+              }) + '\n',
+            ),
+          );
         });
       }
     });
 
     const facade = createLazyFacade(baseConfig);
     const res = await facade.dispatch({
-      jsonrpc: '2.0', id: 8, method: 'tools/call',
-      params: { name: 'test-facade', arguments: { operation: 'search', args: { q: 'test' } } },
+      jsonrpc: '2.0',
+      id: 8,
+      method: 'tools/call',
+      params: {
+        name: 'test-facade',
+        arguments: { operation: 'search', args: { q: 'test' } },
+      },
     });
     assert.ok(res.result.content[0].text.includes('hello'));
   });
@@ -201,19 +260,36 @@ describe('createLazyFacade', () => {
       const msg = JSON.parse(line);
       if (msg.method === 'initialize') {
         process.nextTick(() => {
-          child._handlers.data(Buffer.from(JSON.stringify({ jsonrpc: '2.0', id: msg.id, result: {} }) + '\n'));
+          child._handlers.data(
+            Buffer.from(
+              JSON.stringify({ jsonrpc: '2.0', id: msg.id, result: {} }) + '\n',
+            ),
+          );
         });
       } else if (msg.method === 'resources/list') {
         process.nextTick(() => {
-          child._handlers.data(Buffer.from(JSON.stringify({ jsonrpc: '2.0', id: msg.id, result: { resources: [] } }) + '\n'));
+          child._handlers.data(
+            Buffer.from(
+              JSON.stringify({
+                jsonrpc: '2.0',
+                id: msg.id,
+                result: { resources: [] },
+              }) + '\n',
+            ),
+          );
         });
       }
     });
 
     const facade = createLazyFacade({ ...baseConfig, routingMode: 'native' });
     const res = await facade.dispatch({
-      jsonrpc: '2.0', id: 9, method: 'tools/call',
-      params: { name: 'test-facade', arguments: { operation: 'resources/list', args: {} } },
+      jsonrpc: '2.0',
+      id: 9,
+      method: 'tools/call',
+      params: {
+        name: 'test-facade',
+        arguments: { operation: 'resources/list', args: {} },
+      },
     });
     assert.deepStrictEqual(res.result.resources, []);
   });
@@ -225,19 +301,38 @@ describe('createLazyFacade', () => {
       const msg = JSON.parse(line);
       if (msg.method === 'initialize') {
         process.nextTick(() => {
-          child._handlers.data(Buffer.from(JSON.stringify({ jsonrpc: '2.0', id: msg.id, result: {} }) + '\n'));
+          child._handlers.data(
+            Buffer.from(
+              JSON.stringify({ jsonrpc: '2.0', id: msg.id, result: {} }) + '\n',
+            ),
+          );
         });
       } else if (msg.method === 'tools/call') {
         process.nextTick(() => {
-          child._handlers.data(Buffer.from(JSON.stringify({ jsonrpc: '2.0', id: msg.id, result: { content: [{ type: 'text', text: 'native-tool-result' }] } }) + '\n'));
+          child._handlers.data(
+            Buffer.from(
+              JSON.stringify({
+                jsonrpc: '2.0',
+                id: msg.id,
+                result: {
+                  content: [{ type: 'text', text: 'native-tool-result' }],
+                },
+              }) + '\n',
+            ),
+          );
         });
       }
     });
 
     const facade = createLazyFacade({ ...baseConfig, routingMode: 'native' });
     const res = await facade.dispatch({
-      jsonrpc: '2.0', id: 10, method: 'tools/call',
-      params: { name: 'test-facade', arguments: { operation: 'some_native_tool', args: {} } },
+      jsonrpc: '2.0',
+      id: 10,
+      method: 'tools/call',
+      params: {
+        name: 'test-facade',
+        arguments: { operation: 'some_native_tool', args: {} },
+      },
     });
     assert.ok(res.result.content[0].text.includes('native-tool-result'));
   });
@@ -249,18 +344,35 @@ describe('createLazyFacade', () => {
       const msg = JSON.parse(line);
       if (msg.method === 'initialize') {
         process.nextTick(() => {
-          child._handlers.data(Buffer.from(JSON.stringify({ jsonrpc: '2.0', id: msg.id, result: {} }) + '\n'));
+          child._handlers.data(
+            Buffer.from(
+              JSON.stringify({ jsonrpc: '2.0', id: msg.id, result: {} }) + '\n',
+            ),
+          );
         });
       } else if (msg.method === 'tools/call') {
         process.nextTick(() => {
-          child._handlers.data(Buffer.from(JSON.stringify({ jsonrpc: '2.0', id: msg.id, result: { isError: true, content: [{ type: 'text', text: 'inner error' }] } }) + '\n'));
+          child._handlers.data(
+            Buffer.from(
+              JSON.stringify({
+                jsonrpc: '2.0',
+                id: msg.id,
+                result: {
+                  isError: true,
+                  content: [{ type: 'text', text: 'inner error' }],
+                },
+              }) + '\n',
+            ),
+          );
         });
       }
     });
 
     const facade = createLazyFacade(baseConfig);
     const res = await facade.dispatch({
-      jsonrpc: '2.0', id: 11, method: 'tools/call',
+      jsonrpc: '2.0',
+      id: 11,
+      method: 'tools/call',
       params: { name: 'test-facade', arguments: { operation: 'search' } },
     });
     assert.ok(res.result.content[0].text.includes('[test-facade]'));
@@ -274,18 +386,32 @@ describe('createLazyFacade', () => {
       const msg = JSON.parse(line);
       if (msg.method === 'initialize') {
         process.nextTick(() => {
-          child._handlers.data(Buffer.from(JSON.stringify({ jsonrpc: '2.0', id: msg.id, result: {} }) + '\n'));
+          child._handlers.data(
+            Buffer.from(
+              JSON.stringify({ jsonrpc: '2.0', id: msg.id, result: {} }) + '\n',
+            ),
+          );
         });
       } else if (msg.method === 'tools/call') {
         process.nextTick(() => {
-          child._handlers.data(Buffer.from(JSON.stringify({ jsonrpc: '2.0', id: msg.id, error: { message: 'tool failed' } }) + '\n'));
+          child._handlers.data(
+            Buffer.from(
+              JSON.stringify({
+                jsonrpc: '2.0',
+                id: msg.id,
+                error: { message: 'tool failed' },
+              }) + '\n',
+            ),
+          );
         });
       }
     });
 
     const facade = createLazyFacade(baseConfig);
     const res = await facade.dispatch({
-      jsonrpc: '2.0', id: 12, method: 'tools/call',
+      jsonrpc: '2.0',
+      id: 12,
+      method: 'tools/call',
       params: { name: 'test-facade', arguments: { operation: 'search' } },
     });
     assert.strictEqual(res.result.isError, true);
@@ -293,10 +419,14 @@ describe('createLazyFacade', () => {
   });
 
   it('handles spawn failure', async () => {
-    childProcess.spawn.mockImplementation(() => { throw new Error('spawn failed'); });
+    childProcess.spawn.mockImplementation(() => {
+      throw new Error('spawn failed');
+    });
     const facade = createLazyFacade(baseConfig);
     const res = await facade.dispatch({
-      jsonrpc: '2.0', id: 13, method: 'tools/call',
+      jsonrpc: '2.0',
+      id: 13,
+      method: 'tools/call',
       params: { name: 'test-facade', arguments: { operation: 'search' } },
     });
     assert.strictEqual(res.result.isError, true);
@@ -307,7 +437,9 @@ describe('createLazyFacade', () => {
     childProcess.spawn.mockReturnValue(null);
     const facade = createLazyFacade(baseConfig);
     const res = await facade.dispatch({
-      jsonrpc: '2.0', id: 14, method: 'tools/call',
+      jsonrpc: '2.0',
+      id: 14,
+      method: 'tools/call',
       params: { name: 'test-facade', arguments: { operation: 'search' } },
     });
     assert.strictEqual(res.result.isError, true);
@@ -317,10 +449,14 @@ describe('createLazyFacade', () => {
     const child = fakeChild();
     childProcess.spawn.mockReturnValue(child);
     // Make stdin.write throw a non-Error
-    child.stdin.write.mockImplementation(() => { throw 'string error'; });
+    child.stdin.write.mockImplementation(() => {
+      throw 'string error';
+    });
     const facade = createLazyFacade(baseConfig);
     const res = await facade.dispatch({
-      jsonrpc: '2.0', id: 15, method: 'tools/call',
+      jsonrpc: '2.0',
+      id: 15,
+      method: 'tools/call',
       params: { name: 'test-facade', arguments: { operation: 'search' } },
     });
     assert.strictEqual(res.result.isError, true);
@@ -342,7 +478,9 @@ describe('createLazyFacade', () => {
 
     const facade = createLazyFacade(baseConfig);
     const res = await facade.dispatch({
-      jsonrpc: '2.0', id: 16, method: 'tools/call',
+      jsonrpc: '2.0',
+      id: 16,
+      method: 'tools/call',
       params: { name: 'test-facade', arguments: { operation: 'search' } },
     });
     assert.strictEqual(res.result.isError, true);
@@ -362,7 +500,9 @@ describe('createLazyFacade', () => {
 
     const facade = createLazyFacade(baseConfig);
     const res = await facade.dispatch({
-      jsonrpc: '2.0', id: 17, method: 'tools/call',
+      jsonrpc: '2.0',
+      id: 17,
+      method: 'tools/call',
       params: { name: 'test-facade', arguments: { operation: 'search' } },
     });
     assert.strictEqual(res.result.isError, true);
@@ -375,7 +515,15 @@ describe('createLazyFacade', () => {
       const msg = JSON.parse(line);
       if (msg.method === 'initialize') {
         process.nextTick(() => {
-          child._handlers.data(Buffer.from(JSON.stringify({ jsonrpc: '2.0', id: msg.id, result: { protocolVersion: '2024-11-05' } }) + '\n'));
+          child._handlers.data(
+            Buffer.from(
+              JSON.stringify({
+                jsonrpc: '2.0',
+                id: msg.id,
+                result: { protocolVersion: '2024-11-05' },
+              }) + '\n',
+            ),
+          );
         });
       } else if (msg.method === 'notifications/initialized') {
         // Null out stdin so the subsequent tools/call sendChildRequest hits
@@ -386,7 +534,9 @@ describe('createLazyFacade', () => {
 
     const facade = createLazyFacade(baseConfig);
     const res = await facade.dispatch({
-      jsonrpc: '2.0', id: 99, method: 'tools/call',
+      jsonrpc: '2.0',
+      id: 99,
+      method: 'tools/call',
       params: { name: 'test-facade', arguments: { operation: 'search' } },
     });
     assert.strictEqual(res.result.isError, true);
@@ -399,7 +549,9 @@ describe('createLazyFacade', () => {
     childProcess.spawn.mockReturnValue(child);
     const facade = createLazyFacade(baseConfig);
     const res = await facade.dispatch({
-      jsonrpc: '2.0', id: 18, method: 'tools/call',
+      jsonrpc: '2.0',
+      id: 18,
+      method: 'tools/call',
       params: { name: 'test-facade', arguments: { operation: 'search' } },
     });
     assert.strictEqual(res.result.isError, true);
@@ -412,18 +564,32 @@ describe('createLazyFacade', () => {
       const msg = JSON.parse(line);
       if (msg.method === 'initialize') {
         process.nextTick(() => {
-          child._handlers.data(Buffer.from(JSON.stringify({ jsonrpc: '2.0', id: msg.id, result: {} }) + '\n'));
+          child._handlers.data(
+            Buffer.from(
+              JSON.stringify({ jsonrpc: '2.0', id: msg.id, result: {} }) + '\n',
+            ),
+          );
         });
       } else if (msg.method === 'tools/call') {
         process.nextTick(() => {
-          child._handlers.data(Buffer.from(JSON.stringify({ jsonrpc: '2.0', id: msg.id, error: { code: -1, details: 'complex' } }) + '\n'));
+          child._handlers.data(
+            Buffer.from(
+              JSON.stringify({
+                jsonrpc: '2.0',
+                id: msg.id,
+                error: { code: -1, details: 'complex' },
+              }) + '\n',
+            ),
+          );
         });
       }
     });
 
     const facade = createLazyFacade(baseConfig);
     const res = await facade.dispatch({
-      jsonrpc: '2.0', id: 19, method: 'tools/call',
+      jsonrpc: '2.0',
+      id: 19,
+      method: 'tools/call',
       params: { name: 'test-facade', arguments: { operation: 'search' } },
     });
     assert.strictEqual(res.result.isError, true);
@@ -437,18 +603,32 @@ describe('createLazyFacade', () => {
       if (msg.method === 'initialize') {
         process.nextTick(() => {
           child._handlers.data(Buffer.from('not valid json\n'));
-          child._handlers.data(Buffer.from(JSON.stringify({ jsonrpc: '2.0', id: msg.id, result: {} }) + '\n'));
+          child._handlers.data(
+            Buffer.from(
+              JSON.stringify({ jsonrpc: '2.0', id: msg.id, result: {} }) + '\n',
+            ),
+          );
         });
       } else if (msg.method === 'tools/call') {
         process.nextTick(() => {
-          child._handlers.data(Buffer.from(JSON.stringify({ jsonrpc: '2.0', id: msg.id, result: { content: [{ type: 'text', text: 'ok' }] } }) + '\n'));
+          child._handlers.data(
+            Buffer.from(
+              JSON.stringify({
+                jsonrpc: '2.0',
+                id: msg.id,
+                result: { content: [{ type: 'text', text: 'ok' }] },
+              }) + '\n',
+            ),
+          );
         });
       }
     });
 
     const facade = createLazyFacade(baseConfig);
     const res = await facade.dispatch({
-      jsonrpc: '2.0', id: 20, method: 'tools/call',
+      jsonrpc: '2.0',
+      id: 20,
+      method: 'tools/call',
       params: { name: 'test-facade', arguments: { operation: 'search' } },
     });
     assert.ok(res.result.content[0].text.includes('ok'));
@@ -462,18 +642,32 @@ describe('createLazyFacade', () => {
       if (msg.method === 'initialize') {
         process.nextTick(() => {
           child._handlers.data(Buffer.from('\n\n'));
-          child._handlers.data(Buffer.from(JSON.stringify({ jsonrpc: '2.0', id: msg.id, result: {} }) + '\n'));
+          child._handlers.data(
+            Buffer.from(
+              JSON.stringify({ jsonrpc: '2.0', id: msg.id, result: {} }) + '\n',
+            ),
+          );
         });
       } else if (msg.method === 'tools/call') {
         process.nextTick(() => {
-          child._handlers.data(Buffer.from(JSON.stringify({ jsonrpc: '2.0', id: msg.id, result: { content: [{ type: 'text', text: 'ok' }] } }) + '\n'));
+          child._handlers.data(
+            Buffer.from(
+              JSON.stringify({
+                jsonrpc: '2.0',
+                id: msg.id,
+                result: { content: [{ type: 'text', text: 'ok' }] },
+              }) + '\n',
+            ),
+          );
         });
       }
     });
 
     const facade = createLazyFacade(baseConfig);
     const res = await facade.dispatch({
-      jsonrpc: '2.0', id: 21, method: 'tools/call',
+      jsonrpc: '2.0',
+      id: 21,
+      method: 'tools/call',
       params: { name: 'test-facade', arguments: { operation: 'search' } },
     });
     assert.ok(res.result.content[0].text.includes('ok'));
@@ -489,18 +683,30 @@ describe('createLazyFacade', () => {
           // Send partial data without newline
           child._handlers.data(Buffer.from('{"jsonrpc":"2.0","id":'));
           // Then complete it
-          child._handlers.data(Buffer.from(JSON.stringify(msg.id) + ',"result":{}}\n'));
+          child._handlers.data(
+            Buffer.from(JSON.stringify(msg.id) + ',"result":{}}\n'),
+          );
         });
       } else if (msg.method === 'tools/call') {
         process.nextTick(() => {
-          child._handlers.data(Buffer.from(JSON.stringify({ jsonrpc: '2.0', id: msg.id, result: { content: [{ type: 'text', text: 'ok' }] } }) + '\n'));
+          child._handlers.data(
+            Buffer.from(
+              JSON.stringify({
+                jsonrpc: '2.0',
+                id: msg.id,
+                result: { content: [{ type: 'text', text: 'ok' }] },
+              }) + '\n',
+            ),
+          );
         });
       }
     });
 
     const facade = createLazyFacade(baseConfig);
     const res = await facade.dispatch({
-      jsonrpc: '2.0', id: 22, method: 'tools/call',
+      jsonrpc: '2.0',
+      id: 22,
+      method: 'tools/call',
       params: { name: 'test-facade', arguments: { operation: 'search' } },
     });
     assert.ok(res.result.content[0].text.includes('ok'));
@@ -514,19 +720,37 @@ describe('createLazyFacade', () => {
       if (msg.method === 'initialize') {
         process.nextTick(() => {
           // Send a message with id: null (should be ignored)
-          child._handlers.data(Buffer.from(JSON.stringify({ jsonrpc: '2.0', id: null, result: {} }) + '\n'));
-          child._handlers.data(Buffer.from(JSON.stringify({ jsonrpc: '2.0', id: msg.id, result: {} }) + '\n'));
+          child._handlers.data(
+            Buffer.from(
+              JSON.stringify({ jsonrpc: '2.0', id: null, result: {} }) + '\n',
+            ),
+          );
+          child._handlers.data(
+            Buffer.from(
+              JSON.stringify({ jsonrpc: '2.0', id: msg.id, result: {} }) + '\n',
+            ),
+          );
         });
       } else if (msg.method === 'tools/call') {
         process.nextTick(() => {
-          child._handlers.data(Buffer.from(JSON.stringify({ jsonrpc: '2.0', id: msg.id, result: { content: [{ type: 'text', text: 'ok' }] } }) + '\n'));
+          child._handlers.data(
+            Buffer.from(
+              JSON.stringify({
+                jsonrpc: '2.0',
+                id: msg.id,
+                result: { content: [{ type: 'text', text: 'ok' }] },
+              }) + '\n',
+            ),
+          );
         });
       }
     });
 
     const facade = createLazyFacade(baseConfig);
     const res = await facade.dispatch({
-      jsonrpc: '2.0', id: 23, method: 'tools/call',
+      jsonrpc: '2.0',
+      id: 23,
+      method: 'tools/call',
       params: { name: 'test-facade', arguments: { operation: 'search' } },
     });
     assert.ok(res.result.content[0].text.includes('ok'));
@@ -540,19 +764,37 @@ describe('createLazyFacade', () => {
       if (msg.method === 'initialize') {
         process.nextTick(() => {
           // Send a response with unknown id (should be ignored)
-          child._handlers.data(Buffer.from(JSON.stringify({ jsonrpc: '2.0', id: 999, result: {} }) + '\n'));
-          child._handlers.data(Buffer.from(JSON.stringify({ jsonrpc: '2.0', id: msg.id, result: {} }) + '\n'));
+          child._handlers.data(
+            Buffer.from(
+              JSON.stringify({ jsonrpc: '2.0', id: 999, result: {} }) + '\n',
+            ),
+          );
+          child._handlers.data(
+            Buffer.from(
+              JSON.stringify({ jsonrpc: '2.0', id: msg.id, result: {} }) + '\n',
+            ),
+          );
         });
       } else if (msg.method === 'tools/call') {
         process.nextTick(() => {
-          child._handlers.data(Buffer.from(JSON.stringify({ jsonrpc: '2.0', id: msg.id, result: { content: [{ type: 'text', text: 'ok' }] } }) + '\n'));
+          child._handlers.data(
+            Buffer.from(
+              JSON.stringify({
+                jsonrpc: '2.0',
+                id: msg.id,
+                result: { content: [{ type: 'text', text: 'ok' }] },
+              }) + '\n',
+            ),
+          );
         });
       }
     });
 
     const facade = createLazyFacade(baseConfig);
     const res = await facade.dispatch({
-      jsonrpc: '2.0', id: 24, method: 'tools/call',
+      jsonrpc: '2.0',
+      id: 24,
+      method: 'tools/call',
       params: { name: 'test-facade', arguments: { operation: 'search' } },
     });
     assert.ok(res.result.content[0].text.includes('ok'));
@@ -566,7 +808,9 @@ describe('createLazyFacade', () => {
     const facade = createLazyFacade(baseConfig);
     // Start a call that will be pending
     const callPromise = facade.dispatch({
-      jsonrpc: '2.0', id: 25, method: 'tools/call',
+      jsonrpc: '2.0',
+      id: 25,
+      method: 'tools/call',
       params: { name: 'test-facade', arguments: { operation: 'search' } },
     });
 
@@ -587,13 +831,17 @@ describe('createLazyFacade', () => {
 
   it('close() handles kill throwing', async () => {
     const child = fakeChild();
-    child.kill.mockImplementation(() => { throw new Error('already dead'); });
+    child.kill.mockImplementation(() => {
+      throw new Error('already dead');
+    });
     childProcess.spawn.mockReturnValue(child);
     child.stdin.write.mockImplementation(() => {});
 
     const facade = createLazyFacade(baseConfig);
     const callPromise = facade.dispatch({
-      jsonrpc: '2.0', id: 26, method: 'tools/call',
+      jsonrpc: '2.0',
+      id: 26,
+      method: 'tools/call',
       params: { name: 'test-facade', arguments: { operation: 'search' } },
     });
     facade.close();
@@ -603,7 +851,11 @@ describe('createLazyFacade', () => {
 
   it('serverDispatch returns bare result', async () => {
     const facade = createLazyFacade(baseConfig);
-    const result = await facade.server.dispatch({ jsonrpc: '2.0', id: 1, method: 'initialize' });
+    const result = await facade.server.dispatch({
+      jsonrpc: '2.0',
+      id: 1,
+      method: 'initialize',
+    });
     assert.strictEqual(result.serverInfo.name, 'test-facade');
   });
 
@@ -624,7 +876,9 @@ describe('createLazyFacade', () => {
   it('handles tools/call with non-object params', async () => {
     const facade = createLazyFacade(baseConfig);
     const res = await facade.dispatch({
-      jsonrpc: '2.0', id: 27, method: 'tools/call',
+      jsonrpc: '2.0',
+      id: 27,
+      method: 'tools/call',
       params: 'not-an-object',
     });
     assert.strictEqual(res.result.isError, true);
@@ -634,7 +888,9 @@ describe('createLazyFacade', () => {
   it('handles tools/call with null params', async () => {
     const facade = createLazyFacade(baseConfig);
     const res = await facade.dispatch({
-      jsonrpc: '2.0', id: 28, method: 'tools/call',
+      jsonrpc: '2.0',
+      id: 28,
+      method: 'tools/call',
       params: null,
     });
     assert.strictEqual(res.result.isError, true);
@@ -643,11 +899,15 @@ describe('createLazyFacade', () => {
   it('handles tools/call with non-string tool name', async () => {
     const facade = createLazyFacade(baseConfig);
     const res = await facade.dispatch({
-      jsonrpc: '2.0', id: 29, method: 'tools/call',
+      jsonrpc: '2.0',
+      id: 29,
+      method: 'tools/call',
       params: { name: 123, arguments: {} },
     });
     assert.strictEqual(res.result.isError, true);
-    assert.ok(res.result.content[0].text.includes('Unknown operation: undefined'));
+    assert.ok(
+      res.result.content[0].text.includes('Unknown operation: undefined'),
+    );
   });
 
   it('uses custom snapshotPath and spawnCommand overrides', async () => {
@@ -657,16 +917,24 @@ describe('createLazyFacade', () => {
       snapshotPath: 'C:\\custom\\snap.json',
       spawnCommand: ['npx', 'custom-server'],
     });
-    const res = await facade.dispatch({ jsonrpc: '2.0', id: 1, method: 'initialize' });
+    const res = await facade.dispatch({
+      jsonrpc: '2.0',
+      id: 1,
+      method: 'initialize',
+    });
     assert.strictEqual(res.result.serverInfo.name, 'test-facade');
     // The snapshot path was used
-    assert.ok(fs.readFileSync.mock.calls.some(c => c[0] === 'C:\\custom\\snap.json'));
+    assert.ok(
+      fs.readFileSync.mock.calls.some((c) => c[0] === 'C:\\custom\\snap.json'),
+    );
   });
 
   it('handles localTools not being an array', async () => {
     const facade = createLazyFacade({ ...baseConfig, localTools: null });
     const res = await facade.dispatch({
-      jsonrpc: '2.0', id: 30, method: 'tools/call',
+      jsonrpc: '2.0',
+      id: 30,
+      method: 'tools/call',
       params: { name: 'nonexistent', arguments: {} },
     });
     assert.strictEqual(res.result.isError, true);
@@ -679,18 +947,36 @@ describe('createLazyFacade', () => {
       const msg = JSON.parse(line);
       if (msg.method === 'initialize') {
         process.nextTick(() => {
-          child._handlers.data(Buffer.from(JSON.stringify({ jsonrpc: '2.0', id: msg.id, result: 'string-result' }) + '\n'));
+          child._handlers.data(
+            Buffer.from(
+              JSON.stringify({
+                jsonrpc: '2.0',
+                id: msg.id,
+                result: 'string-result',
+              }) + '\n',
+            ),
+          );
         });
       } else if (msg.method === 'tools/call') {
         process.nextTick(() => {
-          child._handlers.data(Buffer.from(JSON.stringify({ jsonrpc: '2.0', id: msg.id, result: 'string-result' }) + '\n'));
+          child._handlers.data(
+            Buffer.from(
+              JSON.stringify({
+                jsonrpc: '2.0',
+                id: msg.id,
+                result: 'string-result',
+              }) + '\n',
+            ),
+          );
         });
       }
     });
 
     const facade = createLazyFacade(baseConfig);
     const res = await facade.dispatch({
-      jsonrpc: '2.0', id: 31, method: 'tools/call',
+      jsonrpc: '2.0',
+      id: 31,
+      method: 'tools/call',
       params: { name: 'test-facade', arguments: { operation: 'search' } },
     });
     assert.strictEqual(res.result, 'string-result');
@@ -703,18 +989,32 @@ describe('createLazyFacade', () => {
       const msg = JSON.parse(line);
       if (msg.method === 'initialize') {
         process.nextTick(() => {
-          child._handlers.data(Buffer.from(JSON.stringify({ jsonrpc: '2.0', id: msg.id, result: {} }) + '\n'));
+          child._handlers.data(
+            Buffer.from(
+              JSON.stringify({ jsonrpc: '2.0', id: msg.id, result: {} }) + '\n',
+            ),
+          );
         });
       } else if (msg.method === 'tools/call') {
         process.nextTick(() => {
-          child._handlers.data(Buffer.from(JSON.stringify({ jsonrpc: '2.0', id: msg.id, result: { isError: true } }) + '\n'));
+          child._handlers.data(
+            Buffer.from(
+              JSON.stringify({
+                jsonrpc: '2.0',
+                id: msg.id,
+                result: { isError: true },
+              }) + '\n',
+            ),
+          );
         });
       }
     });
 
     const facade = createLazyFacade(baseConfig);
     const res = await facade.dispatch({
-      jsonrpc: '2.0', id: 32, method: 'tools/call',
+      jsonrpc: '2.0',
+      id: 32,
+      method: 'tools/call',
       params: { name: 'test-facade', arguments: { operation: 'search' } },
     });
     assert.strictEqual(res.result.isError, true);
@@ -727,18 +1027,35 @@ describe('createLazyFacade', () => {
       const msg = JSON.parse(line);
       if (msg.method === 'initialize') {
         process.nextTick(() => {
-          child._handlers.data(Buffer.from(JSON.stringify({ jsonrpc: '2.0', id: msg.id, result: {} }) + '\n'));
+          child._handlers.data(
+            Buffer.from(
+              JSON.stringify({ jsonrpc: '2.0', id: msg.id, result: {} }) + '\n',
+            ),
+          );
         });
       } else if (msg.method === 'tools/call') {
         process.nextTick(() => {
-          child._handlers.data(Buffer.from(JSON.stringify({ jsonrpc: '2.0', id: msg.id, result: { isError: true, content: [{ type: 'image', data: 'xyz' }] } }) + '\n'));
+          child._handlers.data(
+            Buffer.from(
+              JSON.stringify({
+                jsonrpc: '2.0',
+                id: msg.id,
+                result: {
+                  isError: true,
+                  content: [{ type: 'image', data: 'xyz' }],
+                },
+              }) + '\n',
+            ),
+          );
         });
       }
     });
 
     const facade = createLazyFacade(baseConfig);
     const res = await facade.dispatch({
-      jsonrpc: '2.0', id: 33, method: 'tools/call',
+      jsonrpc: '2.0',
+      id: 33,
+      method: 'tools/call',
       params: { name: 'test-facade', arguments: { operation: 'search' } },
     });
     assert.strictEqual(res.result.isError, true);
@@ -755,22 +1072,38 @@ describe('createLazyFacade', () => {
       if (msg.method === 'initialize') {
         initCount++;
         process.nextTick(() => {
-          child._handlers.data(Buffer.from(JSON.stringify({ jsonrpc: '2.0', id: msg.id, result: {} }) + '\n'));
+          child._handlers.data(
+            Buffer.from(
+              JSON.stringify({ jsonrpc: '2.0', id: msg.id, result: {} }) + '\n',
+            ),
+          );
         });
       } else if (msg.method === 'tools/call') {
         process.nextTick(() => {
-          child._handlers.data(Buffer.from(JSON.stringify({ jsonrpc: '2.0', id: msg.id, result: { content: [{ type: 'text', text: 'ok' }] } }) + '\n'));
+          child._handlers.data(
+            Buffer.from(
+              JSON.stringify({
+                jsonrpc: '2.0',
+                id: msg.id,
+                result: { content: [{ type: 'text', text: 'ok' }] },
+              }) + '\n',
+            ),
+          );
         });
       }
     });
 
     const facade = createLazyFacade(baseConfig);
     await facade.dispatch({
-      jsonrpc: '2.0', id: 34, method: 'tools/call',
+      jsonrpc: '2.0',
+      id: 34,
+      method: 'tools/call',
       params: { name: 'test-facade', arguments: { operation: 'search' } },
     });
     await facade.dispatch({
-      jsonrpc: '2.0', id: 35, method: 'tools/call',
+      jsonrpc: '2.0',
+      id: 35,
+      method: 'tools/call',
       params: { name: 'test-facade', arguments: { operation: 'search2' } },
     });
     // initialize should only have been sent once
@@ -784,19 +1117,36 @@ describe('createLazyFacade', () => {
       const msg = JSON.parse(line);
       if (msg.method === 'initialize') {
         process.nextTick(() => {
-          child._handlers.data(Buffer.from(JSON.stringify({ jsonrpc: '2.0', id: msg.id, result: {} }) + '\n'));
+          child._handlers.data(
+            Buffer.from(
+              JSON.stringify({ jsonrpc: '2.0', id: msg.id, result: {} }) + '\n',
+            ),
+          );
         });
       } else if (msg.method === 'resources/list') {
         process.nextTick(() => {
-          child._handlers.data(Buffer.from(JSON.stringify({ jsonrpc: '2.0', id: msg.id, result: { resources: [] } }) + '\n'));
+          child._handlers.data(
+            Buffer.from(
+              JSON.stringify({
+                jsonrpc: '2.0',
+                id: msg.id,
+                result: { resources: [] },
+              }) + '\n',
+            ),
+          );
         });
       }
     });
 
     const facade = createLazyFacade({ ...baseConfig, routingMode: 'native' });
     const res = await facade.dispatch({
-      jsonrpc: '2.0', id: 36, method: 'tools/call',
-      params: { name: 'test-facade', arguments: { operation: 'resources/list' } },
+      jsonrpc: '2.0',
+      id: 36,
+      method: 'tools/call',
+      params: {
+        name: 'test-facade',
+        arguments: { operation: 'resources/list' },
+      },
     });
     assert.deepStrictEqual(res.result.resources, []);
   });
@@ -808,28 +1158,46 @@ describe('createLazyFacade', () => {
       const msg = JSON.parse(line);
       if (msg.method === 'initialize') {
         process.nextTick(() => {
-          child._handlers.data(Buffer.from(JSON.stringify({ jsonrpc: '2.0', id: msg.id, result: {} }) + '\n'));
+          child._handlers.data(
+            Buffer.from(
+              JSON.stringify({ jsonrpc: '2.0', id: msg.id, result: {} }) + '\n',
+            ),
+          );
         });
       } else if (msg.method === 'tools/call') {
         process.nextTick(() => {
-          child._handlers.data(Buffer.from(JSON.stringify({ jsonrpc: '2.0', id: msg.id, result: { content: [{ type: 'text', text: 'no-args-result' }] } }) + '\n'));
+          child._handlers.data(
+            Buffer.from(
+              JSON.stringify({
+                jsonrpc: '2.0',
+                id: msg.id,
+                result: { content: [{ type: 'text', text: 'no-args-result' }] },
+              }) + '\n',
+            ),
+          );
         });
       }
     });
 
     const facade = createLazyFacade({ ...baseConfig, routingMode: 'native' });
     const res = await facade.dispatch({
-      jsonrpc: '2.0', id: 37, method: 'tools/call',
+      jsonrpc: '2.0',
+      id: 37,
+      method: 'tools/call',
       params: { name: 'test-facade', arguments: { operation: 'some_tool' } },
     });
     assert.ok(res.result.content[0].text.includes('no-args-result'));
   });
 
   it('handles non-Error thrown by spawn', async () => {
-    childProcess.spawn.mockImplementation(() => { throw 'spawn string error'; });
+    childProcess.spawn.mockImplementation(() => {
+      throw 'spawn string error';
+    });
     const facade = createLazyFacade(baseConfig);
     const res = await facade.dispatch({
-      jsonrpc: '2.0', id: 38, method: 'tools/call',
+      jsonrpc: '2.0',
+      id: 38,
+      method: 'tools/call',
       params: { name: 'test-facade', arguments: { operation: 'search' } },
     });
     assert.strictEqual(res.result.isError, true);
@@ -850,7 +1218,9 @@ describe('createLazyFacade', () => {
 
     const facade = createLazyFacade(baseConfig);
     const res = await facade.dispatch({
-      jsonrpc: '2.0', id: 39, method: 'tools/call',
+      jsonrpc: '2.0',
+      id: 39,
+      method: 'tools/call',
       params: { name: 'test-facade', arguments: { operation: 'search' } },
     });
     assert.strictEqual(res.result.isError, true);
@@ -880,7 +1250,9 @@ describe('runFacadeMain', () => {
 
   it('self-check sets exitCode=1 on failure', () => {
     mcpUtils.parseMcpCliArgs.mockReturnValue({ selfCheck: true });
-    fs.readFileSync.mockImplementation(() => { throw new Error('ENOENT'); });
+    fs.readFileSync.mockImplementation(() => {
+      throw new Error('ENOENT');
+    });
 
     const origExitCode = process.exitCode;
     runFacadeMain(baseConfig, ['--self-check']);
@@ -938,8 +1310,8 @@ describe('runFacadeMain', () => {
     console.error = () => {};
     runFacadeMain(baseConfig, []);
     // Wait for the promise to reject
-    await new Promise(r => process.nextTick(r));
-    await new Promise(r => process.nextTick(r));
+    await new Promise((r) => process.nextTick(r));
+    await new Promise((r) => process.nextTick(r));
     assert.strictEqual(process.exitCode, 1);
     process.exitCode = origExitCode;
     console.error = origError;
@@ -950,18 +1322,27 @@ describe('resolveSpawnCommand', () => {
   const origPlatform = process.platform;
 
   afterEach(() => {
-    Object.defineProperty(process, 'platform', { value: origPlatform, configurable: true });
+    Object.defineProperty(process, 'platform', {
+      value: origPlatform,
+      configurable: true,
+    });
   });
 
   it('passes through on non-win32', () => {
-    Object.defineProperty(process, 'platform', { value: 'linux', configurable: true });
+    Object.defineProperty(process, 'platform', {
+      value: 'linux',
+      configurable: true,
+    });
     const result = resolveSpawnCommand('npx');
     assert.strictEqual(result.file, 'npx');
     assert.strictEqual(result.shell, false);
   });
 
   it('finds .exe on Windows', () => {
-    Object.defineProperty(process, 'platform', { value: 'win32', configurable: true });
+    Object.defineProperty(process, 'platform', {
+      value: 'win32',
+      configurable: true,
+    });
     fs.existsSync.mockImplementation((p) => p.endsWith('.exe'));
     const result = resolveSpawnCommand('my-tool');
     assert.strictEqual(result.file, 'my-tool');
@@ -969,7 +1350,10 @@ describe('resolveSpawnCommand', () => {
   });
 
   it('finds .cmd on Windows', () => {
-    Object.defineProperty(process, 'platform', { value: 'win32', configurable: true });
+    Object.defineProperty(process, 'platform', {
+      value: 'win32',
+      configurable: true,
+    });
     fs.existsSync.mockImplementation((p) => p.endsWith('.cmd'));
     const result = resolveSpawnCommand('npx');
     assert.ok(result.file.endsWith('.cmd'));
@@ -977,7 +1361,10 @@ describe('resolveSpawnCommand', () => {
   });
 
   it('finds .ps1 on Windows', () => {
-    Object.defineProperty(process, 'platform', { value: 'win32', configurable: true });
+    Object.defineProperty(process, 'platform', {
+      value: 'win32',
+      configurable: true,
+    });
     fs.existsSync.mockImplementation((p) => p.endsWith('.ps1'));
     const result = resolveSpawnCommand('npx');
     assert.ok(result.file.endsWith('.ps1'));
@@ -985,7 +1372,10 @@ describe('resolveSpawnCommand', () => {
   });
 
   it('finds .bat on Windows', () => {
-    Object.defineProperty(process, 'platform', { value: 'win32', configurable: true });
+    Object.defineProperty(process, 'platform', {
+      value: 'win32',
+      configurable: true,
+    });
     fs.existsSync.mockImplementation((p) => p.endsWith('.bat'));
     const result = resolveSpawnCommand('npx');
     assert.ok(result.file.endsWith('.bat'));
@@ -993,7 +1383,10 @@ describe('resolveSpawnCommand', () => {
   });
 
   it('falls back to shell:true when not found on Windows', () => {
-    Object.defineProperty(process, 'platform', { value: 'win32', configurable: true });
+    Object.defineProperty(process, 'platform', {
+      value: 'win32',
+      configurable: true,
+    });
     fs.existsSync.mockReturnValue(false);
     const result = resolveSpawnCommand('unknown-cmd');
     assert.strictEqual(result.file, 'unknown-cmd');
@@ -1001,7 +1394,10 @@ describe('resolveSpawnCommand', () => {
   });
 
   it('skips empty PATH dirs on Windows', () => {
-    Object.defineProperty(process, 'platform', { value: 'win32', configurable: true });
+    Object.defineProperty(process, 'platform', {
+      value: 'win32',
+      configurable: true,
+    });
     process.env.PATH = ';;C:\\bin;;';
     fs.existsSync.mockImplementation((p) => p === 'C:\\bin\\my-tool.exe');
     const result = resolveSpawnCommand('my-tool');
@@ -1010,7 +1406,10 @@ describe('resolveSpawnCommand', () => {
   });
 
   it('handles undefined PATH on Windows', () => {
-    Object.defineProperty(process, 'platform', { value: 'win32', configurable: true });
+    Object.defineProperty(process, 'platform', {
+      value: 'win32',
+      configurable: true,
+    });
     const origPath = process.env.PATH;
     delete process.env.PATH;
     fs.existsSync.mockReturnValue(false);
@@ -1023,7 +1422,9 @@ describe('resolveSpawnCommand', () => {
 
 describe('loadSnapshot', () => {
   it('logs error on read failure', () => {
-    fs.readFileSync.mockImplementation(() => { throw new Error('read failed'); });
+    fs.readFileSync.mockImplementation(() => {
+      throw new Error('read failed');
+    });
     const origError = console.error;
     const errors = [];
     console.error = (...args) => errors.push(args.join(' '));

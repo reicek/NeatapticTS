@@ -28,9 +28,15 @@ describe('docs-quality.artifacts.mjs coverage', () => {
       });
 
       expect(result.runDirectory).toContain(runId);
-      expect(result.summaryPath).toBe(path.join(result.runDirectory, 'summary.json'));
-      expect(result.evidencePath).toBe(path.join(result.runDirectory, 'evidence.json'));
-      expect(result.manifestPath).toBe(path.join(result.runDirectory, 'manifest.json'));
+      expect(result.summaryPath).toBe(
+        path.join(result.runDirectory, 'summary.json'),
+      );
+      expect(result.evidencePath).toBe(
+        path.join(result.runDirectory, 'evidence.json'),
+      );
+      expect(result.manifestPath).toBe(
+        path.join(result.runDirectory, 'manifest.json'),
+      );
 
       await cleanupRun(runId);
     });
@@ -111,9 +117,15 @@ describe('docs-quality.artifacts.mjs coverage', () => {
         manifest,
       });
 
-      const writtenSummary = JSON.parse(await readFile(result.summaryPath, 'utf8'));
-      const writtenEvidence = JSON.parse(await readFile(result.evidencePath, 'utf8'));
-      const writtenManifest = JSON.parse(await readFile(result.manifestPath, 'utf8'));
+      const writtenSummary = JSON.parse(
+        await readFile(result.summaryPath, 'utf8'),
+      );
+      const writtenEvidence = JSON.parse(
+        await readFile(result.evidencePath, 'utf8'),
+      );
+      const writtenManifest = JSON.parse(
+        await readFile(result.manifestPath, 'utf8'),
+      );
 
       expect(writtenSummary).toEqual(summary);
       expect(writtenEvidence).toEqual(evidence);

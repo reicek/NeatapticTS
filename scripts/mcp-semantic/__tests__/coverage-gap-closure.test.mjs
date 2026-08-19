@@ -87,17 +87,29 @@ describe('default-param branch coverage', () => {
 
   it('freshnessCheck() uses default options', async () => {
     const { freshnessCheck } = await import('../tools/freshness-check.mjs');
-    try { await freshnessCheck(); } catch { /* may throw if no DB */ }
+    try {
+      await freshnessCheck();
+    } catch {
+      /* may throw if no DB */
+    }
   });
 
   it('indexStats() uses default options', async () => {
     const { indexStats } = await import('../tools/index-stats.mjs');
-    try { await indexStats(); } catch { /* may throw if no DB */ }
+    try {
+      await indexStats();
+    } catch {
+      /* may throw if no DB */
+    }
   });
 
   it('listFamilies() uses default options', async () => {
     const { listFamilies } = await import('../tools/list-families.mjs');
-    try { await listFamilies(); } catch { /* may throw if no DB */ }
+    try {
+      await listFamilies();
+    } catch {
+      /* may throw if no DB */
+    }
   });
 
   it('loadChunk() uses default options and throws', async () => {
@@ -183,7 +195,9 @@ describe('nullish-coalescing branch coverage', () => {
     const { loadChunk } = await import('../tools/load-chunk.mjs');
     fixture = await setupDbWithChunk('file:./load-chunk-coalesce.sqlite');
     // Need the chunk_id from the inserted chunk
-    const chunkResult = await fixture.client.execute('SELECT chunk_id FROM chunks LIMIT 1');
+    const chunkResult = await fixture.client.execute(
+      'SELECT chunk_id FROM chunks LIMIT 1',
+    );
     const chunkId = Number(chunkResult.rows[0].chunk_id);
     const result = await loadChunk({
       chunk_id: chunkId,
@@ -204,8 +218,12 @@ describe('nullish-coalescing branch coverage', () => {
 
   it('loadParentChunk uses getTursoClient when no client provided', async () => {
     const { loadParentChunk } = await import('../tools/load-parent-chunk.mjs');
-    fixture = await createSchemaClientWithParentChild('file:./load-parent-coalesce.sqlite');
-    const chunkResult = await fixture.client.execute('SELECT chunk_id FROM chunks WHERE depth > 0 LIMIT 1');
+    fixture = await createSchemaClientWithParentChild(
+      'file:./load-parent-coalesce.sqlite',
+    );
+    const chunkResult = await fixture.client.execute(
+      'SELECT chunk_id FROM chunks WHERE depth > 0 LIMIT 1',
+    );
     const childId = Number(chunkResult.rows[0].chunk_id);
     const result = await loadParentChunk({
       chunk_id: childId,
@@ -271,7 +289,9 @@ describe('load-chunk cache eviction', () => {
   it('evicts oldest cache entries when exceeding CLICK_CACHE_SIZE', async () => {
     const { loadChunk } = await import('../tools/load-chunk.mjs');
     fixture = await setupDbWithChunk('file:./load-chunk-evict.sqlite');
-    const chunkResult = await fixture.client.execute('SELECT chunk_id FROM chunks LIMIT 1');
+    const chunkResult = await fixture.client.execute(
+      'SELECT chunk_id FROM chunks LIMIT 1',
+    );
     const chunkId = Number(chunkResult.rows[0].chunk_id);
 
     // Insert 51 unique chunk+query pairs to trigger eviction (>50 entries)
@@ -315,7 +335,10 @@ describe('search-advanced branch coverage', () => {
 
   it('triggers broad fallback search when LIKE search returns no results', async () => {
     const { searchAdvanced } = await import('../tools/search-advanced.mjs');
-    fixture = await setupDbWithChunk('file:./search-broad-fallback.sqlite', 'NEAT activation function');
+    fixture = await setupDbWithChunk(
+      'file:./search-broad-fallback.sqlite',
+      'NEAT activation function',
+    );
     const result = await searchAdvanced({
       query: 'zzznomatchterm',
       auto_fallback: true,
@@ -328,7 +351,10 @@ describe('search-advanced branch coverage', () => {
 
   it('includes ranking_explanation in compact mode when explain_ranking is true', async () => {
     const { searchAdvanced } = await import('../tools/search-advanced.mjs');
-    fixture = await setupDbWithChunk('file:./search-ranking-explain.sqlite', 'NEAT activation function');
+    fixture = await setupDbWithChunk(
+      'file:./search-ranking-explain.sqlite',
+      'NEAT activation function',
+    );
     const result = await searchAdvanced({
       query: 'NEAT',
       explain_ranking: true,
@@ -396,7 +422,10 @@ describe('multi-hop-search queryEmbedding branches', () => {
 
   it('uses queryEmbeddingBuffer when provided', async () => {
     const { multiHopSearch } = await import('../tools/multi-hop-search.mjs');
-    fixture = await setupDbWithChunk('file:./multi-hop-emb-buffer.sqlite', 'test content');
+    fixture = await setupDbWithChunk(
+      'file:./multi-hop-emb-buffer.sqlite',
+      'test content',
+    );
     const embeddingBuffer = Buffer.alloc(384 * 4); // 384 floats = 1536 bytes
     const result = await multiHopSearch({
       query: 'test',
@@ -408,7 +437,10 @@ describe('multi-hop-search queryEmbedding branches', () => {
 
   it('uses queryEmbedding as Float32Array when provided', async () => {
     const { multiHopSearch } = await import('../tools/multi-hop-search.mjs');
-    fixture = await setupDbWithChunk('file:./multi-hop-f32.sqlite', 'test content');
+    fixture = await setupDbWithChunk(
+      'file:./multi-hop-f32.sqlite',
+      'test content',
+    );
     const float32 = new Float32Array(384);
     const result = await multiHopSearch({
       query: 'test',
@@ -420,7 +452,10 @@ describe('multi-hop-search queryEmbedding branches', () => {
 
   it('converts queryEmbedding regular array to Float32Array', async () => {
     const { multiHopSearch } = await import('../tools/multi-hop-search.mjs');
-    fixture = await setupDbWithChunk('file:./multi-hop-arr.sqlite', 'test content');
+    fixture = await setupDbWithChunk(
+      'file:./multi-hop-arr.sqlite',
+      'test content',
+    );
     const arr = new Array(384).fill(0);
     const result = await multiHopSearch({
       query: 'test',
@@ -450,7 +485,9 @@ async function createSchemaClientWithParentChild(dbPath) {
       VALUES (?, 0, 'parent chunk', 0, 13, 0)`,
     args: [docId],
   });
-  const parentResult = await client.execute('SELECT chunk_id FROM chunks WHERE depth = 0 LIMIT 1');
+  const parentResult = await client.execute(
+    'SELECT chunk_id FROM chunks WHERE depth = 0 LIMIT 1',
+  );
   const parentId = Number(parentResult.rows[0].chunk_id);
   // Child chunk (depth 1) with parent_chunk_id
   await client.execute({
@@ -495,11 +532,31 @@ async function setupFuzzyMatchDb(dbPath) {
   // Search with seed_names: ["neat"] — case-sensitive exact/prefix lookups fail,
   // fuzzy match lowercases and matches all 5.
   const entities = [
-    { id: 910001, type: 'function', name: 'Neat', qualifiedName: 'Neat' },          // priority 0: qualified.toLowerCase() === "neat"
-    { id: 910002, type: 'class', name: 'NeatHelper', qualifiedName: 'NeatHelper' }, // priority 1: qualified.startsWith("neat") but !==
-    { id: 910003, type: 'function', name: 'neat', qualifiedName: 'src/NeatModule' }, // priority 2: name === "neat" but qualified doesn't match
-    { id: 910004, type: 'variable', name: 'Utils', qualifiedName: 'src/NeatUtils' }, // priority 3: neither matches exactly/prefix
-    { id: 910005, type: 'variable', name: 'Extra', qualifiedName: 'src/NeatExtra' }, // priority 3: same as 910004 for tiebreak
+    { id: 910001, type: 'function', name: 'Neat', qualifiedName: 'Neat' }, // priority 0: qualified.toLowerCase() === "neat"
+    {
+      id: 910002,
+      type: 'class',
+      name: 'NeatHelper',
+      qualifiedName: 'NeatHelper',
+    }, // priority 1: qualified.startsWith("neat") but !==
+    {
+      id: 910003,
+      type: 'function',
+      name: 'neat',
+      qualifiedName: 'src/NeatModule',
+    }, // priority 2: name === "neat" but qualified doesn't match
+    {
+      id: 910004,
+      type: 'variable',
+      name: 'Utils',
+      qualifiedName: 'src/NeatUtils',
+    }, // priority 3: neither matches exactly/prefix
+    {
+      id: 910005,
+      type: 'variable',
+      name: 'Extra',
+      qualifiedName: 'src/NeatExtra',
+    }, // priority 3: same as 910004 for tiebreak
   ];
   for (const e of entities) {
     await client.execute({

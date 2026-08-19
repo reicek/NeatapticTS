@@ -126,9 +126,7 @@ describe('expand-query handler', () => {
       query_class: 'simple_lookup',
     });
 
-    expect(mockExpansionBehaviorForClass).toHaveBeenCalledWith(
-      'simple_lookup',
-    );
+    expect(mockExpansionBehaviorForClass).toHaveBeenCalledWith('simple_lookup');
     expect(mockExpandQuery).toHaveBeenCalledWith({
       query: 'test',
       expandQuery: false,

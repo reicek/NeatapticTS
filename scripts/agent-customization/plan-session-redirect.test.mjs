@@ -55,12 +55,18 @@ function captureConsole() {
   console.log = (...args) => logs.push(args.join(' '));
   console.error = (...args) => errors.push(args.join(' '));
   return {
-    logs, errors,
-    restore() { console.log = origLog; console.error = origError; },
+    logs,
+    errors,
+    restore() {
+      console.log = origLog;
+      console.error = origError;
+    },
   };
 }
 
-const scriptPath = path.resolve('C:\\NeatapticTS\\scripts\\agent-customization\\plan-session-redirect.mjs');
+const scriptPath = path.resolve(
+  'C:\\NeatapticTS\\scripts\\agent-customization\\plan-session-redirect.mjs',
+);
 
 async function importModuleWithGuard() {
   const origArgv = process.argv;
@@ -93,7 +99,9 @@ describe('plan-session-redirect', () => {
     mockFs.existsSync.mockReturnValue(true);
     mockFsPromises.mkdir.mockResolvedValue();
     mockFsPromises.writeFile.mockResolvedValue();
-    mockFsPromises.readFile.mockResolvedValue(JSON.stringify({ plan_path: 'plans/test.md' }));
+    mockFsPromises.readFile.mockResolvedValue(
+      JSON.stringify({ plan_path: 'plans/test.md' }),
+    );
     const cap = captureConsole();
 
     await importModuleWithGuard();
@@ -178,7 +186,9 @@ describe('plan-session-redirect', () => {
     mockFs.existsSync.mockReturnValue(true);
     mockFsPromises.mkdir.mockResolvedValue();
     mockFsPromises.writeFile.mockResolvedValue();
-    mockFsPromises.readFile.mockResolvedValue(JSON.stringify({ plan_path: 'plans/test.md' }));
+    mockFsPromises.readFile.mockResolvedValue(
+      JSON.stringify({ plan_path: 'plans/test.md' }),
+    );
     const cap = captureConsole();
 
     await importModuleWithGuard();
@@ -205,7 +215,9 @@ describe('plan-session-redirect', () => {
     mockFs.existsSync.mockReturnValue(true);
     mockFsPromises.mkdir.mockResolvedValue();
     mockFsPromises.writeFile.mockResolvedValue();
-    mockFsPromises.readFile.mockResolvedValue(JSON.stringify({ plan_path: 'plans/abs-test.md' }));
+    mockFsPromises.readFile.mockResolvedValue(
+      JSON.stringify({ plan_path: 'plans/abs-test.md' }),
+    );
     const cap = captureConsole();
 
     await importModuleWithGuard();
@@ -221,7 +233,9 @@ describe('plan-session-redirect', () => {
     mockFs.existsSync.mockReturnValue(true);
     mockFsPromises.mkdir.mockResolvedValue();
     mockFsPromises.writeFile.mockResolvedValue();
-    mockFsPromises.readFile.mockResolvedValue(JSON.stringify({ plan_path: 'plans/different.md' }));
+    mockFsPromises.readFile.mockResolvedValue(
+      JSON.stringify({ plan_path: 'plans/different.md' }),
+    );
     const cap = captureConsole();
 
     await importModuleWithGuard();

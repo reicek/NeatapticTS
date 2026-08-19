@@ -101,10 +101,46 @@ describe('Neatenstein harness select', () => {
         { id: 3, fitness: 5 },
       ];
       const fitnessRecords = new Map([
-        [0, { damageDealt: 10, survivalTicks: 100, kills: 0, deaths: 1, damageTaken: 5 }],
-        [1, { damageDealt: 30, survivalTicks: 200, kills: 1, deaths: 1, damageTaken: 10 }],
-        [2, { damageDealt: 20, survivalTicks: 150, kills: 0, deaths: 1, damageTaken: 3 }],
-        [3, { damageDealt: 5, survivalTicks: 50, kills: 0, deaths: 1, damageTaken: 1 }],
+        [
+          0,
+          {
+            damageDealt: 10,
+            survivalTicks: 100,
+            kills: 0,
+            deaths: 1,
+            damageTaken: 5,
+          },
+        ],
+        [
+          1,
+          {
+            damageDealt: 30,
+            survivalTicks: 200,
+            kills: 1,
+            deaths: 1,
+            damageTaken: 10,
+          },
+        ],
+        [
+          2,
+          {
+            damageDealt: 20,
+            survivalTicks: 150,
+            kills: 0,
+            deaths: 1,
+            damageTaken: 3,
+          },
+        ],
+        [
+          3,
+          {
+            damageDealt: 5,
+            survivalTicks: 50,
+            kills: 0,
+            deaths: 1,
+            damageTaken: 1,
+          },
+        ],
       ]);
       const result = selectParentProportional(population, fitnessRecords, 42);
       expect(typeof result).toBe('number');
@@ -131,10 +167,46 @@ describe('Neatenstein harness select', () => {
           damageTaken: number;
         }
       >([
-        [0, { damageDealt: 0, survivalTicks: 0, kills: 0, deaths: 1, damageTaken: 0 }],
-        [1, { damageDealt: 0, survivalTicks: 0, kills: 0, deaths: 1, damageTaken: 0 }],
-        [2, { damageDealt: 0, survivalTicks: 0, kills: 0, deaths: 1, damageTaken: 0 }],
-        [3, { damageDealt: 0, survivalTicks: 0, kills: 0, deaths: 1, damageTaken: 0 }],
+        [
+          0,
+          {
+            damageDealt: 0,
+            survivalTicks: 0,
+            kills: 0,
+            deaths: 1,
+            damageTaken: 0,
+          },
+        ],
+        [
+          1,
+          {
+            damageDealt: 0,
+            survivalTicks: 0,
+            kills: 0,
+            deaths: 1,
+            damageTaken: 0,
+          },
+        ],
+        [
+          2,
+          {
+            damageDealt: 0,
+            survivalTicks: 0,
+            kills: 0,
+            deaths: 1,
+            damageTaken: 0,
+          },
+        ],
+        [
+          3,
+          {
+            damageDealt: 0,
+            survivalTicks: 0,
+            kills: 0,
+            deaths: 1,
+            damageTaken: 0,
+          },
+        ],
       ]);
       const result = selectParentProportional(population, fitnessRecords, 42);
       expect(typeof result).toBe('number');
@@ -152,10 +224,46 @@ describe('Neatenstein harness select', () => {
         { id: 3, fitness: 5 },
       ];
       const fitnessRecords = new Map([
-        [0, { damageDealt: 10, survivalTicks: 100, kills: 0, deaths: 1, damageTaken: 5 }],
-        [1, { damageDealt: 30, survivalTicks: 200, kills: 1, deaths: 1, damageTaken: 10 }],
-        [2, { damageDealt: 20, survivalTicks: 150, kills: 0, deaths: 1, damageTaken: 3 }],
-        [3, { damageDealt: 5, survivalTicks: 50, kills: 0, deaths: 1, damageTaken: 1 }],
+        [
+          0,
+          {
+            damageDealt: 10,
+            survivalTicks: 100,
+            kills: 0,
+            deaths: 1,
+            damageTaken: 5,
+          },
+        ],
+        [
+          1,
+          {
+            damageDealt: 30,
+            survivalTicks: 200,
+            kills: 1,
+            deaths: 1,
+            damageTaken: 10,
+          },
+        ],
+        [
+          2,
+          {
+            damageDealt: 20,
+            survivalTicks: 150,
+            kills: 0,
+            deaths: 1,
+            damageTaken: 3,
+          },
+        ],
+        [
+          3,
+          {
+            damageDealt: 5,
+            survivalTicks: 50,
+            kills: 0,
+            deaths: 1,
+            damageTaken: 1,
+          },
+        ],
       ]);
       const first = selectParentProportional(population, fitnessRecords, 42);
       const second = selectParentProportional(population, fitnessRecords, 42);
@@ -175,8 +283,26 @@ describe('Neatenstein harness select', () => {
         { id: 1, fitness: 0 },
       ];
       const lowDamageRecords = new Map([
-        [0, { damageDealt: 100, survivalTicks: 0, kills: 0, deaths: 1, damageTaken: 0 }],
-        [1, { damageDealt: 100, survivalTicks: 0, kills: 0, deaths: 1, damageTaken: 0 }],
+        [
+          0,
+          {
+            damageDealt: 100,
+            survivalTicks: 0,
+            kills: 0,
+            deaths: 1,
+            damageTaken: 0,
+          },
+        ],
+        [
+          1,
+          {
+            damageDealt: 100,
+            survivalTicks: 0,
+            kills: 0,
+            deaths: 1,
+            damageTaken: 0,
+          },
+        ],
       ]);
       // Both have the same fitness (100 * 1.0 - 0 * 0.5 = 100), so selection
       // is proportional and both indices are valid.
@@ -192,8 +318,26 @@ describe('Neatenstein harness select', () => {
       // to 0. Variant 0 keeps positive fitness. With only one positive
       // variant, roulette selection should always pick index 0.
       const penalizedRecords = new Map([
-        [0, { damageDealt: 100, survivalTicks: 0, kills: 0, deaths: 1, damageTaken: 0 }],
-        [1, { damageDealt: 100, survivalTicks: 0, kills: 0, deaths: 1, damageTaken: 1000 }],
+        [
+          0,
+          {
+            damageDealt: 100,
+            survivalTicks: 0,
+            kills: 0,
+            deaths: 1,
+            damageTaken: 0,
+          },
+        ],
+        [
+          1,
+          {
+            damageDealt: 100,
+            survivalTicks: 0,
+            kills: 0,
+            deaths: 1,
+            damageTaken: 1000,
+          },
+        ],
       ]);
       for (let seed = 0; seed < 10; seed++) {
         const pick = selectParentProportional(

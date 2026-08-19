@@ -89,7 +89,8 @@ describe('plan-readiness gate', () => {
   });
 
   it('fails when section is not found', async () => {
-    mockReadWorkspaceFileResult = '# Plan\n\nJust some content without the section.\n';
+    mockReadWorkspaceFileResult =
+      '# Plan\n\nJust some content without the section.\n';
     mockOptions = { json: true, help: false, plan: 'plans/test.plans.md' };
     const { logs } = await importGate(['--json']);
     const parsed = JSON.parse(logs[0]);

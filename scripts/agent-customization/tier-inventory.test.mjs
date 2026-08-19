@@ -138,7 +138,9 @@ describe('tier-inventory', () => {
 
     it('calls printUsage when --help is passed', async () => {
       const origExit = process.exit;
-      process.exit = (code) => { throw new Error(`EXIT:${code}`); };
+      process.exit = (code) => {
+        throw new Error(`EXIT:${code}`);
+      };
       try {
         await import('./tier-inventory.mjs');
       } catch {
