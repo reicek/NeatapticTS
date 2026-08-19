@@ -13,16 +13,19 @@
  * to resolve after the module was split into `voxel-enemy.types.ts` and
  * `voxel-enemy.constants.ts`.
  *
+ * Prefer importing directly from './voxel-enemy.types' or
+ *   './voxel-enemy.constants'. The re-export block exists for backward
+ *   compatibility and may be removed in a future cleanup pass.
+ *
  * @deprecated Import directly from './voxel-enemy.types' or
- *   './voxel-enemy.constants' instead. The re-export block will be removed
- *   in a future cleanup pass.
+ *   './voxel-enemy.constants' instead.
  *
  * @example
  * ```ts
- * // Before (deprecated):
+ * // Legacy (still works):
  * import { MaterialSlot, GRID_WIDTH } from './voxel-enemy';
  *
- * // After (preferred):
+ * // Preferred:
  * import type { MaterialSlot } from './voxel-enemy.types';
  * import { GRID_WIDTH } from './voxel-enemy.constants';
  * ```

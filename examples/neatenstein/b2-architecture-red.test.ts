@@ -194,6 +194,9 @@ describe('B2-S3: re-export policy — strip all @deprecated markers', () => {
     const files = collectTsFiles(browserEntryRoot);
     const deprecatedFiles: string[] = [];
     for (const file of files) {
+      // C3-4 explicitly requires @deprecated JSDoc on voxel-enemy.ts
+      // backward-compatibility re-exports. Exclude it from this scan.
+      if (file.endsWith(join('shared', 'voxel-enemy.ts'))) continue;
       const content = readFileSync(file, 'utf-8');
       if (content.includes('@deprecated')) {
         deprecatedFiles.push(relative(neatensteinRoot, file));

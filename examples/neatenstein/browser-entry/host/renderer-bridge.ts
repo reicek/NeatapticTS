@@ -333,7 +333,10 @@ export function createNeatensteinRendererBridge(
       // path when commit() is unavailable on the worker canvas). The canvas
       // was transferred to the worker, so getContext('2d') returns null on
       // the host — use a no-op drawImage context and close the bitmap.
-      if (data.bitmap instanceof ImageBitmap) {
+      if (
+        typeof ImageBitmap !== 'undefined' &&
+        data.bitmap instanceof ImageBitmap
+      ) {
         consumeNeatensteinFrameBitmap(
           data.bitmap,
           { drawImage: () => {} },
