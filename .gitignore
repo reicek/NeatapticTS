@@ -99,5 +99,13 @@ missing-semantic-index.sqlite
 test-feedback-debug.mjs
 verify-results.mjs
 
+# Test-generated SQLite files and temp directories
+nonexistent-db.sqlite
+nonexistent-dir-*/
+rag-index/__test_tmp_session/
+buildpass.sqlite
+touchbuild.sqlite
+corrupt*.sqlite
+
 coverage/
 coverage*/
