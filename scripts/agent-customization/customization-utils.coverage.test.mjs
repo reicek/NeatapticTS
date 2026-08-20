@@ -26,7 +26,10 @@ const REPO_ROOT = path.resolve(__dirname, '../../');
 
 describe('listMarkdownFiles readdir failure', () => {
   it('returns an empty array when the root directory does not exist', async () => {
-    const files = await listMarkdownFiles('__nonexistent_dir_coverage__', () => true);
+    const files = await listMarkdownFiles(
+      '__nonexistent_dir_coverage__',
+      () => true,
+    );
     expect(files).toEqual([]);
   });
 });
@@ -82,7 +85,10 @@ describe('parsePlanYamlBlock list edge cases', () => {
 
 describe('extractDownstreamTrackers coverage', () => {
   it('finds a body link with plans/ prefix that exists on disk', async () => {
-    const tempFile = path.join(REPO_ROOT, 'plans/__coverage_downstream.plans.md');
+    const tempFile = path.join(
+      REPO_ROOT,
+      'plans/__coverage_downstream.plans.md',
+    );
     await writeFile(tempFile, '# temp', 'utf8');
     try {
       const body = 'See plans/__coverage_downstream.plans.md for details';
@@ -157,9 +163,7 @@ describe('normalizeTestContracts branch coverage', () => {
   });
 
   it('extracts AC-n from text when id is missing', () => {
-    const result = normalizeTestContracts([
-      { text: 'AC-5: Do something' },
-    ]);
+    const result = normalizeTestContracts([{ text: 'AC-5: Do something' }]);
     expect(result).toEqual([
       { id: 'AC-5', text: 'AC-5: Do something', validation: undefined },
     ]);

@@ -373,7 +373,10 @@ async function hop3ScopedVectorSearch(
 function computeCombinedScore(row, graphProximity) {
   /* istanbul ignore if -- defensive: hop1/hop3 strip combined_score from rows */
   if (row.combined_score != null) return Number(row.combined_score);
-  const vectorDistance = Number(/* istanbul ignore next -- defensive: distance always present in vector search results */ row.distance ?? 1);
+  const vectorDistance = Number(
+    /* istanbul ignore next -- defensive: distance always present in vector search results */ row.distance ??
+      1,
+  );
   const vectorSimilarity = 1 - vectorDistance;
   return vectorSimilarity * graphProximity;
 }

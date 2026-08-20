@@ -224,9 +224,13 @@ async function runExpansion(query, expandRequested) {
     const expansion = await expandQuery({ query, expandQuery: true });
     return {
       applied: expansion.expansion.applied,
-      degraded: /* istanbul ignore next -- defensive: expansion always includes degraded flag */ expansion.expansion.degraded ?? false,
+      degraded:
+        /* istanbul ignore next -- defensive: expansion always includes degraded flag */ expansion
+          .expansion.degraded ?? false,
       reason: expansion.expansion.reason,
-      expanded_terms: /* istanbul ignore next -- defensive: expandQuery always returns expandedTerms */ expansion.expandedTerms ?? [],
+      expanded_terms:
+        /* istanbul ignore next -- defensive: expandQuery always returns expandedTerms */ expansion.expandedTerms ??
+        [],
       bm25_query: expansion.bm25Query ?? null,
     };
   } catch (error) {
@@ -291,12 +295,15 @@ async function runContextAssembly(results, queryClass, budget) {
   return {
     context: assembled.context,
     token_count: assembled.tokenCount,
-    tier_counts: /* istanbul ignore next -- defensive: assembleContext always returns tierCounts */ assembled.tierCounts ?? {
-      essential: 0,
-      supporting: 0,
-      supplementary: 0,
-    },
-    selected_chunks: /* istanbul ignore next -- defensive: assembleContext always returns selectedChunks */ assembled.selectedChunks ?? [],
+    tier_counts:
+      /* istanbul ignore next -- defensive: assembleContext always returns tierCounts */ assembled.tierCounts ?? {
+        essential: 0,
+        supporting: 0,
+        supplementary: 0,
+      },
+    selected_chunks:
+      /* istanbul ignore next -- defensive: assembleContext always returns selectedChunks */ assembled.selectedChunks ??
+      [],
   };
 }
 
@@ -308,7 +315,11 @@ async function runContextAssembly(results, queryClass, budget) {
  * @param {object} partial
  * @returns {{ content: Array<{ type: string, text: string }>, structuredContent: object, isError: true }}
  */
-function buildErrorResult(code, message, /* istanbul ignore next -- defensive: all callers provide partial */ partial = {}) {
+function buildErrorResult(
+  code,
+  message,
+  /* istanbul ignore next -- defensive: all callers provide partial */ partial = {},
+) {
   const structuredContent = {
     error: `${code}: ${message}`,
     ...partial,
@@ -493,7 +504,10 @@ function compactAdvancedResult(result) {
  */
 function estimateResponseTokens(results, topResult) {
   const charCount = results.reduce(
-    (sum, result) => sum + (/* istanbul ignore next -- defensive: text always present */ result.text?.length ?? 0),
+    (sum, result) =>
+      sum +
+      /* istanbul ignore next -- defensive: text always present */ (result.text
+        ?.length ?? 0),
     0,
   );
   const topResultCharCount = topResult?.text?.length ?? 0;
@@ -517,7 +531,10 @@ function buildTopResult(result) {
     chunk_id: result.chunk_id,
     file_path: result.file_path,
     family: result.family,
-    text: /* istanbul ignore next -- defensive: body_text always present */ result.body_text ?? result.text ?? '',
+    text:
+      /* istanbul ignore next -- defensive: body_text always present */ result.body_text ??
+      result.text ??
+      '',
   };
 }
 
@@ -795,7 +812,9 @@ export async function searchAdvanced(options = {}) {
         use_rerank: config.use_rerank,
         use_dense: config.use_dense,
         limit: config.limit,
-        results: /* istanbul ignore next -- defensive: runRetrieval always returns results */ searchResult.results ?? [],
+        results:
+          /* istanbul ignore next -- defensive: runRetrieval always returns results */ searchResult.results ??
+          [],
         dense_state: searchResult.dense_state,
         rerank_state: searchResult.rerank_state,
         expansion,

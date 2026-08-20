@@ -12,7 +12,10 @@ jest.unstable_mockModule('./customization-utils.mjs', () => ({
     name,
     ok: issues.length === 0,
     issues,
-    counts: { errors: issues.filter((i) => i.severity === 'error').length, warnings: 0 },
+    counts: {
+      errors: issues.filter((i) => i.severity === 'error').length,
+      warnings: 0,
+    },
     summaryText: `${issues.length === 0 ? 'PASS' : 'FAIL'} ${name}`,
   })),
   writeReport: jest.fn(),
@@ -39,7 +42,9 @@ describe('validate-sdlc-skill-coverage', () => {
     const origArgv = process.argv;
     const origExit = process.exit;
     process.argv = ['node', 'validate-sdlc-skill-coverage.mjs', '--help'];
-    process.exit = (code) => { throw new Error(`EXIT:${code}`); };
+    process.exit = (code) => {
+      throw new Error(`EXIT:${code}`);
+    };
     mockUtils.parseArgs.mockReturnValue({ help: true, json: false });
 
     await importModule();
@@ -55,21 +60,38 @@ describe('validate-sdlc-skill-coverage', () => {
     process.argv = ['node', 'validate-sdlc-skill-coverage.mjs', '--json'];
     mockUtils.parseArgs.mockReturnValue({ help: false, json: true });
     const allSkillNames = [
-      'planning-acceptance-criteria', 'creating-unit-tests', 'red-test-contracts',
-      'running-unit-tests', 'green-validation-gates', 'triaging-test-failures',
-      'test-fix-workflow', 'auditing-js-docs', 'docs-academic-citation-audit',
-      'updating-js-docs', 'educational-docs', 'agent-frontmatter-standards',
-      'updating-agent-frontmatter', 'skill-frontmatter-standards',
-      'updating-skill-frontmatter', 'creating-specialist-agent',
-      'splitting-monolithic-agent', 'capturing-learning-event',
-      'summarizing-session-log', 'agent-inventory-audit', 'agent-script-tooling',
-      'skill-description-evals', 'skill-output-evals', 'subagent-delegation-patterns',
+      'planning-acceptance-criteria',
+      'creating-unit-tests',
+      'red-test-contracts',
+      'running-unit-tests',
+      'green-validation-gates',
+      'triaging-test-failures',
+      'test-fix-workflow',
+      'auditing-js-docs',
+      'docs-academic-citation-audit',
+      'updating-js-docs',
+      'educational-docs',
+      'agent-frontmatter-standards',
+      'updating-agent-frontmatter',
+      'skill-frontmatter-standards',
+      'updating-skill-frontmatter',
+      'creating-specialist-agent',
+      'splitting-monolithic-agent',
+      'capturing-learning-event',
+      'summarizing-session-log',
+      'agent-inventory-audit',
+      'agent-script-tooling',
+      'skill-description-evals',
+      'skill-output-evals',
+      'subagent-delegation-patterns',
       'model-routing-and-budget',
     ];
     mockUtils.listMarkdownFiles.mockResolvedValue(
       allSkillNames.map((n) => `.github/skills/${n}/SKILL.md`),
     );
-    mockUtils.readWorkspaceFile.mockResolvedValue('---\nname: test\nargument-hint: hint\n---\nbody');
+    mockUtils.readWorkspaceFile.mockResolvedValue(
+      '---\nname: test\nargument-hint: hint\n---\nbody',
+    );
     mockUtils.parseFrontmatter.mockImplementation((text, path) => ({
       data: {
         name: path.split('/').at(-2),
@@ -94,12 +116,18 @@ describe('validate-sdlc-skill-coverage', () => {
     mockUtils.parseArgs.mockReturnValue({ help: false, json: true });
     mockUtils.listMarkdownFiles.mockResolvedValue([]);
     mockUtils.readWorkspaceFile.mockResolvedValue('');
-    mockUtils.parseFrontmatter.mockReturnValue({ data: {}, body: '', issues: [] });
+    mockUtils.parseFrontmatter.mockReturnValue({
+      data: {},
+      body: '',
+      issues: [],
+    });
 
     await importModule();
 
     process.argv = origArgv;
-    const errorCalls = mockUtils.issue.mock.calls.filter((c) => c[0] === 'error');
+    const errorCalls = mockUtils.issue.mock.calls.filter(
+      (c) => c[0] === 'error',
+    );
     assert.ok(errorCalls.length >= 1);
   });
 
@@ -107,7 +135,9 @@ describe('validate-sdlc-skill-coverage', () => {
     const origArgv = process.argv;
     process.argv = ['node', 'validate-sdlc-skill-coverage.mjs', '--json'];
     mockUtils.parseArgs.mockReturnValue({ help: false, json: true });
-    mockUtils.listMarkdownFiles.mockResolvedValue(['.github/skills/test-skill/SKILL.md']);
+    mockUtils.listMarkdownFiles.mockResolvedValue([
+      '.github/skills/test-skill/SKILL.md',
+    ]);
     mockUtils.readWorkspaceFile.mockResolvedValue('');
     mockUtils.parseFrontmatter.mockReturnValue({
       data: { name: 'test-skill', 'argument-hint': null },
@@ -130,7 +160,11 @@ describe('validate-sdlc-skill-coverage', () => {
     mockUtils.parseArgs.mockReturnValue({ help: false, json: true });
     mockUtils.listMarkdownFiles.mockResolvedValue([]);
     mockUtils.readWorkspaceFile.mockResolvedValue('');
-    mockUtils.parseFrontmatter.mockReturnValue({ data: {}, body: '', issues: [] });
+    mockUtils.parseFrontmatter.mockReturnValue({
+      data: {},
+      body: '',
+      issues: [],
+    });
 
     await importModule();
 
@@ -150,7 +184,11 @@ describe('validate-sdlc-skill-coverage', () => {
     mockUtils.parseArgs.mockReturnValue({ help: false, json: true });
     mockUtils.listMarkdownFiles.mockResolvedValue([]);
     mockUtils.readWorkspaceFile.mockResolvedValue('');
-    mockUtils.parseFrontmatter.mockReturnValue({ data: {}, body: '', issues: [] });
+    mockUtils.parseFrontmatter.mockReturnValue({
+      data: {},
+      body: '',
+      issues: [],
+    });
 
     await importModule();
 
@@ -170,7 +208,11 @@ describe('validate-sdlc-skill-coverage', () => {
       return [];
     });
     mockUtils.readWorkspaceFile.mockResolvedValue('');
-    mockUtils.parseFrontmatter.mockReturnValue({ data: {}, body: '', issues: [] });
+    mockUtils.parseFrontmatter.mockReturnValue({
+      data: {},
+      body: '',
+      issues: [],
+    });
 
     await importModule();
 
@@ -182,9 +224,15 @@ describe('validate-sdlc-skill-coverage', () => {
     const origArgv = process.argv;
     process.argv = ['node', 'validate-sdlc-skill-coverage.mjs', '--json'];
     mockUtils.parseArgs.mockReturnValue({ help: false, json: true });
-    mockUtils.listMarkdownFiles.mockResolvedValue(['.github/skills/test-skill/SKILL.md']);
+    mockUtils.listMarkdownFiles.mockResolvedValue([
+      '.github/skills/test-skill/SKILL.md',
+    ]);
     mockUtils.readWorkspaceFile.mockResolvedValue('---\n---\nbody');
-    mockUtils.parseFrontmatter.mockReturnValue({ data: {}, body: '', issues: [] });
+    mockUtils.parseFrontmatter.mockReturnValue({
+      data: {},
+      body: '',
+      issues: [],
+    });
 
     await importModule();
 

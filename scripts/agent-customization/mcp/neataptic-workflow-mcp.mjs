@@ -360,7 +360,9 @@ export async function runWorkflowSelfCheck({ server, planPath }) {
   }
 
   /* istanbul ignore next: structuredContent is always present from well-formed MCP responses */
-  const workflowSnapshot = ensureObject(workflowSnapshotResult.structuredContent);
+  const workflowSnapshot = ensureObject(
+    workflowSnapshotResult.structuredContent,
+  );
   const expectedPhase = activePlanContext.activePhase;
   const expectedStep = activePlanContext.activeStep;
 
@@ -585,7 +587,10 @@ function buildCompactSliceResponse(descriptor, sliceId, planPath, ragContext) {
     step_number: descriptor.stepNumber,
     step_title: String(withDefault(stepMeta.title, '')),
     step_status: withDefault(notes.step_status, null),
-    title: withDefault(notes.title, withDefault(descriptor.sliceTitle, sliceId)),
+    title: withDefault(
+      notes.title,
+      withDefault(descriptor.sliceTitle, sliceId),
+    ),
     status: withDefault(notes.status, 'unknown'),
     goal: withDefault(notes.goal, null),
     estimate_hours: withDefault(notes.estimate_hours, null),
@@ -932,7 +937,9 @@ async function fetchSliceContext(
   }
 
   // Sort by effective score and keep the strongest chunks up to the limit.
-  mergedResults.sort((a, b) => withDefault(b._score, 0) - withDefault(a._score, 0));
+  mergedResults.sort(
+    (a, b) => withDefault(b._score, 0) - withDefault(a._score, 0),
+  );
 
   /**
    * Normalize a raw search result into a context chunk, back-filling body text
@@ -1085,7 +1092,7 @@ async function fetchSliceContext(
   // Add refs for partial-file chunks so the agent can retrieve the rest.
   const partialFiles = chunks.filter((c) => c.partial_file === true);
   for (const chunk of partialFiles.slice(0, 3)) {
-    const basename = (withDefault(chunk.file_path, 'unknown')).split('/').pop();
+    const basename = withDefault(chunk.file_path, 'unknown').split('/').pop();
     followUpRefs.push({
       tool: 'search_context',
       args: { query: basename, limit: 3 },
@@ -1134,12 +1141,17 @@ async function fetchSliceContext(
           .map((chunk) => {
             /* istanbul ignore next: chunk.text is always a non-empty string (filtered above) */
             const fullText = chunk.text || '';
-            const basename = (withDefault(chunk.file_path, 'unknown')).split('/').pop();
+            const basename = withDefault(chunk.file_path, 'unknown')
+              .split('/')
+              .pop();
             const partialNote =
               chunk.partial_file === true
                 ? ` [PARTIAL: chars 0-${chunk.char_end} of ${chunk.file_chars}]`
                 : '';
-            return `${basename} — ${withDefault(fullText.split(/\r?\n/).find((l) => l.trim().length > 0), '')}${partialNote}`;
+            return `${basename} — ${withDefault(
+              fullText.split(/\r?\n/).find((l) => l.trim().length > 0),
+              '',
+            )}${partialNote}`;
           })
           .join('\n');
 
@@ -1343,7 +1355,12 @@ function deduplicateLocationChunks(chunks) {
   for (const [, list] of grouped) {
     const scored = list.map((chunk) => {
       /* istanbul ignore next: char_start fallback chain for varying chunk formats */
-      const start = Number(withDefault(chunk.char_start, withDefault(chunk.metadata?.char_start, 0)));
+      const start = Number(
+        withDefault(
+          chunk.char_start,
+          withDefault(chunk.metadata?.char_start, 0),
+        ),
+      );
       /* istanbul ignore next: char_end fallback chain for varying chunk formats */
       const rawEnd = withDefault(chunk.char_end, chunk.metadata?.char_end);
       const end =
@@ -1351,7 +1368,9 @@ function deduplicateLocationChunks(chunks) {
           ? rawEnd
           : Number.MAX_SAFE_INTEGER;
       /* istanbul ignore next: score fallback chain for varying chunk formats */
-      const score = Number(withDefault(chunk.score, withDefault(chunk._score, 0)));
+      const score = Number(
+        withDefault(chunk.score, withDefault(chunk._score, 0)),
+      );
       return { chunk, start, end, score };
     });
     // Broadest ranges first for a given start offset, then by score.
@@ -1407,7 +1426,9 @@ function boostTestFileChunks(
       return chunk;
     }
     /* istanbul ignore next: score fallback chain for varying chunk formats */
-    const baseScore = Number(withDefault(chunk.score, withDefault(chunk._score, 0)));
+    const baseScore = Number(
+      withDefault(chunk.score, withDefault(chunk._score, 0)),
+    );
     return { ...chunk, score: baseScore + bonus, _score: baseScore + bonus };
   });
 }
@@ -1651,7 +1672,8 @@ async function findSliceDescriptorAcrossSteps(
     const slices = ensureArray(metadata.slices);
     const slice = slices.find(
       /* istanbul ignore next: slice_id is always present in well-formed plan YAML */
-      (candidateSlice) => String(withDefault(candidateSlice.slice_id, '')) === sliceId,
+      (candidateSlice) =>
+        String(withDefault(candidateSlice.slice_id, '')) === sliceId,
     );
 
     if (slice) {
@@ -1685,7 +1707,10 @@ async function findSliceDescriptor(activePlanContext, planPath, sliceId) {
   const planText = await readFile(absolutePlanPath, 'utf8');
 
   /* istanbul ignore next: activeStep may be null when phase has expansion:steps */
-  const activeStepNumber = withDefault(activePlanContext.activeStep?.number, null);
+  const activeStepNumber = withDefault(
+    activePlanContext.activeStep?.number,
+    null,
+  );
   /* istanbul ignore next: activeStep may be null when phase has expansion:steps */
   const activeStepTitle = withDefault(activePlanContext.activeStep?.title, '');
   const stepLabel = deriveStepLabel(sliceId);
@@ -1729,7 +1754,8 @@ async function findSliceDescriptor(activePlanContext, planPath, sliceId) {
   const slices = ensureArray(metadata.slices);
   const slice = slices.find(
     /* istanbul ignore next: slice_id is always present in well-formed plan YAML */
-    (candidateSlice) => String(withDefault(candidateSlice.slice_id, '')) === sliceId,
+    (candidateSlice) =>
+      String(withDefault(candidateSlice.slice_id, '')) === sliceId,
   );
 
   if (slice) {

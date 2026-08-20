@@ -62,7 +62,9 @@ describe('validate-plan-phase-packets entry-point coverage', () => {
     const stdoutChunks = [];
     process.argv = [process.execPath, SCRIPT_PATH, '--json'];
     process.stdout.write = (chunk) => {
-      stdoutChunks.push(typeof chunk === 'string' ? chunk : chunk.toString('utf8'));
+      stdoutChunks.push(
+        typeof chunk === 'string' ? chunk : chunk.toString('utf8'),
+      );
       return true;
     };
     console.error = () => {};
@@ -118,9 +120,16 @@ describe('validate-plan-phase-packets entry-point coverage', () => {
     await fs.writeFile(invalidPlanAbs, invalidPlan, 'utf8');
 
     const stdoutChunks = [];
-    process.argv = [process.execPath, SCRIPT_PATH, '--json', `--plan=${invalidPlanRel}`];
+    process.argv = [
+      process.execPath,
+      SCRIPT_PATH,
+      '--json',
+      `--plan=${invalidPlanRel}`,
+    ];
     process.stdout.write = (chunk) => {
-      stdoutChunks.push(typeof chunk === 'string' ? chunk : chunk.toString('utf8'));
+      stdoutChunks.push(
+        typeof chunk === 'string' ? chunk : chunk.toString('utf8'),
+      );
       return true;
     };
     process.exitCode = undefined;

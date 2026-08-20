@@ -47,6 +47,33 @@ export interface Individual<TVariant> {
 export type FitnessScore = number;
 
 /**
+ * Per-variant fitness ledger accumulated across an enemy's lifetime.
+ *
+ * Each enemy variant accumulates raw telemetry across its lifetime. The
+ * selection step turns this into a scalar fitness via the fitness formula
+ * defined in plan Step A4 item 10:
+ * `fitness = α * damageDealt + β * survivalTicks + γ * kills - δ * damageTaken`.
+ *
+ * @property damageDealt - Total damage dealt to the player during this variant's lifetime.
+ * @property survivalTicks - Total ticks the variant survived before death.
+ * @property kills - Confirmed kills against the player.
+ * @property deaths - Number of times this variant died.
+ * @property damageTaken - Total damage taken from the player during this variant's lifetime.
+ */
+export interface FitnessRecord {
+  /** Total damage dealt to the player during this variant's lifetime. */
+  damageDealt: number;
+  /** Total ticks the variant survived before death. */
+  survivalTicks: number;
+  /** Confirmed kills against the player. */
+  kills: number;
+  /** Number of times this variant died. */
+  deaths: number;
+  /** Total damage taken from the player during this variant's lifetime. */
+  damageTaken: number;
+}
+
+/**
  * Quality signal emitted by one main-agent episode.
  *
  * These raw telemetry fields are combined by the fitness composite into a
@@ -259,7 +286,11 @@ export interface EnemyBehaviorMetrics {
 // ---------------------------------------------------------------------------
 
 /**
- * Options accepted by {@link createMlpEnemyPopulation}.
+ * Options accepted by {@link createMlpEnemyPopulation} to configure the
+ * deterministic enemy population.
+ *
+ * All fields are optional; a zero-argument call produces a reproducible
+ * population seeded at `0`.
  */
 export interface CreateMlpEnemyPopulationOptions {
   /** Deterministic seed used to generate the initial variant weights. */
@@ -268,6 +299,9 @@ export interface CreateMlpEnemyPopulationOptions {
 
 /**
  * MLP enemy population returned by {@link createMlpEnemyPopulation}.
+ *
+ * Exposes the shared {@link EnemyPopulation} contract plus a generation-gated
+ * `update` method that refreshes the champion snapshot on a fixed interval.
  */
 export interface MlpEnemyPopulation extends EnemyPopulation {
   /**
@@ -281,7 +315,8 @@ export interface MlpEnemyPopulation extends EnemyPopulation {
 }
 
 /**
- * Options accepted by {@link createSwarmEnemyPopulation}.
+ * Options accepted by {@link createSwarmEnemyPopulation} to configure the
+ * shared DNA, cohort size, and deterministic seed for the swarm backend.
  */
 export interface CreateSwarmEnemyPopulationOptions {
   /** Deterministic seed used to generate the shared DNA and per-enemy coordinates. */
@@ -292,6 +327,9 @@ export interface CreateSwarmEnemyPopulationOptions {
 
 /**
  * One member of the weight-shared cohort.
+ *
+ * Each member shares the same DNA and weight vector but receives distinct
+ * stigmergic coordinates so the cohort can spread across the map as a unit.
  */
 export interface SwarmVariant {
   /** Stable enemy index within the cohort. */
@@ -306,6 +344,9 @@ export interface SwarmVariant {
 
 /**
  * Swarm enemy population returned by {@link createSwarmEnemyPopulation}.
+ *
+ * Exposes the shared {@link EnemyPopulation} contract plus a generation-gated
+ * `update` method that refreshes the cohort snapshot on a fixed interval.
  */
 export interface SwarmEnemyPopulation extends EnemyPopulation {
   /**
@@ -319,7 +360,11 @@ export interface SwarmEnemyPopulation extends EnemyPopulation {
 }
 
 /**
- * Configuration accepted by {@link runArmsRaceGeneration}.
+ * Configuration accepted by {@link runArmsRaceGeneration} to run one
+ * co-evolution step between the main agent and the enemy backend.
+ *
+ * All optional fields have deterministic defaults so the same seed and
+ * generation always produce the same generation outcome.
  */
 export interface RunArmsRaceGenerationOptions {
   /** Deterministic seed for the generation. */
@@ -345,10 +390,21 @@ export interface RunArmsRaceGenerationOptions {
    * instead of running `runMainGeneration`.
    */
   championQuality?: CombatQualitySignal;
+  /**
+   * Optional algorithm context carrying MAP-Elites archive, league,
+   * CMA-ES state, transition replay buffer, curriculum difficulty, and
+   * bounded-concurrency batch processor. When provided, the generation
+   * runner invokes all six algorithm modules from the production path.
+   */
+  algorithmContext?: import('./arms-race').ArmsRaceAlgorithmContext;
 }
 
 /**
  * Result emitted by one arms-race generation.
+ *
+ * Bundles the advanced generation number, the selected main-agent champion,
+ * the frozen enemy snapshot it was evaluated against, the champion's combat
+ * quality signal, and summary metrics for the enemy population behavior.
  */
 export interface ArmsRaceGenerationResult {
   /** Generation number advanced by one step. */
@@ -365,6 +421,38 @@ export interface ArmsRaceGenerationResult {
   replayPressure: number;
   /** Enemy behavior metrics summarising the generation's enemy population. */
   enemyBehaviorMetrics: EnemyBehaviorMetrics;
+  /**
+   * Curriculum difficulty [0, 1] computed from player performance telemetry.
+   * Present only when `algorithmContext` was supplied to the generation call.
+   */
+  curriculumDifficulty?: number;
+  /**
+   * Wave difficulty [0, 1] for the current generation, derived from curriculum
+   * difficulty and generation number. Present only when `algorithmContext` was
+   * supplied.
+   */
+  waveDifficulty?: number;
+  /**
+   * Enemy capability after curriculum scaling. Present only when
+   * `algorithmContext` was supplied.
+   */
+  scaledEnemyCapability?: number;
+  /**
+   * Opponents sampled from the unified league for this generation. Present
+   * only when `algorithmContext` was supplied.
+   */
+  leagueOpponents?: unknown[];
+  /**
+   * Weights evolved by the CMA-ES + transition-replay enhanced path. Present
+   * only when `algorithmContext` was supplied.
+   */
+  evolvedEnemyWeights?: Float32Array;
+  /**
+   * Pending inference batch promise from the bounded-concurrency dispatcher.
+   * Present only when `algorithmContext` was supplied. Callers in async
+   * contexts may await this to ensure all inference tasks complete.
+   */
+  inferenceBatch?: Promise<unknown[]>;
 }
 
 /**
@@ -464,6 +552,18 @@ export interface FireGateConfig {
   state: FireGateState;
   /** Current enemyVisible sensor value (sensor[12]). */
   enemyVisible: number;
+}
+
+/**
+ * Result of {@link applyFireGate} — a new hysteresis state and fire decision.
+ *
+ * The input state is never mutated; callers must persist `state` themselves.
+ */
+export interface FireGateResult {
+  /** Updated hysteresis state (new object — input is not mutated). */
+  state: FireGateState;
+  /** Whether fire should be emitted this tick. */
+  shouldFire: boolean;
 }
 
 /**

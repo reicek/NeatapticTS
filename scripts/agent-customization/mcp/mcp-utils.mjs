@@ -394,7 +394,9 @@ export async function runShellFreeCommand(commandString, options = {}) {
         command: commandString,
         executable: requestedExecutable,
         argv,
-        exitCode: /* istanbul ignore next -- defensive: process killed without exit code */ exitCode ?? 1,
+        exitCode:
+          /* istanbul ignore next -- defensive: process killed without exit code */ exitCode ??
+          1,
         stdout: finalizeCapturedOutput(stdout, stdoutTruncated),
         stderr: finalizeCapturedOutput(stderr, stderrTruncated),
         durationMs: Date.now() - startTime,

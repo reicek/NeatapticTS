@@ -5,10 +5,20 @@ jest.unstable_mockModule('../../../mcp-semantic/repo-cortex-mcp.mjs', () => ({
   createRepoCortexMcpServer: jest.fn(() => ({
     dispatch: jest.fn(async (req) => {
       if (req.method === 'initialize') {
-        return { protocolVersion: '2024-11-05', capabilities: {}, serverInfo: { name: 'cortex' } };
+        return {
+          protocolVersion: '2024-11-05',
+          capabilities: {},
+          serverInfo: { name: 'cortex' },
+        };
       }
       if (req.method === 'tools/list') {
-        return { tools: [{ name: 'index_stats' }, { name: 'list_families' }, { name: 'search_corpus' }] };
+        return {
+          tools: [
+            { name: 'index_stats' },
+            { name: 'list_families' },
+            { name: 'search_corpus' },
+          ],
+        };
       }
       if (req.method === 'tools/call') {
         if (req.params.name === 'search_corpus') {
@@ -41,7 +51,12 @@ function captureConsole() {
   const logs = [];
   const origLog = console.log;
   console.log = (...args) => logs.push(args.join(' '));
-  return { logs, restore() { console.log = origLog; } };
+  return {
+    logs,
+    restore() {
+      console.log = origLog;
+    },
+  };
 }
 
 describe('capture-cortex-snapshot', () => {
@@ -72,7 +87,8 @@ describe('capture-cortex-snapshot', () => {
     // Override dispatch to throw for specific calls
     mockCortex.createRepoCortexMcpServer.mockReturnValue({
       dispatch: jest.fn(async (req) => {
-        if (req.method === 'initialize') return { protocolVersion: '2024-11-05' };
+        if (req.method === 'initialize')
+          return { protocolVersion: '2024-11-05' };
         if (req.method === 'tools/list') return { tools: [] };
         if (req.method === 'tools/call') {
           throw new Error('tool error');
@@ -98,7 +114,8 @@ describe('capture-cortex-snapshot', () => {
 
     mockCortex.createRepoCortexMcpServer.mockReturnValue({
       dispatch: jest.fn(async (req) => {
-        if (req.method === 'initialize') return { protocolVersion: '2024-11-05' };
+        if (req.method === 'initialize')
+          return { protocolVersion: '2024-11-05' };
         if (req.method === 'tools/list') return { tools: [] };
         if (req.method === 'tools/call') {
           throw 'string error';

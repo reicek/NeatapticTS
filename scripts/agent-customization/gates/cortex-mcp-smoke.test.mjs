@@ -50,8 +50,9 @@ async function withArgv(argv, fn) {
 
 async function importGate() {
   jest.resetModules();
-  return await withArgv([process.execPath, 'dummy'], () =>
-    import('./cortex-mcp-smoke.mjs'),
+  return await withArgv(
+    [process.execPath, 'dummy'],
+    () => import('./cortex-mcp-smoke.mjs'),
   );
 }
 

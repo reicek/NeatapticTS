@@ -1,5 +1,20 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- dynamic import test helper */
 import { describe, expect, it } from '@jest/globals';
+
+/**
+ * Minimal type for the dynamically-imported gun-sprite-data module.
+ */
+type GunSpriteDataModule = typeof import('../../gun-sprite-data.js');
+
+/**
+ * Minimal type for the dynamically-imported gun-sprite-decode module.
+ */
+type DecodeModule = {
+  decodeGunSpriteFrame: (
+    grid: readonly (readonly number[])[],
+    palette: readonly (readonly number[])[],
+  ) => { width: number; height: number; data: Uint8ClampedArray };
+  buildGunAccentPalette: (accent: number[]) => number[][];
+};
 
 /**
  * Red-phase contract tests for the palette-indexed chaingun sprite asset and
@@ -17,19 +32,15 @@ import { describe, expect, it } from '@jest/globals';
 describe('Neatenstein gun-sprite-data asset', () => {
   describe('AC-04c-001: palette-indexed sprite exports', () => {
     it('exports GUN_SPRITE_SCALE as a positive integer', async () => {
-      const mod = (await import('../../gun-sprite-data.js')) as Record<
-        string,
-        any
-      >;
+      const mod =
+        (await import('../../gun-sprite-data.js')) as GunSpriteDataModule;
       expect(mod.GUN_SPRITE_SCALE).toBeGreaterThan(0);
       expect(Number.isInteger(mod.GUN_SPRITE_SCALE)).toBe(true);
     });
 
     it('exports GUN_SPRITE_PALETTE as an array of RGBA tuples', async () => {
-      const mod = (await import('../../gun-sprite-data.js')) as Record<
-        string,
-        any
-      >;
+      const mod =
+        (await import('../../gun-sprite-data.js')) as GunSpriteDataModule;
       expect(Array.isArray(mod.GUN_SPRITE_PALETTE)).toBe(true);
       expect(mod.GUN_SPRITE_PALETTE.length).toBeGreaterThanOrEqual(9);
       for (const color of mod.GUN_SPRITE_PALETTE) {
@@ -38,10 +49,8 @@ describe('Neatenstein gun-sprite-data asset', () => {
     });
 
     it('exports GUN_SPRITE_FRAMES with at least idle and fire keys', async () => {
-      const mod = (await import('../../gun-sprite-data.js')) as Record<
-        string,
-        any
-      >;
+      const mod =
+        (await import('../../gun-sprite-data.js')) as GunSpriteDataModule;
       expect(mod.GUN_SPRITE_FRAMES).toBeDefined();
       expect(mod.GUN_SPRITE_FRAMES.idle).toBeDefined();
       expect(mod.GUN_SPRITE_FRAMES.fire).toBeDefined();
@@ -50,10 +59,8 @@ describe('Neatenstein gun-sprite-data asset', () => {
 
   describe('AC-04c-001: grid dimensions', () => {
     it('idle frame is a 40x24 grid (wide horizontal chaingun)', async () => {
-      const mod = (await import('../../gun-sprite-data.js')) as Record<
-        string,
-        any
-      >;
+      const mod =
+        (await import('../../gun-sprite-data.js')) as GunSpriteDataModule;
       const idle = mod.GUN_SPRITE_FRAMES.idle as number[][];
       expect(idle.length).toBe(24);
       for (const row of idle) {
@@ -62,10 +69,8 @@ describe('Neatenstein gun-sprite-data asset', () => {
     });
 
     it('fire frame is a 40x24 grid', async () => {
-      const mod = (await import('../../gun-sprite-data.js')) as Record<
-        string,
-        any
-      >;
+      const mod =
+        (await import('../../gun-sprite-data.js')) as GunSpriteDataModule;
       const fire = mod.GUN_SPRITE_FRAMES.fire as number[][];
       expect(fire.length).toBe(24);
       for (const row of fire) {
@@ -74,10 +79,8 @@ describe('Neatenstein gun-sprite-data asset', () => {
     });
 
     it('decoded bounds produce a non-empty sprite (positive width and height)', async () => {
-      const mod = (await import('../../gun-sprite-data.js')) as Record<
-        string,
-        any
-      >;
+      const mod =
+        (await import('../../gun-sprite-data.js')) as GunSpriteDataModule;
       const idle = mod.GUN_SPRITE_FRAMES.idle as number[][];
       let minX = 40;
       let maxX = -1;
@@ -100,10 +103,8 @@ describe('Neatenstein gun-sprite-data asset', () => {
 
   describe('AC-04c-003: material distribution from palette indices', () => {
     it('upper half (barrel rows 0-11) has non-transparent pixels', async () => {
-      const mod = (await import('../../gun-sprite-data.js')) as Record<
-        string,
-        any
-      >;
+      const mod =
+        (await import('../../gun-sprite-data.js')) as GunSpriteDataModule;
       const idle = mod.GUN_SPRITE_FRAMES.idle as number[][];
       const upperRows = idle.slice(0, 12);
       let total = 0;
@@ -118,10 +119,8 @@ describe('Neatenstein gun-sprite-data asset', () => {
     });
 
     it('lower half (receiver rows 12-23) uses dark palette indices (1, 2, 3)', async () => {
-      const mod = (await import('../../gun-sprite-data.js')) as Record<
-        string,
-        any
-      >;
+      const mod =
+        (await import('../../gun-sprite-data.js')) as GunSpriteDataModule;
       const idle = mod.GUN_SPRITE_FRAMES.idle as number[][];
       const lowerRows = idle.slice(12);
       let darkCount = 0;
@@ -134,10 +133,8 @@ describe('Neatenstein gun-sprite-data asset', () => {
     });
 
     it('palette contains teal accent entries (indices 5 and 6)', async () => {
-      const mod = (await import('../../gun-sprite-data.js')) as Record<
-        string,
-        any
-      >;
+      const mod =
+        (await import('../../gun-sprite-data.js')) as GunSpriteDataModule;
       const palette = mod.GUN_SPRITE_PALETTE as number[][];
       // Indices 5 and 6 are the teal accent / glow entries.
       expect(palette[5]).toBeDefined();
@@ -149,10 +146,8 @@ describe('Neatenstein gun-sprite-data asset', () => {
 
   describe('AC-04c-004: angular stepped profile', () => {
     it('horizontal half-widths include at least 3 distinct values', async () => {
-      const mod = (await import('../../gun-sprite-data.js')) as Record<
-        string,
-        any
-      >;
+      const mod =
+        (await import('../../gun-sprite-data.js')) as GunSpriteDataModule;
       const idle = mod.GUN_SPRITE_FRAMES.idle as number[][];
       const halfWidths: number[] = [];
       for (const row of idle) {
@@ -173,10 +168,8 @@ describe('Neatenstein gun-sprite-data asset', () => {
     });
 
     it('sprite has varying row widths (angular profile exists)', async () => {
-      const mod = (await import('../../gun-sprite-data.js')) as Record<
-        string,
-        any
-      >;
+      const mod =
+        (await import('../../gun-sprite-data.js')) as GunSpriteDataModule;
       const idle = mod.GUN_SPRITE_FRAMES.idle as number[][];
       const halfWidths: number[] = [];
       for (const row of idle) {
@@ -200,10 +193,8 @@ describe('Neatenstein gun-sprite-data asset', () => {
 
   describe('AC-04c-005: firing-frame muzzle-flash burst', () => {
     it('fire frame has muzzle-flash pixels (index 7) at the top rows', async () => {
-      const mod = (await import('../../gun-sprite-data.js')) as Record<
-        string,
-        any
-      >;
+      const mod =
+        (await import('../../gun-sprite-data.js')) as GunSpriteDataModule;
       const fire = mod.GUN_SPRITE_FRAMES.fire as number[][];
       const topRows = fire.slice(0, 4);
       let hasFlash = false;
@@ -217,10 +208,8 @@ describe('Neatenstein gun-sprite-data asset', () => {
     });
 
     it('fire frame has more non-transparent pixels than idle frame', async () => {
-      const mod = (await import('../../gun-sprite-data.js')) as Record<
-        string,
-        any
-      >;
+      const mod =
+        (await import('../../gun-sprite-data.js')) as GunSpriteDataModule;
       const idle = mod.GUN_SPRITE_FRAMES.idle as number[][];
       const fire = mod.GUN_SPRITE_FRAMES.fire as number[][];
       let idleCount = 0;
@@ -258,18 +247,16 @@ const DECODE_MODULE = './gun-sprite-decode.ts';
 describe('Neatenstein gun sprite decoder', () => {
   describe('AC-04c-011: decodeGunSpriteFrame function', () => {
     it('exports decodeGunSpriteFrame as a function', async () => {
-      const mod = (await import(DECODE_MODULE)) as Record<string, any>;
+      const mod = (await import(DECODE_MODULE)) as DecodeModule;
       expect(typeof mod.decodeGunSpriteFrame).toBe('function');
     });
   });
 
   describe('AC-04c-011: decoded frame dimensions and data', () => {
     it('decoded idle frame has dimensions 40*scale x 24*scale', async () => {
-      const decodeMod = (await import(DECODE_MODULE)) as Record<string, any>;
-      const dataMod = (await import('../../gun-sprite-data.js')) as Record<
-        string,
-        any
-      >;
+      const decodeMod = (await import(DECODE_MODULE)) as DecodeModule;
+      const dataMod =
+        (await import('../../gun-sprite-data.js')) as GunSpriteDataModule;
       const scale = dataMod.GUN_SPRITE_SCALE as number;
       const idle = dataMod.GUN_SPRITE_FRAMES.idle as number[][];
       const decoded = decodeMod.decodeGunSpriteFrame(
@@ -281,11 +268,9 @@ describe('Neatenstein gun sprite decoder', () => {
     });
 
     it('decoded frame data is a Uint8ClampedArray of correct length', async () => {
-      const decodeMod = (await import(DECODE_MODULE)) as Record<string, any>;
-      const dataMod = (await import('../../gun-sprite-data.js')) as Record<
-        string,
-        any
-      >;
+      const decodeMod = (await import(DECODE_MODULE)) as DecodeModule;
+      const dataMod =
+        (await import('../../gun-sprite-data.js')) as GunSpriteDataModule;
       const scale = dataMod.GUN_SPRITE_SCALE as number;
       const idle = dataMod.GUN_SPRITE_FRAMES.idle as number[][];
       const decoded = decodeMod.decodeGunSpriteFrame(
@@ -297,11 +282,9 @@ describe('Neatenstein gun sprite decoder', () => {
     });
 
     it('decoder correctly maps any palette index to its RGBA color', async () => {
-      const decodeMod = (await import(DECODE_MODULE)) as Record<string, any>;
-      const dataMod = (await import('../../gun-sprite-data.js')) as Record<
-        string,
-        any
-      >;
+      const decodeMod = (await import(DECODE_MODULE)) as DecodeModule;
+      const dataMod =
+        (await import('../../gun-sprite-data.js')) as GunSpriteDataModule;
       const scale = dataMod.GUN_SPRITE_SCALE as number;
       const idle = dataMod.GUN_SPRITE_FRAMES.idle as number[][];
       const palette = dataMod.GUN_SPRITE_PALETTE as number[][];
@@ -331,11 +314,9 @@ describe('Neatenstein gun sprite decoder', () => {
 
   describe('AC-04c-012: palette swap support', () => {
     it('palette swap produces different RGBA values for swapped indices', async () => {
-      const decodeMod = (await import(DECODE_MODULE)) as Record<string, any>;
-      const dataMod = (await import('../../gun-sprite-data.js')) as Record<
-        string,
-        any
-      >;
+      const decodeMod = (await import(DECODE_MODULE)) as DecodeModule;
+      const dataMod =
+        (await import('../../gun-sprite-data.js')) as GunSpriteDataModule;
       const idle = dataMod.GUN_SPRITE_FRAMES.idle as number[][];
       const originalPalette = dataMod.GUN_SPRITE_PALETTE as number[][];
       const swappedPalette = originalPalette.map((color, i) =>
@@ -366,16 +347,14 @@ describe('Neatenstein gun sprite decoder', () => {
 
   describe('AC-04c-013: buildGunAccentPalette accent color swap', () => {
     it('exports buildGunAccentPalette as a function', async () => {
-      const mod = (await import(DECODE_MODULE)) as Record<string, any>;
+      const mod = (await import(DECODE_MODULE)) as DecodeModule;
       expect(typeof mod.buildGunAccentPalette).toBe('function');
     });
 
     it('replaces RGB of indices 5 and 6 with accent color, preserving original alpha', async () => {
-      const decodeMod = (await import(DECODE_MODULE)) as Record<string, any>;
-      const dataMod = (await import('../../gun-sprite-data.js')) as Record<
-        string,
-        any
-      >;
+      const decodeMod = (await import(DECODE_MODULE)) as DecodeModule;
+      const dataMod =
+        (await import('../../gun-sprite-data.js')) as GunSpriteDataModule;
       const originalPalette = dataMod.GUN_SPRITE_PALETTE as number[][];
       const accentPalette = decodeMod.buildGunAccentPalette([
         255, 0, 128,
@@ -391,11 +370,9 @@ describe('Neatenstein gun sprite decoder', () => {
     });
 
     it('leaves all non-accent palette entries unchanged (incl. index 7 alpha)', async () => {
-      const decodeMod = (await import(DECODE_MODULE)) as Record<string, any>;
-      const dataMod = (await import('../../gun-sprite-data.js')) as Record<
-        string,
-        any
-      >;
+      const decodeMod = (await import(DECODE_MODULE)) as DecodeModule;
+      const dataMod =
+        (await import('../../gun-sprite-data.js')) as GunSpriteDataModule;
       const originalPalette = dataMod.GUN_SPRITE_PALETTE as number[][];
       const accentPalette = decodeMod.buildGunAccentPalette([
         100, 200, 50,

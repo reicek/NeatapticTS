@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Shared NEAT I/O configuration for the Neatenstein main agent.
  *
  * This module centralises the network input/output sizes, the maximum
@@ -10,7 +10,7 @@
  */
 
 import type { GameTickInputSnapshot } from '../host/game/tick';
-import type { FireGateState, FireGateConfig } from './types';
+import type { FireGateState, FireGateConfig, FireGateResult } from './types';
 import {
   DASH_THRESHOLD,
   NEAT_OUTPUT_INDEX_DASH,
@@ -20,16 +20,12 @@ import {
 /**
  * Mutable hysteresis state for the soft fire gate.
  *
- * @deprecated Import from `./types` instead. This re-export preserves the
- *   public API for existing consumers.
  */
-export type { FireGateState } from './types';
+export type { FireGateState, FireGateResult } from './types';
 
 /**
  * Optional fire-gate configuration passed to {@link networkOutputToTickInput}.
  *
- * @deprecated Import from `./types` instead. This re-export preserves the
- *   public API for existing consumers.
  */
 export type { FireGateConfig } from './types';
 
@@ -216,34 +212,39 @@ export function createFireGateState(): FireGateState {
  * - Between the two thresholds, the gate maintains its current state
  *   (hysteresis band — prevents boundary oscillation).
  *
- * The `state` object is mutated in-place to persist hysteresis between ticks.
+ * The `state` object is NOT mutated — a new {@link FireGateResult} is returned
+ * containing the updated state and fire decision. Callers must persist
+ * `result.state` between ticks to maintain hysteresis.
  *
- * @param state - Mutable hysteresis state (updated in-place).
+ * @param state - Current hysteresis state (not mutated).
  * @param enemyVisible - Current value of the enemyVisible sensor (sensor[12]).
  * @param rawFireOutput - Raw network output[3] (fire activation).
- * @returns `true` if fire should be emitted, `false` if suppressed.
+ * @returns A {@link FireGateResult} with the new state and fire decision.
  * @see AC-P5S1a-001, AC-P5S1a-002, AC-P5S1a-003
  */
 export function applyFireGate(
   state: FireGateState,
   enemyVisible: number,
   rawFireOutput: number,
-): boolean {
-  // Update hysteresis state based on enemyVisible sensor.
+): FireGateResult {
+  // Compute new hysteresis state based on enemyVisible sensor.
+  let fireActive = state.fireActive;
   if (enemyVisible >= FIRE_GATE_HYSTERESIS_HIGH) {
-    state.fireActive = true;
+    fireActive = true;
   } else if (enemyVisible < FIRE_GATE_HYSTERESIS_LOW) {
-    state.fireActive = false;
+    fireActive = false;
   }
   // Between thresholds: maintain current state (hysteresis band).
 
+  const newState: FireGateState = { fireActive };
+
   // If the gate is closed (no enemy visible), suppress fire entirely.
-  if (!state.fireActive) {
-    return false;
+  if (!fireActive) {
+    return { state: newState, shouldFire: false };
   }
 
   // Gate is open — apply the normal fire threshold.
-  return rawFireOutput > 0;
+  return { state: newState, shouldFire: rawFireOutput > 0 };
 }
 
 /**
@@ -286,11 +287,15 @@ export function networkOutputToTickInput(
         ];
 
   const fire = fireGate
-    ? applyFireGate(
-        fireGate.state,
-        fireGate.enemyVisible,
-        out[NEAT_OUTPUT_INDEX_FIRE],
-      )
+    ? (() => {
+        const result = applyFireGate(
+          fireGate.state,
+          fireGate.enemyVisible,
+          out[NEAT_OUTPUT_INDEX_FIRE],
+        );
+        fireGate.state = result.state;
+        return result.shouldFire;
+      })()
     : out[NEAT_OUTPUT_INDEX_FIRE] > 0;
 
   return {

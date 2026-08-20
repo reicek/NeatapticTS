@@ -16,7 +16,7 @@ import {
 import { applyDamage } from './state';
 import { resolveTickDurationMs } from './tick.time.utils';
 import type { CollisionMap } from '../../renderer/map';
-import type { EnemyBoltState, GameState, Vector2 } from './types';
+import type { EnemyBoltState, GameState } from './types';
 import type { UpdateEnemyBoltsResult } from '../types';
 
 // Re-export consolidated types so existing imports from this module remain valid.
@@ -52,82 +52,84 @@ export function updateEnemyBolts(
   const dtSeconds = resolvedDtMs / NEATENSTEIN_MS_PER_SECOND;
   let nextState = state;
 
-  const updatedBolts = bolts
-    .filter((bolt) => bolt.active)
-    .map((bolt) => {
-      const step = bolt.speedCellsPerSecond * dtSeconds;
-      const nextPosition: Vector2 = {
-        x: bolt.position.x + bolt.direction.x * step,
-        y: bolt.position.y + bolt.direction.y * step,
+  // Mutate bolt positions in place and compact into a result array of the
+  // same bolt references — no .filter().map() clone chain (A2 Fix 5).
+  const updatedBolts: EnemyBoltState[] = [];
+  for (let i = 0; i < bolts.length; i += 1) {
+    const bolt = bolts[i];
+    if (!bolt.active) continue;
+
+    // Use local scalars for the next position — no Vector2 allocation.
+    const step = bolt.speedCellsPerSecond * dtSeconds;
+    const nextX = bolt.position.x + bolt.direction.x * step;
+    const nextY = bolt.position.y + bolt.direction.y * step;
+
+    // Check wall collision.
+    const hitWall = collisionMap
+      ? collisionMap.isSolid(Math.floor(nextX), Math.floor(nextY))
+      : false;
+
+    // Check out of bounds.
+    const outOfBounds =
+      nextX < 0 ||
+      nextX >= NEATENSTEIN_MAP_SIZE ||
+      nextY < 0 ||
+      nextY >= NEATENSTEIN_MAP_SIZE;
+
+    // Check distance traveled from origin.
+    const distanceTraveled =
+      bolt.origin &&
+      Number.isFinite(bolt.origin.x) &&
+      Number.isFinite(bolt.origin.y)
+        ? Math.hypot(nextX - bolt.origin.x, nextY - bolt.origin.y)
+        : 0;
+    const beyondMaxRange =
+      distanceTraveled >= NEATENSTEIN_ENEMY_BOLT_MAX_RANGE_CELLS;
+
+    // Check lifetime expiry.
+    const elapsedMs = Math.max(0, currentTimeMs - bolt.createdAtMs);
+    const lifetimeExpired = elapsedMs >= NEATENSTEIN_ENEMY_BOLT_LIFETIME_MS;
+
+    // Check player proximity.
+    const playerDist = Math.hypot(
+      nextX - nextState.player.position.x,
+      nextY - nextState.player.position.y,
+    );
+    const hitPlayer =
+      !hitWall &&
+      !outOfBounds &&
+      !beyondMaxRange &&
+      playerDist <= NEATENSTEIN_ENEMY_BOLT_HIT_RADIUS_CELLS;
+
+    const movementStopped = outOfBounds || hitWall || beyondMaxRange;
+    const active = !lifetimeExpired && !hitPlayer;
+
+    // Capture previous hit state before mutation.
+    const wasHit = bolt.hitPlayer;
+
+    // Mutate bolt position in place — only update if the bolt moved.
+    if (!movementStopped) {
+      bolt.position.x = nextX;
+      bolt.position.y = nextY;
+    }
+    bolt.active = active;
+    bolt.hitPlayer = hitPlayer || bolt.hitPlayer;
+
+    if (hitPlayer && !wasHit) {
+      nextState = applyDamage(nextState, bolt.damage);
+      // Grant the same contact i-frame window as melee contact damage
+      // so subsequent bolts and contact damage are blocked for 500ms.
+      nextState = {
+        ...nextState,
+        player: {
+          ...nextState.player,
+          contactIFrameMs: NEATENSTEIN_CONTACT_IFRAME_MS,
+        },
       };
+    }
 
-      // Check wall collision.
-      const hitWall = collisionMap
-        ? collisionMap.isSolid(
-            Math.floor(nextPosition.x),
-            Math.floor(nextPosition.y),
-          )
-        : false;
-
-      // Check out of bounds.
-      const outOfBounds =
-        nextPosition.x < 0 ||
-        nextPosition.x >= NEATENSTEIN_MAP_SIZE ||
-        nextPosition.y < 0 ||
-        nextPosition.y >= NEATENSTEIN_MAP_SIZE;
-
-      // Check distance traveled from origin.
-      const distanceTraveled =
-        bolt.origin &&
-        Number.isFinite(bolt.origin.x) &&
-        Number.isFinite(bolt.origin.y)
-          ? Math.hypot(
-              nextPosition.x - bolt.origin.x,
-              nextPosition.y - bolt.origin.y,
-            )
-          : 0;
-      const beyondMaxRange =
-        distanceTraveled >= NEATENSTEIN_ENEMY_BOLT_MAX_RANGE_CELLS;
-
-      // Check lifetime expiry.
-      const elapsedMs = Math.max(0, currentTimeMs - bolt.createdAtMs);
-      const lifetimeExpired = elapsedMs >= NEATENSTEIN_ENEMY_BOLT_LIFETIME_MS;
-
-      // Check player proximity.
-      const playerDist = Math.hypot(
-        nextPosition.x - nextState.player.position.x,
-        nextPosition.y - nextState.player.position.y,
-      );
-      const hitPlayer =
-        !hitWall &&
-        !outOfBounds &&
-        !beyondMaxRange &&
-        playerDist <= NEATENSTEIN_ENEMY_BOLT_HIT_RADIUS_CELLS;
-
-      const movementStopped = outOfBounds || hitWall || beyondMaxRange;
-      const active = !lifetimeExpired && !hitPlayer;
-      const nextPositionFinal = movementStopped ? bolt.position : nextPosition;
-
-      if (hitPlayer && !bolt.hitPlayer) {
-        nextState = applyDamage(nextState, bolt.damage);
-        // Grant the same contact i-frame window as melee contact damage
-        // so subsequent bolts and contact damage are blocked for 500ms.
-        nextState = {
-          ...nextState,
-          player: {
-            ...nextState.player,
-            contactIFrameMs: NEATENSTEIN_CONTACT_IFRAME_MS,
-          },
-        };
-      }
-
-      return {
-        ...bolt,
-        position: nextPositionFinal,
-        active,
-        hitPlayer: hitPlayer || bolt.hitPlayer,
-      };
-    });
+    updatedBolts.push(bolt);
+  }
 
   return { state: nextState, bolts: updatedBolts };
 }

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Replay buffer for death-context recording in the Neatenstein co-evolution
  * harness.
  *
@@ -15,8 +15,6 @@ import type { DeathContext, ReplayBuffer } from './types';
 /**
  * Replay buffer instance returned by {@link createReplayBuffer}.
  *
- * @deprecated Import from `./types` instead. This re-export preserves the
- *   public API for existing consumers.
  */
 export type { ReplayBuffer } from './types';
 

@@ -164,7 +164,11 @@ describe('freshness-check', () => {
           indexed_at: '2024-01-01T00:00:00.000Z',
         },
       ]);
-      const suppliedProof = { mtime_ms: 1000, file_size: 500, sha256: 'abc123' };
+      const suppliedProof = {
+        mtime_ms: 1000,
+        file_size: 500,
+        sha256: 'abc123',
+      };
       mockIsFreshDocument.mockReturnValue(true);
       try {
         await freshnessCheck({
@@ -202,10 +206,12 @@ describe('freshness-check', () => {
           indexed_at: '2024-01-01T00:00:00.000Z',
         },
       ]);
-      mockGetFreshnessProof.mockResolvedValue({ mtime_ms: 1000, file_size: 500, sha256: 'aaa' });
-      mockIsFreshDocument
-        .mockReturnValueOnce(true)
-        .mockReturnValueOnce(false);
+      mockGetFreshnessProof.mockResolvedValue({
+        mtime_ms: 1000,
+        file_size: 500,
+        sha256: 'aaa',
+      });
+      mockIsFreshDocument.mockReturnValueOnce(true).mockReturnValueOnce(false);
       try {
         const result = await freshnessCheck({ client });
 
@@ -228,7 +234,11 @@ describe('freshness-check', () => {
           indexed_at: '2024-01-01T00:00:00.000Z',
         },
       ]);
-      mockGetFreshnessProof.mockResolvedValue({ mtime_ms: 1000, file_size: 500, sha256: 'aaa' });
+      mockGetFreshnessProof.mockResolvedValue({
+        mtime_ms: 1000,
+        file_size: 500,
+        sha256: 'aaa',
+      });
       mockIsFreshDocument.mockReturnValue(true);
       try {
         const result = await freshnessCheck({ client });

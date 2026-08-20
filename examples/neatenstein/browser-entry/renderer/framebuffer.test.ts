@@ -196,10 +196,29 @@ describe('Neatenstein framebuffer utilities', () => {
       expect(resolveNeatensteinFogFactor(Number.POSITIVE_INFINITY)).toBe(1);
     });
 
-    it('returns 0 below the cap (step function)', () => {
+    it('returns 0 below the fog start distance', () => {
+      // CAP / 2 = 15 is below NEATENSTEIN_FOG_START_DISTANCE (18), so no fog.
       expect(
         resolveNeatensteinFogFactor(NEATENSTEIN_RENDER_DISTANCE_CAP / 2),
       ).toBe(0);
+    });
+  });
+
+  describe('resolveNeatensteinFogFactor (smooth fog contract)', () => {
+    it('returns a smooth fog factor between 0 and 1 at 80% of the render distance cap', () => {
+      // Arrange: distance at 80% of the cap — well within the fog transition
+      // range (FOG_START..CAP). The smoothstep fog factor ramps from 0 at
+      // FOG_START to 1 at the cap, so 80% of the cap yields an intermediate
+      // value.
+      const midDistance = NEATENSTEIN_RENDER_DISTANCE_CAP * 0.8;
+
+      // Act
+      const fog = resolveNeatensteinFogFactor(midDistance);
+
+      // Assert — the smoothstep curve produces a value strictly between 0
+      // and 1 at this distance.
+      expect(fog).toBeGreaterThan(0);
+      expect(fog).toBeLessThan(1);
     });
   });
 

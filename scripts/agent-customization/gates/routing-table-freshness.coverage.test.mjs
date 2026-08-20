@@ -34,9 +34,8 @@ async function captureConsole(fn) {
 
 describe('routing-table-freshness gate direct coverage', () => {
   it('main() prints PASS and sets exit code 0 when gate passes', async () => {
-    const { main, runRoutingTableFreshnessGate } = await import(
-      './routing-table-freshness.gate.mjs'
-    );
+    const { main, runRoutingTableFreshnessGate } =
+      await import('./routing-table-freshness.gate.mjs');
 
     // First check if the gate passes on the real repo
     const result = await runRoutingTableFreshnessGate();
@@ -78,9 +77,8 @@ describe('routing-table-freshness gate direct coverage', () => {
     });
 
     // If the gate fails, there should be a fixHint line
-    const { runRoutingTableFreshnessGate } = await import(
-      './routing-table-freshness.gate.mjs'
-    );
+    const { runRoutingTableFreshnessGate } =
+      await import('./routing-table-freshness.gate.mjs');
     const result = await runRoutingTableFreshnessGate();
     if (!result.pass) {
       assert.ok(logs.some((l) => l.includes('fixHint')));
@@ -90,7 +88,10 @@ describe('routing-table-freshness gate direct coverage', () => {
 
   it('runRoutingTableFreshnessGate returns fail when routing table file does not exist (line 22)', async () => {
     const fs = await import('node:fs/promises');
-    const routingTablePath = path.resolve('.github', 'agent-skill-routing-table.md');
+    const routingTablePath = path.resolve(
+      '.github',
+      'agent-skill-routing-table.md',
+    );
     const backupPath = routingTablePath + '.bak';
 
     // Temporarily rename the routing table file so fileExists returns false
@@ -113,11 +114,17 @@ describe('routing-table-freshness gate direct coverage', () => {
 
   it('main() prints FAIL and fixHint when gate fails on stale file (lines 53,66-70 branches)', async () => {
     const fs = await import('node:fs/promises');
-    const routingTablePath = path.resolve('.github', 'agent-skill-routing-table.md');
+    const routingTablePath = path.resolve(
+      '.github',
+      'agent-skill-routing-table.md',
+    );
     const originalContent = await fs.readFile(routingTablePath, 'utf8');
 
     // Make the file stale by appending a comment
-    await fs.writeFile(routingTablePath, originalContent + '\n<!-- stale -->\n');
+    await fs.writeFile(
+      routingTablePath,
+      originalContent + '\n<!-- stale -->\n',
+    );
     try {
       const originalArgv = process.argv;
       const originalLog = console.log;
@@ -145,9 +152,8 @@ describe('routing-table-freshness gate direct coverage', () => {
   });
 
   it('handleMainError logs error and sets exit code', async () => {
-    const { handleMainError } = await import(
-      './routing-table-freshness.gate.mjs'
-    );
+    const { handleMainError } =
+      await import('./routing-table-freshness.gate.mjs');
     const errors = [];
     const originalErr = console.error;
     console.error = (...args) => errors.push(args.join(' '));
@@ -188,9 +194,8 @@ describe('routing-table-freshness gate direct coverage', () => {
   });
 
   it('runRoutingTableFreshnessGate returns structured result', async () => {
-    const { runRoutingTableFreshnessGate } = await import(
-      './routing-table-freshness.gate.mjs'
-    );
+    const { runRoutingTableFreshnessGate } =
+      await import('./routing-table-freshness.gate.mjs');
     const result = await runRoutingTableFreshnessGate();
     assert.equal(typeof result.pass, 'boolean');
     assert.ok(result.evidence);

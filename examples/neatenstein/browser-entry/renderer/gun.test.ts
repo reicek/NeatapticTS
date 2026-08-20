@@ -1,6 +1,18 @@
 import { describe, expect, it, jest } from '@jest/globals';
 
 /**
+ * Minimal type for the dynamically-imported gun module exports.
+ */
+type GunModule = typeof import('./gun.ts');
+
+/**
+ * Minimal type for the dynamically-imported gun-sprite-data module.
+ */
+type GunSpriteDataModule = {
+  GUN_SPRITE_SCALE: number;
+};
+
+/**
  * Minimal mock 2D canvas context for verifying gun render side effects.
  *
  * Only the methods the gun renderer is expected to call are stubbed.
@@ -41,16 +53,12 @@ function createMockCanvasContext(): CanvasRenderingContext2D {
 describe('Neatenstein gun overlay renderer', () => {
   describe('AC-101: required exports', () => {
     it('exports renderGunOverlay', async () => {
-      const { renderGunOverlay } =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-        (await import('./gun.ts')) as Record<string, any>;
+      const { renderGunOverlay } = (await import('./gun.ts')) as GunModule;
       expect(typeof renderGunOverlay).toBe('function');
     });
 
     it('exports createInitialGunState', async () => {
-      const { createInitialGunState } =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-        (await import('./gun.ts')) as Record<string, any>;
+      const { createInitialGunState } = (await import('./gun.ts')) as GunModule;
       expect(typeof createInitialGunState).toBe('function');
     });
   });
@@ -58,8 +66,7 @@ describe('Neatenstein gun overlay renderer', () => {
   describe('AC-101: geometry and side effects', () => {
     it('does not draw a filled rectangle covering the entire gun body', async () => {
       const { renderGunOverlay, createInitialGunState, GUN_BODY_ASPECT_RATIO } =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-        (await import('./gun.ts')) as Record<string, any>;
+        (await import('./gun.ts')) as GunModule;
       const ctx = createMockCanvasContext();
       const width = 640;
       const height = 360;
@@ -87,8 +94,7 @@ describe('Neatenstein gun overlay renderer', () => {
 
     it('saves the canvas state before applying recoil', async () => {
       const { renderGunOverlay, createInitialGunState } =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-        (await import('./gun.ts')) as Record<string, any>;
+        (await import('./gun.ts')) as GunModule;
       const ctx = createMockCanvasContext();
       const gun = { ...createInitialGunState(), recoilOffset: 5 };
       renderGunOverlay(ctx, gun, 640, 360);
@@ -97,8 +103,7 @@ describe('Neatenstein gun overlay renderer', () => {
 
     it('translates the canvas by a numeric recoil vector', async () => {
       const { renderGunOverlay, createInitialGunState } =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-        (await import('./gun.ts')) as Record<string, any>;
+        (await import('./gun.ts')) as GunModule;
       const ctx = createMockCanvasContext();
       const gun = { ...createInitialGunState(), recoilOffset: 5 };
       renderGunOverlay(ctx, gun, 640, 360);
@@ -110,8 +115,7 @@ describe('Neatenstein gun overlay renderer', () => {
 
     it('restores the canvas state after applying recoil', async () => {
       const { renderGunOverlay, createInitialGunState } =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-        (await import('./gun.ts')) as Record<string, any>;
+        (await import('./gun.ts')) as GunModule;
       const ctx = createMockCanvasContext();
       const gun = { ...createInitialGunState(), recoilOffset: 5 };
       renderGunOverlay(ctx, gun, 640, 360);
@@ -122,15 +126,13 @@ describe('Neatenstein gun overlay renderer', () => {
   describe('AC-101: color configuration', () => {
     it('uses Neon White (#FBFFFF) for the gun body color constant', async () => {
       const { NEATENSTEIN_GUN_BODY_COLOR } =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-        (await import('./gun.ts')) as Record<string, any>;
+        (await import('./gun.ts')) as GunModule;
       expect(NEATENSTEIN_GUN_BODY_COLOR).toBe('#FBFFFF');
     });
 
     it('uses teal (#00f0ff) for the gun accent color constant', async () => {
       const { NEATENSTEIN_GUN_ACCENT_COLOR } =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-        (await import('./gun.ts')) as Record<string, any>;
+        (await import('./gun.ts')) as GunModule;
       expect(NEATENSTEIN_GUN_ACCENT_COLOR).toBe('#00f0ff');
     });
   });
@@ -138,8 +140,7 @@ describe('Neatenstein gun overlay renderer', () => {
   describe('AC-403R: no elliptical shadow bar', () => {
     it('does not draw an elliptical shadow under the cannon', async () => {
       const { renderGunOverlay, createInitialGunState } =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-        (await import('./gun.ts')) as Record<string, any>;
+        (await import('./gun.ts')) as GunModule;
       const ctx = createMockCanvasContext();
       renderGunOverlay(ctx, createInitialGunState(), 640, 360);
       expect(ctx.ellipse).not.toHaveBeenCalled();
@@ -148,9 +149,7 @@ describe('Neatenstein gun overlay renderer', () => {
 
   describe('AC-04c-002: wide horizontally-elongated chaingun aspect ratio', () => {
     it('exposes GUN_BODY_ASPECT_RATIO near 1.6 (width/height) for the wide chaingun silhouette', async () => {
-      const { GUN_BODY_ASPECT_RATIO } =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-        (await import('./gun.ts')) as Record<string, any>;
+      const { GUN_BODY_ASPECT_RATIO } = (await import('./gun.ts')) as GunModule;
       expect(GUN_BODY_ASPECT_RATIO).toBeDefined();
       // AC-04c-002: the wide Wolfenstein chaingun targets a 1.6 width/height
       // ratio, replacing the old 0.75 square-column ratio. The current 0.75
@@ -160,8 +159,7 @@ describe('Neatenstein gun overlay renderer', () => {
 
     it('draws non-transparent fillRect calls in the lower viewport across aspect ratios', async () => {
       const { renderGunOverlay, createInitialGunState } =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-        (await import('./gun.ts')) as Record<string, any>;
+        (await import('./gun.ts')) as GunModule;
       const gun = createInitialGunState();
       for (const [viewportWidth, viewportHeight] of [
         [640, 360],
@@ -188,8 +186,7 @@ describe('Neatenstein gun overlay renderer', () => {
 
     it('draws a barrel-band detail with fillRect', async () => {
       const { renderGunOverlay, createInitialGunState } =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-        (await import('./gun.ts')) as Record<string, any>;
+        (await import('./gun.ts')) as GunModule;
       const ctx = createMockCanvasContext();
       renderGunOverlay(ctx, createInitialGunState(), 640, 360);
       expect(ctx.fillRect).toHaveBeenCalled();
@@ -199,8 +196,7 @@ describe('Neatenstein gun overlay renderer', () => {
   describe('AC-018b: unified sprite, no vector body', () => {
     it('does not use vector path commands for the cannon body', async () => {
       const { renderGunOverlay, createInitialGunState } =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-        (await import('./gun.ts')) as Record<string, any>;
+        (await import('./gun.ts')) as GunModule;
       const ctx = createMockCanvasContext();
       renderGunOverlay(ctx, createInitialGunState(), 640, 360);
       expect(ctx.beginPath).not.toHaveBeenCalled();
@@ -211,8 +207,7 @@ describe('Neatenstein gun overlay renderer', () => {
 
     it('does not create linear gradients for the gun body', async () => {
       const { renderGunOverlay, createInitialGunState } =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-        (await import('./gun.ts')) as Record<string, any>;
+        (await import('./gun.ts')) as GunModule;
       const ctx = createMockCanvasContext();
       renderGunOverlay(ctx, createInitialGunState(), 640, 360);
       expect(ctx.createLinearGradient).not.toHaveBeenCalled();
@@ -220,8 +215,7 @@ describe('Neatenstein gun overlay renderer', () => {
 
     it('does not mix vector-body fills and voxel fills for the same overlay', async () => {
       const { renderGunOverlay, createInitialGunState } =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-        (await import('./gun.ts')) as Record<string, any>;
+        (await import('./gun.ts')) as GunModule;
       const ctx = createMockCanvasContext();
       renderGunOverlay(ctx, createInitialGunState(), 640, 360);
 
@@ -254,8 +248,7 @@ describe('Neatenstein gun overlay renderer', () => {
 
     it('renders at least one fillStyle color from GUN_SPRITE_PALETTE not in the voxel-gun palette', async () => {
       const { renderGunOverlay, createInitialGunState } =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-        (await import('./gun.ts')) as Record<string, any>;
+        (await import('./gun.ts')) as GunModule;
 
       // Track every fillStyle assignment via a setter spy
       const loggedStyles: string[] = [];
@@ -287,11 +280,9 @@ describe('Neatenstein gun overlay renderer', () => {
 
     it('renders the decoded sprite frame (per-pixel fillRect calls matching grid bounds)', async () => {
       const { renderGunOverlay, createInitialGunState } =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-        (await import('./gun.ts')) as Record<string, any>;
+        (await import('./gun.ts')) as GunModule;
       const { GUN_SPRITE_SCALE } =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-        (await import('../../gun-sprite-data.js')) as Record<string, any>;
+        (await import('../../gun-sprite-data.js')) as GunSpriteDataModule;
 
       const ctx = createMockCanvasContext();
       renderGunOverlay(ctx, createInitialGunState(), 640, 360);
@@ -319,8 +310,7 @@ describe('Neatenstein gun overlay renderer', () => {
 
     it('when firing, renders muzzle-flash pixels with semi-transparent alpha from GUN_SPRITE_PALETTE index 7', async () => {
       const { renderGunOverlay, createInitialGunState } =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import test helper
-        (await import('./gun.ts')) as Record<string, any>;
+        (await import('./gun.ts')) as GunModule;
       // Track fillStyle assignments with alpha
       const loggedStyles: string[] = [];
       const ctx = createMockCanvasContext();

@@ -6,11 +6,19 @@
  * {@link robot-sprite-decode.ts} module so the same decode/tint/render
  * pipeline can be reused for both the robot and the gun sprites.
  *
+ * This module replaces the retired procedural voxel gun projector APIs:
+ * - `buildVoxelGun` (formerly in `scripts/voxel-gun.ts`, removed)
+ * - `projectVoxelGunSprite` (formerly in `renderer/gun-sprite.ts`, removed)
+ * - `ProjectedGunVoxel` (type formerly in `renderer/gun-sprite.ts`, removed)
+ *
+ * Those stub files have been deleted as tombstones. Use
+ * {@link decodeGunSpriteFrame} and {@link buildGunAccentPalette} instead.
+ *
  * @module
  */
 
 import { GUN_SPRITE_PALETTE, GUN_SPRITE_SCALE } from '../../gun-sprite-data.js';
-import { type VoxelSnapshot } from '../../../neatenstein/scripts/snapshot-renderer';
+import { type VoxelSnapshot } from '../shared/snapshot-renderer';
 import { RGBA_CHANNELS } from '../constants';
 import type { EncodedGunSpriteFrame } from './renderer.gun.types';
 

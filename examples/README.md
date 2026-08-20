@@ -113,13 +113,16 @@ Best starting points:
 
 ### Neatenstein
 
-[neatenstein](./neatenstein) is the best next step if you want to see how a procedural art pipeline feeds a browser-hosted NGE demo.
+[neatenstein](./neatenstein) is the best next step if you want to see how procedural generation, live rendering, and neuroevolution share a single browser runtime.
 
-It generates a compact voxel enemy from a palette grid, renders orthographic snapshots for each compass direction, and packages them into a deterministic sprite sheet that the live demo can load. The scripts under `scripts/` are the public art pipeline; the browser entry wires the result into a raycasting renderer. The lesson is how to keep deterministic generation, reference snapshots, and runtime rendering aligned in one example.
+The demo starts with a deterministic maze generator and a procedural voxel enemy pipeline. The art pipeline builds compact sprite sheets from orthographic snapshots; the renderer streams those sprites through a grid DDA raycaster. On top of that runtime, an NGE enemy-population harness evolves enemy controllers: each death feeds a per-variant fitness ledger, drives proportional parent selection, and can place variants into a behavioral MAP-Elites archive. The lesson is how to keep deterministic generation, reference snapshots, runtime rendering, and online evolution aligned in one example.
 
 Best starting points:
 
 - [neatenstein/README.md](./neatenstein/README.md)
+- [neatenstein/browser-entry/renderer/map.ts](./neatenstein/browser-entry/renderer/map.ts)
+- [neatenstein/browser-entry/harness/enemy-mlp.ts](./neatenstein/browser-entry/harness/enemy-mlp.ts)
+- [neatenstein/browser-entry/harness/enemy-evolution.ts](./neatenstein/browser-entry/harness/enemy-evolution.ts)
 - [neatenstein/scripts/generate-enemy-sprites.ts](./neatenstein/scripts/generate-enemy-sprites.ts)
 - [neatenstein/scripts/snapshot-renderer.ts](./neatenstein/scripts/snapshot-renderer.ts)
 - [neatenstein/browser-entry/README.md](./neatenstein/browser-entry/README.md)
@@ -127,20 +130,20 @@ Best starting points:
 
 ## How the flagship demos differ
 
-| Dimension         | Flappy Bird                                                                     | ASCII Maze                                                                              | Racing Curriculum                                                                    | Neatenstein                                                                              |
-| ----------------- | ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- |
-| Core challenge    | Reflex control under changing geometry                                          | Deliberate navigation toward a goal                                                     | Competitive coevolution across two teams                                             | Procedural voxel art feeding a live renderer                                             |
-| Observation style | Broad temporal observation                                                      | Tight handcrafted state summary                                                         | Continuous sensor vector from track state                                            | Voxel grid snapshots rendered from 8 compass directions                                  |
-| Policy outputs    | 2 action scores                                                                 | 4 directional scores                                                                    | Car-control vector (steer, throttle, brake)                                          | Not defined in this slice; the current example focuses on the procedural sprite pipeline |
-| Teaching emphasis | Evaluation fairness, feed-forward local memory, worker playback, inspectable UI | Reward shaping, curriculum transfer, telemetry-rich evolution, explicit search overlays | Host/worker authority, frozen-snapshot coevolution, zero-copy transfer, protocol FSM | Deterministic procedural generation, reference snapshots, and sprite-sheet packaging     |
-| Runtime flavor    | Browser-heavy and replay-oriented                                               | Console-browser hybrid and experiment-oriented                                          | Worker-authoritative simulation with host rendering                                  | Browser-hosted raycasting with a deterministic art pipeline                              |
+| Dimension         | Flappy Bird                                                                     | ASCII Maze                                                                              | Racing Curriculum                                                                    | Neatenstein                                                                                                      |
+| ----------------- | ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| Core challenge    | Reflex control under changing geometry                                          | Deliberate navigation toward a goal                                                     | Competitive coevolution across two teams                                             | Procedural maze + voxel art feeding an arms-race NGE demo                                                        |
+| Observation style | Broad temporal observation                                                      | Tight handcrafted state summary                                                         | Continuous sensor vector from track state                                            | Voxel grid snapshots and a DDA raycaster, plus enemy-local sensor summaries                                      |
+| Policy outputs    | 2 action scores                                                                 | 4 directional scores                                                                    | Car-control vector (steer, throttle, brake)                                          | 4 movement + 1 fire scores for enemies, with optional Hebbian updates                                            |
+| Teaching emphasis | Evaluation fairness, feed-forward local memory, worker playback, inspectable UI | Reward shaping, curriculum transfer, telemetry-rich evolution, explicit search overlays | Host/worker authority, frozen-snapshot coevolution, zero-copy transfer, protocol FSM | Deterministic procedural generation, reference snapshots, sprite-sheet packaging, and per-death enemy evolution |
+| Runtime flavor    | Browser-heavy and replay-oriented                                               | Console-browser hybrid and experiment-oriented                                          | Worker-authoritative simulation with host rendering                                  | Browser-hosted raycasting and worker-backed simulation with online evolution                                     |
 
 The quickest mental shortcut is simple:
 
 - Flappy Bird is a fast control-systems lesson.
 - ASCII Maze is a compact decision-making lesson.
 - Racing Curriculum is a coevolution and runtime-authority lesson.
-- Neatenstein is a procedural-art-to-runtime lesson.
+- Neatenstein is a procedural-generation-to-arms-race-NGE lesson.
 
 Together they show that a good neuroevolution example is not one fixed template. Observation design, scoring design, runtime ownership, visualization strategy, and even where the assets come from all change with the problem.
 

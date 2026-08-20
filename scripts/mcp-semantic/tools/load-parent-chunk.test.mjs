@@ -29,7 +29,11 @@ describe('load-parent-chunk', () => {
   afterEach(async () => {
     restoreEnv();
     if (client) {
-      try { await client.close(); } catch { /* noop */ }
+      try {
+        await client.close();
+      } catch {
+        /* noop */
+      }
     }
   });
 
@@ -51,21 +55,21 @@ describe('load-parent-chunk', () => {
 
   describe('error cases', () => {
     it('throws on non-integer chunk_id', async () => {
-      await expect(
-        loadParentChunk({ chunk_id: 1.5, client }),
-      ).rejects.toThrow('chunk_id must be a positive integer');
+      await expect(loadParentChunk({ chunk_id: 1.5, client })).rejects.toThrow(
+        'chunk_id must be a positive integer',
+      );
     });
 
     it('throws on zero chunk_id', async () => {
-      await expect(
-        loadParentChunk({ chunk_id: 0, client }),
-      ).rejects.toThrow('chunk_id must be a positive integer');
+      await expect(loadParentChunk({ chunk_id: 0, client })).rejects.toThrow(
+        'chunk_id must be a positive integer',
+      );
     });
 
     it('throws on negative chunk_id', async () => {
-      await expect(
-        loadParentChunk({ chunk_id: -5, client }),
-      ).rejects.toThrow('chunk_id must be a positive integer');
+      await expect(loadParentChunk({ chunk_id: -5, client })).rejects.toThrow(
+        'chunk_id must be a positive integer',
+      );
     });
 
     it('throws on non-number chunk_id', async () => {
@@ -104,7 +108,17 @@ describe('load-parent-chunk', () => {
       await client.execute({
         sql: `INSERT INTO chunks (chunk_id, doc_id, chunk_index, heading_path, body_text, char_start, char_end, parent_chunk_id, depth)
               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        args: [430020, TEST_DOC_ID, 6, 'Orphan2', 'orphan2 body', 0, 10, 777777, 1],
+        args: [
+          430020,
+          TEST_DOC_ID,
+          6,
+          'Orphan2',
+          'orphan2 body',
+          0,
+          10,
+          777777,
+          1,
+        ],
       });
 
       await expect(
@@ -115,7 +129,8 @@ describe('load-parent-chunk', () => {
 
   describe('client vs databasePath', () => {
     it('uses getTursoClient when no client provided', async () => {
-      const { setTursoClient, closeTursoClient } = await import('./cortex-db.mjs');
+      const { setTursoClient, closeTursoClient } =
+        await import('./cortex-db.mjs');
       const dbPath = ':memory:test-load-parent';
       setTursoClient(dbPath, client);
       try {

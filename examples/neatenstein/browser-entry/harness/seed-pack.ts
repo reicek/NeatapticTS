@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Deterministic seed-pack generation for the Neatenstein asymmetric
  * co-evolution harness.
  *
@@ -19,8 +19,6 @@ import { hashSeed } from './hash-seed';
 /**
  * Configuration for {@link createSeedPack}.
  *
- * @deprecated Import from `./types` instead. This re-export preserves the
- *   public API for existing consumers.
  */
 export type { CreateSeedPackOptions } from './types';
 

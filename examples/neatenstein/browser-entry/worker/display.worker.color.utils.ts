@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Pure color utility executors extracted from the display worker.
  *
  * These helpers format RGB triples, resolve enemy team colors, and apply
@@ -10,7 +10,7 @@
 
 import {
   NEATENSTEIN_BACKGROUND_RGB,
-  NEATENSTEIN_RENDER_DISTANCE_CAP,
+  resolveNeatensteinFogFactor,
 } from '../renderer/framebuffer';
 import {
   GOLDEN_ANGLE_DEG,
@@ -28,6 +28,23 @@ import {
  */
 export function formatRgb(color: { r: number; g: number; b: number }): string {
   return `rgb(${Math.round(color.r)}, ${Math.round(color.g)}, ${Math.round(color.b)})`;
+}
+
+/**
+ * Format an RGB triple as a `#rrggbb` hex string.
+ *
+ * Used by the framebuffer wall path where {@link writeNeonWallColumn}
+ * calls `parseHexColor`, which strictly requires `#rrggbb` format.
+ *
+ * @param color - RGB color object.
+ * @returns Hex color string in `#rrggbb` format.
+ */
+export function rgbToHex(color: { r: number; g: number; b: number }): string {
+  const toHex = (n: number): string =>
+    Math.max(0, Math.min(255, Math.round(n)))
+      .toString(16)
+      .padStart(2, '0');
+  return `#${toHex(color.r)}${toHex(color.g)}${toHex(color.b)}`;
 }
 
 /**
@@ -81,25 +98,20 @@ export function resolveEnemyTeamColor(
 }
 
 /**
- * Clamp a value to a `[min, max]` range.
- *
- * @param value - Value to clamp.
- * @param min - Inclusive minimum.
- * @param max - Inclusive maximum.
- * @returns The clamped value.
- */
-export function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
-}
-
-/**
  * Resolve a safe distance-fog interpolation factor.
+ *
+ * Delegates to the shared smoothstep fog function so the worker-tier render
+ * path uses the same distance-based fog curve as the CPU fallback path.
+ * Returns `0` (no fog) at distances up to `NEATENSTEIN_FOG_START_DISTANCE`,
+ * then smoothly ramps to `1` (fully fogged) at
+ * `NEATENSTEIN_RENDER_DISTANCE_CAP` using a smoothstep curve. Non-finite
+ * distances are treated as fully fogged.
  *
  * @param perpWallDist - Perpendicular wall distance.
  * @returns Fog factor in `[0, 1]`.
  */
 export function resolveWallFogFactor(perpWallDist: number): number {
-  return perpWallDist >= NEATENSTEIN_RENDER_DISTANCE_CAP ? 1 : 0;
+  return resolveNeatensteinFogFactor(perpWallDist);
 }
 
 /**

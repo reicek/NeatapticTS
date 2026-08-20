@@ -41,12 +41,18 @@ function captureConsole() {
   console.log = (...args) => logs.push(args.join(' '));
   console.error = (...args) => errors.push(args.join(' '));
   return {
-    logs, errors,
-    restore() { console.log = origLog; console.error = origError; },
+    logs,
+    errors,
+    restore() {
+      console.log = origLog;
+      console.error = origError;
+    },
   };
 }
 
-const scriptPath = path.resolve('C:\\NeatapticTS\\scripts\\agent-customization\\watch-routing-table.mjs');
+const scriptPath = path.resolve(
+  'C:\\NeatapticTS\\scripts\\agent-customization\\watch-routing-table.mjs',
+);
 
 async function importModuleWithGuard(argv) {
   const origArgv = process.argv;
@@ -229,7 +235,11 @@ describe('watch-routing-table', () => {
       watcherObj.register(cb);
       // Simulate a file event with non-string filename
       setTimeout(() => {
-        try { cb('change', undefined); } catch { /* ignore */ }
+        try {
+          cb('change', undefined);
+        } catch {
+          /* ignore */
+        }
       }, 10);
       return watcherObj.watcher;
     });
@@ -320,7 +330,9 @@ describe('watch-routing-table', () => {
     await importModuleWithGuard([]);
 
     const origExit = process.exit;
-    process.exit = () => { throw new Error('EXIT:0'); };
+    process.exit = () => {
+      throw new Error('EXIT:0');
+    };
     try {
       process.emit('SIGINT');
     } catch {
@@ -344,7 +356,9 @@ describe('watch-routing-table', () => {
     await importModuleWithGuard([]);
 
     const origExit = process.exit;
-    process.exit = () => { throw new Error('EXIT:0'); };
+    process.exit = () => {
+      throw new Error('EXIT:0');
+    };
     try {
       process.emit('SIGTERM');
     } catch {

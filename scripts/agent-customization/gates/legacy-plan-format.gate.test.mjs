@@ -270,7 +270,9 @@ describe('legacy-plan-format gate', () => {
       const parsed = JSON.parse(logs[0]);
       assert.equal(parsed.pass, false);
       assert.equal(parsed.evidence.legacyBlocks.length, 1);
-      assert.ok(parsed.evidence.legacyBlocks[0].reason.includes('YAML parse error'));
+      assert.ok(
+        parsed.evidence.legacyBlocks[0].reason.includes('YAML parse error'),
+      );
     });
 
     it('skips blocks where metadata.phase is undefined', async () => {
@@ -281,10 +283,7 @@ describe('legacy-plan-format gate', () => {
         return [];
       };
       mockReadFileFn = async () =>
-        planWithHeading(
-          '### Phase 1: Setup [WIP]',
-          "status: '[WIP]'",
-        );
+        planWithHeading('### Phase 1: Setup [WIP]', "status: '[WIP]'");
       mockParseYamlFn = () => ({ expansion: 'none' }); // no phase property
       const logs = await importGate(['--json']);
       const parsed = JSON.parse(logs[0]);
@@ -441,8 +440,7 @@ describe('legacy-plan-format gate', () => {
         return [];
       };
       // YAML block at start of file — no heading before it
-      mockReadFileFn = async () =>
-        yamlBlock("status: '[WIP]'\nphase: 1");
+      mockReadFileFn = async () => yamlBlock("status: '[WIP]'\nphase: 1");
       mockParseYamlFn = () => ({ phase: 1, expansion: 'none' });
       const logs = await importGate(['--json']);
       const parsed = JSON.parse(logs[0]);
@@ -458,8 +456,7 @@ describe('legacy-plan-format gate', () => {
         return [];
       };
       mockReadFileFn = async () =>
-        'Some text.\nMore text.\n\n' +
-        yamlBlock("status: '[WIP]'\nphase: 1");
+        'Some text.\nMore text.\n\n' + yamlBlock("status: '[WIP]'\nphase: 1");
       mockParseYamlFn = () => ({ phase: 1, expansion: 'none' });
       const logs = await importGate(['--json']);
       const parsed = JSON.parse(logs[0]);
@@ -475,10 +472,7 @@ describe('legacy-plan-format gate', () => {
         return [];
       };
       mockReadFileFn = async () =>
-        planWithHeading(
-          '### Phase 1: Setup [WIP]',
-          'phase: 1',
-        );
+        planWithHeading('### Phase 1: Setup [WIP]', 'phase: 1');
       mockParseYamlFn = () => ({ phase: 1, expansion: 'none' });
       const logs = await importGate(['--json']);
       const parsed = JSON.parse(logs[0]);

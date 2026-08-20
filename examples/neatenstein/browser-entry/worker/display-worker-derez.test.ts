@@ -1,62 +1,15 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
-import { NEATENSTEIN_RENDER_FRAME_FORMAT_VERSION } from '../constants';
 import type {
   ControlledEnemy,
   EnemyControllerState,
-} from '../../scripts/enemy-controller';
+} from '../shared/enemy-controller';
 import type { GameState } from '../host/game/types';
 
-const loadModule = (path: string): Promise<unknown> => import(path);
-
-interface MockWorkerGlobal {
-  postMessage: jest.Mock;
-  requestAnimationFrame: jest.Mock;
-  onmessage: ((event: MessageEvent) => void) | null;
-}
-
-function installMockWorkerGlobal(): MockWorkerGlobal {
-  const self: MockWorkerGlobal = {
-    postMessage: jest.fn(),
-    requestAnimationFrame: jest.fn(() => 0),
-    onmessage: null,
-  };
-  (globalThis as unknown as Record<string, unknown>).self = self;
-  return self;
-}
-
-const workerSelf = installMockWorkerGlobal();
-
-function sendInitMessage(tier: 'worker' | 'cpu' | 'gpu') {
-  if (typeof workerSelf.onmessage === 'function') {
-    workerSelf.onmessage({
-      data: {
-        type: 'init',
-        tier,
-        version: NEATENSTEIN_RENDER_FRAME_FORMAT_VERSION,
-        mapSeed: 42,
-      },
-    } as unknown as MessageEvent);
-  }
-}
-
-function sendSimStateMessage() {
-  if (typeof workerSelf.onmessage === 'function') {
-    workerSelf.onmessage({
-      data: {
-        type: 'simState',
-        state: {
-          canvasWidth: 640,
-          canvasHeight: 360,
-          simTick: 1,
-          cameraX: 12.5,
-          cameraY: 12.5,
-          cameraYaw: 0.25,
-          mapSeed: 42,
-        },
-      },
-    } as unknown as MessageEvent);
-  }
-}
+import {
+  loadModule,
+  sendInitMessage,
+  sendSimStateMessage,
+} from './display.worker.test-helpers';
 
 describe('Neatenstein derez pruning fix', () => {
   beforeEach(() => {
@@ -152,5 +105,109 @@ describe('Neatenstein derez pruning fix', () => {
       );
       expect(deadEnemy).toBeUndefined();
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// A2 Fix 4 — Zero-timestep pass conditional skip
+//
+// display.worker.sim.utils.ts:373-379 runs a second updateEnemyController
+// call unconditionally.  The fix makes it conditional: skip when
+// completedDeRezIndices.length === 0, and reuse the distance map from pass 1.
+// ---------------------------------------------------------------------------
+
+describe('A2 Fix 4: Zero-timestep pass conditional skip', () => {
+  it('exports __testOnlyGetZeroTimestepPassSkipped as a function from sim utils', async () => {
+    const mod = (await loadModule('./display.worker.sim.utils.ts')) as Record<
+      string,
+      unknown
+    >;
+    expect(typeof mod.__testOnlyGetZeroTimestepPassSkipped).toBe('function');
+  });
+
+  it('returns true after a sim step with no completed de-rez', async () => {
+    // Load the worker module and trigger sim steps via the message flow
+    // so the diagnostic reflects actual runtime behavior.
+    jest.resetModules();
+    await loadModule('./display.worker.ts');
+    sendInitMessage('cpu');
+    // Send one tick to initialize the game state and controller.
+    sendSimStateMessage();
+
+    // Mock gameTick to return the state unchanged (no enemy spawning,
+    // no deaths) so that the enemy count stays stable between the first
+    // updateEnemyController call and the skipPass check.
+    const tickModule = await import('../host/game/tick');
+    const gameTickSpy = jest
+      .spyOn(tickModule, 'gameTick')
+      .mockImplementation((gameState: GameState) => gameState);
+
+    // Send another tick — with gameTick mocked to return unchanged state,
+    // the controller count matches the game count, no de-rez completions,
+    // no dead enemies → skipPass = true.
+    sendSimStateMessage();
+    gameTickSpy.mockRestore();
+
+    const { __testOnlyGetZeroTimestepPassSkipped } = (await loadModule(
+      './display.worker.sim.utils.ts',
+    )) as {
+      __testOnlyGetZeroTimestepPassSkipped: () => boolean;
+    };
+    // When no enemies complete de-rez and the controller is synced with
+    // the game state, the zero-timestep pass should be skipped (skipPass
+    // = true).
+    expect(__testOnlyGetZeroTimestepPassSkipped()).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// A2 Fix 6 — De-rez pruning single-pass with Set
+//
+// display.worker.sim.utils.ts:333-362 runs 3 chained .map().filter().map()
+// every tick.  The fix replaces this with a single in-place loop using a Set
+// for completed indices, and only runs when completedDeRezIndices.length > 0.
+// ---------------------------------------------------------------------------
+
+describe('A2 Fix 6: De-rez pruning single-pass with Set', () => {
+  it('exports __testOnlyGetDeRezPruningUsedSinglePass as a function from sim utils', async () => {
+    const mod = (await loadModule('./display.worker.sim.utils.ts')) as Record<
+      string,
+      unknown
+    >;
+    expect(typeof mod.__testOnlyGetDeRezPruningUsedSinglePass).toBe('function');
+  });
+
+  it('returns true after a sim step (pruning used single-pass Set approach)', async () => {
+    // Load the worker module and trigger a sim step via the message flow
+    // so the diagnostic reflects actual runtime behavior.
+    await loadModule('./display.worker.ts');
+    sendInitMessage('cpu');
+    sendSimStateMessage();
+
+    const { __testOnlyGetDeRezPruningUsedSinglePass } = (await loadModule(
+      './display.worker.sim.utils.ts',
+    )) as {
+      __testOnlyGetDeRezPruningUsedSinglePass: () => boolean;
+    };
+    // The de-rez pruning should use a single in-place loop with a Set
+    // for completed indices, not chained .map().filter().map().
+    expect(__testOnlyGetDeRezPruningUsedSinglePass()).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// A2 Fix 8 — runSimStep mutable internal state (no deep clone)
+//
+// runSimStep currently uses spread/map chains to clone state.  The fix
+// mutates internal state in place to eliminate per-tick allocation.
+// ---------------------------------------------------------------------------
+
+describe('A2 Fix 8: runSimStep mutable internal state', () => {
+  it('exports __testOnlyGetSimStepCloneCount as a function from sim utils', async () => {
+    const mod = (await loadModule('./display.worker.sim.utils.ts')) as Record<
+      string,
+      unknown
+    >;
+    expect(typeof mod.__testOnlyGetSimStepCloneCount).toBe('function');
   });
 });

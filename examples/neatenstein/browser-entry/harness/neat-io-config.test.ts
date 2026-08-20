@@ -92,124 +92,142 @@ describe('P5S1-fire-gate: applyFireGate', () => {
   it('AC-P5S1a-001: suppresses fire when enemyVisible below hysteresis floor', () => {
     const state = createFireGateState();
     // enemyVisible = 0 (no enemy) → below 0.15 floor → fire suppressed
-    expect(applyFireGate(state, 0, 0.9)).toBe(false);
+    expect(applyFireGate(state, 0, 0.9).shouldFire).toBe(false);
   });
 
   it('AC-P5S1a-001: suppresses fire even when rawFireOutput is strongly positive', () => {
     const state = createFireGateState();
-    expect(applyFireGate(state, 0, 5.0)).toBe(false);
+    expect(applyFireGate(state, 0, 5.0).shouldFire).toBe(false);
   });
 
   it('AC-P5S1a-002: allows fire when enemyVisible above hysteresis ceiling', () => {
     const state = createFireGateState();
     // enemyVisible = 1 (enemy visible) → above 0.18 ceiling → fire allowed
-    expect(applyFireGate(state, 1, 0.5)).toBe(true);
+    expect(applyFireGate(state, 1, 0.5).shouldFire).toBe(true);
   });
 
   it('AC-P5S1a-002: does NOT suppress fire when enemy is visible but rawFireOutput ≤ 0', () => {
     const state = createFireGateState();
     // Gate opens, but raw fire output is not positive → no fire
-    expect(applyFireGate(state, 1, -0.1)).toBe(false);
-    expect(applyFireGate(state, 1, 0)).toBe(false);
+    expect(applyFireGate(state, 1, -0.1).shouldFire).toBe(false);
+    expect(applyFireGate(state, 1, 0).shouldFire).toBe(false);
   });
 
   it('AC-P5S1a-003: hysteresis — gate stays open when enemyVisible drops into hysteresis band', () => {
-    const state = createFireGateState();
+    let gateState = createFireGateState();
     // Open the gate with enemyVisible = 1
-    applyFireGate(state, 1, 0.5);
-    expect(state.fireActive).toBe(true);
+    const r1 = applyFireGate(gateState, 1, 0.5);
+    expect(r1.shouldFire).toBe(true);
+    expect(r1.state.fireActive).toBe(true);
+    gateState = r1.state;
 
     // enemyVisible drops to 0.16 (between 0.15 and 0.18) — gate stays open
-    expect(applyFireGate(state, 0.16, 0.5)).toBe(true);
-    expect(state.fireActive).toBe(true);
+    const r2 = applyFireGate(gateState, 0.16, 0.5);
+    expect(r2.shouldFire).toBe(true);
+    expect(r2.state.fireActive).toBe(true);
   });
 
   it('AC-P5S1a-003: hysteresis — gate stays closed when enemyVisible rises into hysteresis band', () => {
-    const state = createFireGateState();
+    const gateState = createFireGateState();
     // Gate starts closed
-    expect(state.fireActive).toBe(false);
+    expect(gateState.fireActive).toBe(false);
 
     // enemyVisible rises to 0.16 (between 0.15 and 0.18) — gate stays closed
-    expect(applyFireGate(state, 0.16, 0.5)).toBe(false);
-    expect(state.fireActive).toBe(false);
+    const r = applyFireGate(gateState, 0.16, 0.5);
+    expect(r.shouldFire).toBe(false);
+    expect(r.state.fireActive).toBe(false);
   });
 
   it('AC-P5S1a-003: hysteresis — gate closes when enemyVisible drops below floor', () => {
-    const state = createFireGateState();
+    let gateState = createFireGateState();
     // Open the gate
-    applyFireGate(state, 1, 0.5);
-    expect(state.fireActive).toBe(true);
+    const r1 = applyFireGate(gateState, 1, 0.5);
+    expect(r1.state.fireActive).toBe(true);
+    gateState = r1.state;
 
     // enemyVisible drops to 0.10 (below 0.15 floor) — gate closes
-    expect(applyFireGate(state, 0.1, 0.5)).toBe(false);
-    expect(state.fireActive).toBe(false);
+    const r2 = applyFireGate(gateState, 0.1, 0.5);
+    expect(r2.shouldFire).toBe(false);
+    expect(r2.state.fireActive).toBe(false);
   });
 
   it('AC-P5S1a-003: hysteresis — gate opens when enemyVisible rises above ceiling', () => {
-    const state = createFireGateState();
+    const gateState = createFireGateState();
     // Gate starts closed
-    expect(state.fireActive).toBe(false);
+    expect(gateState.fireActive).toBe(false);
 
     // enemyVisible rises to 0.20 (above 0.18 ceiling) — gate opens
-    expect(applyFireGate(state, 0.2, 0.5)).toBe(true);
-    expect(state.fireActive).toBe(true);
+    const r = applyFireGate(gateState, 0.2, 0.5);
+    expect(r.shouldFire).toBe(true);
+    expect(r.state.fireActive).toBe(true);
   });
 
   it('AC-P5S1a-003: hysteresis — no rapid oscillation at boundary', () => {
-    const state = createFireGateState();
+    let gateState = createFireGateState();
     // Simulate enemyVisible oscillating around the boundary
     // Tick 1: enemy visible → gate opens
-    expect(applyFireGate(state, 1, 0.5)).toBe(true);
+    let r = applyFireGate(gateState, 1, 0.5);
+    expect(r.shouldFire).toBe(true);
+    gateState = r.state;
     // Tick 2: brief visibility loss (sensor = 0.16, in hysteresis band) → gate stays open
-    expect(applyFireGate(state, 0.16, 0.5)).toBe(true);
+    r = applyFireGate(gateState, 0.16, 0.5);
+    expect(r.shouldFire).toBe(true);
+    gateState = r.state;
     // Tick 3: enemy still barely visible (sensor = 0.17, in hysteresis band) → gate stays open
-    expect(applyFireGate(state, 0.17, 0.5)).toBe(true);
+    r = applyFireGate(gateState, 0.17, 0.5);
+    expect(r.shouldFire).toBe(true);
+    gateState = r.state;
     // Tick 4: enemy visible again → gate stays open
-    expect(applyFireGate(state, 1, 0.5)).toBe(true);
-    expect(state.fireActive).toBe(true);
+    r = applyFireGate(gateState, 1, 0.5);
+    expect(r.shouldFire).toBe(true);
+    expect(r.state.fireActive).toBe(true);
   });
 
   it('AC-P5S1a-003: hysteresis — gate closes and stays closed through band', () => {
-    const state = createFireGateState();
+    let gateState = createFireGateState();
     // Open the gate
-    applyFireGate(state, 1, 0.5);
-    expect(state.fireActive).toBe(true);
+    let r = applyFireGate(gateState, 1, 0.5);
+    expect(r.state.fireActive).toBe(true);
+    gateState = r.state;
 
     // enemyVisible drops below floor → gate closes
-    expect(applyFireGate(state, 0.1, 0.5)).toBe(false);
-    expect(state.fireActive).toBe(false);
+    r = applyFireGate(gateState, 0.1, 0.5);
+    expect(r.shouldFire).toBe(false);
+    expect(r.state.fireActive).toBe(false);
+    gateState = r.state;
 
     // enemyVisible rises into hysteresis band → gate stays closed
-    expect(applyFireGate(state, 0.16, 0.5)).toBe(false);
-    expect(state.fireActive).toBe(false);
+    r = applyFireGate(gateState, 0.16, 0.5);
+    expect(r.shouldFire).toBe(false);
+    expect(r.state.fireActive).toBe(false);
   });
 
-  it('mutates state in-place (persists between ticks)', () => {
+  it('returns new state (does not mutate input)', () => {
     const state = createFireGateState();
-    applyFireGate(state, 1, 0.5);
-    expect(state.fireActive).toBe(true);
-    // Same state object should retain the change
-    applyFireGate(state, 0.16, 0.5);
-    expect(state.fireActive).toBe(true);
+    const r1 = applyFireGate(state, 1, 0.5);
+    expect(r1.state.fireActive).toBe(true);
+    // Input state must not be mutated
+    expect(state.fireActive).toBe(false);
+    // Thread the new state for the next call
+    const r2 = applyFireGate(r1.state, 0.16, 0.5);
+    expect(r2.state.fireActive).toBe(true);
+    // Previous state object is also not mutated by the second call
+    expect(r1.state.fireActive).toBe(true);
   });
 });
 
 describe('P5S1-fire-gate: networkOutputToTickInput with fire gate', () => {
   it('AC-P5S1a-001: suppresses fire when no enemy visible (fireGate provided)', () => {
     const state = createFireGateState();
-    const result = networkOutputToTickInput([0, 0, 0, 0.9, 0], {
-      state,
-      enemyVisible: 0,
-    });
+    const fireGate = { state, enemyVisible: 0 };
+    const result = networkOutputToTickInput([0, 0, 0, 0.9, 0], fireGate);
     expect(result.fire).toBe(false);
   });
 
   it('AC-P5S1a-002: allows fire when enemy visible (fireGate provided)', () => {
     const state = createFireGateState();
-    const result = networkOutputToTickInput([0, 0, 0, 0.5, 0], {
-      state,
-      enemyVisible: 1,
-    });
+    const fireGate = { state, enemyVisible: 1 };
+    const result = networkOutputToTickInput([0, 0, 0, 0.5, 0], fireGate);
     expect(result.fire).toBe(true);
   });
 
@@ -222,35 +240,32 @@ describe('P5S1-fire-gate: networkOutputToTickInput with fire gate', () => {
   });
 
   it('hysteresis maintained across multiple calls with same state object', () => {
-    const state = createFireGateState();
+    let state = createFireGateState();
     // Tick 1: enemy visible → fire allowed
-    let result = networkOutputToTickInput([0, 0, 0, 0.5, 0], {
-      state,
-      enemyVisible: 1,
-    });
+    let fireGate = { state, enemyVisible: 1 };
+    let result = networkOutputToTickInput([0, 0, 0, 0.5, 0], fireGate);
     expect(result.fire).toBe(true);
+    state = fireGate.state;
 
     // Tick 2: enemy briefly not visible (in hysteresis band) → fire still allowed
-    result = networkOutputToTickInput([0, 0, 0, 0.5, 0], {
-      state,
-      enemyVisible: 0.16,
-    });
+    fireGate = { state, enemyVisible: 0.16 };
+    result = networkOutputToTickInput([0, 0, 0, 0.5, 0], fireGate);
     expect(result.fire).toBe(true);
+    state = fireGate.state;
 
     // Tick 3: enemy truly gone (below floor) → fire suppressed
-    result = networkOutputToTickInput([0, 0, 0, 0.5, 0], {
-      state,
-      enemyVisible: 0,
-    });
+    fireGate = { state, enemyVisible: 0 };
+    result = networkOutputToTickInput([0, 0, 0, 0.5, 0], fireGate);
     expect(result.fire).toBe(false);
   });
 
   it('non-fire outputs are unaffected by fire gate', () => {
     const state = createFireGateState();
-    const result = networkOutputToTickInput([0.8, -0.6, 0.4, 0.9, 0.7], {
-      state,
-      enemyVisible: 0,
-    });
+    const fireGate = { state, enemyVisible: 0 };
+    const result = networkOutputToTickInput(
+      [0.8, -0.6, 0.4, 0.9, 0.7],
+      fireGate,
+    );
     // Fire suppressed but move/look/dash are normal
     expect(result.fire).toBe(false);
     expect(result.move.x).toBeCloseTo(Math.tanh(0.8));
@@ -261,10 +276,8 @@ describe('P5S1-fire-gate: networkOutputToTickInput with fire gate', () => {
 
   it('pads short output arrays even with fire gate', () => {
     const state = createFireGateState();
-    const result = networkOutputToTickInput([0.5, 0.5], {
-      state,
-      enemyVisible: 1,
-    });
+    const fireGate = { state, enemyVisible: 1 };
+    const result = networkOutputToTickInput([0.5, 0.5], fireGate);
     // Padded: out[2]=0, out[3]=0, out[4]=0
     expect(result.fire).toBe(false); // out[3] = 0, not > 0
     expect(result.dash).toBe(false); // out[4] = 0, not > 0.5

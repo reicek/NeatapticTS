@@ -454,9 +454,7 @@ describe('searchContext — compact', () => {
       searchCorpusFn: async () => fakeSearchResponse([fakeChunk(1)]),
       assembleContextFn: async () =>
         fakeAssembleResponse({
-          selectedChunks: [
-            { chunk_id: 1, truncated: true },
-          ],
+          selectedChunks: [{ chunk_id: 1, truncated: true }],
         }),
     });
     expect(result.compact).toBe(true);
@@ -814,8 +812,7 @@ describe('searchContext — edge cases', () => {
       query: 'q',
       budget: 5,
       searchCorpusFn: async () => fakeSearchResponse([fakeChunk(1)]),
-      assembleContextFn: async () =>
-        fakeAssembleResponse({ tokenCount: 100 }),
+      assembleContextFn: async () => fakeAssembleResponse({ tokenCount: 100 }),
     });
     expect(result.budget_remaining).toBe(0);
   });
@@ -933,9 +930,8 @@ describe('searchContext — branch coverage', () => {
   });
 
   it('uses real searchCorpus and assembleContext fallbacks with a schema client', async () => {
-    const { createSchemaClient, insertTestFixtures } = await import(
-      './turso-test-helpers.mjs'
-    );
+    const { createSchemaClient, insertTestFixtures } =
+      await import('./turso-test-helpers.mjs');
     const client = await createSchemaClient();
     try {
       await insertTestFixtures(client);

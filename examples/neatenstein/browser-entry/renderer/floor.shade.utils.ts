@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Shading and lighting executors extracted from the floor renderer.
  *
  * Contains pure leaf functions that compute alpha from depth, resolve cached
@@ -8,7 +8,11 @@
  */
 
 import { FLAPPY_NEON_PALETTE } from '../../../flappy_bird/constants/constants.palette';
-import { NEATENSTEIN_BACKGROUND_RGB } from './framebuffer';
+import {
+  NEATENSTEIN_BACKGROUND_RGB,
+  NEATENSTEIN_RENDER_DISTANCE_CAP,
+  resolveNeatensteinFogFactor,
+} from './framebuffer';
 import { strokeNeatensteinFloorBand } from './floor.band.utils';
 import type {
   NeatensteinFloorRenderContext,
@@ -25,6 +29,7 @@ import {
   NEATENSTEIN_FLOOR_GLOW_ALPHA_MULTIPLIER,
   NEATENSTEIN_FLOOR_SHADOW_BLUR_PX,
 } from './renderer.floor.constants';
+import { clamp } from '../shared/math-guards.utils';
 
 // Re-export previously-public symbols that moved to dedicated files.
 export {
@@ -54,15 +59,33 @@ const NEATENSTEIN_FLOOR_SHADOW_COLOR = FLAPPY_NEON_PALETTE.groundGridGlow;
 const NEATENSTEIN_FLOOR_STROKE_STYLE_CACHE = new Map<string, string>();
 
 /**
- * Clamp a number into the inclusive range `[min, max]`.
+ * Resolve floor grid color with smoothstep fog applied to RGB channels (C1.3).
  *
- * @param value - Value to clamp.
- * @param min - Lower bound.
- * @param max - Upper bound.
- * @returns Clamped value.
+ * Blends the base grid color toward the background void color using the shared
+ * smoothstep fog factor ({@link resolveNeatensteinFogFactor}). At
+ * `FOG_START_DISTANCE` the fog factor is 0 (base color unchanged); at
+ * `RENDER_DISTANCE_CAP` the fog factor is 1 (fully background color).
+ *
+ * @param r - Base color red channel [0, 255].
+ * @param g - Base color green channel [0, 255].
+ * @param b - Base color blue channel [0, 255].
+ * @param distance - World-space distance from the camera.
+ * @returns Fogged RGB color `{ r, g, b }`.
  */
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
+export function resolveNeatensteinFloorFoggedColor(
+  r: number,
+  g: number,
+  b: number,
+  distance: number,
+): { r: number; g: number; b: number } {
+  const fogFactor = resolveNeatensteinFogFactor(distance);
+  const invFog = 1 - fogFactor;
+
+  return {
+    r: r * invFog + NEATENSTEIN_BACKGROUND_RGB.r * fogFactor,
+    g: g * invFog + NEATENSTEIN_BACKGROUND_RGB.g * fogFactor,
+    b: b * invFog + NEATENSTEIN_BACKGROUND_RGB.b * fogFactor,
+  };
 }
 
 /**
@@ -82,6 +105,25 @@ export function resolveNeatensteinFloorAlpha(depthRatio: number): number {
     NEATENSTEIN_FLOOR_MIN_ALPHA +
     (NEATENSTEIN_FLOOR_MAX_ALPHA - NEATENSTEIN_FLOOR_MIN_ALPHA) * clampedRatio
   );
+}
+
+/**
+ * Resolve floor grid alpha from world-space distance using the unified
+ * smoothstep fog factor.
+ *
+ * Replaces the depth-band alpha system with a single continuous fog
+ * derivation: `alpha = MAX_ALPHA * (1 - fogFactor)`. At
+ * `FOG_START_DISTANCE` the fog factor is 0 (full alpha); at
+ * `RENDER_DISTANCE_CAP` the fog factor is 1 (alpha ≈ 0).
+ *
+ * @param distance - World-space distance from the camera.
+ * @returns Alpha value in `[0, MAX_ALPHA]`.
+ */
+export function resolveNeatensteinFloorAlphaFromDistance(
+  distance: number,
+): number {
+  const fogFactor = resolveNeatensteinFogFactor(distance);
+  return NEATENSTEIN_FLOOR_MAX_ALPHA * (1 - fogFactor);
 }
 
 /**
@@ -182,12 +224,21 @@ export function strokeNeatensteinGridBands(
     const bandRatio = (bandIndex + 0.5) / NEATENSTEIN_FLOOR_ALPHA_BANDS;
     const coreAlpha = resolveNeatensteinFloorAlpha(bandRatio);
 
-    // All bands within 30 cells use the original floor color — fog only
-    // applies AT the 30-cell cap, not before.
+    // C1.3: Apply smoothstep fog to the grid color per band. Each band's
+    // representative distance is derived from its depth ratio (0 = far,
+    // 1 = near), so distant bands fade toward the background void.
+    const representativeDistance =
+      NEATENSTEIN_RENDER_DISTANCE_CAP * (1 - bandRatio);
+
     let foggedRgb: { r: number; g: number; b: number };
     /* istanbul ignore else -- FLOOR_BASE_RGB is always non-null with the valid palette color */
     if (FLOOR_BASE_RGB !== null) {
-      foggedRgb = FLOOR_BASE_RGB;
+      foggedRgb = resolveNeatensteinFloorFoggedColor(
+        FLOOR_BASE_RGB.r,
+        FLOOR_BASE_RGB.g,
+        FLOOR_BASE_RGB.b,
+        representativeDistance,
+      );
     } else {
       foggedRgb = NEATENSTEIN_BACKGROUND_RGB;
     }

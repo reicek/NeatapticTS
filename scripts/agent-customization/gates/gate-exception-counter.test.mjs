@@ -82,7 +82,9 @@ describe('gate-exception-counter', () => {
 
   it('--derive-from-learning-log with valid sessionId uses learning log count', async () => {
     mockCountTrailingGateFailures = jest.fn(() => 4);
-    mockLoadLearningLogEvents = jest.fn(async () => [{ eventType: 'gate-exception' }]);
+    mockLoadLearningLogEvents = jest.fn(async () => [
+      { eventType: 'gate-exception' },
+    ]);
 
     const logs = await importGate([
       '--derive-from-learning-log',
@@ -159,10 +161,7 @@ describe('gate-exception-counter', () => {
   });
 
   it('unknown args are ignored', async () => {
-    const logs = await importGate([
-      '--unknown-flag',
-      '--failure-count=0',
-    ]);
+    const logs = await importGate(['--unknown-flag', '--failure-count=0']);
     const parsed = JSON.parse(logs[0]);
     assert.equal(parsed.failureCount, 0);
     assert.equal(parsed.escalationTriggered, false);

@@ -47,7 +47,12 @@ export const MLP_OUTPUT_TURN = 'turn';
 /** Output label for the fire action. */
 export const MLP_OUTPUT_FIRE = 'fire';
 
-/** Ordered output labels for the MLP enemy backend. */
+/**
+ * Ordered semantic output labels for the MLP enemy backend.
+ *
+ * These labels map the four scalar outputs produced by {@link activateMlp} to
+ * named enemy actions: forward movement, lateral strafing, turning, and firing.
+ */
 export const NEATENSTEIN_MLP_OUTPUT_LABELS: readonly string[] = [
   MLP_OUTPUT_MOVE,
   MLP_OUTPUT_STRAFE,

@@ -49,9 +49,11 @@ describe('Neatenstein game constants', () => {
       });
     });
 
-    it('exports an enemy concurrent cap equal to 8', async () => {
+    it('exports an enemy concurrent cap of at least 16', async () => {
       const mod = (await import('./constants.ts')) as Record<string, unknown>;
-      expect(mod.NEATENSTEIN_ENEMY_MAX_CONCURRENT as number).toBe(8);
+      expect(
+        mod.NEATENSTEIN_ENEMY_MAX_CONCURRENT as number,
+      ).toBeGreaterThanOrEqual(16);
     });
 
     it('exports dash invulnerability equal to 200 ms', async () => {

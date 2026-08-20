@@ -296,30 +296,30 @@ describe('Neatenstein game state', () => {
     });
 
     it('increments player ammo by the given amount', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- restoreAmmo not yet exported; red test
-      const mod = (await import('./state.ts')) as Record<string, any>;
+      const mod = (await import('./state.ts')) as Record<string, unknown>;
       const { createGameState } = mod as typeof import('./state.ts');
       const state = createGameState({ seed: 42 });
       const lowAmmoState = {
         ...state,
         player: { ...state.player, ammo: 10 },
       };
-      const result = mod.restoreAmmo(lowAmmoState, 5) as {
+      const restoreAmmo = mod.restoreAmmo as (...args: unknown[]) => unknown;
+      const result = restoreAmmo(lowAmmoState, 5) as {
         player: { ammo: number };
       };
       expect(result.player.ammo).toBe(15);
     });
 
     it('clamps restored ammo at maxAmmo', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- restoreAmmo not yet exported; red test
-      const mod = (await import('./state.ts')) as Record<string, any>;
+      const mod = (await import('./state.ts')) as Record<string, unknown>;
       const { createGameState } = mod as typeof import('./state.ts');
       const state = createGameState({ seed: 42 });
       const nearMaxState = {
         ...state,
         player: { ...state.player, ammo: 48 },
       };
-      const result = mod.restoreAmmo(nearMaxState, 10) as {
+      const restoreAmmo = mod.restoreAmmo as (...args: unknown[]) => unknown;
+      const result = restoreAmmo(nearMaxState, 10) as {
         player: { ammo: number };
       };
       expect(result.player.ammo).toBe(state.player.maxAmmo);

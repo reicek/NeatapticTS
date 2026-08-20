@@ -665,6 +665,7 @@ export function resolvePrimitiveIntent(
 }
 
 const NEUTRAL_NODE_RESPONSE = 1;
+const DEFAULT_TIME_CONSTANT = 1.0;
 
 /**
  * Node (Neuron)
@@ -742,6 +743,16 @@ export default class Node {
    * The internal state of the node (sum of weighted inputs + bias) before the activation function is applied.
    */
   state: number;
+  /**
+   * Per-node evolvable time constant for CTRNN (Continuous Time Recurrent Neural Network) formulation.
+   *
+   * Controls the speed of temporal integration during activation. A value of 1.0
+   * gives fast (near-instant) response; larger values introduce slower temporal
+   * memory. Mutated by the `MOD_TIME_CONSTANT` operator.
+   *
+   * Defaults to `1.0`.
+   */
+  timeConstant: number;
   /**
    * The node's state from the previous activation cycle. Used for recurrent self-connections.
    */
@@ -826,6 +837,7 @@ export default class Node {
     // Initialize state and activation values.
     this.activation = 0;
     this.state = 0;
+    this.timeConstant = DEFAULT_TIME_CONSTANT;
     this.old = 0;
 
     // Initialize mask for dropout (default is no dropout).
@@ -882,6 +894,33 @@ export default class Node {
    */
   setActivation(fn: (x: number, derivate?: boolean) => number) {
     this.squash = fn;
+  }
+
+  /**
+   * Applies CTRNN (Continuous Time Recurrent Neural Network) exponential Euler
+   * integration to advance the node's internal state.
+   *
+   * **Scaffolding:** This method is library scaffolding for a future CTRNN
+   * activation path. It is not yet routed through the standard network
+   * `activate` / `noTraceActivate` pipeline. The Neatenstein demo uses MLP
+   * inference (not `Node` objects), so integration is deferred to a later
+   * step that adds a recurrent activation mode to the network.
+   *
+   * Updates `this.state` in place using the formula:
+   *   `state += (inputSum - state) * (dt / timeConstant)`
+   *
+   * Then applies the squash function to compute the new activation. The
+   * `timeConstant` property controls temporal memory: larger values produce
+   * slower, more inertial responses.
+   *
+   * @param inputSum The weighted sum of inputs (including bias if desired).
+   * @param dt The discrete time step for integration.
+   * @returns The node's activation after integration.
+   */
+  applyCtrnnActivation(inputSum: number, dt: number): number {
+    this.state += (inputSum - this.state) * (dt / this.timeConstant);
+    this.activation = this.squash(this.state * this.response) * this.mask;
+    return this.activation;
   }
 
   /**
@@ -1469,6 +1508,7 @@ export default class Node {
       index: this.index,
       bias: this.bias,
       response: this.response,
+      timeConstant: this.timeConstant,
       type: this.type,
       squash: this.squash ? this.squash.name : null,
       mask: this.mask,
@@ -1483,8 +1523,9 @@ export default class Node {
   static fromJSON(json: {
     bias: number;
     response?: number;
+    timeConstant?: number;
     type: string;
-    squash: string;
+    squash: string | null;
     mask: number;
   }): Node {
     const node = new Node(json.type);
@@ -1493,6 +1534,12 @@ export default class Node {
       typeof json.response === 'number' && Number.isFinite(json.response)
         ? json.response
         : NEUTRAL_NODE_RESPONSE;
+    node.timeConstant =
+      typeof json.timeConstant === 'number' &&
+      Number.isFinite(json.timeConstant) &&
+      json.timeConstant > 0
+        ? json.timeConstant
+        : DEFAULT_TIME_CONSTANT;
     node.mask = json.mask;
     if (json.squash) {
       const squashFn =

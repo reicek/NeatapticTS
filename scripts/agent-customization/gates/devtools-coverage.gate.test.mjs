@@ -150,7 +150,10 @@ describe('devtools-coverage gate', () => {
 
     it('handles non-array skills via toArray (scalar)', async () => {
       mockFrontmatterData = {
-        [relPathFor('03-red-testing')]: { skills: 'devtools', agents: ALL_SPECIALISTS },
+        [relPathFor('03-red-testing')]: {
+          skills: 'devtools',
+          agents: ALL_SPECIALISTS,
+        },
         [relPathFor('05-green-testing')]: fullAgent(),
       };
       const { runDevtoolsCoverageGate } = await withArgv(

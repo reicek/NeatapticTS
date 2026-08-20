@@ -168,7 +168,9 @@ describe('slice-context-archive', () => {
         expect(result.sliceTitle).toBe('Archived slice');
         expect(result.boundaryNotes.phase).toBe(2);
         expect(result.boundaryNotes.phase_status).toBe('[DONE]');
-        expect(result.boundaryNotes.phase_title).toBe('Phase 2 — Implementation');
+        expect(result.boundaryNotes.phase_title).toBe(
+          'Phase 2 — Implementation',
+        );
         expect(result.boundaryNotes.step).toBe('3');
         expect(result.boundaryNotes.status).toBe('[DONE]');
         expect(result.boundaryNotes.goal).toBe('Implement archived feature');
@@ -247,10 +249,7 @@ describe('slice-context-archive', () => {
       const logsPath = 'plans/test-archive-empty.logs.md';
       await writeTempFile(logsPath, EMPTY_CONTENT);
       try {
-        const result = await findArchivedSliceDescriptor(
-          logsPath,
-          'any-slice',
-        );
+        const result = await findArchivedSliceDescriptor(logsPath, 'any-slice');
         expect(result).toBeNull();
       } finally {
         await removeTempFile(logsPath);

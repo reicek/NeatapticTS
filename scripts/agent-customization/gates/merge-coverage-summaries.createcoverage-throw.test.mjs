@@ -21,9 +21,8 @@ jest.unstable_mockModule('istanbul-lib-coverage', () => ({
   },
 }));
 
-const { mergeCoverageSummaries } = await import(
-  './merge-coverage-summaries.mjs'
-);
+const { mergeCoverageSummaries } =
+  await import('./merge-coverage-summaries.mjs');
 
 const REPO_ROOT = path.resolve();
 
@@ -80,6 +79,8 @@ describe('merge-coverage-summaries createCoverageMap throw coverage', () => {
 
     // The coverage-final.json should be in mergedFiles (the path is collected),
     // but the file entries from it should be skipped because createCoverageMap threw.
-    assert.ok(result.mergedFiles.some((f) => f.endsWith('coverage-final.json')));
+    assert.ok(
+      result.mergedFiles.some((f) => f.endsWith('coverage-final.json')),
+    );
   });
 });

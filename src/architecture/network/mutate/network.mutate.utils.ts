@@ -16,6 +16,7 @@ import {
   batchNorm,
   modActivation,
   modBias,
+  modTimeConstant,
   modWeight,
   reinitWeight,
   subBackConn,
@@ -69,6 +70,7 @@ const MUTATION_DISPATCH: Record<string, MutationHandler> = {
   ADD_GRU_NODE: addGRUNode,
   REINIT_WEIGHT: reinitWeight,
   BATCH_NORM: batchNorm,
+  MOD_TIME_CONSTANT: modTimeConstant,
 };
 
 /**

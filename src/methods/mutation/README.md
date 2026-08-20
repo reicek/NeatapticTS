@@ -59,6 +59,56 @@ const structuralExploration = [
 
 ## methods/mutation/mutation.ts
 
+### ALL
+
+Named export of the `ALL` mutation list for direct import.
+
+### FFW
+
+Named export of the `FFW` mutation list for direct import.
+
+### MOD_TIME_CONSTANT
+
+Named export of the `MOD_TIME_CONSTANT` config for direct import.
+
+This operator retunes a node's CTRNN `timeConstant` without changing
+topology. Larger values give the neuron slower, more inertial activation
+dynamics; smaller values produce near-instant response. It complements
+structural memory operators such as `ADD_LSTM_NODE` and `ADD_GRU_NODE`
+because it modifies temporal behavior on existing nodes.
+
+Runtime use: a mutation controller picks `MOD_TIME_CONSTANT` from the shelf;
+the actual perturbation is applied by {@link mutateTimeConstant}; the
+perturbed node then integrates via `applyCtrnnActivation`.
+
+Example:
+
+```ts
+const broadShelf = mutation.ALL;
+expect(broadShelf.map((m) => m.name)).toContain('MOD_TIME_CONSTANT');
+```
+
+### mutateTimeConstant
+
+```ts
+mutateTimeConstant(
+  node: TimeConstantBearer,
+  rng: () => number,
+): void
+```
+
+Perturbs a node's `timeConstant` by a Gaussian N(0, TIME_CONSTANT_SIGMA)
+perturbation drawn from the supplied RNG via the Box-Muller transform,
+clamping to a positive minimum so the CTRNN integration remains stable.
+
+Using the supplied RNG (rather than a deterministic hash) preserves
+evolutionary diversity: clone populations with different RNG states produce
+different perturbations, while the same RNG state remains reproducible.
+
+Parameters:
+- `node` - A node instance with a `timeConstant` property.
+- `rng` - Uniform RNG returning values in [0, 1). Defaults to `Math.random`.
+
 ### MutationConfig
 
 Configuration shape for one mutation operator.
@@ -67,3 +117,7 @@ Each mutation method carries a small policy object describing what kind of
 structural or parametric change it performs and the narrow knobs that shape
 that change. Read the fields as metadata for the evolutionary controller,
 not as a full runtime implementation.
+
+### TimeConstantBearer
+
+Minimal interface for nodes that carry an evolvable `timeConstant` property.

@@ -14,7 +14,9 @@ import { tmpdir } from 'node:os';
 jest.unstable_mockModule('onnxruntime-node', () => ({
   InferenceSession: {
     create: async () => {
-      throw new Error('Mocked: onnxruntime-node is not available in test environment');
+      throw new Error(
+        'Mocked: onnxruntime-node is not available in test environment',
+      );
     },
   },
   Tensor: class MockTensor {},
@@ -44,7 +46,9 @@ afterEach(async () => {
 
 describe('reranker-readiness: constants', () => {
   it('exports DEFAULT_RERANKER_MODEL_ID', () => {
-    expect(DEFAULT_RERANKER_MODEL_ID).toBe('cross-encoder/ms-marco-MiniLM-L-6-v2');
+    expect(DEFAULT_RERANKER_MODEL_ID).toBe(
+      'cross-encoder/ms-marco-MiniLM-L-6-v2',
+    );
   });
 
   it('exports DEFAULT_RERANKER_MAX_SEQUENCE_LENGTH', () => {
@@ -91,7 +95,9 @@ describe('reranker-readiness: forced states', () => {
   });
 
   it('ignores invalid forced state values', async () => {
-    const report = await checkRerankerReadiness({ forceState: 'invalid-state' });
+    const report = await checkRerankerReadiness({
+      forceState: 'invalid-state',
+    });
     // Should not be forced — should proceed to actual filesystem check
     expect(report.state).not.toBe('invalid-state');
   });
@@ -184,7 +190,10 @@ describe('reranker-readiness: model-only path', () => {
     const modelDir = path.join(tempDir, 'non-object-meta');
     await mkdir(modelDir, { recursive: true });
     await writeFile(path.join(modelDir, 'model.onnx'), 'fake-onnx');
-    await writeFile(path.join(modelDir, 'model-meta.json'), '"string-not-object"');
+    await writeFile(
+      path.join(modelDir, 'model-meta.json'),
+      '"string-not-object"',
+    );
     const report = await checkRerankerReadiness({
       rerankerModelDirectory: modelDir,
     });
@@ -243,7 +252,9 @@ describe('reranker-readiness: warm/session path', () => {
     const report = await checkRerankerReadiness({
       rerankerModelDirectory: modelDir,
     });
-    expect(report.max_sequence_length).toBe(DEFAULT_RERANKER_MAX_SEQUENCE_LENGTH);
+    expect(report.max_sequence_length).toBe(
+      DEFAULT_RERANKER_MAX_SEQUENCE_LENGTH,
+    );
   });
 
   it('uses default model_id when meta omits it', async () => {

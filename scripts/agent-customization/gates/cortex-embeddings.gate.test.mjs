@@ -124,7 +124,10 @@ describe('cortex-embeddings gate', () => {
       });
       assert.equal(result.pass, false);
       assert.equal(result.evidence.length, 1);
-      assert.equal(result.evidence[0].issue, 'hybrid MRR@5 improvement below threshold');
+      assert.equal(
+        result.evidence[0].issue,
+        'hybrid MRR@5 improvement below threshold',
+      );
       assert.equal(result.evidence[0].minHybridImprovement, 0.02);
     });
 
@@ -243,11 +246,14 @@ describe('cortex-embeddings gate', () => {
         () => import('./cortex-embeddings.gate.mjs'),
       );
       jest.resetModules();
-      jest.unstable_mockModule('../../../rag-index/validate-embeddings.mjs', () => ({
-        validateEmbeddings: async () => {
-          throw new Error('boom');
-        },
-      }));
+      jest.unstable_mockModule(
+        '../../../rag-index/validate-embeddings.mjs',
+        () => ({
+          validateEmbeddings: async () => {
+            throw new Error('boom');
+          },
+        }),
+      );
       const { runCortexEmbeddingsGate: run } = await withArgv(
         [process.execPath, 'dummy'],
         () => import('./cortex-embeddings.gate.mjs'),
@@ -261,18 +267,23 @@ describe('cortex-embeddings gate', () => {
         },
       });
       assert.equal(result.pass, false);
-      const errEv = result.evidence.find((e) => e.issue === 'gate execution error');
+      const errEv = result.evidence.find(
+        (e) => e.issue === 'gate execution error',
+      );
       assert.ok(errEv);
       assert.equal(errEv.message, 'boom');
     });
 
     it('catches non-Error throw and stringifies it', async () => {
       jest.resetModules();
-      jest.unstable_mockModule('../../../rag-index/validate-embeddings.mjs', () => ({
-        validateEmbeddings: async () => {
-          throw 'string failure';
-        },
-      }));
+      jest.unstable_mockModule(
+        '../../../rag-index/validate-embeddings.mjs',
+        () => ({
+          validateEmbeddings: async () => {
+            throw 'string failure';
+          },
+        }),
+      );
       const { runCortexEmbeddingsGate } = await withArgv(
         [process.execPath, 'dummy'],
         () => import('./cortex-embeddings.gate.mjs'),
@@ -286,16 +297,21 @@ describe('cortex-embeddings gate', () => {
         },
       });
       assert.equal(result.pass, false);
-      const errEv = result.evidence.find((e) => e.issue === 'gate execution error');
+      const errEv = result.evidence.find(
+        (e) => e.issue === 'gate execution error',
+      );
       assert.ok(errEv);
       assert.equal(errEv.message, 'string failure');
     });
 
     it('loads evaluationReport via dynamic import when not provided', async () => {
       jest.resetModules();
-      jest.unstable_mockModule('../../../rag-index/validate-embeddings.mjs', () => ({
-        validateEmbeddings: async () => ({ evidence: [] }),
-      }));
+      jest.unstable_mockModule(
+        '../../../rag-index/validate-embeddings.mjs',
+        () => ({
+          validateEmbeddings: async () => ({ evidence: [] }),
+        }),
+      );
       const { runCortexEmbeddingsGate } = await withArgv(
         [process.execPath, 'dummy'],
         () => import('./cortex-embeddings.gate.mjs'),
@@ -324,7 +340,9 @@ describe('cortex-embeddings gate', () => {
           hybridMrrAt5: 0.6,
         },
       });
-      assert.ok(seenPaths.every((p) => p.startsWith(path.resolve('/custom/models'))));
+      assert.ok(
+        seenPaths.every((p) => p.startsWith(path.resolve('/custom/models'))),
+      );
     });
   });
 

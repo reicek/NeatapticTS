@@ -36,7 +36,9 @@ beforeEach(() => {
 
 describe('validate-agent-quality.fix', () => {
   it('fixes agents with frontmatter and tier', async () => {
-    mockUtils.listMarkdownFiles.mockResolvedValue(['.github/agents/test.agent.md']);
+    mockUtils.listMarkdownFiles.mockResolvedValue([
+      '.github/agents/test.agent.md',
+    ]);
     mockUtils.readWorkspaceFile.mockResolvedValue(
       '---\nname: test-agent\ntier: 3\ndescription: Test\n---\n\nBody content.',
     );
@@ -53,7 +55,9 @@ describe('validate-agent-quality.fix', () => {
   });
 
   it('reports error for file without frontmatter', async () => {
-    mockUtils.listMarkdownFiles.mockResolvedValue(['.github/agents/no-fm.agent.md']);
+    mockUtils.listMarkdownFiles.mockResolvedValue([
+      '.github/agents/no-fm.agent.md',
+    ]);
     mockUtils.readWorkspaceFile.mockResolvedValue('Just text, no frontmatter.');
 
     const report = await runFix({});
@@ -64,7 +68,9 @@ describe('validate-agent-quality.fix', () => {
   });
 
   it('handles parseFrontmatter throwing', async () => {
-    mockUtils.listMarkdownFiles.mockResolvedValue(['.github/agents/bad.agent.md']);
+    mockUtils.listMarkdownFiles.mockResolvedValue([
+      '.github/agents/bad.agent.md',
+    ]);
     mockUtils.readWorkspaceFile.mockResolvedValue(
       '---\nname: bad-agent\n---\n\nBody.',
     );
@@ -79,7 +85,9 @@ describe('validate-agent-quality.fix', () => {
   });
 
   it('handles writeFile failure', async () => {
-    mockUtils.listMarkdownFiles.mockResolvedValue(['.github/agents/fail.agent.md']);
+    mockUtils.listMarkdownFiles.mockResolvedValue([
+      '.github/agents/fail.agent.md',
+    ]);
     mockUtils.readWorkspaceFile.mockResolvedValue(
       '---\nname: fail-agent\ntier: 2\n---\n\nBody.',
     );
@@ -95,7 +103,9 @@ describe('validate-agent-quality.fix', () => {
   });
 
   it('generates tier-1 footer with PHASE_COMPLETE and SUB_ORCHESTRATORS_USED', async () => {
-    mockUtils.listMarkdownFiles.mockResolvedValue(['.github/agents/t1.agent.md']);
+    mockUtils.listMarkdownFiles.mockResolvedValue([
+      '.github/agents/t1.agent.md',
+    ]);
     mockUtils.readWorkspaceFile.mockResolvedValue(
       '---\nname: t1-agent\ntier: 1\n---\n\nBody.',
     );
@@ -111,7 +121,9 @@ describe('validate-agent-quality.fix', () => {
   });
 
   it('generates tier-2 footer with SPECIALISTS_USED and HANDOFF', async () => {
-    mockUtils.listMarkdownFiles.mockResolvedValue(['.github/agents/t2.agent.md']);
+    mockUtils.listMarkdownFiles.mockResolvedValue([
+      '.github/agents/t2.agent.md',
+    ]);
     mockUtils.readWorkspaceFile.mockResolvedValue(
       '---\nname: t2-agent\ntier: 2\n---\n\nBody.',
     );
@@ -127,7 +139,9 @@ describe('validate-agent-quality.fix', () => {
   });
 
   it('generates tier-4 footer without HANDOFF', async () => {
-    mockUtils.listMarkdownFiles.mockResolvedValue(['.github/agents/t4.agent.md']);
+    mockUtils.listMarkdownFiles.mockResolvedValue([
+      '.github/agents/t4.agent.md',
+    ]);
     mockUtils.readWorkspaceFile.mockResolvedValue(
       '---\nname: t4-agent\ntier: 4\n---\n\nBody.',
     );
@@ -144,11 +158,15 @@ describe('validate-agent-quality.fix', () => {
   });
 
   it('uses tier 1 footer when tier is unknown', async () => {
-    mockUtils.listMarkdownFiles.mockResolvedValue(['.github/agents/unknown.agent.md']);
+    mockUtils.listMarkdownFiles.mockResolvedValue([
+      '.github/agents/unknown.agent.md',
+    ]);
     mockUtils.readWorkspaceFile.mockResolvedValue(
       '---\nname: unknown-agent\n---\n\nBody.',
     );
-    mockUtils.parseFrontmatter.mockReturnValue({ data: { name: 'unknown-agent' } });
+    mockUtils.parseFrontmatter.mockReturnValue({
+      data: { name: 'unknown-agent' },
+    });
 
     await runFix({});
 
@@ -158,10 +176,10 @@ describe('validate-agent-quality.fix', () => {
   });
 
   it('uses empty role when name is empty', async () => {
-    mockUtils.listMarkdownFiles.mockResolvedValue(['.github/agents/noname.agent.md']);
-    mockUtils.readWorkspaceFile.mockResolvedValue(
-      '---\ntier: 3\n---\n\nBody.',
-    );
+    mockUtils.listMarkdownFiles.mockResolvedValue([
+      '.github/agents/noname.agent.md',
+    ]);
+    mockUtils.readWorkspaceFile.mockResolvedValue('---\ntier: 3\n---\n\nBody.');
     mockUtils.parseFrontmatter.mockReturnValue({ data: {} });
 
     await runFix({});
@@ -183,7 +201,9 @@ describe('validate-agent-quality.fix', () => {
   });
 
   it('preserves content before existing Output format heading', async () => {
-    mockUtils.listMarkdownFiles.mockResolvedValue(['.github/agents/existing.agent.md']);
+    mockUtils.listMarkdownFiles.mockResolvedValue([
+      '.github/agents/existing.agent.md',
+    ]);
     mockUtils.readWorkspaceFile.mockResolvedValue(
       '---\nname: existing\ntier: 3\n---\n\nImportant content.\n\n## Output format\n\n```structured-v1\nOLD: stuff\n```\n',
     );

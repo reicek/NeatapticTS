@@ -203,9 +203,7 @@ describe('pre-dispatch-freshness-hook', () => {
       runReindexBackground();
       mockChild.pid = originalPid;
       assert.ok(
-        mockAppendFileSync.mock.calls.some((call) =>
-          call[1].includes('pid ?'),
-        ),
+        mockAppendFileSync.mock.calls.some((call) => call[1].includes('pid ?')),
       );
     });
 
@@ -228,9 +226,7 @@ describe('pre-dispatch-freshness-hook', () => {
       exitCall[1](0);
       mockChild.pid = originalPid;
       assert.ok(
-        mockAppendFileSync.mock.calls.some((call) =>
-          call[1].includes('pid ?'),
-        ),
+        mockAppendFileSync.mock.calls.some((call) => call[1].includes('pid ?')),
       );
     });
 
@@ -282,7 +278,11 @@ describe('pre-dispatch-freshness-hook', () => {
     });
 
     it('logs question mark when build status is null in sync reindex', () => {
-      mockSpawnSync.mockReturnValueOnce({ status: null, stdout: '', stderr: '' });
+      mockSpawnSync.mockReturnValueOnce({
+        status: null,
+        stdout: '',
+        stderr: '',
+      });
       runReindexSync();
       assert.ok(
         mockAppendFileSync.mock.calls.some((call) =>
@@ -337,9 +337,7 @@ describe('pre-dispatch-freshness-hook', () => {
       await new Promise((r) => setTimeout(r, 200));
       process.stdout.write = origWrite;
       assert.ok(
-        mockAppendFileSync.mock.calls.some((call) =>
-          call[1].includes('fresh'),
-        ),
+        mockAppendFileSync.mock.calls.some((call) => call[1].includes('fresh')),
       );
     });
 

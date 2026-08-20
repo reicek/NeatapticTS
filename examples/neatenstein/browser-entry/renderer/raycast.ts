@@ -25,6 +25,30 @@ export { buildNeatensteinMap };
 export type { CastRayDDAHit } from './renderer.raycast.types';
 
 /**
+ * World-space size of one DDA grid cell in world units (C1.1, Invariant §1).
+ *
+ * The DDA traverses integer map cells, so each cell is 1 world unit wide. This
+ * MUST equal {@link NEATENSTEIN_FLOOR_GRID_SPACING_WORLD} so wall bases align
+ * to floor grid lines.
+ */
+export const NEATENSTEIN_DDA_CELL_SIZE_WORLD = 1.0 as const;
+
+/**
+ * Resolve the initial side distance for a DDA axis, guarding against the
+ * `0 * Infinity = NaN` edge case that occurs when the ray origin is exactly
+ * on a grid line and the direction component is near-zero (making
+ * `deltaDist` infinite).
+ *
+ * @param offset - Grid-line offset from the ray origin (always ≥ 0).
+ * @param deltaDist - Distance between successive grid lines on this axis.
+ * @returns Side distance, with `Infinity` substituted for any `NaN` result.
+ */
+export function resolveSideDistance(offset: number, deltaDist: number): number {
+  const result = offset * deltaDist;
+  return Number.isNaN(result) ? Number.POSITIVE_INFINITY : result;
+}
+
+/**
  * Return `true` when a direction component is effectively zero.
  *
  * @param value - Direction component to test.
@@ -78,6 +102,9 @@ function computePerpendicularWallDistance(
  * This is the renderer-facing raycast entrypoint. It traverses the canonical
  * flat map directly and performs no per-ray grid allocation.
  *
+ * When `out` is provided, the result is written into it and the same object
+ * is returned, avoiding a per-ray object allocation on hot paths.
+ *
  * Preconditions (satisfied by the fixed 120×120 Neatenstein map and valid
  * camera path):
  * - `flatMap.length === side * side`.
@@ -97,6 +124,8 @@ function computePerpendicularWallDistance(
  * @param posY - Ray origin Y coordinate in grid units.
  * @param dirX - Ray direction X component in renderer camera-space scale.
  * @param dirY - Ray direction Y component in renderer camera-space scale.
+ * @param out - Optional pre-allocated hit object to write into and return,
+ *   avoiding a per-call allocation on hot paths.
  * @returns The first wall hit, or a sentinel with `perpWallDist = Infinity`
  *   when no wall is found within {@link NEATENSTEIN_RENDER_DISTANCE_CAP} cells.
  */
@@ -107,6 +136,7 @@ export function castRayDDAFromFlatMap(
   posY: number,
   dirX: number,
   dirY: number,
+  out?: CastRayDDAHit,
 ): CastRayDDAHit {
   let mapX = Math.floor(posX);
   let mapY = Math.floor(posY);
@@ -124,10 +154,16 @@ export function castRayDDAFromFlatMap(
     : Math.abs(1 / dirY);
 
   // Distance from the ray origin to the first crossed grid line on each axis.
-  let sideDistX =
-    stepX > 0 ? (mapX + 1 - posX) * deltaDistX : (posX - mapX) * deltaDistX;
-  let sideDistY =
-    stepY > 0 ? (mapY + 1 - posY) * deltaDistY : (posY - mapY) * deltaDistY;
+  // resolveSideDistance guards against the 0 * Infinity = NaN edge case when
+  // the ray origin is exactly on a grid line and the direction is near-zero.
+  let sideDistX = resolveSideDistance(
+    stepX > 0 ? mapX + 1 - posX : posX - mapX,
+    deltaDistX,
+  );
+  let sideDistY = resolveSideDistance(
+    stepY > 0 ? mapY + 1 - posY : posY - mapY,
+    deltaDistY,
+  );
 
   let sideHit: 0 | 1;
   let steps = 0;
@@ -145,28 +181,72 @@ export function castRayDDAFromFlatMap(
 
     steps += 1;
 
-    // Non-zero cells are walls.
-    if (flatMap[mapY * side + mapX] !== 0) {
+    // Bounds guard: stop before reading out-of-range map cells. Open sight
+    // lines can walk past the map edge before hitting the step cap, so a flat
+    // array read would wrap to a false hit.
+    if (mapX < 0 || mapY < 0 || mapX >= side || mapY >= side) {
+      if (out) {
+        out.perpWallDist = Number.POSITIVE_INFINITY;
+        out.side = sideHit;
+        out.mapX = mapX;
+        out.mapY = mapY;
+        return out;
+      }
       return {
-        perpWallDist: computePerpendicularWallDistance(
-          mapX,
-          mapY,
-          posX,
-          posY,
-          dirX,
-          dirY,
-          stepX,
-          stepY,
-          sideHit,
-        ),
+        perpWallDist: Number.POSITIVE_INFINITY,
         side: sideHit,
         mapX,
         mapY,
       };
     }
 
-    // Hard cap: stop walking after a fixed number of empty cells.
-    if (steps >= NEATENSTEIN_RENDER_DISTANCE_CAP) {
+    // Non-zero cells are walls.
+    if (flatMap[mapY * side + mapX] !== 0) {
+      const perpWallDist = computePerpendicularWallDistance(
+        mapX,
+        mapY,
+        posX,
+        posY,
+        dirX,
+        dirY,
+        stepX,
+        stepY,
+        sideHit,
+      );
+      if (out) {
+        out.perpWallDist = perpWallDist;
+        out.side = sideHit;
+        out.mapX = mapX;
+        out.mapY = mapY;
+        return out;
+      }
+      return {
+        perpWallDist,
+        side: sideHit,
+        mapX,
+        mapY,
+      };
+    }
+
+    // Hard cap: stop walking after a distance-proportional number of empty
+    // cells. A 45° ray advances ~0.707 perpendicular units per step, so a
+    // fixed 30-step cap would clip legitimate walls ~21 units away. Scale by
+    // the inverse of the dominant direction component so that axis-aligned
+    // rays keep the standard 30-step limit and diagonal rays get the steps
+    // they need to cover the same world distance.
+    const minAbsDir = Math.min(Math.abs(dirX), Math.abs(dirY));
+    const maxSteps =
+      minAbsDir < RAY_DIRECTION_EPSILON
+        ? NEATENSTEIN_RENDER_DISTANCE_CAP
+        : Math.ceil(NEATENSTEIN_RENDER_DISTANCE_CAP / minAbsDir);
+    if (steps >= maxSteps) {
+      if (out) {
+        out.perpWallDist = Number.POSITIVE_INFINITY;
+        out.side = sideHit;
+        out.mapX = mapX;
+        out.mapY = mapY;
+        return out;
+      }
       return {
         perpWallDist: Number.POSITIVE_INFINITY,
         side: sideHit,

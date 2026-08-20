@@ -121,9 +121,8 @@ describe('harness-launcher mock-based branch coverage', () => {
         createServer: jest.fn(() => mockServer),
       }));
 
-      const { launchLocalServer: mockLaunch } = await import(
-        '../harness-launcher'
-      );
+      const { launchLocalServer: mockLaunch } =
+        await import('../harness-launcher');
 
       await expect(
         mockLaunch({
@@ -149,9 +148,8 @@ describe('harness-launcher mock-based branch coverage', () => {
         createServer: jest.fn(() => mockServer),
       }));
 
-      const { launchLocalServer: mockLaunch } = await import(
-        '../harness-launcher'
-      );
+      const { launchLocalServer: mockLaunch } =
+        await import('../harness-launcher');
 
       await expect(
         mockLaunch({
@@ -179,9 +177,8 @@ describe('harness-launcher mock-based branch coverage', () => {
         createServer: jest.fn(() => mockServer),
       }));
 
-      const { launchLocalServer: mockLaunch } = await import(
-        '../harness-launcher'
-      );
+      const { launchLocalServer: mockLaunch } =
+        await import('../harness-launcher');
       const result = await mockLaunch({
         cwd: REPO_ROOT,
         port: 18096,
@@ -210,9 +207,8 @@ describe('harness-launcher mock-based branch coverage', () => {
         createServer: jest.fn(() => mockServer),
       }));
 
-      const { launchLocalServer: mockLaunch } = await import(
-        '../harness-launcher'
-      );
+      const { launchLocalServer: mockLaunch } =
+        await import('../harness-launcher');
       const result = await mockLaunch({
         cwd: REPO_ROOT,
         port: 18097,
@@ -244,9 +240,8 @@ describe('harness-launcher mock-based branch coverage', () => {
         createServer: jest.fn(() => mockServer),
       }));
 
-      const { launchLocalServer: mockLaunch } = await import(
-        '../harness-launcher'
-      );
+      const { launchLocalServer: mockLaunch } =
+        await import('../harness-launcher');
       const result = await mockLaunch({
         cwd: REPO_ROOT,
         port: 18098,
@@ -275,9 +270,8 @@ describe('harness-launcher mock-based branch coverage', () => {
         .spyOn(globalThis, 'clearTimeout')
         .mockImplementation(() => {});
 
-      const { launchLocalServer: mockLaunch } = await import(
-        '../harness-launcher'
-      );
+      const { launchLocalServer: mockLaunch } =
+        await import('../harness-launcher');
       const result = await mockLaunch({
         cwd: REPO_ROOT,
         port: 18099,
@@ -320,9 +314,7 @@ describe('harness-launcher mock-based branch coverage', () => {
 
   it('defaults request.url to "/" when url is undefined (403 via drive root)', async () => {
     await jest.isolateModulesAsync(async () => {
-      let requestHandler:
-        | ((req: any, res: any) => void)
-        | null = null;
+      let requestHandler: ((req: any, res: any) => void) | null = null;
       const mockServer = {
         on: jest.fn(),
         listen: jest.fn((_port: number, _host: string, cb: () => void) => cb()),
@@ -341,9 +333,8 @@ describe('harness-launcher mock-based branch coverage', () => {
         readFile: jest.fn(async () => Buffer.from('mock')),
       }));
 
-      const { launchLocalServer: mockLaunch } = await import(
-        '../harness-launcher'
-      );
+      const { launchLocalServer: mockLaunch } =
+        await import('../harness-launcher');
       const driveRoot = path.parse(process.cwd()).root;
       const result = await mockLaunch({ cwd: driveRoot, port: 18100 });
 

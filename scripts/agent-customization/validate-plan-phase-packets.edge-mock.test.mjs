@@ -13,7 +13,10 @@ const utils = await import('./customization-utils.mjs');
 jest.unstable_mockModule('./customization-utils.mjs', () => ({
   ...utils,
   parsePlanYamlBlock: (yamlText) => {
-    if (typeof yamlText === 'string' && yamlText.includes('NULL_SLICE_MARKER')) {
+    if (
+      typeof yamlText === 'string' &&
+      yamlText.includes('NULL_SLICE_MARKER')
+    ) {
       return {
         phase: 'A',
         step: 1,
@@ -32,7 +35,10 @@ jest.unstable_mockModule('./customization-utils.mjs', () => ({
         slices: [null],
       };
     }
-    if (typeof yamlText === 'string' && yamlText.includes('NON_OBJECT_MARKER')) {
+    if (
+      typeof yamlText === 'string' &&
+      yamlText.includes('NON_OBJECT_MARKER')
+    ) {
       return 'not-an-object';
     }
     return utils.parsePlanYamlBlock(yamlText);

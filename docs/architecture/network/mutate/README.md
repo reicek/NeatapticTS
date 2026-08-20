@@ -1494,6 +1494,23 @@ Parameters:
 
 Returns: Nothing.
 
+### modTimeConstant
+
+```ts
+modTimeConstant(): void
+```
+
+Mutates the CTRNN time constant on a random non-input node.
+
+Picks a random mutable (hidden or output) node and perturbs its
+`timeConstant` via {@link mutateTimeConstant} using the network's
+deterministic RNG.
+
+Parameters:
+- `this` - Bound network.
+
+Returns: Nothing.
+
 ### modWeight
 
 ```ts

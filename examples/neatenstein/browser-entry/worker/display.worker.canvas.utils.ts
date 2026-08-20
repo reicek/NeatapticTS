@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Pure canvas utility executors extracted from the display worker.
  *
  * These helpers validate dimensions, synchronize the OffscreenCanvas backing
@@ -15,16 +15,6 @@ import {
 } from '../constants';
 import type { NeatensteinSpriteRenderContext } from '../renderer/sprites';
 import type { DisplayTier } from './display.worker.types';
-
-/**
- * Return whether a value is usable as a positive render dimension.
- *
- * @param value - Candidate dimension.
- * @returns Whether the dimension is positive and finite.
- */
-export function isPositiveFiniteDimension(value: number): boolean {
-  return Number.isFinite(value) && value > 0;
-}
 
 /**
  * Synchronize the transferred OffscreenCanvas with the host-provided render

@@ -35,7 +35,10 @@ function createMockClient({ rows = [], failOnAnn = false } = {}) {
           })),
         };
       }
-      if (sql.includes('vector_distance_cos') && sql.includes('ORDER BY distance')) {
+      if (
+        sql.includes('vector_distance_cos') &&
+        sql.includes('ORDER BY distance')
+      ) {
         // brute-force path
         return {
           rows: rows.map((r) => ({
@@ -74,7 +77,12 @@ describe('query-dense: empty query', () => {
   });
 
   it('includes family and alpha in empty result when dense and family are set', async () => {
-    const result = await queryDenseIndex({ query: '', family: 'ts-source', dense: true, alpha: 0.7 });
+    const result = await queryDenseIndex({
+      query: '',
+      family: 'ts-source',
+      dense: true,
+      alpha: 0.7,
+    });
     expect(result.results).toEqual([]);
     expect(result.family).toBe('ts-source');
     expect(result.use_dense).toBe(true);
@@ -221,7 +229,9 @@ describe('query-dense: dense mode', () => {
     const mockRows = [];
     const client = createMockClient({ rows: mockRows });
     const mockEmbed = async () => new Float32Array([0.1, 0.2, 0.3]);
-    mockEmbed.release = async () => { released = true; };
+    mockEmbed.release = async () => {
+      released = true;
+    };
     await queryDenseIndex({
       query: 'test',
       limit: 5,

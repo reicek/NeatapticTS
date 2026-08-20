@@ -215,10 +215,13 @@ describe('Neatenstein game collision', () => {
         ...(jest.requireActual('./constants.ts') as Record<string, unknown>),
         NEATENSTEIN_CONTACT_RANGE_CELLS: 0,
       }));
-      const stateMod = (require as any)('./state.ts') as Record<string, any>;
-      const collisionMod = (require as any)('./collision.ts') as Record<
-        string,
-        any
+      const stateMod = (require as any)('./state.ts') as Pick<
+        typeof import('./state.ts'),
+        'createGameState'
+      >;
+      const collisionMod = (require as any)('./collision.ts') as Pick<
+        typeof import('./collision.ts'),
+        'resolveContactDamage'
       >;
       const { createGameState } = stateMod;
       const { resolveContactDamage: mockedResolveContactDamage } = collisionMod;

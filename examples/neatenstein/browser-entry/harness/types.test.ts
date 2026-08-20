@@ -3,6 +3,7 @@ import type {
   CombatQualitySignal,
   EnemyPopulation,
   EnemyVariant,
+  FitnessRecord,
   FitnessScore,
   Individual,
   MainVariant,
@@ -125,6 +126,19 @@ describe('Neatenstein harness types', () => {
     it('accepts a FitnessScore as a numeric value', () => {
       const score: FitnessScore = 42;
       expect(score).toBe(42);
+    });
+  });
+
+  describe('FitnessRecord shape', () => {
+    it('accepts a FitnessRecord with all required fields including damageTaken', () => {
+      const record: FitnessRecord = {
+        damageDealt: 30,
+        survivalTicks: 200,
+        kills: 1,
+        deaths: 1,
+        damageTaken: 10,
+      };
+      expect(record.damageTaken).toBe(10);
     });
   });
 });

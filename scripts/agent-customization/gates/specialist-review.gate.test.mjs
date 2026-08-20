@@ -58,8 +58,7 @@ async function importGate(argv) {
 // Content helpers
 const WIP_WITH_SPECIALIST =
   '[WIP]\n## VALIDATION_EVIDENCE\nimplementation-pattern-scout: APPROVE\n';
-const WIP_WITH_TRIVIAL =
-  '[WIP]\n## VALIDATION_EVIDENCE\nseverity: TRIVIAL\n';
+const WIP_WITH_TRIVIAL = '[WIP]\n## VALIDATION_EVIDENCE\nseverity: TRIVIAL\n';
 const WIP_NO_EVIDENCE =
   '[WIP]\nSome plan content without validation evidence section.\n';
 const WIP_NO_MARKERS =
@@ -135,10 +134,7 @@ describe('specialist-review gate', () => {
   describe('with WIP plans via --plan', () => {
     it('returns pass=true when specialist review evidence found', async () => {
       mockReadFileSyncFn = () => WIP_WITH_SPECIALIST;
-      const logs = await importGate([
-        '--json',
-        '--plan=plans/test.plans.md',
-      ]);
+      const logs = await importGate(['--json', '--plan=plans/test.plans.md']);
       const parsed = JSON.parse(logs[0]);
       assert.equal(parsed.pass, true);
       assert.equal(parsed.evidence.wipPlans, 1);
@@ -149,10 +145,7 @@ describe('specialist-review gate', () => {
 
     it('returns pass=true when TRIVIAL exemption marker found', async () => {
       mockReadFileSyncFn = () => WIP_WITH_TRIVIAL;
-      const logs = await importGate([
-        '--json',
-        '--plan=plans/test.plans.md',
-      ]);
+      const logs = await importGate(['--json', '--plan=plans/test.plans.md']);
       const parsed = JSON.parse(logs[0]);
       assert.equal(parsed.pass, true);
       assert.ok(parsed.evidence.planResults[0].found);
@@ -162,10 +155,7 @@ describe('specialist-review gate', () => {
 
     it('returns pass=false when no VALIDATION_EVIDENCE section', async () => {
       mockReadFileSyncFn = () => WIP_NO_EVIDENCE;
-      const logs = await importGate([
-        '--json',
-        '--plan=plans/test.plans.md',
-      ]);
+      const logs = await importGate(['--json', '--plan=plans/test.plans.md']);
       const parsed = JSON.parse(logs[0]);
       assert.equal(parsed.pass, false);
       assert.equal(
@@ -177,10 +167,7 @@ describe('specialist-review gate', () => {
 
     it('returns pass=false when no specialist review markers found', async () => {
       mockReadFileSyncFn = () => WIP_NO_MARKERS;
-      const logs = await importGate([
-        '--json',
-        '--plan=plans/test.plans.md',
-      ]);
+      const logs = await importGate(['--json', '--plan=plans/test.plans.md']);
       const parsed = JSON.parse(logs[0]);
       assert.equal(parsed.pass, false);
       assert.equal(
@@ -195,16 +182,10 @@ describe('specialist-review gate', () => {
         if (callNum === 1) return '[WIP]\n'; // filter call
         throw new Error('ENOENT'); // checkPlan call
       };
-      const logs = await importGate([
-        '--json',
-        '--plan=plans/test.plans.md',
-      ]);
+      const logs = await importGate(['--json', '--plan=plans/test.plans.md']);
       const parsed = JSON.parse(logs[0]);
       assert.equal(parsed.pass, false);
-      assert.equal(
-        parsed.evidence.planResults[0].reason,
-        'file not readable',
-      );
+      assert.equal(parsed.evidence.planResults[0].reason, 'file not readable');
     });
 
     it('returns found=false when content no longer has [WIP] on second call', async () => {
@@ -212,16 +193,10 @@ describe('specialist-review gate', () => {
         if (callNum === 1) return '[WIP]\n'; // filter call
         return 'No WIP here.\n'; // checkPlan call
       };
-      const logs = await importGate([
-        '--json',
-        '--plan=plans/test.plans.md',
-      ]);
+      const logs = await importGate(['--json', '--plan=plans/test.plans.md']);
       const parsed = JSON.parse(logs[0]);
       assert.equal(parsed.pass, false);
-      assert.equal(
-        parsed.evidence.planResults[0].reason,
-        'no [WIP] sections',
-      );
+      assert.equal(parsed.evidence.planResults[0].reason, 'no [WIP] sections');
     });
   });
 

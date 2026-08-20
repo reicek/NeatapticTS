@@ -15,6 +15,7 @@ import {
 } from './constants';
 import { createGameState } from './state';
 import type {
+  AmmoPickupState,
   BoltState,
   EnemyBoltState,
   EnemyImpactSpot,
@@ -1313,8 +1314,7 @@ describe('AC-11-enemy-fire: updateEnemyBolts', () => {
     // Mock applyEnemyDamage to avoid crash when enemy index is out of bounds.
     const damageSpy = jest
       .spyOn(combatModule, 'applyEnemyDamage')
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- mock implementation
-      .mockImplementation((state: any) => state);
+      .mockImplementation((state: GameState) => state);
 
     const collisionMap = { isSolid: () => false as const };
     const state = createGameState({ seed: NEATENSTEIN_TEST_SEED });
@@ -1727,5 +1727,66 @@ describe('AC-P3S1c-001: lastShotHit flag in gameTick', () => {
       collisionMap,
     );
     expect(afterNoHit.lastShotHit).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// A2 Fix 5 — gameTick allocation chain: in-place mutation
+//
+// tick.bolt.utils.ts, tick.impact.utils.ts, and tick.pickups.utils.ts use
+// .filter().map(clone) chains that allocate new objects every tick.  The fix
+// mutates entities in place with active flags and compacts in a single pass,
+// returning the same object references (not clones).
+// ---------------------------------------------------------------------------
+
+describe('A2 Fix 5: In-place mutation (no clone chains)', () => {
+  it('updateBolts mutates bolts in place without cloning', async () => {
+    const { updateBolts } =
+      (await import('./tick.bolt.utils.ts')) as typeof import('./tick.bolt.utils.ts');
+    const bolt: BoltState = {
+      position: { x: 5, y: 5 },
+      direction: { x: 1, y: 0 },
+      speedCellsPerSecond: 10,
+      active: true,
+      createdAtMs: 0,
+    };
+    // dt=1000ms, speed=10 → step=10 → new position (15,5), still in bounds.
+    const result = updateBolts([bolt], 1000, 1000);
+    expect(result.length).toBeGreaterThan(0);
+    // The returned bolt must be the SAME object reference (mutated in place),
+    // not a clone.  Currently fails because updateBolts uses .map(b => ({...b})).
+    expect(result[0]).toBe(bolt);
+  });
+
+  it('ageImpacts mutates impacts in place without cloning', async () => {
+    const { ageImpacts } =
+      (await import('./tick.impact.utils.ts')) as typeof import('./tick.impact.utils.ts');
+    const impact = makeImpact(100);
+    // dt=16ms → lifetimeMs becomes 84 (still > 0, survives).
+    const result = ageImpacts([impact], 16);
+    expect(result.length).toBeGreaterThan(0);
+    // The returned impact must be the SAME object reference (mutated in place),
+    // not a clone.  Currently fails because ageImpacts uses .map(i => ({...i})).
+    expect(result[0]).toBe(impact);
+  });
+
+  it('updateAmmoPickups mutates expired pickups in place without cloning', async () => {
+    const { updateAmmoPickups } =
+      (await import('./tick.pickups.utils.ts')) as typeof import('./tick.pickups.utils.ts');
+    const state = createGameState({ seed: 1 });
+    const pickup: AmmoPickupState = {
+      position: { x: 100, y: 100 },
+      amount: 5,
+      active: true,
+      createdAtMs: 0,
+      lifetimeMs: 50,
+    };
+    state.ammoPickups = [pickup];
+    // simTimeMs=100, lifetimeMs=50 → expired (100 - 0 >= 50).
+    updateAmmoPickups(state, 100);
+    // The original pickup object should have been mutated to active=false
+    // in place.  Currently fails because updateAmmoPickups creates a clone
+    // {...pickup, active: false} and filters it out, leaving original unchanged.
+    expect(pickup.active).toBe(false);
   });
 });

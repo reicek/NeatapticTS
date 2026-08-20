@@ -271,7 +271,10 @@ describe('runtime-enforcement', () => {
       fs.mkdir.mockResolvedValue(undefined);
       fs.writeFile.mockResolvedValue(undefined);
       fs.readFile.mockRejectedValue(new Error('ENOENT'));
-      const carrier = await mod.initializeRuntimeContextCarrier('test', 'custom');
+      const carrier = await mod.initializeRuntimeContextCarrier(
+        'test',
+        'custom',
+      );
       assert.strictEqual(carrier.sessionId, 'test');
       assert.strictEqual(carrier.carrierSource, 'custom');
       assert.strictEqual(carrier.preparedAction, null);
@@ -503,7 +506,11 @@ describe('runtime-enforcement', () => {
         sessionId: 'test',
         carrier: {
           sessionId: 'test',
-          preparedAction: { flowId: 'f', currentAgent: 'a', delegatorChain: [] },
+          preparedAction: {
+            flowId: 'f',
+            currentAgent: 'a',
+            delegatorChain: [],
+          },
         },
       });
       assert.strictEqual(result.ok, false);
@@ -516,7 +523,11 @@ describe('runtime-enforcement', () => {
         sessionId: 'test',
         carrier: {
           sessionId: 'test',
-          preparedAction: { flowId: 'f', currentAgent: 'a', delegatorChain: 'x' },
+          preparedAction: {
+            flowId: 'f',
+            currentAgent: 'a',
+            delegatorChain: 'x',
+          },
         },
       });
       assert.strictEqual(result.ok, false);
@@ -846,17 +857,18 @@ describe('runtime-enforcement', () => {
 
   describe('normalizeStringArray', () => {
     it('handles array input', () => {
-      assert.deepStrictEqual(
-        mod.normalizeStringArray(['a', 'b', 'c']),
-        ['a', 'b', 'c'],
-      );
+      assert.deepStrictEqual(mod.normalizeStringArray(['a', 'b', 'c']), [
+        'a',
+        'b',
+        'c',
+      ]);
     });
 
     it('filters empty array entries', () => {
-      assert.deepStrictEqual(
-        mod.normalizeStringArray(['a', '', '  ', 'c']),
-        ['a', 'c'],
-      );
+      assert.deepStrictEqual(mod.normalizeStringArray(['a', '', '  ', 'c']), [
+        'a',
+        'c',
+      ]);
     });
 
     it('handles non-array non-string', () => {
@@ -871,38 +883,39 @@ describe('runtime-enforcement', () => {
     });
 
     it('parses JSON array string', () => {
-      assert.deepStrictEqual(
-        mod.normalizeStringArray('["a", "b"]'),
-        ['a', 'b'],
-      );
+      assert.deepStrictEqual(mod.normalizeStringArray('["a", "b"]'), [
+        'a',
+        'b',
+      ]);
     });
 
     it('falls back to comma split for malformed JSON', () => {
-      assert.deepStrictEqual(
-        mod.normalizeStringArray('[bad json, a]'),
-        ['[bad json', 'a]'],
-      );
+      assert.deepStrictEqual(mod.normalizeStringArray('[bad json, a]'), [
+        '[bad json',
+        'a]',
+      ]);
     });
 
     it('handles comma-separated string', () => {
-      assert.deepStrictEqual(
-        mod.normalizeStringArray('a, b, c'),
-        ['a', 'b', 'c'],
-      );
+      assert.deepStrictEqual(mod.normalizeStringArray('a, b, c'), [
+        'a',
+        'b',
+        'c',
+      ]);
     });
 
     it('handles JSON array with non-string entries', () => {
-      assert.deepStrictEqual(
-        mod.normalizeStringArray('[1, 2, null]'),
-        ['1', '2'],
-      );
+      assert.deepStrictEqual(mod.normalizeStringArray('[1, 2, null]'), [
+        '1',
+        '2',
+      ]);
     });
 
     it('handles array with null entries', () => {
-      assert.deepStrictEqual(
-        mod.normalizeStringArray(['a', null, 'b']),
-        ['a', 'b'],
-      );
+      assert.deepStrictEqual(mod.normalizeStringArray(['a', null, 'b']), [
+        'a',
+        'b',
+      ]);
     });
   });
 

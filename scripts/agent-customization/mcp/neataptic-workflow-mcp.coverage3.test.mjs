@@ -271,7 +271,9 @@ goal: 'Test no slices'
         expect(result.slice_id).toBe('dup-slice');
         // The search_context ref should appear in follow_up_refs
         const searchRef = result.context.follow_up_refs.find(
-          (r) => r.tool === 'search_context' && r.reason === 'Follow up for more context',
+          (r) =>
+            r.tool === 'search_context' &&
+            r.reason === 'Follow up for more context',
         );
         expect(searchRef).toBeDefined();
       } finally {
@@ -331,7 +333,8 @@ goal: 'Test no slices'
         expect(partialChunk.partial_file).toBe(true);
         // Dropped chunk should have a load_chunk follow-up ref
         const loadChunkRef = result.context.follow_up_refs.find(
-          (r) => r.tool === 'load_chunk' && r.args?.chunk_id === 'dropped-chunk',
+          (r) =>
+            r.tool === 'load_chunk' && r.args?.chunk_id === 'dropped-chunk',
         );
         expect(loadChunkRef).toBeDefined();
       } finally {

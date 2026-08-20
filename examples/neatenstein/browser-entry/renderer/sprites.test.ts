@@ -3,7 +3,7 @@
  */
 
 import { describe, expect, it } from '@jest/globals';
-import { type VoxelSnapshot } from '../../../neatenstein/scripts/snapshot-renderer';
+import { type VoxelSnapshot } from '../shared/snapshot-renderer';
 import { NEATENSTEIN_FLOOR_FOV_RADIANS } from './floor';
 import {
   NEATENSTEIN_BACKGROUND_RGB,
@@ -332,7 +332,8 @@ describe('neatenstein sprites', () => {
       ctx,
     );
 
-    expect(ctx.calls.length).toBe(1);
+    // B3.5: per-sprite putImageData removed; callers flush once at frame level.
+    expect(ctx.calls.length).toBe(0);
   });
 
   it('does not flush the canvas when every sprite column is occluded', async () => {
@@ -713,7 +714,7 @@ describe('neatenstein sprites', () => {
       expect(calls.length).toBe(0);
     });
 
-    it('flushes exactly once for a visible voxel projection', async () => {
+    it('does not flush per-sprite for a visible voxel projection', async () => {
       const { renderNeatensteinSprite } = await import('./sprites');
       const frame = createMockVoxelSnapshot(
         FRAME_SIZE,
@@ -744,7 +745,8 @@ describe('neatenstein sprites', () => {
         frame,
         ctx,
       );
-      expect(calls.length).toBe(1);
+      // B3.5: per-sprite putImageData removed; callers flush once at frame level.
+      expect(calls.length).toBe(0);
     });
 
     it('writes at least two distinct non-black pixel colors from the voxel frame', async () => {
@@ -832,7 +834,8 @@ describe('neatenstein sprites', () => {
       };
 
       renderNeatensteinSprite(framebuffer, zBuffer, clip, frame, ctx);
-      expect(calls.length).toBe(1);
+      // B3.5: per-sprite putImageData removed; callers flush once at frame level.
+      expect(calls.length).toBe(0);
     });
 
     it('ignores legacy color strings and does not flush', async () => {
@@ -895,7 +898,8 @@ describe('neatenstein sprites', () => {
         frame,
         ctx,
       );
-      expect(calls.length).toBe(1);
+      // B3.5: per-sprite putImageData removed; callers flush once at frame level.
+      expect(calls.length).toBe(0);
     });
   });
 
@@ -1286,9 +1290,8 @@ describe('neatenstein sprites', () => {
         ctx,
       );
 
-      // Capability: the renderer flushes exactly once for a visible
-      // projection using real ROBOT_SPRITE_FRAMES data.
-      expect(calls.length).toBe(1);
+      // B3.5: per-sprite putImageData removed; callers flush once at frame level.
+      expect(calls.length).toBe(0);
 
       // Capability: the framebuffer contains at least one non-transparent
       // pixel, proving the encoded frame was actually sampled.
@@ -1616,9 +1619,8 @@ describe('neatenstein sprites', () => {
         teamColor,
       );
 
-      // Capability: the renderer flushes exactly once for a visible
-      // projection with team color applied.
-      expect(calls.length).toBe(1);
+      // B3.5: per-sprite putImageData removed; callers flush once at frame level.
+      expect(calls.length).toBe(0);
 
       // Capability: the framebuffer contains at least one non-transparent
       // pixel, proving the team-colored encoded frame was rendered.

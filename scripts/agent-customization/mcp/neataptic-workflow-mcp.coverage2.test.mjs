@@ -168,9 +168,7 @@ status: '[DONE]'
       const inventoryTool = tools.find(
         (t) => t.name === 'get_customization_inventory',
       );
-      await expect(inventoryTool.handler()).rejects.toThrow(
-        /exit code 1/,
-      );
+      await expect(inventoryTool.handler()).rejects.toThrow(/exit code 1/);
     });
 
     it('covers loadCustomizationInventory invalid JSON error', async () => {
@@ -184,9 +182,7 @@ status: '[DONE]'
       const inventoryTool = tools.find(
         (t) => t.name === 'get_customization_inventory',
       );
-      await expect(inventoryTool.handler()).rejects.toThrow(
-        /valid JSON/,
-      );
+      await expect(inventoryTool.handler()).rejects.toThrow(/valid JSON/);
     });
   });
 
@@ -296,11 +292,7 @@ status: '[DONE]'
 `);
       try {
         const mockServer = {
-          tools: [
-            { name: 'tool1' },
-            { name: 'tool2' },
-            { name: 'tool3' },
-          ],
+          tools: [{ name: 'tool1' }, { name: 'tool2' }, { name: 'tool3' }],
           dispatch: async (request) => {
             if (request.method === 'initialize') {
               return { protocolVersion: MCP_PROTOCOL_VERSION };
@@ -464,9 +456,7 @@ status: '[DONE]'
           slice_id: 'assembled-slice',
           plan_path: planPath,
         });
-        expect(result.context.text).toBe(
-          'Assembled context text from cortex',
-        );
+        expect(result.context.text).toBe('Assembled context text from cortex');
       } finally {
         await removeTempPlan(planPath);
       }
@@ -660,9 +650,7 @@ ${slicesYaml.join('\n')}
         expect(result.compact).toBe(true);
         expect(result.truncated).toBe(true);
         expect(result.fallback_message).toContain('could not be trimmed');
-        expect(Buffer.byteLength(result.goal, 'utf8')).toBeLessThanOrEqual(
-          256,
-        );
+        expect(Buffer.byteLength(result.goal, 'utf8')).toBeLessThanOrEqual(256);
       } finally {
         await removeTempPlan(planPath);
       }
@@ -707,9 +695,7 @@ slices:
           plan_path: planPath,
         });
         expect(result.slice_id).toBe('my-slice');
-        expect(result.goal).toBe(
-          'Test normalizeStepNumber with number',
-        );
+        expect(result.goal).toBe('Test normalizeStepNumber with number');
       } finally {
         await removeTempPlan(planPath);
       }

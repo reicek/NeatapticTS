@@ -5,6 +5,8 @@ import {
   hasLineOfSight,
 } from './raycast';
 
+const MATH_SQRT2 = Math.SQRT2;
+
 const SIDE = 8;
 
 function createClosedFlatGrid(): Uint8Array {
@@ -176,5 +178,57 @@ describe('hasLineOfSight', () => {
     expect(
       hasLineOfSight(grid, SIDE, { x: 1.5, y: 1.5 }, { x: 10, y: 1.5 }),
     ).toBe(false);
+  });
+});
+
+describe('DDA bounds safety', () => {
+  it('returns Infinity when the ray steps outside the map bounds', () => {
+    // Arrange: 4×4 map with a wall at row 2, col 0 (flatMap index 8).
+    // The ray starts at (1.5, 1.5) heading east (+X). After crossing the
+    // east edge at mapX=4, the out-of-bounds read flatMap[1*4 + 4] =
+    // flatMap[8] wraps to the wall at row 2, col 0 and returns a false
+    // hit with garbage coordinates. A bounds guard must return Infinity
+    // instead.
+    const side = 4;
+    const flatMap = new Uint8Array(side * side);
+    flatMap[2 * side + 0] = 1;
+
+    // Act
+    const result = castRayDDAFromFlatMap(flatMap, side, 1.5, 1.5, 1, 0);
+
+    // Assert — fails today: no bounds check, so out-of-bounds index wraps
+    // to a valid cell and returns a false wall hit with perpWallDist = 2.5.
+    expect(result.perpWallDist).toBe(Infinity);
+  });
+});
+
+describe('DDA step-cap inequivalence at 45°', () => {
+  it('reaches a wall at 45° within the render distance cap despite the step budget', () => {
+    // Arrange: 64×64 open-perimeter map with a wall at cell (50, 50).
+    // At 45° (dirX = dirY = 1/√2), each DDA step covers ~1.414 Euclidean
+    // units but only ~0.707 perpendicular units. The 30-step cap reaches
+    // ~21 perpendicular units, but the render distance cap is 30. The
+    // wall at (50, 50) is at perpendicular distance ~24.75 (< 30), so it
+    // should be hit, but the static 30-step budget cuts the ray off at
+    // step 30 (cell ~47, 47) before reaching the wall.
+    const side = 64;
+    const flatMap = new Uint8Array(side * side);
+    // Perimeter walls
+    for (let x = 0; x < side; x += 1) {
+      flatMap[0 * side + x] = 1;
+      flatMap[(side - 1) * side + x] = 1;
+      flatMap[x * side + 0] = 1;
+      flatMap[x * side + (side - 1)] = 1;
+    }
+    // Wall on the diagonal at cell (50, 50)
+    flatMap[50 * side + 50] = 1;
+    const dir = 1 / MATH_SQRT2;
+
+    // Act
+    const result = castRayDDAFromFlatMap(flatMap, side, 32.5, 32.5, dir, dir);
+
+    // Assert — fails today: 30 steps only reaches ~21 perpendicular units,
+    // so the wall at ~24.75 is never reached and Infinity is returned.
+    expect(Number.isFinite(result.perpWallDist)).toBe(true);
   });
 });

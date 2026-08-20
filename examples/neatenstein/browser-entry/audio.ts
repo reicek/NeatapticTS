@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Procedural Web Audio engine for the Neatenstein neon raycasting demo.
  *
  * The engine is intentionally lazy: no `AudioContext` is created while the
@@ -63,6 +63,7 @@ import type {
   NeatensteinAudioEngine,
   NeatensteinCueParams,
 } from './audio.types';
+import { clamp } from './shared/math-guards.utils';
 
 export { NEATENSTEIN_AUDIO_SOUND_NAMES };
 export type {
@@ -138,18 +139,6 @@ const DEFAULT_GAIN_CUE = DEFAULT_GAIN;
 
 /** Attenuation factor applied per unit distance. */
 const DISTANCE_ATTENUATION = DISTANCE_ATTENUATION_PER_UNIT;
-
-/**
- * Clamp a number to the inclusive range [min, max].
- *
- * @param value - Value to clamp.
- * @param min - Lower bound.
- * @param max - Upper bound.
- * @returns Clamped value.
- */
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
-}
 
 /**
  * Convert positional options into a stereo pan value.

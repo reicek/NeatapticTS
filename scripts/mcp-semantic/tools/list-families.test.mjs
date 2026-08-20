@@ -25,7 +25,11 @@ describe('list-families', () => {
   afterEach(async () => {
     restoreEnv();
     if (client) {
-      try { await client.close(); } catch { /* noop */ }
+      try {
+        await client.close();
+      } catch {
+        /* noop */
+      }
     }
   });
 
@@ -74,7 +78,15 @@ describe('list-families', () => {
     await client.execute({
       sql: `INSERT INTO documents (doc_id, file_path, doc_family, mtime_ms, file_size, sha256, indexed_at)
             VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      args: [500003, 'src/no-chunks.ts', 'no-chunks-family', 3000, 100, 'sha3', 3000],
+      args: [
+        500003,
+        'src/no-chunks.ts',
+        'no-chunks-family',
+        3000,
+        100,
+        'sha3',
+        3000,
+      ],
     });
 
     const result = await listFamilies({ client });
@@ -90,7 +102,8 @@ describe('list-families', () => {
   it('uses getTursoClient when no client provided', async () => {
     // This exercises the `await getTursoClient(options.databasePath)` branch.
     // We pass databasePath to a :memory: client via setTursoClient.
-    const { setTursoClient, closeTursoClient } = await import('./cortex-db.mjs');
+    const { setTursoClient, closeTursoClient } =
+      await import('./cortex-db.mjs');
     const dbPath = ':memory:test-list-families';
     setTursoClient(dbPath, client);
     try {

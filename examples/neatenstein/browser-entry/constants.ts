@@ -525,8 +525,19 @@ export const CACHE_KEY_SEPARATOR = ':';
 // Phase 5 — Entry-level constants
 // ---------------------------------------------------------------------------
 
+/**
+ * Fixed simulation timestep in milliseconds.
+ *
+ * This is a private mirror of the canonical value exported from
+ * {@link ./host/game/constants.ts}. It is intentionally **not** re-exported
+ * (see the `no longer exports the removed fixed-timestep` contract test) but
+ * is used to derive {@link REFERENCE_TIMESTEP_MS} without creating a circular
+ * module dependency between this file and `./host/game/constants.ts`.
+ */
+const NEATENSTEIN_FIXED_TIMESTEP_MS = 16;
+
 /** Reference timestep for FPS-scaled simulation stepping in milliseconds. */
-export const REFERENCE_TIMESTEP_MS = 16;
+export const REFERENCE_TIMESTEP_MS = NEATENSTEIN_FIXED_TIMESTEP_MS;
 
 /** Default maximum player health used as a fallback frame value. */
 export const DEFAULT_MAX_HEALTH = 100;

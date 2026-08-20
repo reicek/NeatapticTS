@@ -25,11 +25,24 @@ interface AdaptationSignal {
   positioningDelta: number;
 }
 
+interface EnemyBehaviorMetrics {
+  aggression: number;
+  movementPattern: number;
+  positioning: number;
+}
+
 interface DeathFeedbackModule {
   computeAdaptationSignal: (
     prevGeneration: GenerationSnapshot,
     currGeneration: GenerationSnapshot,
   ) => AdaptationSignal;
+  computeEnemyBehaviorMetrics: (telemetry: {
+    damageDealt: number;
+    survivalTicks: number;
+    meanDistanceToPlayer: number;
+    dirChangeCount: number;
+    maxMapDistance: number;
+  }) => EnemyBehaviorMetrics;
 }
 
 const prevSnapshot: GenerationSnapshot = {
@@ -123,6 +136,74 @@ describe('Neatenstein harness death feedback', () => {
 
       expect(signal.direction).toBe('shifted');
       expect(signal.aggressionDelta).toBeCloseTo(0.05, 5);
+    });
+  });
+
+  describe('AC-A4-003: real telemetry behavior metrics', () => {
+    it('exports computeEnemyBehaviorMetrics as a function', async () => {
+      const mod =
+        (await import('./death-feedback.ts')) as unknown as DeathFeedbackModule;
+
+      expect(typeof mod.computeEnemyBehaviorMetrics).toBe('function');
+    });
+
+    it('computes aggression from damage dealt and survival ticks', async () => {
+      const { computeEnemyBehaviorMetrics } =
+        (await import('./death-feedback.ts')) as unknown as DeathFeedbackModule;
+      const telemetry = {
+        damageDealt: 10,
+        survivalTicks: 50,
+        meanDistanceToPlayer: 5,
+        dirChangeCount: 3,
+        maxMapDistance: 20,
+      };
+      const result = computeEnemyBehaviorMetrics(telemetry);
+      expect(result.aggression).toBeCloseTo(10 / 15, 5);
+    });
+
+    it('computes positioning from mean distance', async () => {
+      const { computeEnemyBehaviorMetrics } =
+        (await import('./death-feedback.ts')) as unknown as DeathFeedbackModule;
+      const telemetry = {
+        damageDealt: 10,
+        survivalTicks: 50,
+        meanDistanceToPlayer: 5,
+        dirChangeCount: 3,
+        maxMapDistance: 20,
+      };
+      const result = computeEnemyBehaviorMetrics(telemetry);
+      expect(result.positioning).toBeCloseTo(0.25, 5);
+    });
+
+    it('computes movementPattern from direction changes', async () => {
+      const { computeEnemyBehaviorMetrics } =
+        (await import('./death-feedback.ts')) as unknown as DeathFeedbackModule;
+      const telemetry = {
+        damageDealt: 10,
+        survivalTicks: 50,
+        meanDistanceToPlayer: 5,
+        dirChangeCount: 3,
+        maxMapDistance: 20,
+      };
+      const result = computeEnemyBehaviorMetrics(telemetry);
+      expect(result.movementPattern).toBeCloseTo(0.06, 5);
+    });
+
+    it('clamps all metrics to [0, 1]', async () => {
+      const { computeEnemyBehaviorMetrics } =
+        (await import('./death-feedback.ts')) as unknown as DeathFeedbackModule;
+      const telemetry = {
+        damageDealt: 0,
+        survivalTicks: 0,
+        meanDistanceToPlayer: 0,
+        dirChangeCount: 0,
+        maxMapDistance: 1,
+      };
+      const result = computeEnemyBehaviorMetrics(telemetry);
+      const clamped = (value: number) => value >= 0 && value <= 1;
+      expect(clamped(result.aggression)).toBe(true);
+      expect(clamped(result.positioning)).toBe(true);
+      expect(clamped(result.movementPattern)).toBe(true);
     });
   });
 });

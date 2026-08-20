@@ -27,7 +27,12 @@ import {
 describe('parseMcpCliArgs', () => {
   it('returns all false with empty argv', () => {
     const result = parseMcpCliArgs([]);
-    expect(result).toEqual({ help: false, json: false, selfCheck: false, plan: undefined });
+    expect(result).toEqual({
+      help: false,
+      json: false,
+      selfCheck: false,
+      plan: undefined,
+    });
   });
 
   it('parses --help and -h', () => {
@@ -44,30 +49,51 @@ describe('parseMcpCliArgs', () => {
   });
 
   it('parses --plan=<path>', () => {
-    expect(parseMcpCliArgs(['--plan=plans/test.plans.md']).plan).toBe('plans/test.plans.md');
+    expect(parseMcpCliArgs(['--plan=plans/test.plans.md']).plan).toBe(
+      'plans/test.plans.md',
+    );
   });
 
   it('parses all flags at once', () => {
-    const result = parseMcpCliArgs(['--help', '-h', '--json', '--self-check', '--plan=foo']);
-    expect(result).toEqual({ help: true, json: true, selfCheck: true, plan: 'foo' });
+    const result = parseMcpCliArgs([
+      '--help',
+      '-h',
+      '--json',
+      '--self-check',
+      '--plan=foo',
+    ]);
+    expect(result).toEqual({
+      help: true,
+      json: true,
+      selfCheck: true,
+      plan: 'foo',
+    });
   });
 });
 
 describe('requireExplicitPlanPath', () => {
   it('returns trimmed path for valid string', () => {
-    expect(requireExplicitPlanPath('  plans/test.plans.md  ')).toBe('plans/test.plans.md');
+    expect(requireExplicitPlanPath('  plans/test.plans.md  ')).toBe(
+      'plans/test.plans.md',
+    );
   });
 
   it('throws for undefined', () => {
-    expect(() => requireExplicitPlanPath(undefined)).toThrow('MCP entrypoints require --plan');
+    expect(() => requireExplicitPlanPath(undefined)).toThrow(
+      'MCP entrypoints require --plan',
+    );
   });
 
   it('throws for empty string', () => {
-    expect(() => requireExplicitPlanPath('   ')).toThrow('MCP entrypoints require --plan');
+    expect(() => requireExplicitPlanPath('   ')).toThrow(
+      'MCP entrypoints require --plan',
+    );
   });
 
   it('throws for non-string', () => {
-    expect(() => requireExplicitPlanPath(123)).toThrow('MCP entrypoints require --plan');
+    expect(() => requireExplicitPlanPath(123)).toThrow(
+      'MCP entrypoints require --plan',
+    );
   });
 });
 
@@ -83,7 +109,9 @@ describe('resolveRepoRootPath', () => {
   });
 
   it('throws for non-string', () => {
-    expect(() => resolveRepoRootPath(42)).toThrow('path must be a non-empty string');
+    expect(() => resolveRepoRootPath(42)).toThrow(
+      'path must be a non-empty string',
+    );
   });
 });
 
@@ -125,8 +153,13 @@ describe('printMcpUsage', () => {
 describe('emitSelfCheckReport', () => {
   it('calls writeReport with json option', () => {
     // writeReport writes to stdout; spy on process.stdout.write
-    const writeSpy = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
-    emitSelfCheckReport({ name: 'test', issues: [], summary: 'ok' }, { json: true });
+    const writeSpy = jest
+      .spyOn(process.stdout, 'write')
+      .mockImplementation(() => true);
+    emitSelfCheckReport(
+      { name: 'test', issues: [], summary: 'ok' },
+      { json: true },
+    );
     expect(writeSpy).toHaveBeenCalled();
     const output = writeSpy.mock.calls.map((c) => c[0].toString()).join('');
     expect(output).toContain('"name"');
@@ -134,8 +167,13 @@ describe('emitSelfCheckReport', () => {
   });
 
   it('calls writeReport with non-json option', () => {
-    const writeSpy = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
-    emitSelfCheckReport({ name: 'test', issues: [], summary: 'ok' }, { json: false });
+    const writeSpy = jest
+      .spyOn(process.stdout, 'write')
+      .mockImplementation(() => true);
+    emitSelfCheckReport(
+      { name: 'test', issues: [], summary: 'ok' },
+      { json: false },
+    );
     expect(writeSpy).toHaveBeenCalled();
     writeSpy.mockRestore();
   });
@@ -143,9 +181,11 @@ describe('emitSelfCheckReport', () => {
 
 describe('createSelfCheckReport', () => {
   it('merges summarizeIssues with details', () => {
-    const report = createSelfCheckReport('test', [
-      { severity: 'error', path: 'a', message: 'msg' },
-    ], { extra: 'detail' });
+    const report = createSelfCheckReport(
+      'test',
+      [{ severity: 'error', path: 'a', message: 'msg' }],
+      { extra: 'detail' },
+    );
     expect(report.name).toBe('test');
     expect(report.extra).toBe('detail');
     expect(report.ok).toBe(false);
@@ -203,12 +243,17 @@ describe('createMcpServer and dispatch', () => {
     const result = await server.dispatch({ method: 'initialize' });
     expect(result.protocolVersion).toBe(MCP_PROTOCOL_VERSION);
     expect(result.capabilities).toEqual({ tools: {} });
-    expect(result.serverInfo).toEqual({ name: 'test-server', version: '1.0.0' });
+    expect(result.serverInfo).toEqual({
+      name: 'test-server',
+      version: '1.0.0',
+    });
   });
 
   it('notifications/initialized returns null', async () => {
     const server = makeServer();
-    const result = await server.dispatch({ method: 'notifications/initialized' });
+    const result = await server.dispatch({
+      method: 'notifications/initialized',
+    });
     expect(result).toBeNull();
   });
 
@@ -268,9 +313,9 @@ describe('createMcpServer and dispatch', () => {
 
     it('throws -32602 when params is missing', async () => {
       const server = makeServer();
-      await expect(
-        server.dispatch({ method: 'tools/call' }),
-      ).rejects.toThrow('tools/call requires params.');
+      await expect(server.dispatch({ method: 'tools/call' })).rejects.toThrow(
+        'tools/call requires params.',
+      );
     });
 
     it('throws -32602 when params is not an object', async () => {
@@ -297,7 +342,10 @@ describe('createMcpServer and dispatch', () => {
     it('throws -32602 for unknown tool name', async () => {
       const server = makeServer();
       await expect(
-        server.dispatch({ method: 'tools/call', params: { name: 'nonexistent' } }),
+        server.dispatch({
+          method: 'tools/call',
+          params: { name: 'nonexistent' },
+        }),
       ).rejects.toThrow('Unknown tool: nonexistent');
     });
 
@@ -401,7 +449,11 @@ describe('invokeServerRequest', () => {
 
 describe('tokenizeShellSafeCommand', () => {
   it('tokenizes a simple command', () => {
-    expect(tokenizeShellSafeCommand('node -e hello')).toEqual(['node', '-e', 'hello']);
+    expect(tokenizeShellSafeCommand('node -e hello')).toEqual([
+      'node',
+      '-e',
+      'hello',
+    ]);
   });
 
   it('tokenizes with double-quoted args', () => {
@@ -429,7 +481,9 @@ describe('tokenizeShellSafeCommand', () => {
   });
 
   it('throws for empty command', () => {
-    expect(() => tokenizeShellSafeCommand('   ')).toThrow('Validation command must not be empty');
+    expect(() => tokenizeShellSafeCommand('   ')).toThrow(
+      'Validation command must not be empty',
+    );
   });
 
   it('throws for shell metacharacters', () => {
@@ -469,15 +523,21 @@ describe('requireString', () => {
   });
 
   it('throws for non-string', () => {
-    expect(() => requireString(42, 'field')).toThrow('field must be a non-empty string');
+    expect(() => requireString(42, 'field')).toThrow(
+      'field must be a non-empty string',
+    );
   });
 
   it('throws for empty string', () => {
-    expect(() => requireString('   ', 'field')).toThrow('field must be a non-empty string');
+    expect(() => requireString('   ', 'field')).toThrow(
+      'field must be a non-empty string',
+    );
   });
 
   it('throws for null', () => {
-    expect(() => requireString(null, 'field')).toThrow('field must be a non-empty string');
+    expect(() => requireString(null, 'field')).toThrow(
+      'field must be a non-empty string',
+    );
   });
 });
 
@@ -546,7 +606,11 @@ describe('formatToolResult', () => {
   });
 
   it('builds slice-specific summary with slice_id, phase, and step_number', () => {
-    const result = formatToolResult({ slice_id: 'S1', phase: 2, step_number: 3 });
+    const result = formatToolResult({
+      slice_id: 'S1',
+      phase: 2,
+      step_number: 3,
+    });
     expect(result.content[0].text).toContain('slice S1 (phase 2, step 3)');
   });
 });

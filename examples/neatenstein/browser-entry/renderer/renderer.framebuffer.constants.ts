@@ -46,6 +46,17 @@ export const NEATENSTEIN_MAX_VIEW_DIST = 140;
 export const NEATENSTEIN_RENDER_DISTANCE_CAP = 30;
 
 /**
+ * Distance at which fog begins its smooth transition toward the background.
+ *
+ * Fog is zero (no fog) below this distance, then smoothly ramps to full fog
+ * at {@link NEATENSTEIN_RENDER_DISTANCE_CAP} using a smoothstep curve.
+ * Set to `0.6 * CAP` so the near two-thirds of the view remains clear.
+ */
+export const NEATENSTEIN_FOG_START_DISTANCE = Math.round(
+  NEATENSTEIN_RENDER_DISTANCE_CAP * 0.6,
+);
+
+/**
  * Background RGB used by the distance-fog pass.
  *
  * This is the dark neon void color `#060b14` from the Phase 1 design

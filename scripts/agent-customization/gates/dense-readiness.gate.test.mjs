@@ -197,7 +197,10 @@ describe('dense-readiness gate', () => {
       await importGateMain([]);
       assert.notEqual(capturedWrite, null);
       assert.equal(capturedWrite.json, false);
-      assert.equal(capturedWrite.formatText(capturedWrite.payload), 'PASS dense-readiness.gate');
+      assert.equal(
+        capturedWrite.formatText(capturedWrite.payload),
+        'PASS dense-readiness.gate',
+      );
     });
 
     it('emits JSON with --json when pass=false', async () => {
@@ -214,7 +217,10 @@ describe('dense-readiness gate', () => {
       mockReadinessReport = { state: 'model-only' };
       await importGateMain([]);
       assert.equal(capturedWrite.json, false);
-      assert.equal(capturedWrite.formatText(capturedWrite.payload), 'FAIL dense-readiness.gate');
+      assert.equal(
+        capturedWrite.formatText(capturedWrite.payload),
+        'FAIL dense-readiness.gate',
+      );
       assert.equal(process.exitCode, 1);
     });
 
@@ -228,12 +234,15 @@ describe('dense-readiness gate', () => {
       mockReadinessReport = { state: 'warm' };
       let received;
       jest.resetModules();
-      jest.unstable_mockModule('../../../rag-index/dense-readiness.mjs', () => ({
-        checkDenseReadiness: async (opts) => {
-          received = opts;
-          return mockReadinessReport;
-        },
-      }));
+      jest.unstable_mockModule(
+        '../../../rag-index/dense-readiness.mjs',
+        () => ({
+          checkDenseReadiness: async (opts) => {
+            received = opts;
+            return mockReadinessReport;
+          },
+        }),
+      );
       await withArgv([process.execPath, GATE_PATH], async () => {
         await import('./dense-readiness.gate.mjs');
         await new Promise((r) => setTimeout(r, 200));

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Player movement and wall-collision resolution for the Neatenstein host-side
  * simulation.
  *
@@ -24,6 +24,7 @@ import {
 } from './constants';
 import { createGameState } from './state';
 import type { EnemyState, GameState, Vector2 } from './types';
+import { isFiniteNumber } from '../../shared/math-guards.utils';
 
 export { createGameState };
 
@@ -39,16 +40,6 @@ const NEATENSTEIN_COLLISION_EDGE_EPSILON = 1e-9;
  * Neutral movement vector.
  */
 const ZERO_VECTOR: Vector2 = { x: 0, y: 0 };
-
-/**
- * Return whether a number is finite.
- *
- * @param value - Candidate numeric value.
- * @returns Whether the value is a finite number.
- */
-function isFiniteNumber(value: number): boolean {
-  return Number.isFinite(value);
-}
 
 /**
  * Resolve a safe movement timestep.

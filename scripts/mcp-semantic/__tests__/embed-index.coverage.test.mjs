@@ -16,7 +16,9 @@ import { fileURLToPath } from 'node:url';
 jest.unstable_mockModule('onnxruntime-node', () => ({
   InferenceSession: {
     create: async () => {
-      throw new Error('Mocked: onnxruntime-node is not available in test environment');
+      throw new Error(
+        'Mocked: onnxruntime-node is not available in test environment',
+      );
     },
   },
   Tensor: class MockTensor {},
@@ -87,9 +89,9 @@ describe('embed-index — normalizeEmbeddingVector', () => {
   });
 
   it('throws when dimension does not match', () => {
-    expect(() => normalizeEmbeddingVector(new Float32Array([1, 2, 3]), 2)).toThrow(
-      'Expected embedding dimension 2, received 3',
-    );
+    expect(() =>
+      normalizeEmbeddingVector(new Float32Array([1, 2, 3]), 2),
+    ).toThrow('Expected embedding dimension 2, received 3');
   });
 
   it('handles single-element vector', () => {
@@ -142,7 +144,10 @@ describe('embed-index — readModelMeta', () => {
 
   it('reads model-meta.json from modelMetaPath', async () => {
     const metaPath = path.join(TEMP_DIR, 'model-meta.json');
-    await writeFile(metaPath, JSON.stringify({ dimension: 128, model_sha256: 'def' }));
+    await writeFile(
+      metaPath,
+      JSON.stringify({ dimension: 128, model_sha256: 'def' }),
+    );
     const result = await readModelMeta({ modelMetaPath: metaPath });
     expect(result).toEqual({ dimension: 128, model_sha256: 'def' });
   });
@@ -217,8 +222,13 @@ describe('embed-index — createOnnxTextEmbedder (tokenizer & config)', () => {
     const modelDir = path.join(TEMP_DIR, 'bad-config-' + Date.now());
     await mkdir(modelDir, { recursive: true });
     await copyRealTokenizer(modelDir);
-    await writeFile(path.join(modelDir, 'tokenizer_config.json'), '{ invalid json }');
-    await expect(createOnnxTextEmbedder({ modelDirectory: modelDir })).rejects.toThrow();
+    await writeFile(
+      path.join(modelDir, 'tokenizer_config.json'),
+      '{ invalid json }',
+    );
+    await expect(
+      createOnnxTextEmbedder({ modelDirectory: modelDir }),
+    ).rejects.toThrow();
   });
 
   it('reaches ONNX session creation with valid tokenizer and string unk_token', async () => {
@@ -234,7 +244,9 @@ describe('embed-index — createOnnxTextEmbedder (tokenizer & config)', () => {
       JSON.stringify({ unk_token: '[UNK]' }),
     );
     // Will fail at InferenceSession.create because model.onnx doesn't exist
-    await expect(createOnnxTextEmbedder({ modelDirectory: modelDir })).rejects.toThrow();
+    await expect(
+      createOnnxTextEmbedder({ modelDirectory: modelDir }),
+    ).rejects.toThrow();
   }, 30000);
 
   it('handles object unk_token in special_tokens_map', async () => {
@@ -249,7 +261,9 @@ describe('embed-index — createOnnxTextEmbedder (tokenizer & config)', () => {
       path.join(modelDir, 'special_tokens_map.json'),
       JSON.stringify({ unk_token: { type: 'SpecialToken', content: '[UNK]' } }),
     );
-    await expect(createOnnxTextEmbedder({ modelDirectory: modelDir })).rejects.toThrow();
+    await expect(
+      createOnnxTextEmbedder({ modelDirectory: modelDir }),
+    ).rejects.toThrow();
   }, 30000);
 
   it('uses fallback unk_token when special_tokens_map is missing', async () => {
@@ -261,7 +275,9 @@ describe('embed-index — createOnnxTextEmbedder (tokenizer & config)', () => {
       JSON.stringify({ do_lower_case: true }),
     );
     // No special_tokens_map.json — resolveSpecialToken should use fallback
-    await expect(createOnnxTextEmbedder({ modelDirectory: modelDir })).rejects.toThrow();
+    await expect(
+      createOnnxTextEmbedder({ modelDirectory: modelDir }),
+    ).rejects.toThrow();
   }, 30000);
 
   it('handles missing tokenizer_config.json (ENOENT fallback)', async () => {
@@ -273,7 +289,9 @@ describe('embed-index — createOnnxTextEmbedder (tokenizer & config)', () => {
       JSON.stringify({ unk_token: '[UNK]' }),
     );
     // No tokenizer_config.json — readJsonFile should return {} (ENOENT)
-    await expect(createOnnxTextEmbedder({ modelDirectory: modelDir })).rejects.toThrow();
+    await expect(
+      createOnnxTextEmbedder({ modelDirectory: modelDir }),
+    ).rejects.toThrow();
   }, 30000);
 });
 
@@ -701,7 +719,9 @@ describe('embed-index — buildEmbeddingIndex', () => {
       modelMeta: { dimension: 384, model_sha256: 'test-sha' },
     });
 
-    const doc = await client.execute('SELECT indexed_at FROM documents WHERE doc_id = 1');
+    const doc = await client.execute(
+      'SELECT indexed_at FROM documents WHERE doc_id = 1',
+    );
     expect(Number(doc.rows[0].indexed_at)).toBeGreaterThan(1000);
   });
 });

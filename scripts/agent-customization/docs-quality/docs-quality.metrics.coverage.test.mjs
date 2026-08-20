@@ -3,9 +3,8 @@ import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 // Capture real contract module before mocking
-const realContract = await import(
-  '../../../rag-index/docs-quality/docs-quality.contract.mjs'
-);
+const realContract =
+  await import('../../../rag-index/docs-quality/docs-quality.contract.mjs');
 
 // Mutable mock state
 let scanImpl = async () => scanResult;
@@ -54,14 +53,14 @@ jest.unstable_mockModule(
   () => ({
     ...realContract,
     validateDocsQualityManifestV1: (manifest) =>
-      validationOverride ?? realContract.validateDocsQualityManifestV1(manifest),
+      validationOverride ??
+      realContract.validateDocsQualityManifestV1(manifest),
   }),
 );
 
 // Import metrics module AFTER all mocks
-const { runDocsQualityMetrics } = await import(
-  '../../../rag-index/docs-quality/docs-quality.metrics.mjs'
-);
+const { runDocsQualityMetrics } =
+  await import('../../../rag-index/docs-quality/docs-quality.metrics.mjs');
 
 const PROJECT_ROOT = process.cwd();
 const METRICS_MODULE_PATH = path.resolve(
@@ -261,9 +260,9 @@ describe('docs-quality.metrics.mjs coverage', () => {
   // -------------------------------------------------------------------------
   describe('resolveScopeConfig error branch', () => {
     it('throws when scope=paths with no sourcePaths', async () => {
-      await expect(
-        runDocsQualityMetrics({ scope: 'paths' }),
-      ).rejects.toThrow('scope=paths requires at least one source path.');
+      await expect(runDocsQualityMetrics({ scope: 'paths' })).rejects.toThrow(
+        'scope=paths requires at least one source path.',
+      );
     });
 
     it('throws when scope=paths with empty sourcePaths', async () => {
@@ -281,12 +280,42 @@ describe('docs-quality.metrics.mjs coverage', () => {
       scanResult = {
         pass: false,
         evidence: [
-          { file: 'src/a.ts', issue: 'missing JSDoc', numericValue: 0, symbol: 'a' },
-          { file: 'src/b.ts', issue: 'weak JSDoc', numericValue: 3, symbol: 'b' },
-          { file: 'src/c.ts', issue: 'high complexity', numericValue: 15, symbol: 'c' },
-          { file: 'src/d.ts', issue: 'incomplete JSDoc tags', numericValue: 2, symbol: 'd' },
-          { file: 'src/e.ts', issue: 'missing JSDoc', numericValue: 0, symbol: 'e' },
-          { file: 'src/f.ts', issue: 'unknown issue', numericValue: 0, symbol: 'f' },
+          {
+            file: 'src/a.ts',
+            issue: 'missing JSDoc',
+            numericValue: 0,
+            symbol: 'a',
+          },
+          {
+            file: 'src/b.ts',
+            issue: 'weak JSDoc',
+            numericValue: 3,
+            symbol: 'b',
+          },
+          {
+            file: 'src/c.ts',
+            issue: 'high complexity',
+            numericValue: 15,
+            symbol: 'c',
+          },
+          {
+            file: 'src/d.ts',
+            issue: 'incomplete JSDoc tags',
+            numericValue: 2,
+            symbol: 'd',
+          },
+          {
+            file: 'src/e.ts',
+            issue: 'missing JSDoc',
+            numericValue: 0,
+            symbol: 'e',
+          },
+          {
+            file: 'src/f.ts',
+            issue: 'unknown issue',
+            numericValue: 0,
+            symbol: 'f',
+          },
         ],
         issueDimensions: [],
         fixHint: 'fix hint',
@@ -316,17 +345,35 @@ describe('docs-quality.metrics.mjs coverage', () => {
       writeCoverageFiles(tempDir, {
         lcovContent: [
           lcovRecord('src/file1.ts', {
-            lineFound: 10, lineHits: 8,
-            branchFound: 5, branchHits: 4,
-            functionFound: 3, functionHits: 2,
-            daLines: [[1, 1], [2, 0], [3, 1]],
-            brdaLines: [[1, 0, 0, '-'], [2, 0, 1, 0], [3, 0, 2, 1]],
-            fndaLines: [[0, 'uncoveredFn'], [1, 'coveredFn'], [0, '']],
+            lineFound: 10,
+            lineHits: 8,
+            branchFound: 5,
+            branchHits: 4,
+            functionFound: 3,
+            functionHits: 2,
+            daLines: [
+              [1, 1],
+              [2, 0],
+              [3, 1],
+            ],
+            brdaLines: [
+              [1, 0, 0, '-'],
+              [2, 0, 1, 0],
+              [3, 0, 2, 1],
+            ],
+            fndaLines: [
+              [0, 'uncoveredFn'],
+              [1, 'coveredFn'],
+              [0, ''],
+            ],
           }),
           lcovRecord('src/file2.ts', {
-            lineFound: 5, lineHits: 5,
-            branchFound: 3, branchHits: 3,
-            functionFound: 2, functionHits: 2,
+            lineFound: 5,
+            lineHits: 5,
+            branchFound: 3,
+            branchHits: 3,
+            functionFound: 2,
+            functionHits: 2,
           }),
         ].join('\n'),
       });
@@ -336,33 +383,52 @@ describe('docs-quality.metrics.mjs coverage', () => {
       expect(cov.available).toBe(true);
       expect(cov.totalFiles).toBe(2);
       expect(cov.filesBelow100).toBe(1);
-      expect(cov.filesBelow100Detail[0].statementCoverageSource).toBe('lcov-line-fallback');
+      expect(cov.filesBelow100Detail[0].statementCoverageSource).toBe(
+        'lcov-line-fallback',
+      );
       expect(cov.filesBelow100Detail[0].uncoveredLines).toContain(2);
       expect(cov.filesBelow100Detail[0].uncoveredBranches).toHaveLength(2);
       expect(cov.filesBelow100Detail[0].uncoveredBranches[0].taken).toBe(null);
       expect(cov.filesBelow100Detail[0].uncoveredBranches[1].taken).toBe(0);
-      expect(cov.filesBelow100Detail[0].uncoveredFunctions).toEqual(['uncoveredFn']);
+      expect(cov.filesBelow100Detail[0].uncoveredFunctions).toEqual([
+        'uncoveredFn',
+      ]);
     });
 
     it('parses lcov.info with coverage-summary.json', async () => {
       writeCoverageFiles(tempDir, {
         lcovContent: [
           lcovRecord('src/file1.ts', {
-            lineFound: 10, lineHits: 7,
-            branchFound: 5, branchHits: 3,
-            functionFound: 3, functionHits: 2,
+            lineFound: 10,
+            lineHits: 7,
+            branchFound: 5,
+            branchHits: 3,
+            functionFound: 3,
+            functionHits: 2,
           }),
         ].join('\n'),
         coverageSummary: {
-          total: { statements: { pct: 85 }, branches: { pct: 60 }, functions: { pct: 80 }, lines: { pct: 70 } },
-          'src/file1.ts': { statements: { pct: 75 }, branches: { pct: 60 }, functions: { pct: 80 }, lines: { pct: 70 } },
+          total: {
+            statements: { pct: 85 },
+            branches: { pct: 60 },
+            functions: { pct: 80 },
+            lines: { pct: 70 },
+          },
+          'src/file1.ts': {
+            statements: { pct: 75 },
+            branches: { pct: 60 },
+            functions: { pct: 80 },
+            lines: { pct: 70 },
+          },
         },
       });
 
       const result = await runDocsQualityMetrics();
       const cov = result.summary.coverage;
       expect(cov.filesBelow100Detail[0].statements).toBe(75);
-      expect(cov.filesBelow100Detail[0].statementCoverageSource).toBe('coverage-summary');
+      expect(cov.filesBelow100Detail[0].statementCoverageSource).toBe(
+        'coverage-summary',
+      );
       expect(cov.isPartial).toBe(true);
       expect(cov.coveragePass).toBe(false);
     });
@@ -372,9 +438,12 @@ describe('docs-quality.metrics.mjs coverage', () => {
         lcovContent: [
           'TN:test\nLF:5\nLH:5\nend_of_record\n',
           lcovRecord('src/file1.ts', {
-            lineFound: 5, lineHits: 5,
-            branchFound: 3, branchHits: 3,
-            functionFound: 2, functionHits: 2,
+            lineFound: 5,
+            lineHits: 5,
+            branchFound: 3,
+            branchHits: 3,
+            functionFound: 2,
+            functionHits: 2,
           }),
         ].join('\n'),
       });
@@ -387,14 +456,20 @@ describe('docs-quality.metrics.mjs coverage', () => {
       writeCoverageFiles(tempDir, {
         lcovContent: [
           lcovRecord('lib/file1.ts', {
-            lineFound: 10, lineHits: 5,
-            branchFound: 5, branchHits: 2,
-            functionFound: 3, functionHits: 1,
+            lineFound: 10,
+            lineHits: 5,
+            branchFound: 5,
+            branchHits: 2,
+            functionFound: 3,
+            functionHits: 1,
           }),
           lcovRecord('src/file2.ts', {
-            lineFound: 5, lineHits: 5,
-            branchFound: 3, branchHits: 3,
-            functionFound: 2, functionHits: 2,
+            lineFound: 5,
+            lineHits: 5,
+            branchFound: 3,
+            branchHits: 3,
+            functionFound: 2,
+            functionHits: 2,
           }),
         ].join('\n'),
       });
@@ -407,14 +482,27 @@ describe('docs-quality.metrics.mjs coverage', () => {
       writeCoverageFiles(tempDir, {
         lcovContent: [
           lcovRecord('src/file1.ts', {
-            lineFound: 10, lineHits: 10,
-            branchFound: 5, branchHits: 5,
-            functionFound: 3, functionHits: 3,
+            lineFound: 10,
+            lineHits: 10,
+            branchFound: 5,
+            branchHits: 5,
+            functionFound: 3,
+            functionHits: 3,
           }),
         ].join('\n'),
         coverageSummary: {
-          total: { statements: { pct: 100 }, branches: { pct: 100 }, functions: { pct: 100 }, lines: { pct: 100 } },
-          'src/file1.ts': { statements: { pct: 100 }, branches: { pct: 100 }, functions: { pct: 100 }, lines: { pct: 100 } },
+          total: {
+            statements: { pct: 100 },
+            branches: { pct: 100 },
+            functions: { pct: 100 },
+            lines: { pct: 100 },
+          },
+          'src/file1.ts': {
+            statements: { pct: 100 },
+            branches: { pct: 100 },
+            functions: { pct: 100 },
+            lines: { pct: 100 },
+          },
         },
       });
 
@@ -429,19 +517,28 @@ describe('docs-quality.metrics.mjs coverage', () => {
       writeCoverageFiles(tempDir, {
         lcovContent: [
           lcovRecord('src/zzz.ts', {
-            lineFound: 10, lineHits: 9,
-            branchFound: 5, branchHits: 5,
-            functionFound: 3, functionHits: 3,
+            lineFound: 10,
+            lineHits: 9,
+            branchFound: 5,
+            branchHits: 5,
+            functionFound: 3,
+            functionHits: 3,
           }),
           lcovRecord('src/aaa.ts', {
-            lineFound: 10, lineHits: 5,
-            branchFound: 5, branchHits: 5,
-            functionFound: 3, functionHits: 3,
+            lineFound: 10,
+            lineHits: 5,
+            branchFound: 5,
+            branchHits: 5,
+            functionFound: 3,
+            functionHits: 3,
           }),
           lcovRecord('src/bbb.ts', {
-            lineFound: 10, lineHits: 5,
-            branchFound: 5, branchHits: 5,
-            functionFound: 3, functionHits: 3,
+            lineFound: 10,
+            lineHits: 5,
+            branchFound: 5,
+            branchHits: 5,
+            functionFound: 3,
+            functionHits: 3,
           }),
         ].join('\n'),
       });
@@ -459,25 +556,33 @@ describe('docs-quality.metrics.mjs coverage', () => {
       writeCoverageFiles(tempDir, {
         lcovContent: [
           lcovRecord(absPath, {
-            lineFound: 10, lineHits: 7,
-            branchFound: 5, branchHits: 3,
-            functionFound: 3, functionHits: 2,
+            lineFound: 10,
+            lineHits: 7,
+            branchFound: 5,
+            branchHits: 3,
+            functionFound: 3,
+            functionHits: 2,
           }),
         ].join('\n'),
       });
 
       const result = await runDocsQualityMetrics();
       expect(result.summary.coverage.totalFiles).toBe(1);
-      expect(result.summary.coverage.filesBelow100Detail[0].file).toContain('src/file1.ts');
+      expect(result.summary.coverage.filesBelow100Detail[0].file).toContain(
+        'src/file1.ts',
+      );
     });
 
     it('handles absolute SF: paths outside cwd', async () => {
       writeCoverageFiles(tempDir, {
         lcovContent: [
           lcovRecord('/other/dir/src/file1.ts', {
-            lineFound: 10, lineHits: 7,
-            branchFound: 5, branchHits: 3,
-            functionFound: 3, functionHits: 2,
+            lineFound: 10,
+            lineHits: 7,
+            branchFound: 5,
+            branchHits: 3,
+            functionFound: 3,
+            functionHits: 2,
           }),
         ].join('\n'),
       });
@@ -490,9 +595,12 @@ describe('docs-quality.metrics.mjs coverage', () => {
       writeCoverageFiles(tempDir, {
         lcovContent: [
           lcovRecord('unknown', {
-            lineFound: 10, lineHits: 7,
-            branchFound: 5, branchHits: 3,
-            functionFound: 3, functionHits: 2,
+            lineFound: 10,
+            lineHits: 7,
+            branchFound: 5,
+            branchHits: 3,
+            functionFound: 3,
+            functionHits: 2,
           }),
         ].join('\n'),
       });
@@ -505,14 +613,20 @@ describe('docs-quality.metrics.mjs coverage', () => {
       writeCoverageFiles(tempDir, {
         lcovContent: [
           lcovRecord('src/file1.ts', {
-            lineFound: 10, lineHits: 5,
-            branchFound: 5, branchHits: 2,
-            functionFound: 3, functionHits: 1,
+            lineFound: 10,
+            lineHits: 5,
+            branchFound: 5,
+            branchHits: 2,
+            functionFound: 3,
+            functionHits: 1,
           }),
           lcovRecord('lib/file2.ts', {
-            lineFound: 10, lineHits: 5,
-            branchFound: 5, branchHits: 2,
-            functionFound: 3, functionHits: 1,
+            lineFound: 10,
+            lineHits: 5,
+            branchFound: 5,
+            branchHits: 2,
+            functionFound: 3,
+            functionHits: 1,
           }),
         ].join('\n'),
       });
@@ -533,9 +647,12 @@ describe('docs-quality.metrics.mjs coverage', () => {
       writeCoverageFiles(tempDir, {
         lcovContent: [
           lcovRecord('src/file1.ts', {
-            lineFound: 10, lineHits: 7,
-            branchFound: 5, branchHits: 3,
-            functionFound: 3, functionHits: 2,
+            lineFound: 10,
+            lineHits: 7,
+            branchFound: 5,
+            branchHits: 3,
+            functionFound: 3,
+            functionHits: 2,
           }),
         ].join('\n'),
         coverageSummary: {
@@ -548,24 +665,33 @@ describe('docs-quality.metrics.mjs coverage', () => {
       });
 
       const result = await runDocsQualityMetrics();
-      expect(result.summary.coverage.filesBelow100Detail[0].statements).toBe(80);
-      expect(result.summary.coverage.filesBelow100Detail[0].statementCoverageSource).toBe('coverage-summary');
+      expect(result.summary.coverage.filesBelow100Detail[0].statements).toBe(
+        80,
+      );
+      expect(
+        result.summary.coverage.filesBelow100Detail[0].statementCoverageSource,
+      ).toBe('coverage-summary');
     });
 
     it('handles invalid JSON in coverage-summary.json', async () => {
       writeCoverageFiles(tempDir, {
         lcovContent: [
           lcovRecord('src/file1.ts', {
-            lineFound: 10, lineHits: 7,
-            branchFound: 5, branchHits: 3,
-            functionFound: 3, functionHits: 2,
+            lineFound: 10,
+            lineHits: 7,
+            branchFound: 5,
+            branchHits: 3,
+            functionFound: 3,
+            functionHits: 2,
           }),
         ].join('\n'),
         coverageSummary: '{ invalid json {{{',
       });
 
       const result = await runDocsQualityMetrics();
-      expect(result.summary.coverage.filesBelow100Detail[0].statementCoverageSource).toBe('lcov-line-fallback');
+      expect(
+        result.summary.coverage.filesBelow100Detail[0].statementCoverageSource,
+      ).toBe('lcov-line-fallback');
       expect(result.summary.coverage.isPartial).toBeUndefined();
     });
   });
@@ -578,9 +704,12 @@ describe('docs-quality.metrics.mjs coverage', () => {
       writeCoverageFiles(tempDir, {
         lcovContent: [
           lcovRecord('src/file1.ts', {
-            lineFound: 10, lineHits: 7,
-            branchFound: 5, branchHits: 3,
-            functionFound: 3, functionHits: 2,
+            lineFound: 10,
+            lineHits: 7,
+            branchFound: 5,
+            branchHits: 3,
+            functionFound: 3,
+            functionHits: 2,
           }),
         ].join('\n'),
         coverageSummary: {
@@ -597,9 +726,12 @@ describe('docs-quality.metrics.mjs coverage', () => {
       writeCoverageFiles(tempDir, {
         lcovContent: [
           lcovRecord('src/file1.ts', {
-            lineFound: 10, lineHits: 7,
-            branchFound: 5, branchHits: 3,
-            functionFound: 3, functionHits: 2,
+            lineFound: 10,
+            lineHits: 7,
+            branchFound: 5,
+            branchHits: 3,
+            functionFound: 3,
+            functionHits: 2,
           }),
         ].join('\n'),
         coverageSummary: {
@@ -616,9 +748,12 @@ describe('docs-quality.metrics.mjs coverage', () => {
       writeCoverageFiles(tempDir, {
         lcovContent: [
           lcovRecord('src/file1.ts', {
-            lineFound: 10, lineHits: 7,
-            branchFound: 5, branchHits: 3,
-            functionFound: 3, functionHits: 2,
+            lineFound: 10,
+            lineHits: 7,
+            branchFound: 5,
+            branchHits: 3,
+            functionFound: 3,
+            functionHits: 2,
           }),
         ].join('\n'),
         coverageSummary: {
@@ -668,9 +803,12 @@ describe('docs-quality.metrics.mjs coverage', () => {
       writeCoverageFiles(tempDir, {
         lcovContent: [
           lcovRecord('src/empty.ts', {
-            lineFound: 0, lineHits: 0,
-            branchFound: 0, branchHits: 0,
-            functionFound: 0, functionHits: 0,
+            lineFound: 0,
+            lineHits: 0,
+            branchFound: 0,
+            branchHits: 0,
+            functionFound: 0,
+            functionHits: 0,
           }),
         ].join('\n'),
       });
@@ -685,9 +823,7 @@ describe('docs-quality.metrics.mjs coverage', () => {
 
     it('handles missing counters (null match)', async () => {
       writeCoverageFiles(tempDir, {
-        lcovContent: [
-          'SF:src/nocounters.ts\nend_of_record\n',
-        ].join('\n'),
+        lcovContent: ['SF:src/nocounters.ts\nend_of_record\n'].join('\n'),
       });
 
       const result = await runDocsQualityMetrics();
@@ -704,7 +840,12 @@ describe('docs-quality.metrics.mjs coverage', () => {
       scanResult = {
         pass: false,
         evidence: [
-          { file: 'src/a.ts', issue: 'missing JSDoc', numericValue: 0, symbol: 'a' },
+          {
+            file: 'src/a.ts',
+            issue: 'missing JSDoc',
+            numericValue: 0,
+            symbol: 'a',
+          },
         ],
         issueDimensions: [],
         fixHint: 'fix',
@@ -723,9 +864,9 @@ describe('docs-quality.metrics.mjs coverage', () => {
         errors: [{ field: 'test', message: 'test error' }],
       };
 
-      await expect(
-        runDocsQualityMetrics(),
-      ).rejects.toThrow('Invalid docs-quality manifest: test');
+      await expect(runDocsQualityMetrics()).rejects.toThrow(
+        'Invalid docs-quality manifest: test',
+      );
     });
   });
 

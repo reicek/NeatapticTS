@@ -38,14 +38,27 @@ describe('docs-quality.normalize.mjs coverage', () => {
 
     it('resolves numericValue from entry.numericValue first', () => {
       const result = normalizeDocsQualityEvidence([
-        { file: 'a.ts', issue: 'high complexity', symbol: 'f', numericValue: 15, words: 5, complexity: 10 },
+        {
+          file: 'a.ts',
+          issue: 'high complexity',
+          symbol: 'f',
+          numericValue: 15,
+          words: 5,
+          complexity: 10,
+        },
       ]);
       expect(result[0].numericValue).toBe(15);
     });
 
     it('resolves numericValue from entry.words when numericValue is not finite', () => {
       const result = normalizeDocsQualityEvidence([
-        { file: 'a.ts', issue: 'weak JSDoc', symbol: 'f', numericValue: 'not-a-number', words: 3 },
+        {
+          file: 'a.ts',
+          issue: 'weak JSDoc',
+          symbol: 'f',
+          numericValue: 'not-a-number',
+          words: 3,
+        },
       ]);
       expect(result[0].numericValue).toBe(3);
     });
@@ -73,8 +86,18 @@ describe('docs-quality.normalize.mjs coverage', () => {
 
     it('deduplicates entries with same symbol|issue|numericValue', () => {
       const result = normalizeDocsQualityEvidence([
-        { file: 'a.ts', issue: 'missing JSDoc', symbol: 'foo', numericValue: 0 },
-        { file: 'b.ts', issue: 'missing JSDoc', symbol: 'foo', numericValue: 0 },
+        {
+          file: 'a.ts',
+          issue: 'missing JSDoc',
+          symbol: 'foo',
+          numericValue: 0,
+        },
+        {
+          file: 'b.ts',
+          issue: 'missing JSDoc',
+          symbol: 'foo',
+          numericValue: 0,
+        },
       ]);
       expect(result).toHaveLength(1);
     });
@@ -92,7 +115,12 @@ describe('docs-quality.normalize.mjs coverage', () => {
     it('sorts by severity rank (high complexity first)', () => {
       const result = normalizeDocsQualityEvidence([
         { file: 'a.ts', issue: 'weak JSDoc', symbol: 'f', numericValue: 5 },
-        { file: 'b.ts', issue: 'high complexity', symbol: 'g', numericValue: 10 },
+        {
+          file: 'b.ts',
+          issue: 'high complexity',
+          symbol: 'g',
+          numericValue: 10,
+        },
         { file: 'c.ts', issue: 'missing JSDoc', symbol: 'h', numericValue: 0 },
       ]);
       expect(result[0].issue).toBe('high complexity');
@@ -163,7 +191,12 @@ describe('docs-quality.normalize.mjs coverage', () => {
 
     it('handles incomplete JSDoc tags with severity rank 2', () => {
       const result = normalizeDocsQualityEvidence([
-        { file: 'a.ts', issue: 'incomplete JSDoc tags', symbol: 'f', numericValue: 0 },
+        {
+          file: 'a.ts',
+          issue: 'incomplete JSDoc tags',
+          symbol: 'f',
+          numericValue: 0,
+        },
         { file: 'b.ts', issue: 'missing JSDoc', symbol: 'g', numericValue: 0 },
       ]);
       expect(result[0].issue).toBe('missing JSDoc');
@@ -329,12 +362,32 @@ describe('docs-quality.normalize.mjs coverage', () => {
 
     it('digest sort compares symbol when file and issue are same (lines 139-140)', () => {
       const d1 = computeNormalizedEvidenceDigest([
-        { file: 'a.ts', issue: 'missing JSDoc', symbol: 'alpha', numericValue: 0 },
-        { file: 'a.ts', issue: 'missing JSDoc', symbol: 'zeta', numericValue: 5 },
+        {
+          file: 'a.ts',
+          issue: 'missing JSDoc',
+          symbol: 'alpha',
+          numericValue: 0,
+        },
+        {
+          file: 'a.ts',
+          issue: 'missing JSDoc',
+          symbol: 'zeta',
+          numericValue: 5,
+        },
       ]);
       const d2 = computeNormalizedEvidenceDigest([
-        { file: 'a.ts', issue: 'missing JSDoc', symbol: 'zeta', numericValue: 5 },
-        { file: 'a.ts', issue: 'missing JSDoc', symbol: 'alpha', numericValue: 0 },
+        {
+          file: 'a.ts',
+          issue: 'missing JSDoc',
+          symbol: 'zeta',
+          numericValue: 5,
+        },
+        {
+          file: 'a.ts',
+          issue: 'missing JSDoc',
+          symbol: 'alpha',
+          numericValue: 0,
+        },
       ]);
       expect(d1).toBe(d2);
     });

@@ -10,9 +10,8 @@ import {
   createEnvIsolation,
 } from '../__tests__/turso-test-helpers.mjs';
 
-const { multiHopSearch, multiHopSearchHandler } = await import(
-  './multi-hop-search.mjs'
-);
+const { multiHopSearch, multiHopSearchHandler } =
+  await import('./multi-hop-search.mjs');
 
 /**
  * Create a mock client that returns controlled results for each hop.
@@ -153,9 +152,7 @@ describe('multi-hop-search', () => {
   describe('max_hops=2 (seed + graph)', () => {
     it('returns seed chunks and entities without hop 3', async () => {
       const client = createMockClient({
-        seedChunks: [
-          { chunk_id: 1, body_text: 'chunk 1', distance: 0.3 },
-        ],
+        seedChunks: [{ chunk_id: 1, body_text: 'chunk 1', distance: 0.3 }],
         graphRows: [
           {
             entity_id: 100,
@@ -241,9 +238,7 @@ describe('multi-hop-search', () => {
   describe('max_hops=3 (seed + graph + scoped vector)', () => {
     it('performs all three hops and combines results', async () => {
       const client = createMockClient({
-        seedChunks: [
-          { chunk_id: 1, body_text: 'seed chunk', distance: 0.2 },
-        ],
+        seedChunks: [{ chunk_id: 1, body_text: 'seed chunk', distance: 0.2 }],
         graphRows: [
           {
             entity_id: 100,
@@ -320,7 +315,12 @@ describe('multi-hop-search', () => {
     it('preserves existing combined_score from rows', async () => {
       const client = createMockClient({
         seedChunks: [
-          { chunk_id: 1, body_text: 'chunk 1', distance: 0.2, combined_score: 0.99 },
+          {
+            chunk_id: 1,
+            body_text: 'chunk 1',
+            distance: 0.2,
+            combined_score: 0.99,
+          },
         ],
       });
 

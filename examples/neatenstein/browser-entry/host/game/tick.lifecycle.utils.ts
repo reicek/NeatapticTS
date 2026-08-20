@@ -40,6 +40,9 @@ export function applyBoltImpactResults(
 ): BoltImpactResult {
   let next = state;
   let boltHitEnemy = false;
+  // Track whether we own (have cloned) the enemyImpacts array — allows
+  // in-place push + front-trim for subsequent hits in the same call.
+  let impactsOwned = false;
 
   for (const bolt of updatedBolts) {
     if (
@@ -56,12 +59,24 @@ export function applyBoltImpactResults(
           lifetimeMs: NEATENSTEIN_ENEMY_IMPACT_LIFETIME_MS,
           boltTravelTimeMs: 0,
         };
-        next = {
-          ...next,
-          enemyImpacts: [...(next.enemyImpacts ?? []), enemyImpact].slice(
-            -NEATENSTEIN_ENEMY_IMPACT_MAX_CONCURRENT,
-          ),
-        };
+        // Ring buffer: push + front-trim instead of [...array, item].slice(-MAX)
+        // (A2 Fix 5: avoids double array allocation per bolt hit).
+        if (!impactsOwned) {
+          // First hit: clone the array to avoid mutating the input state's array.
+          next = {
+            ...next,
+            enemyImpacts: next.enemyImpacts ? [...next.enemyImpacts] : [],
+          };
+          impactsOwned = true;
+        }
+        const impacts = next.enemyImpacts!;
+        impacts.push(enemyImpact);
+        if (impacts.length > NEATENSTEIN_ENEMY_IMPACT_MAX_CONCURRENT) {
+          impacts.splice(
+            0,
+            impacts.length - NEATENSTEIN_ENEMY_IMPACT_MAX_CONCURRENT,
+          );
+        }
         next = applyEnemyDamage(next, bolt.hitEnemyIndex);
       }
     }

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Framebuffer utilities for the Neatenstein neon CPU renderer.
  *
  * The CPU tier renders into a flat RGBA framebuffer backed by a
@@ -21,13 +21,16 @@
 
 import {
   NEATENSTEIN_BACKGROUND_RGB,
+  NEATENSTEIN_FOG_START_DISTANCE,
   NEATENSTEIN_RENDER_DISTANCE_CAP,
   RGBA_CHANNELS,
 } from './renderer.framebuffer.constants';
+import { clampInt } from '../shared/math-guards.utils';
 
 // Re-export constants and types for external consumers.
 export {
   NEATENSTEIN_BACKGROUND_RGB,
+  NEATENSTEIN_FOG_START_DISTANCE,
   NEATENSTEIN_FRAMEBUFFER_CHANNELS,
   NEATENSTEIN_MAX_VIEW_DIST,
   NEATENSTEIN_RENDER_DISTANCE_CAP,
@@ -75,69 +78,14 @@ export function hasExactNeatensteinFramebufferByteLength(
 }
 
 /**
- * Clamp a numeric value to an integer in the inclusive `[min, max]` range.
- *
- * The value is truncated toward zero before clamping, so floating-point
- * raycaster bounds such as `drawStart` and `drawEnd` can be passed directly.
- *
- * Non-finite values are handled defensively:
- *
- * - `NaN` returns `min`
- * - `-Infinity` returns `min`
- * - `Infinity` returns `max`
- *
- * Bounds are normalized with `Math.trunc`. If `min > max`, the bounds are
- * swapped so the function remains total.
- *
- * @param value - Value to truncate and clamp.
- * @param min - Inclusive lower bound.
- * @param max - Inclusive upper bound.
- * @returns Integer clamped into the normalized range.
- *
- * @example
- * ```ts
- * clampInt(12.9, 0, 10); // 10
- * clampInt(-2.2, 0, 10); // 0
- * clampInt(4.8, 0, 10); // 4
- * ```
- */
-function clampInt(value: number, min: number, max: number): number {
-  const rawMin = Number.isFinite(min) ? Math.trunc(min) : 0;
-  const rawMax = Number.isFinite(max) ? Math.trunc(max) : rawMin;
-
-  // Normalize reversed bounds so callers do not need to pre-sort them.
-  const lower = Math.min(rawMin, rawMax);
-  const upper = Math.max(rawMin, rawMax);
-
-  if (Number.isNaN(value) || value === Number.NEGATIVE_INFINITY) {
-    return lower;
-  }
-
-  if (value === Number.POSITIVE_INFINITY) {
-    return upper;
-  }
-
-  const truncated = Math.trunc(value);
-
-  if (truncated < lower) {
-    return lower;
-  }
-
-  if (truncated > upper) {
-    return upper;
-  }
-
-  return truncated;
-}
-
-/**
  * Resolve a distance-based fog factor shared by the floor, ceiling, and sprite
  * renderers.
  *
- * Returns `0` (no fog) at distance `0` and `1` (fully fogged) at
- * {@link NEATENSTEIN_RENDER_DISTANCE_CAP}. Non-finite distances are treated as
- * fully fogged so malformed projections fade into the background instead of
- * producing invalid color channels.
+ * Returns `0` (no fog) at distances up to
+ * {@link NEATENSTEIN_FOG_START_DISTANCE}, then smoothly ramps to `1` (fully
+ * fogged) at {@link NEATENSTEIN_RENDER_DISTANCE_CAP} using a smoothstep curve.
+ * Non-finite distances are treated as fully fogged so malformed projections
+ * fade into the background instead of producing invalid color channels.
  *
  * @param distance - World-space distance from the camera.
  * @returns Fog interpolation factor in `[0, 1]`.
@@ -147,7 +95,20 @@ export function resolveNeatensteinFogFactor(distance: number): number {
     return 1;
   }
 
-  return distance >= NEATENSTEIN_RENDER_DISTANCE_CAP ? 1 : 0;
+  if (distance >= NEATENSTEIN_RENDER_DISTANCE_CAP) {
+    return 1;
+  }
+
+  if (distance <= NEATENSTEIN_FOG_START_DISTANCE) {
+    return 0;
+  }
+
+  const range =
+    NEATENSTEIN_RENDER_DISTANCE_CAP - NEATENSTEIN_FOG_START_DISTANCE;
+  const t = (distance - NEATENSTEIN_FOG_START_DISTANCE) / range;
+
+  // Smoothstep: t * t * (3 - 2 * t) for a C1-continuous transition.
+  return t * t * (3 - 2 * t);
 }
 
 /**

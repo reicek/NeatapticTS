@@ -81,6 +81,236 @@ Topology budget enforced at every lifecycle transition.
 
 The budget is always positive and never exceeds the configured tier cap.
 
+## neat/nge-main-agent/nge-to-network.ts
+
+### assembleNetworkFromParts
+
+```ts
+assembleNetworkFromParts(
+  nodes: default[],
+  seed: number,
+): default
+```
+
+Assemble a `Network` from pre-wired nodes via the construct-from-parts API.
+
+Input and output node labels are collected from the node array and passed to
+`Network.construct` with `mode: 'recurrent'` and relaxed output-edge
+validation so that output self-connections and feedback edges are permitted.
+
+`Network.construct` separates self-connections into `network.selfconns` and
+non-self connections into `network.connections`. The bridge preserves that
+invariant — callers should inspect both arrays. The total edge count is
+`network.connections.length + network.selfconns.length`, matching the bridge
+contract that this sum equals `state.edgeCount`.
+
+Parameters:
+- `nodes` - Pre-wired node array with labels on I/O nodes.
+- `seed` - Determinism seed forwarded to the network constructor.
+
+Returns: A materialized `Network` instance.
+
+### createMaterializationNodes
+
+```ts
+createMaterializationNodes(
+  nodeCount: number,
+  seed: number,
+  inputCount: number,
+  outputCount: number,
+): default[]
+```
+
+Create `nodeCount` deterministic `Node` instances with role-based labels.
+
+The first `inputCount` nodes are typed `'input'`, the last `outputCount`
+nodes `'output'`, and every interior node `'hidden'`. A seeded PRNG supplies
+bias values so the same seed always produces the same initial biases.
+
+Parameters:
+- `nodeCount` - Total nodes to create (must be ≥ 2 for a valid I/O pair).
+- `seed` - Determinism seed forwarded to the PRNG.
+- `inputCount` - Number of input nodes (first `inputCount` indices).
+- `outputCount` - Number of output nodes (last `outputCount` indices).
+
+Returns: An ordered array of `Node` instances.
+
+### createSeededRng
+
+```ts
+createSeededRng(
+  seed: number,
+): () => number
+```
+
+Create a deterministic mulberry32 PRNG from a numeric seed.
+
+The same seed always produces the same sequence of pseudo-random floats in
+`[0, 1)`, which keeps node bias initialization reproducible.
+
+Parameters:
+- `seed` - Numeric seed (coerced to a 32-bit unsigned integer).
+
+Returns: A stateful RNG function returning floats in `[0, 1)`.
+
+### enumerateCandidateEdges
+
+```ts
+enumerateCandidateEdges(
+  nodeCount: number,
+  recurrentFirst: boolean,
+  inputCount: number,
+): [number, number][]
+```
+
+Enumerate all candidate directed edges for `nodeCount` nodes in deterministic
+order.
+
+Self-edges are listed separately from non-self edges. When `recurrentFirst`
+is true, self-edges precede non-self edges so that a `slice(0, edgeCount)`
+selection guarantees at least one recurrent connection.
+
+Parameters:
+- `nodeCount` - Total number of nodes.
+- `recurrentFirst` - Whether to prioritize self-connections.
+- `inputCount` - Number of input nodes (indices 0..inputCount-1) to
+protect from incoming edges.
+
+Returns: An ordered array of `[sourceIndex, targetIndex]` pairs.
+
+### materializeFromNgeState
+
+```ts
+materializeFromNgeState(
+  state: NgeMaterializableState,
+  options: MaterializeOptions | undefined,
+): default
+```
+
+Materialize a live {@link Network} runtime from an NGE main-agent lifecycle state.
+
+The bridge reads the deterministic topology counts (`nodeCount`, `edgeCount`),
+motif archetypes, and seed from any lifecycle stage — embryo, juvenile, adult,
+or reproducing — and produces a fully wired `Network` instance whose:
+
+- `nodes.length` equals `state.nodeCount`,
+- `connections.length + selfconns.length` equals `state.edgeCount`
+  (self-connections remain in `selfconns`, matching the `Network.construct`
+  invariant), and
+- `connections` or `selfconns` contains at least one self-connection when the
+  state's archetypes include a recurrent motif (`GatedRecurrentCell` or
+  `EpisodicSlot`).
+
+The same state always produces the same node and connection counts, and the
+same innovation IDs, making the bridge reproducible across calls.
+
+Parameters:
+- `state` - Any materializable NGE main-agent lifecycle state.
+- `options` - Optional I/O configuration. When omitted the bridge defaults
+to 1 input and 1 output node (the first and last nodes respectively). Pass
+`{ inputCount, outputCount }` to produce a network with the correct number
+of input and output nodes — e.g. to be a drop-in replacement for
+`new Network(22, 5)`.
+
+Returns: A `Network` instance wired with the state's topology.
+
+Example:
+
+```ts
+const embryo = buildMainAgentEmbryo({ seed: 42, maxNodes: 1024, maxEdges: 4096 });
+const network = materializeFromNgeState(embryo);
+console.log(network.nodes.length);       // 3
+console.log(network.connections.length); // non-self edges
+console.log(network.selfconns.length);   // self-edges
+```
+
+### MaterializeOptions
+
+Optional I/O configuration for {@link materializeFromNgeState}.
+
+Allows the caller to specify how many of the materialized nodes should be
+designated as input and output nodes, making the bridge a drop-in replacement
+for `new Network(inputCount, outputCount)`.
+
+### NgeMaterializableState
+
+Union of every NGE main-agent lifecycle stage that carries enough topology
+metadata to materialize a `Network`.
+
+All four stages share `nodeCount`, `edgeCount`, `seed`, and `archetypes`
+(each with a `computationType`), which are the only fields the bridge reads.
+
+### resolveNodeLabel
+
+```ts
+resolveNodeLabel(
+  role: string,
+  index: number,
+): string | null
+```
+
+Resolve a human-readable label for a node so it can be referenced by string
+id in `Network.construct`.
+
+Parameters:
+- `role` - Runtime role assigned to the node.
+- `index` - Zero-based node position.
+
+Returns: A label string for input/output nodes, or `null` for hidden nodes.
+
+### resolveNodeRole
+
+```ts
+resolveNodeRole(
+  index: number,
+  nodeCount: number,
+  inputCount: number,
+  outputCount: number,
+): string
+```
+
+Resolve the runtime role string for a node at a given index.
+
+The first `inputCount` nodes are inputs and the last `outputCount` nodes are
+outputs. When the two ranges would overlap (`inputCount + outputCount >
+nodeCount`) the output range takes precedence so every requested output node
+is guaranteed a slot.
+
+Parameters:
+- `index` - Zero-based node position.
+- `nodeCount` - Total node count in the materialization set.
+- `inputCount` - Number of input nodes.
+- `outputCount` - Number of output nodes.
+
+Returns: `'input'`, `'output'`, or `'hidden'`.
+
+### wireMaterializationEdges
+
+```ts
+wireMaterializationEdges(
+  nodes: default[],
+  edgeCount: number,
+  hasRecurrentMotif: boolean,
+  inputCount: number,
+): void
+```
+
+Wire `edgeCount` deterministic connections between the provided nodes.
+
+Candidate edges are enumerated in a stable order. When `hasRecurrentMotif`
+is true, self-connections are prioritized so at least one recurrent edge is
+selected (provided `edgeCount` ≥ 1). Otherwise, non-self edges come first and
+self-connections fill remaining slots only when needed.
+
+The first `inputCount` nodes are never targets of any edge, preserving the
+pure-source invariant required by `Network.construct`.
+
+Parameters:
+- `nodes` - Ordered node array to wire.
+- `edgeCount` - Number of edges to create.
+- `hasRecurrentMotif` - Whether recurrent motifs are present in the state.
+- `inputCount` - Number of input nodes to protect from incoming edges.
+
 ## neat/nge-main-agent/neat.nge-main-agent.adult.ts
 
 ### buildDefaultFitnessMetrics

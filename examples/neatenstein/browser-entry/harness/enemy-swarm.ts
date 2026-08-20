@@ -1,4 +1,4 @@
-/**
+﻿/**
  * WeightSharedCohort (SWARM) backend for the Neatenstein enemy population.
  *
  * This module materializes a small cohort of enemies that share a single DNA
@@ -29,24 +29,18 @@ import type { Vector2 } from '../host/game/types';
 /**
  * Options accepted by {@link createSwarmEnemyPopulation}.
  *
- * @deprecated Import from `./types` instead. This re-export preserves the
- *   public API for existing consumers.
  */
 export type { CreateSwarmEnemyPopulationOptions } from './types';
 
 /**
  * One member of the weight-shared cohort.
  *
- * @deprecated Import from `./types` instead. This re-export preserves the
- *   public API for existing consumers.
  */
 export type { SwarmVariant } from './types';
 
 /**
  * Swarm enemy population returned by {@link createSwarmEnemyPopulation}.
  *
- * @deprecated Import from `./types` instead. This re-export preserves the
- *   public API for existing consumers.
  */
 export type { SwarmEnemyPopulation } from './types';
 

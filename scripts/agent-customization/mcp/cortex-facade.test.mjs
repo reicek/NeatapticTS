@@ -9,7 +9,11 @@ jest.unstable_mockModule('./lazy-facade-core.mjs', () => ({
 }));
 
 jest.unstable_mockModule('./cortex-tier-tool.mjs', () => ({
-  createSliceContextTool: jest.fn(() => ({ name: 'get_slice_context', description: 'slice context', handler: jest.fn() })),
+  createSliceContextTool: jest.fn(() => ({
+    name: 'get_slice_context',
+    description: 'slice context',
+    handler: jest.fn(),
+  })),
 }));
 
 let mockLazyFacade;
@@ -35,7 +39,10 @@ describe('cortex-facade', () => {
     assert.strictEqual(config.title, 'NeatapticTS Repo Cortex');
     assert.strictEqual(config.version, '0.1.0');
     assert.ok(config.defaultSnapshotPath);
-    assert.deepStrictEqual(config.defaultSpawnCommand, ['node', 'scripts/mcp-semantic/repo-cortex-mcp.mjs']);
+    assert.deepStrictEqual(config.defaultSpawnCommand, [
+      'node',
+      'scripts/mcp-semantic/repo-cortex-mcp.mjs',
+    ]);
     assert.ok(config.localTools.length > 0);
     assert.strictEqual(result.fake, true);
   });
@@ -43,7 +50,10 @@ describe('cortex-facade', () => {
   it('passes custom options through to createLazyFacade', async () => {
     const { createCortexFacade } = await import('./cortex-facade.mjs');
 
-    createCortexFacade({ snapshotPath: '/custom/path', spawnCommand: ['custom'] });
+    createCortexFacade({
+      snapshotPath: '/custom/path',
+      spawnCommand: ['custom'],
+    });
 
     const config = mockLazyFacade.createLazyFacade.mock.calls[0][0];
     assert.strictEqual(config.snapshotPath, '/custom/path');

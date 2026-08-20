@@ -13,9 +13,8 @@ import {
   TEST_PARENT_CHUNK_ID,
 } from '../__tests__/turso-test-helpers.mjs';
 
-const { traverseGraph, traverseGraphHandler } = await import(
-  './traverse-graph.mjs'
-);
+const { traverseGraph, traverseGraphHandler } =
+  await import('./traverse-graph.mjs');
 
 describe('traverse-graph', () => {
   const { saveEnv, restoreEnv } = createEnvIsolation();
@@ -31,7 +30,11 @@ describe('traverse-graph', () => {
   afterEach(async () => {
     restoreEnv();
     if (client) {
-      try { await client.close(); } catch { /* noop */ }
+      try {
+        await client.close();
+      } catch {
+        /* noop */
+      }
     }
   });
 
@@ -43,15 +46,15 @@ describe('traverse-graph', () => {
     });
 
     it('throws when seed_names is empty array and no seed_query', async () => {
-      await expect(
-        traverseGraph({ seed_names: [], client }),
-      ).rejects.toThrow('seed_query or seed_names is required');
+      await expect(traverseGraph({ seed_names: [], client })).rejects.toThrow(
+        'seed_query or seed_names is required',
+      );
     });
 
     it('throws when seed_query is empty string and no seed_names', async () => {
-      await expect(
-        traverseGraph({ seed_query: '', client }),
-      ).rejects.toThrow('seed_query or seed_names is required');
+      await expect(traverseGraph({ seed_query: '', client })).rejects.toThrow(
+        'seed_query or seed_names is required',
+      );
     });
   });
 
@@ -178,7 +181,16 @@ describe('traverse-graph', () => {
       await client.execute({
         sql: `INSERT INTO entities (entity_id, entity_type, name, qualified_name, doc_id, chunk_id, module_path, file_path)
               VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        args: [900003, 'module', 'NoChunkEntity', 'src/turso.NoChunkEntity', TEST_DOC_ID, null, 'src/test.ts', 'src/test.ts'],
+        args: [
+          900003,
+          'module',
+          'NoChunkEntity',
+          'src/turso.NoChunkEntity',
+          TEST_DOC_ID,
+          null,
+          'src/test.ts',
+          'src/test.ts',
+        ],
       });
 
       const result = await traverseGraph({
@@ -268,17 +280,34 @@ describe('traverse-graph', () => {
       // Use a mock client that returns an edge with null source_qualified_name
       // to exercise the isWellFormedEdge false branch.
       const entities = [
-        { entity_id: 900001, entity_type: 'function', name: 'EntityA', qualified_name: 'src.EntityA', doc_id: null, chunk_id: null },
-        { entity_id: 900002, entity_type: 'class', name: 'EntityB', qualified_name: 'src.EntityB', doc_id: null, chunk_id: null },
+        {
+          entity_id: 900001,
+          entity_type: 'function',
+          name: 'EntityA',
+          qualified_name: 'src.EntityA',
+          doc_id: null,
+          chunk_id: null,
+        },
+        {
+          entity_id: 900002,
+          entity_type: 'class',
+          name: 'EntityB',
+          qualified_name: 'src.EntityB',
+          doc_id: null,
+          chunk_id: null,
+        },
       ];
       const edges = [
         {
-          edge_id: 1, source_entity_id: 900001, target_entity_id: 900002,
+          edge_id: 1,
+          source_entity_id: 900001,
+          target_entity_id: 900002,
           source_qualified_name: null, // malformed: null instead of string
           source_entity_type: 'function',
           target_qualified_name: 'src.EntityB',
           target_entity_type: 'class',
-          relationship: 'references', confidence: 'high',
+          relationship: 'references',
+          confidence: 'high',
         },
       ];
 
@@ -434,9 +463,9 @@ describe('traverse-graph', () => {
     });
 
     it('throws when no seeds provided', async () => {
-      await expect(
-        traverseGraphHandler({ client }),
-      ).rejects.toThrow('seed_query or seed_names is required');
+      await expect(traverseGraphHandler({ client })).rejects.toThrow(
+        'seed_query or seed_names is required',
+      );
     });
 
     it('defaults max_hops to 2 when not provided', async () => {

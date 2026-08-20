@@ -9,7 +9,7 @@
  */
 
 import { NEATENSTEIN_MAP_SIZE } from '../constants';
-import { castRayDDAFromFlatMap } from '../renderer/raycast';
+import { castRayDDAFromFlatMap, type CastRayDDAHit } from '../renderer/raycast';
 import type { RaycastHit } from './display.worker.types';
 
 /**
@@ -24,6 +24,8 @@ import type { RaycastHit } from './display.worker.types';
  * @param cameraDirectionY - Camera direction Y.
  * @param cameraPlaneX - Camera plane X.
  * @param cameraPlaneY - Camera plane Y.
+ * @param out - Optional pre-allocated hit object to write into and return,
+ *   avoiding a per-call allocation on hot paths.
  * @returns DDA raycast hit or miss sentinel.
  */
 export function castColumnRay(
@@ -36,6 +38,7 @@ export function castColumnRay(
   cameraDirectionY: number,
   cameraPlaneX: number,
   cameraPlaneY: number,
+  out?: CastRayDDAHit,
 ): RaycastHit {
   // Map the column index to a -1..+1 offset on the camera plane.
   const cameraPlaneOffset = (2 * column) / columnCount - 1;
@@ -51,5 +54,6 @@ export function castColumnRay(
     cameraPositionY,
     rayDirectionX,
     rayDirectionY,
+    out,
   );
 }

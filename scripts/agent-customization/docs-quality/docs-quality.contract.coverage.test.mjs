@@ -87,14 +87,18 @@ describe('docs-quality.contract.mjs coverage', () => {
       const manifest = createValidManifest();
       manifest.scannerVersion = '  ';
       const result = validateDocsQualityManifestV1(manifest);
-      expect(result.errors.some((e) => e.field === 'scannerVersion')).toBe(true);
+      expect(result.errors.some((e) => e.field === 'scannerVersion')).toBe(
+        true,
+      );
     });
 
     it('rejects non-string scannerVersion', () => {
       const manifest = createValidManifest();
       manifest.scannerVersion = 123;
       const result = validateDocsQualityManifestV1(manifest);
-      expect(result.errors.some((e) => e.field === 'scannerVersion')).toBe(true);
+      expect(result.errors.some((e) => e.field === 'scannerVersion')).toBe(
+        true,
+      );
     });
   });
 
@@ -103,14 +107,18 @@ describe('docs-quality.contract.mjs coverage', () => {
       const manifest = createValidManifest();
       manifest.thresholdConfig = null;
       const result = validateDocsQualityManifestV1(manifest);
-      expect(result.errors.some((e) => e.field === 'thresholdConfig')).toBe(true);
+      expect(result.errors.some((e) => e.field === 'thresholdConfig')).toBe(
+        true,
+      );
     });
 
     it('rejects array thresholdConfig', () => {
       const manifest = createValidManifest();
       manifest.thresholdConfig = [];
       const result = validateDocsQualityManifestV1(manifest);
-      expect(result.errors.some((e) => e.field === 'thresholdConfig')).toBe(true);
+      expect(result.errors.some((e) => e.field === 'thresholdConfig')).toBe(
+        true,
+      );
     });
   });
 
@@ -144,14 +152,18 @@ describe('docs-quality.contract.mjs coverage', () => {
       const manifest = createValidManifest();
       manifest.sourcePathsDigest = '';
       const result = validateDocsQualityManifestV1(manifest);
-      expect(result.errors.some((e) => e.field === 'sourcePathsDigest')).toBe(true);
+      expect(result.errors.some((e) => e.field === 'sourcePathsDigest')).toBe(
+        true,
+      );
     });
 
     it('rejects non-string sourcePathsDigest', () => {
       const manifest = createValidManifest();
       manifest.sourcePathsDigest = 42;
       const result = validateDocsQualityManifestV1(manifest);
-      expect(result.errors.some((e) => e.field === 'sourcePathsDigest')).toBe(true);
+      expect(result.errors.some((e) => e.field === 'sourcePathsDigest')).toBe(
+        true,
+      );
     });
   });
 
@@ -160,14 +172,18 @@ describe('docs-quality.contract.mjs coverage', () => {
       const manifest = createValidManifest();
       manifest.issueBreakdown = null;
       const result = validateDocsQualityManifestV1(manifest);
-      expect(result.errors.some((e) => e.field === 'issueBreakdown')).toBe(true);
+      expect(result.errors.some((e) => e.field === 'issueBreakdown')).toBe(
+        true,
+      );
     });
 
     it('rejects array issueBreakdown', () => {
       const manifest = createValidManifest();
       manifest.issueBreakdown = [1, 2];
       const result = validateDocsQualityManifestV1(manifest);
-      expect(result.errors.some((e) => e.field === 'issueBreakdown')).toBe(true);
+      expect(result.errors.some((e) => e.field === 'issueBreakdown')).toBe(
+        true,
+      );
     });
   });
 
@@ -192,14 +208,18 @@ describe('docs-quality.contract.mjs coverage', () => {
       const manifest = createValidManifest();
       manifest.normalizedEvidenceDigest = '';
       const result = validateDocsQualityManifestV1(manifest);
-      expect(result.errors.some((e) => e.field === 'normalizedEvidenceDigest')).toBe(true);
+      expect(
+        result.errors.some((e) => e.field === 'normalizedEvidenceDigest'),
+      ).toBe(true);
     });
 
     it('rejects non-string normalizedEvidenceDigest', () => {
       const manifest = createValidManifest();
       manifest.normalizedEvidenceDigest = null;
       const result = validateDocsQualityManifestV1(manifest);
-      expect(result.errors.some((e) => e.field === 'normalizedEvidenceDigest')).toBe(true);
+      expect(
+        result.errors.some((e) => e.field === 'normalizedEvidenceDigest'),
+      ).toBe(true);
     });
   });
 

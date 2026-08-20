@@ -35,16 +35,23 @@ export function updateAmmoPickups(
     return state;
   }
 
+  // In-place mutation with single-pass compaction (A2 Fix 5).
+  // Mutate pickup.active in place, compact active pickups in a single pass.
   let ammoGain = 0;
-  const updatedPickups = pickups.map((pickup) => {
+  let writeIndex = 0;
+
+  for (let readIndex = 0; readIndex < pickups.length; readIndex += 1) {
+    const pickup = pickups[readIndex];
+
     if (!pickup.active) {
-      return pickup;
+      continue;
     }
 
     const lifetimeMs = pickup.lifetimeMs ?? NEATENSTEIN_AMMO_PICKUP_LIFETIME_MS;
     const expired = simTimeMs - pickup.createdAtMs >= lifetimeMs;
     if (expired) {
-      return { ...pickup, active: false };
+      pickup.active = false;
+      continue;
     }
 
     const dx = pickup.position.x - state.player.position.x;
@@ -52,17 +59,20 @@ export function updateAmmoPickups(
     const dist = Math.hypot(dx, dy);
     if (dist <= NEATENSTEIN_AMMO_PICKUP_COLLECTION_RADIUS_CELLS) {
       ammoGain += pickup.amount;
-      return { ...pickup, active: false };
+      pickup.active = false;
+      continue;
     }
 
-    return pickup;
-  });
+    // Keep active pickup in compacted array.
+    pickups[writeIndex] = pickup;
+    writeIndex += 1;
+  }
 
-  const activePickups = updatedPickups.filter((pickup) => pickup.active);
+  pickups.length = writeIndex;
 
   let next: GameState = {
     ...state,
-    ammoPickups: activePickups,
+    ammoPickups: pickups,
   };
 
   if (ammoGain > 0) {

@@ -9,7 +9,10 @@ jest.unstable_mockModule('./customization-utils.mjs', () => ({
     name,
     ok: issues.length === 0,
     issues,
-    counts: { errors: issues.filter((i) => i.severity === 'error').length, warnings: 0 },
+    counts: {
+      errors: issues.filter((i) => i.severity === 'error').length,
+      warnings: 0,
+    },
     summaryText: `${issues.length === 0 ? 'PASS' : 'FAIL'} ${name}`,
   })),
   writeReport: jest.fn(),
@@ -37,7 +40,9 @@ describe('run-skill-trigger-evals', () => {
     const origArgv = process.argv;
     const origExit = process.exit;
     process.argv = ['node', 'run-skill-trigger-evals.mjs', '--help'];
-    process.exit = (code) => { throw new Error(`EXIT:${code}`); };
+    process.exit = (code) => {
+      throw new Error(`EXIT:${code}`);
+    };
     mockUtils.parseArgs.mockReturnValue({ help: true, json: false });
 
     await importModule();
@@ -100,7 +105,9 @@ describe('run-skill-trigger-evals', () => {
     process.argv = origArgv;
     const report = mockUtils.writeReport.mock.calls[0][0];
     assert.strictEqual(report.summary.failed, 1);
-    const errorCalls = mockUtils.issue.mock.calls.filter((c) => c[0] === 'error');
+    const errorCalls = mockUtils.issue.mock.calls.filter(
+      (c) => c[0] === 'error',
+    );
     assert.ok(errorCalls.some((c) => c[2].includes('failed')));
   });
 
@@ -130,8 +137,17 @@ describe('run-skill-trigger-evals', () => {
 
   it('escalates pending to error in strict mode', async () => {
     const origArgv = process.argv;
-    process.argv = ['node', 'run-skill-trigger-evals.mjs', '--json', '--strict'];
-    mockUtils.parseArgs.mockReturnValue({ help: false, json: true, strict: true });
+    process.argv = [
+      'node',
+      'run-skill-trigger-evals.mjs',
+      '--json',
+      '--strict',
+    ];
+    mockUtils.parseArgs.mockReturnValue({
+      help: false,
+      json: true,
+      strict: true,
+    });
     mockUtils.readWorkspaceFile.mockResolvedValue(
       JSON.stringify({
         evals: [
@@ -201,8 +217,8 @@ describe('run-skill-trigger-evals', () => {
     await importModule();
 
     process.argv = origArgv;
-    const errorCalls = mockUtils.issue.mock.calls.filter(
-      (c) => c[2].includes('unsupported observed field'),
+    const errorCalls = mockUtils.issue.mock.calls.filter((c) =>
+      c[2].includes('unsupported observed field'),
     );
     assert.ok(errorCalls.length >= 1);
   });
@@ -228,8 +244,8 @@ describe('run-skill-trigger-evals', () => {
     await importModule();
 
     process.argv = origArgv;
-    const errorCalls = mockUtils.issue.mock.calls.filter(
-      (c) => c[2].includes('observedTriggered must be boolean'),
+    const errorCalls = mockUtils.issue.mock.calls.filter((c) =>
+      c[2].includes('observedTriggered must be boolean'),
     );
     assert.ok(errorCalls.length >= 1);
   });
@@ -255,8 +271,8 @@ describe('run-skill-trigger-evals', () => {
     await importModule();
 
     process.argv = origArgv;
-    const errorCalls = mockUtils.issue.mock.calls.filter(
-      (c) => c[2].includes('observedTarget must be a string'),
+    const errorCalls = mockUtils.issue.mock.calls.filter((c) =>
+      c[2].includes('observedTarget must be a string'),
     );
     assert.ok(errorCalls.length >= 1);
   });
@@ -282,8 +298,8 @@ describe('run-skill-trigger-evals', () => {
     await importModule();
 
     process.argv = origArgv;
-    const errorCalls = mockUtils.issue.mock.calls.filter(
-      (c) => c[2].includes('observedNotes must be a string'),
+    const errorCalls = mockUtils.issue.mock.calls.filter((c) =>
+      c[2].includes('observedNotes must be a string'),
     );
     assert.ok(errorCalls.length >= 1);
   });
@@ -299,8 +315,8 @@ describe('run-skill-trigger-evals', () => {
     await importModule();
 
     process.argv = origArgv;
-    const errorCalls = mockUtils.issue.mock.calls.filter(
-      (c) => c[2].includes('no evals'),
+    const errorCalls = mockUtils.issue.mock.calls.filter((c) =>
+      c[2].includes('no evals'),
     );
     assert.ok(errorCalls.length >= 1);
   });
@@ -348,8 +364,8 @@ describe('run-skill-trigger-evals', () => {
     await importModule();
 
     process.argv = origArgv;
-    const errorCalls = mockUtils.issue.mock.calls.filter(
-      (c) => c[2].includes('UNKNOWN'),
+    const errorCalls = mockUtils.issue.mock.calls.filter((c) =>
+      c[2].includes('UNKNOWN'),
     );
     assert.ok(errorCalls.length >= 1);
   });
@@ -363,8 +379,8 @@ describe('run-skill-trigger-evals', () => {
     await importModule();
 
     process.argv = origArgv;
-    const errorCalls = mockUtils.issue.mock.calls.filter(
-      (c) => c[2].includes('no evals'),
+    const errorCalls = mockUtils.issue.mock.calls.filter((c) =>
+      c[2].includes('no evals'),
     );
     assert.ok(errorCalls.length >= 1);
   });
@@ -391,11 +407,19 @@ describe('run-skill-trigger-evals', () => {
     await importModule();
 
     process.argv = origArgv;
-    const errorCalls = mockUtils.issue.mock.calls.filter(
-      (c) => c[2].includes('UNKNOWN'),
+    const errorCalls = mockUtils.issue.mock.calls.filter((c) =>
+      c[2].includes('UNKNOWN'),
     );
-    assert.ok(errorCalls.some((c) => c[2].includes('observedTriggered must be boolean')));
-    assert.ok(errorCalls.some((c) => c[2].includes('observedTarget must be a string')));
-    assert.ok(errorCalls.some((c) => c[2].includes('observedNotes must be a string')));
+    assert.ok(
+      errorCalls.some((c) =>
+        c[2].includes('observedTriggered must be boolean'),
+      ),
+    );
+    assert.ok(
+      errorCalls.some((c) => c[2].includes('observedTarget must be a string')),
+    );
+    assert.ok(
+      errorCalls.some((c) => c[2].includes('observedNotes must be a string')),
+    );
   });
 });

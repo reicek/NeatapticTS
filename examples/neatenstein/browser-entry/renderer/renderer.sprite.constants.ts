@@ -20,7 +20,7 @@ import {
   FULL_CIRCLE_RADIANS,
   NEATENSTEIN_EPSILON_1E9,
 } from '../constants';
-import { type EnemyAnimationState } from '../../../neatenstein/scripts/enemy-animator';
+import { type EnemyAnimationState } from '../shared/enemy-animator';
 
 // Re-export shared constants for renderer-level consumers.
 export { RGBA_CHANNELS, NEATENSTEIN_INVISIBLE_SENTINEL };

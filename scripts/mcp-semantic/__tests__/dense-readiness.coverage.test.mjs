@@ -21,9 +21,8 @@ jest.unstable_mockModule('../../../rag-index/validate-embeddings.mjs', () => ({
   __esModule: true,
 }));
 
-const { checkDenseReadiness } = await import(
-  '../../../rag-index/dense-readiness.mjs'
-);
+const { checkDenseReadiness } =
+  await import('../../../rag-index/dense-readiness.mjs');
 
 const savedEnv = { ...process.env };
 const savedArgv = process.argv;
@@ -139,7 +138,9 @@ describe('checkDenseReadiness — model-only state', () => {
     const report = await checkDenseReadiness({ modelDirectory: modelDir });
     expect(report.state).toBe('model-only');
     expect(report.ready).toBe(false);
-    expect(report.reason).toBe('Embeddings are incomplete: expected 10, found 5.');
+    expect(report.reason).toBe(
+      'Embeddings are incomplete: expected 10, found 5.',
+    );
   });
 
   it('returns model-only with generic reason when counts are null', async () => {
@@ -152,7 +153,9 @@ describe('checkDenseReadiness — model-only state', () => {
 
     const report = await checkDenseReadiness({ modelDirectory: modelDir });
     expect(report.state).toBe('model-only');
-    expect(report.reason).toBe('Dense model is present but embeddings are missing or incomplete.');
+    expect(report.reason).toBe(
+      'Dense model is present but embeddings are missing or incomplete.',
+    );
   });
 
   it('returns model-only when validation throws', async () => {
@@ -162,7 +165,9 @@ describe('checkDenseReadiness — model-only state', () => {
     const report = await checkDenseReadiness({ modelDirectory: modelDir });
     expect(report.state).toBe('model-only');
     expect(report.ready).toBe(false);
-    expect(report.reason).toBe('Dense embeddings could not be validated: DB locked');
+    expect(report.reason).toBe(
+      'Dense embeddings could not be validated: DB locked',
+    );
   });
 
   it('returns model-only when validation throws a non-Error value', async () => {
@@ -171,7 +176,9 @@ describe('checkDenseReadiness — model-only state', () => {
 
     const report = await checkDenseReadiness({ modelDirectory: modelDir });
     expect(report.state).toBe('model-only');
-    expect(report.reason).toBe('Dense embeddings could not be validated: string error');
+    expect(report.reason).toBe(
+      'Dense embeddings could not be validated: string error',
+    );
   });
 });
 

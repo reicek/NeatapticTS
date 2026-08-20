@@ -20,8 +20,7 @@ function createMockClient({
   return {
     calls,
     async execute(sqlOrObj) {
-      const sql =
-        typeof sqlOrObj === 'string' ? sqlOrObj : sqlOrObj.sql;
+      const sql = typeof sqlOrObj === 'string' ? sqlOrObj : sqlOrObj.sql;
       calls.push(sql);
 
       // COUNT query
@@ -74,9 +73,7 @@ describe('ann-index', () => {
       expect(result.build_started_at).toBeDefined();
       expect(result.build_completed_at).toBeDefined();
       // Should have called tuned SQL (with WITH KEY)
-      expect(
-        client.calls.some((sql) => sql.includes('WITH KEY')),
-      ).toBe(true);
+      expect(client.calls.some((sql) => sql.includes('WITH KEY'))).toBe(true);
     });
 
     it('falls back to basic DiskANN when tuned SQL fails', async () => {
@@ -96,8 +93,7 @@ describe('ann-index', () => {
       expect(
         client.calls.some(
           (sql) =>
-            sql.includes('libsql_vector_idx') &&
-            !sql.includes('WITH KEY'),
+            sql.includes('libsql_vector_idx') && !sql.includes('WITH KEY'),
         ),
       ).toBe(true);
     });
@@ -235,8 +231,7 @@ describe('ann-index', () => {
       const client = {
         calls: [],
         async execute(sqlOrObj) {
-          const sql =
-            typeof sqlOrObj === 'string' ? sqlOrObj : sqlOrObj.sql;
+          const sql = typeof sqlOrObj === 'string' ? sqlOrObj : sqlOrObj.sql;
           this.calls.push(sql);
           if (sql.includes('SELECT COUNT(*)')) {
             return { rows: [] };

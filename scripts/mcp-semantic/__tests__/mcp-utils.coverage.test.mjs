@@ -37,14 +37,22 @@ import {
 // ---------------------------------------------------------------------------
 describe('mcp-utils — parseMcpCliArgs', () => {
   it('parses help, json, selfCheck flags', () => {
-    expect(parseMcpCliArgs(['--help'])).toMatchObject({ help: true, json: false, selfCheck: false });
+    expect(parseMcpCliArgs(['--help'])).toMatchObject({
+      help: true,
+      json: false,
+      selfCheck: false,
+    });
     expect(parseMcpCliArgs(['-h'])).toMatchObject({ help: true });
     expect(parseMcpCliArgs(['--json'])).toMatchObject({ json: true });
-    expect(parseMcpCliArgs(['--self-check'])).toMatchObject({ selfCheck: true });
+    expect(parseMcpCliArgs(['--self-check'])).toMatchObject({
+      selfCheck: true,
+    });
   });
 
   it('parses --plan= path', () => {
-    expect(parseMcpCliArgs(['--plan=plans/x.md'])).toMatchObject({ plan: 'plans/x.md' });
+    expect(parseMcpCliArgs(['--plan=plans/x.md'])).toMatchObject({
+      plan: 'plans/x.md',
+    });
   });
 
   it('returns undefined plan when not present', () => {
@@ -95,13 +103,20 @@ describe('mcp-utils — resolveRepoRootPath', () => {
 // ---------------------------------------------------------------------------
 describe('mcp-utils — resolveExplicitPlanPath', () => {
   it('returns absolute and display paths for repo-relative plan', () => {
-    const { absolutePath, displayPath } = resolveExplicitPlanPath('scripts/test.mjs');
+    const { absolutePath, displayPath } =
+      resolveExplicitPlanPath('scripts/test.mjs');
     expect(path.isAbsolute(absolutePath)).toBe(true);
     expect(displayPath).toBe('scripts/test.mjs');
   });
 
   it('returns absolute displayPath when outside repo', () => {
-    const external = path.resolve(__dirname, '..', '..', '..', 'external-file.mjs');
+    const external = path.resolve(
+      __dirname,
+      '..',
+      '..',
+      '..',
+      'external-file.mjs',
+    );
     const { displayPath } = resolveExplicitPlanPath(external);
     // When the path is outside the repo, displayPath is the normalized absolute path
     expect(displayPath).toBeTruthy();
@@ -140,7 +155,9 @@ describe('mcp-utils — emitSelfCheckReport', () => {
   it('delegates to writeReport', () => {
     // emitSelfCheckReport calls writeReport which writes to stdout/console
     // Just verify it doesn't throw
-    expect(() => emitSelfCheckReport({ name: 'test' }, { json: false })).not.toThrow();
+    expect(() =>
+      emitSelfCheckReport({ name: 'test' }, { json: false }),
+    ).not.toThrow();
   });
 });
 
@@ -149,7 +166,11 @@ describe('mcp-utils — emitSelfCheckReport', () => {
 // ---------------------------------------------------------------------------
 describe('mcp-utils — createSelfCheckReport', () => {
   it('merges issue summary with details', () => {
-    const report = createSelfCheckReport('test', [{ severity: 'error', path: 'a', message: 'b' }], { extra: true });
+    const report = createSelfCheckReport(
+      'test',
+      [{ severity: 'error', path: 'a', message: 'b' }],
+      { extra: true },
+    );
     expect(report).toHaveProperty('name', 'test');
     expect(report).toHaveProperty('extra', true);
     expect(report).toHaveProperty('summaryText');
@@ -167,13 +188,26 @@ describe('mcp-utils — createSelfCheckReport', () => {
 // ---------------------------------------------------------------------------
 describe('mcp-utils — createTool', () => {
   it('creates a tool with default inputSchema', () => {
-    const tool = createTool({ name: 'test', description: 'desc', handler: () => null });
-    expect(tool.inputSchema).toEqual({ type: 'object', properties: {}, additionalProperties: false });
+    const tool = createTool({
+      name: 'test',
+      description: 'desc',
+      handler: () => null,
+    });
+    expect(tool.inputSchema).toEqual({
+      type: 'object',
+      properties: {},
+      additionalProperties: false,
+    });
   });
 
   it('preserves caller-provided inputSchema', () => {
     const schema = { type: 'object', properties: { x: { type: 'string' } } };
-    const tool = createTool({ name: 'test', description: 'desc', inputSchema: schema, handler: () => null });
+    const tool = createTool({
+      name: 'test',
+      description: 'desc',
+      inputSchema: schema,
+      handler: () => null,
+    });
     expect(tool.inputSchema).toBe(schema);
   });
 });
@@ -193,7 +227,11 @@ describe('mcp-utils — createMcpServer', () => {
   let server;
 
   beforeEach(() => {
-    server = createMcpServer({ serverName: 'test', serverVersion: '1.0.0', tools });
+    server = createMcpServer({
+      serverName: 'test',
+      serverVersion: '1.0.0',
+      tools,
+    });
   });
 
   it('exposes serverInfo and listed tools (without handler)', () => {
@@ -209,7 +247,9 @@ describe('mcp-utils — createMcpServer', () => {
   });
 
   it('dispatches notifications/initialized (returns null)', async () => {
-    const result = await server.dispatch({ method: 'notifications/initialized' });
+    const result = await server.dispatch({
+      method: 'notifications/initialized',
+    });
     expect(result).toBeNull();
   });
 
@@ -248,7 +288,9 @@ describe('mcp-utils — createMcpServer', () => {
   });
 
   it('throws on tools/call without params', async () => {
-    await expect(server.dispatch({ method: 'tools/call', id: 7 })).rejects.toThrow();
+    await expect(
+      server.dispatch({ method: 'tools/call', id: 7 }),
+    ).rejects.toThrow();
   });
 
   it('throws on tools/call without name', async () => {
@@ -259,7 +301,11 @@ describe('mcp-utils — createMcpServer', () => {
 
   it('throws on unknown tool', async () => {
     await expect(
-      server.dispatch({ method: 'tools/call', id: 9, params: { name: 'bogus' } }),
+      server.dispatch({
+        method: 'tools/call',
+        id: 9,
+        params: { name: 'bogus' },
+      }),
     ).rejects.toThrow();
   });
 
@@ -268,10 +314,16 @@ describe('mcp-utils — createMcpServer', () => {
       createTool({
         name: 'boom',
         description: 'Always fails',
-        handler: async () => { throw new Error('handler error'); },
+        handler: async () => {
+          throw new Error('handler error');
+        },
       }),
     ];
-    const errorServer = createMcpServer({ serverName: 'test', serverVersion: '1.0.0', tools: errorTools });
+    const errorServer = createMcpServer({
+      serverName: 'test',
+      serverVersion: '1.0.0',
+      tools: errorTools,
+    });
     const result = await errorServer.dispatch({
       method: 'tools/call',
       id: 10,
@@ -286,10 +338,16 @@ describe('mcp-utils — createMcpServer', () => {
       createTool({
         name: 'boom',
         description: 'Always fails',
-        handler: async () => { throw 'string error'; },
+        handler: async () => {
+          throw 'string error';
+        },
       }),
     ];
-    const errorServer = createMcpServer({ serverName: 'test', serverVersion: '1.0.0', tools: errorTools });
+    const errorServer = createMcpServer({
+      serverName: 'test',
+      serverVersion: '1.0.0',
+      tools: errorTools,
+    });
     const result = await errorServer.dispatch({
       method: 'tools/call',
       id: 11,
@@ -318,7 +376,9 @@ describe('mcp-utils — invokeServerRequest', () => {
     const server = createMcpServer({
       serverName: 'test',
       serverVersion: '1.0.0',
-      tools: [createTool({ name: 'ping', description: 'd', handler: () => 'ok' })],
+      tools: [
+        createTool({ name: 'ping', description: 'd', handler: () => 'ok' }),
+      ],
     });
     const result = await invokeServerRequest(server, { method: 'ping' });
     expect(result).toEqual({});
@@ -328,7 +388,9 @@ describe('mcp-utils — invokeServerRequest', () => {
     const server = createMcpServer({
       serverName: 'test',
       serverVersion: '1.0.0',
-      tools: [createTool({ name: 'echo', description: 'd', handler: (a) => a })],
+      tools: [
+        createTool({ name: 'echo', description: 'd', handler: (a) => a }),
+      ],
     });
     const result = await invokeServerRequest(server, {
       method: 'tools/call',
@@ -343,7 +405,10 @@ describe('mcp-utils — invokeServerRequest', () => {
 // ---------------------------------------------------------------------------
 describe('mcp-utils — formatToolResult', () => {
   it('passes through pre-formatted content array', () => {
-    const result = formatToolResult({ content: [{ type: 'text', text: 'pre' }], isError: false });
+    const result = formatToolResult({
+      content: [{ type: 'text', text: 'pre' }],
+      isError: false,
+    });
     expect(result.content[0].text).toBe('pre');
     expect(result.isError).toBe(false);
   });
@@ -366,7 +431,11 @@ describe('mcp-utils — formatToolResult', () => {
   });
 
   it('builds slice-specific summary when slice_id is present', () => {
-    const result = formatToolResult({ slice_id: 'S1', step_number: 3, phase: 'impl' });
+    const result = formatToolResult({
+      slice_id: 'S1',
+      step_number: 3,
+      phase: 'impl',
+    });
     expect(result.content[0].text).toContain('S1');
     expect(result.content[0].text).toContain('phase impl');
     expect(result.content[0].text).toContain('step 3');
@@ -405,19 +474,32 @@ describe('mcp-utils — tokenizeShellSafeCommand', () => {
   });
 
   it('handles double spaces between tokens (flushShellSafeToken empty branch)', () => {
-    expect(tokenizeShellSafeCommand('node  -e  1')).toEqual(['node', '-e', '1']);
+    expect(tokenizeShellSafeCommand('node  -e  1')).toEqual([
+      'node',
+      '-e',
+      '1',
+    ]);
   });
 
   it('tokenizes a simple command', () => {
-    expect(tokenizeShellSafeCommand('node script.mjs')).toEqual(['node', 'script.mjs']);
+    expect(tokenizeShellSafeCommand('node script.mjs')).toEqual([
+      'node',
+      'script.mjs',
+    ]);
   });
 
   it('tokenizes with quoted arguments', () => {
-    expect(tokenizeShellSafeCommand('node "my script.mjs"')).toEqual(['node', 'my script.mjs']);
+    expect(tokenizeShellSafeCommand('node "my script.mjs"')).toEqual([
+      'node',
+      'my script.mjs',
+    ]);
   });
 
   it('tokenizes with single-quoted arguments', () => {
-    expect(tokenizeShellSafeCommand("node 'my script.mjs'")).toEqual(['node', 'my script.mjs']);
+    expect(tokenizeShellSafeCommand("node 'my script.mjs'")).toEqual([
+      'node',
+      'my script.mjs',
+    ]);
   });
 
   it('throws on empty command', () => {
@@ -472,14 +554,18 @@ describe('mcp-utils — selfCheckError', () => {
 // ---------------------------------------------------------------------------
 describe('mcp-utils — runShellFreeCommand', () => {
   it('runs a node command and captures stdout', async () => {
-    const result = await runShellFreeCommand('node -e "process.stdout.write(\'hello\')"');
+    const result = await runShellFreeCommand(
+      'node -e "process.stdout.write(\'hello\')"',
+    );
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toBe('hello');
     expect(result.executable).toBe('node');
   });
 
   it('captures stderr', async () => {
-    const result = await runShellFreeCommand('node -e "process.stderr.write(\'err\')"');
+    const result = await runShellFreeCommand(
+      'node -e "process.stderr.write(\'err\')"',
+    );
     expect(result.exitCode).toBe(0);
     expect(result.stderr).toBe('err');
   });
@@ -512,7 +598,9 @@ describe('mcp-utils — runShellFreeCommand', () => {
   });
 
   it('returns structured result with all fields', async () => {
-    const result = await runShellFreeCommand('node -e "process.stdout.write(\'test\')"');
+    const result = await runShellFreeCommand(
+      'node -e "process.stdout.write(\'test\')"',
+    );
     expect(result).toHaveProperty('command');
     expect(result).toHaveProperty('executable');
     expect(result).toHaveProperty('argv');
@@ -544,12 +632,19 @@ describe('mcp-utils — runStdioMcpServer', () => {
       configurable: true,
     });
 
-    const writeSpy = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
+    const writeSpy = jest
+      .spyOn(process.stdout, 'write')
+      .mockImplementation(() => true);
 
     const serverPromise = runStdioMcpServer(server);
 
     // Send a ping request
-    mockStdin.emit('data', Buffer.from(JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'ping' }) + '\n'));
+    mockStdin.emit(
+      'data',
+      Buffer.from(
+        JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'ping' }) + '\n',
+      ),
+    );
 
     // Wait a tick for processing
     await new Promise((resolve) => setImmediate(resolve));
@@ -583,7 +678,9 @@ describe('mcp-utils — runStdioMcpServer', () => {
       configurable: true,
     });
 
-    const writeSpy = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
+    const writeSpy = jest
+      .spyOn(process.stdout, 'write')
+      .mockImplementation(() => true);
 
     const serverPromise = runStdioMcpServer(server);
 
@@ -620,8 +717,12 @@ describe('mcp-utils — runStdioMcpServer', () => {
       configurable: true,
     });
 
-    const writeSpy = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
-    const stderrSpy = jest.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    const writeSpy = jest
+      .spyOn(process.stdout, 'write')
+      .mockImplementation(() => true);
+    const stderrSpy = jest
+      .spyOn(process.stderr, 'write')
+      .mockImplementation(() => true);
 
     const serverPromise = runStdioMcpServer(server);
 
@@ -652,7 +753,9 @@ describe('mcp-utils — runStdioMcpServer', () => {
 
     // Override dispatch to throw
     const originalDispatch = server.dispatch;
-    server.dispatch = async () => { throw new Error('dispatch error'); };
+    server.dispatch = async () => {
+      throw new Error('dispatch error');
+    };
 
     const mockStdin = new EventEmitter();
     mockStdin.resume = () => {};
@@ -662,11 +765,18 @@ describe('mcp-utils — runStdioMcpServer', () => {
       configurable: true,
     });
 
-    const writeSpy = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
+    const writeSpy = jest
+      .spyOn(process.stdout, 'write')
+      .mockImplementation(() => true);
 
     const serverPromise = runStdioMcpServer(server);
 
-    mockStdin.emit('data', Buffer.from(JSON.stringify({ jsonrpc: '2.0', id: 99, method: 'bogus' }) + '\n'));
+    mockStdin.emit(
+      'data',
+      Buffer.from(
+        JSON.stringify({ jsonrpc: '2.0', id: 99, method: 'bogus' }) + '\n',
+      ),
+    );
 
     await new Promise((resolve) => setImmediate(resolve));
     mockStdin.emit('end');
@@ -690,7 +800,9 @@ describe('mcp-utils — runStdioMcpServer', () => {
       tools: [],
     });
 
-    server.dispatch = async () => { throw new Error('notif error'); };
+    server.dispatch = async () => {
+      throw new Error('notif error');
+    };
 
     const mockStdin = new EventEmitter();
     mockStdin.resume = () => {};
@@ -700,12 +812,17 @@ describe('mcp-utils — runStdioMcpServer', () => {
       configurable: true,
     });
 
-    const stderrSpy = jest.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    const stderrSpy = jest
+      .spyOn(process.stderr, 'write')
+      .mockImplementation(() => true);
 
     const serverPromise = runStdioMcpServer(server);
 
     // Notification: no id field
-    mockStdin.emit('data', Buffer.from(JSON.stringify({ jsonrpc: '2.0', method: 'bogus' }) + '\n'));
+    mockStdin.emit(
+      'data',
+      Buffer.from(JSON.stringify({ jsonrpc: '2.0', method: 'bogus' }) + '\n'),
+    );
 
     await new Promise((resolve) => setImmediate(resolve));
     mockStdin.emit('end');
@@ -745,9 +862,9 @@ describe('mcp-utils — invokeServerRequest error paths', () => {
       serverVersion: '1.0.0',
       tools: [],
     });
-    await expect(invokeServerRequest(server, { method: 'bogus' })).rejects.toThrow(
-      'Unsupported method: bogus',
-    );
+    await expect(
+      invokeServerRequest(server, { method: 'bogus' }),
+    ).rejects.toThrow('Unsupported method: bogus');
   });
 
   it('re-throws JsonRpcError from tool handler (isJsonRpcError path)', async () => {
@@ -756,10 +873,21 @@ describe('mcp-utils — invokeServerRequest error paths', () => {
     const server = createMcpServer({
       serverName: 'test',
       serverVersion: '1.0.0',
-      tools: [createTool({ name: 'boom', description: 'd', handler: () => { throw jsonRpcErr; } })],
+      tools: [
+        createTool({
+          name: 'boom',
+          description: 'd',
+          handler: () => {
+            throw jsonRpcErr;
+          },
+        }),
+      ],
     });
     await expect(
-      invokeServerRequest(server, { method: 'tools/call', params: { name: 'boom' } }),
+      invokeServerRequest(server, {
+        method: 'tools/call',
+        params: { name: 'boom' },
+      }),
     ).rejects.toThrow('Custom RPC error');
   });
 
@@ -767,9 +895,20 @@ describe('mcp-utils — invokeServerRequest error paths', () => {
     const server = createMcpServer({
       serverName: 'test',
       serverVersion: '1.0.0',
-      tools: [createTool({ name: 'boom', description: 'd', handler: () => { throw new Error('handler error'); } })],
+      tools: [
+        createTool({
+          name: 'boom',
+          description: 'd',
+          handler: () => {
+            throw new Error('handler error');
+          },
+        }),
+      ],
     });
-    const result = await invokeServerRequest(server, { method: 'tools/call', params: { name: 'boom' } });
+    const result = await invokeServerRequest(server, {
+      method: 'tools/call',
+      params: { name: 'boom' },
+    });
     expect(result.isError).toBe(true);
   });
 
@@ -780,7 +919,10 @@ describe('mcp-utils — invokeServerRequest error paths', () => {
       tools: [],
     });
     await expect(
-      invokeServerRequest(server, { method: 'tools/call', params: { name: 'bogus' } }),
+      invokeServerRequest(server, {
+        method: 'tools/call',
+        params: { name: 'bogus' },
+      }),
     ).rejects.toThrow('Unknown tool: bogus');
   });
 });
@@ -822,9 +964,16 @@ describe('mcp-utils — stdio parser edge cases', () => {
       const mockStdin = new EventEmitter();
       mockStdin.resume = () => {};
       const originalStdin = process.stdin;
-      Object.defineProperty(process, 'stdin', { value: mockStdin, configurable: true });
-      const writeSpy = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
-      const stderrSpy = jest.spyOn(process.stderr, 'write').mockImplementation(() => true);
+      Object.defineProperty(process, 'stdin', {
+        value: mockStdin,
+        configurable: true,
+      });
+      const writeSpy = jest
+        .spyOn(process.stdout, 'write')
+        .mockImplementation(() => true);
+      const stderrSpy = jest
+        .spyOn(process.stderr, 'write')
+        .mockImplementation(() => true);
 
       const serverPromise = runStdioMcpServer(server);
       await callback(mockStdin);
@@ -832,76 +981,121 @@ describe('mcp-utils — stdio parser edge cases', () => {
 
       writeSpy.mockRestore();
       stderrSpy.mockRestore();
-      Object.defineProperty(process, 'stdin', { value: originalStdin, configurable: true });
+      Object.defineProperty(process, 'stdin', {
+        value: originalStdin,
+        configurable: true,
+      });
     };
   }
 
-  it('handles leading line breaks before Content-Length frame', withMockStdin(async (mockStdin) => {
-    const payload = JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'ping' });
-    const frame = `\r\nContent-Length: ${Buffer.byteLength(payload)}\r\n\r\n${payload}`;
-    mockStdin.emit('data', Buffer.from(frame));
-    await new Promise((resolve) => setImmediate(resolve));
-    mockStdin.emit('end');
-  }));
+  it(
+    'handles leading line breaks before Content-Length frame',
+    withMockStdin(async (mockStdin) => {
+      const payload = JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'ping' });
+      const frame = `\r\nContent-Length: ${Buffer.byteLength(payload)}\r\n\r\n${payload}`;
+      mockStdin.emit('data', Buffer.from(frame));
+      await new Promise((resolve) => setImmediate(resolve));
+      mockStdin.emit('end');
+    }),
+  );
 
-  it('handles buffer with only line breaks (empty after dropLeadingLineBreaks)', withMockStdin(async (mockStdin) => {
-    mockStdin.emit('data', Buffer.from('\r\n'));
-    await new Promise((resolve) => setImmediate(resolve));
-    mockStdin.emit('end');
-  }));
+  it(
+    'handles buffer with only line breaks (empty after dropLeadingLineBreaks)',
+    withMockStdin(async (mockStdin) => {
+      mockStdin.emit('data', Buffer.from('\r\n'));
+      await new Promise((resolve) => setImmediate(resolve));
+      mockStdin.emit('end');
+    }),
+  );
 
-  it('handles empty line in newline-delimited mode (continue on empty message)', withMockStdin(async (mockStdin) => {
-    mockStdin.emit('data', Buffer.from(' \n'));
-    await new Promise((resolve) => setImmediate(resolve));
-    mockStdin.emit('end');
-  }));
+  it(
+    'handles empty line in newline-delimited mode (continue on empty message)',
+    withMockStdin(async (mockStdin) => {
+      mockStdin.emit('data', Buffer.from(' \n'));
+      await new Promise((resolve) => setImmediate(resolve));
+      mockStdin.emit('end');
+    }),
+  );
 
-  it('handles incomplete Content-Length frame (parsedFrame null - body too short)', withMockStdin(async (mockStdin) => {
-    mockStdin.emit('data', Buffer.from('Content-Length: 100\r\n\r\n{short}'));
-    await new Promise((resolve) => setImmediate(resolve));
-    mockStdin.emit('end');
-  }));
+  it(
+    'handles incomplete Content-Length frame (parsedFrame null - body too short)',
+    withMockStdin(async (mockStdin) => {
+      mockStdin.emit('data', Buffer.from('Content-Length: 100\r\n\r\n{short}'));
+      await new Promise((resolve) => setImmediate(resolve));
+      mockStdin.emit('end');
+    }),
+  );
 
-  it('handles incomplete Content-Length header (no header separator found)', withMockStdin(async (mockStdin) => {
-    mockStdin.emit('data', Buffer.from('Content-Length: 50\r\n\r'));
-    await new Promise((resolve) => setImmediate(resolve));
-    mockStdin.emit('end');
-  }));
+  it(
+    'handles incomplete Content-Length header (no header separator found)',
+    withMockStdin(async (mockStdin) => {
+      mockStdin.emit('data', Buffer.from('Content-Length: 50\r\n\r'));
+      await new Promise((resolve) => setImmediate(resolve));
+      mockStdin.emit('end');
+    }),
+  );
 
-  it('handles invalid Content-Length value (throws, caught by queued handler)', withMockStdin(async (mockStdin) => {
-    mockStdin.emit('data', Buffer.from('Content-Length: abc\r\n\r\n{}'));
-    await new Promise((resolve) => setImmediate(resolve));
-    mockStdin.emit('end');
-  }));
+  it(
+    'handles invalid Content-Length value (throws, caught by queued handler)',
+    withMockStdin(async (mockStdin) => {
+      mockStdin.emit('data', Buffer.from('Content-Length: abc\r\n\r\n{}'));
+      await new Promise((resolve) => setImmediate(resolve));
+      mockStdin.emit('end');
+    }),
+  );
 
-  it('handles Content-Length header with no value (extractContentLength returns null)', withMockStdin(async (mockStdin) => {
-    mockStdin.emit('data', Buffer.from('Content-Length:\r\nX-Custom: value\r\n\r\n{}'));
-    await new Promise((resolve) => setImmediate(resolve));
-    mockStdin.emit('end');
-  }));
+  it(
+    'handles Content-Length header with no value (extractContentLength returns null)',
+    withMockStdin(async (mockStdin) => {
+      mockStdin.emit(
+        'data',
+        Buffer.from('Content-Length:\r\nX-Custom: value\r\n\r\n{}'),
+      );
+      await new Promise((resolve) => setImmediate(resolve));
+      mockStdin.emit('end');
+    }),
+  );
 
-  it('handles newline-delimited data without newline (lineEndIndex -1)', withMockStdin(async (mockStdin) => {
-    mockStdin.emit('data', Buffer.from('hello world'));
-    await new Promise((resolve) => setImmediate(resolve));
-    mockStdin.emit('end');
-  }));
+  it(
+    'handles newline-delimited data without newline (lineEndIndex -1)',
+    withMockStdin(async (mockStdin) => {
+      mockStdin.emit('data', Buffer.from('hello world'));
+      await new Promise((resolve) => setImmediate(resolve));
+      mockStdin.emit('end');
+    }),
+  );
 
-  it('handles notifications/initialized with id (result null → writeJsonRpcSuccessResponse early return)', withMockStdin(async (mockStdin) => {
-    mockStdin.emit('data', Buffer.from(JSON.stringify({ jsonrpc: '2.0', id: 42, method: 'notifications/initialized' }) + '\n'));
-    await new Promise((resolve) => setImmediate(resolve));
-    mockStdin.emit('end');
-  }));
+  it(
+    'handles notifications/initialized with id (result null → writeJsonRpcSuccessResponse early return)',
+    withMockStdin(async (mockStdin) => {
+      mockStdin.emit(
+        'data',
+        Buffer.from(
+          JSON.stringify({
+            jsonrpc: '2.0',
+            id: 42,
+            method: 'notifications/initialized',
+          }) + '\n',
+        ),
+      );
+      await new Promise((resolve) => setImmediate(resolve));
+      mockStdin.emit('end');
+    }),
+  );
 
-  it('handles extra header line before Content-Length (non-matching header skipped)', withMockStdin(async (mockStdin) => {
-    const payload = JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'ping' });
-    // First line is a non-matching header, second is Content-Length
-    const frame = `X-Custom: value\r\nContent-Length: ${Buffer.byteLength(payload)}\r\n\r\n${payload}`;
-    // startsWithContentLengthHeader won't match since it starts with X-Custom, so it falls through to newline mode
-    // This tests the extractContentLength path with non-matching header lines
-    mockStdin.emit('data', Buffer.from(frame));
-    await new Promise((resolve) => setImmediate(resolve));
-    mockStdin.emit('end');
-  }));
+  it(
+    'handles extra header line before Content-Length (non-matching header skipped)',
+    withMockStdin(async (mockStdin) => {
+      const payload = JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'ping' });
+      // First line is a non-matching header, second is Content-Length
+      const frame = `X-Custom: value\r\nContent-Length: ${Buffer.byteLength(payload)}\r\n\r\n${payload}`;
+      // startsWithContentLengthHeader won't match since it starts with X-Custom, so it falls through to newline mode
+      // This tests the extractContentLength path with non-matching header lines
+      mockStdin.emit('data', Buffer.from(frame));
+      await new Promise((resolve) => setImmediate(resolve));
+      mockStdin.emit('end');
+    }),
+  );
 });
 
 // ---------------------------------------------------------------------------
@@ -915,25 +1109,38 @@ describe('mcp-utils — writeStdioJsonRpcErrorResponse branches', () => {
       tools: [],
     });
 
-    server.dispatch = async () => { throw 'string error'; };
+    server.dispatch = async () => {
+      throw 'string error';
+    };
 
     const mockStdin = new EventEmitter();
     mockStdin.resume = () => {};
     const originalStdin = process.stdin;
-    Object.defineProperty(process, 'stdin', { value: mockStdin, configurable: true });
-    const stderrSpy = jest.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    Object.defineProperty(process, 'stdin', {
+      value: mockStdin,
+      configurable: true,
+    });
+    const stderrSpy = jest
+      .spyOn(process.stderr, 'write')
+      .mockImplementation(() => true);
 
     const serverPromise = runStdioMcpServer(server);
 
     // Notification: no id field, dispatch throws non-Error
-    mockStdin.emit('data', Buffer.from(JSON.stringify({ jsonrpc: '2.0', method: 'bogus' }) + '\n'));
+    mockStdin.emit(
+      'data',
+      Buffer.from(JSON.stringify({ jsonrpc: '2.0', method: 'bogus' }) + '\n'),
+    );
     await new Promise((resolve) => setImmediate(resolve));
     mockStdin.emit('end');
     await serverPromise;
 
     expect(stderrSpy).toHaveBeenCalled();
     stderrSpy.mockRestore();
-    Object.defineProperty(process, 'stdin', { value: originalStdin, configurable: true });
+    Object.defineProperty(process, 'stdin', {
+      value: originalStdin,
+      configurable: true,
+    });
   });
 
   it('writes error response with non-Error message for request with id (line 696 false branch)', async () => {
@@ -943,25 +1150,40 @@ describe('mcp-utils — writeStdioJsonRpcErrorResponse branches', () => {
       tools: [],
     });
 
-    server.dispatch = async () => { throw 'non-error dispatch'; };
+    server.dispatch = async () => {
+      throw 'non-error dispatch';
+    };
 
     const mockStdin = new EventEmitter();
     mockStdin.resume = () => {};
     const originalStdin = process.stdin;
-    Object.defineProperty(process, 'stdin', { value: mockStdin, configurable: true });
-    const writeSpy = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
+    Object.defineProperty(process, 'stdin', {
+      value: mockStdin,
+      configurable: true,
+    });
+    const writeSpy = jest
+      .spyOn(process.stdout, 'write')
+      .mockImplementation(() => true);
 
     const serverPromise = runStdioMcpServer(server);
 
     // Request with id, dispatch throws non-Error
-    mockStdin.emit('data', Buffer.from(JSON.stringify({ jsonrpc: '2.0', id: 55, method: 'bogus' }) + '\n'));
+    mockStdin.emit(
+      'data',
+      Buffer.from(
+        JSON.stringify({ jsonrpc: '2.0', id: 55, method: 'bogus' }) + '\n',
+      ),
+    );
     await new Promise((resolve) => setImmediate(resolve));
     mockStdin.emit('end');
     await serverPromise;
 
     expect(writeSpy).toHaveBeenCalled();
     writeSpy.mockRestore();
-    Object.defineProperty(process, 'stdin', { value: originalStdin, configurable: true });
+    Object.defineProperty(process, 'stdin', {
+      value: originalStdin,
+      configurable: true,
+    });
   });
 
   it('writes error response with jsonRpcData when present (line 697 false branch)', async () => {
@@ -974,23 +1196,38 @@ describe('mcp-utils — writeStdioJsonRpcErrorResponse branches', () => {
     const customError = new Error('custom error with data');
     customError.jsonRpcCode = -32001;
     customError.jsonRpcData = { detail: 'extra info' };
-    server.dispatch = async () => { throw customError; };
+    server.dispatch = async () => {
+      throw customError;
+    };
 
     const mockStdin = new EventEmitter();
     mockStdin.resume = () => {};
     const originalStdin = process.stdin;
-    Object.defineProperty(process, 'stdin', { value: mockStdin, configurable: true });
-    const writeSpy = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
+    Object.defineProperty(process, 'stdin', {
+      value: mockStdin,
+      configurable: true,
+    });
+    const writeSpy = jest
+      .spyOn(process.stdout, 'write')
+      .mockImplementation(() => true);
 
     const serverPromise = runStdioMcpServer(server);
 
-    mockStdin.emit('data', Buffer.from(JSON.stringify({ jsonrpc: '2.0', id: 77, method: 'bogus' }) + '\n'));
+    mockStdin.emit(
+      'data',
+      Buffer.from(
+        JSON.stringify({ jsonrpc: '2.0', id: 77, method: 'bogus' }) + '\n',
+      ),
+    );
     await new Promise((resolve) => setImmediate(resolve));
     mockStdin.emit('end');
     await serverPromise;
 
     expect(writeSpy).toHaveBeenCalled();
     writeSpy.mockRestore();
-    Object.defineProperty(process, 'stdin', { value: originalStdin, configurable: true });
+    Object.defineProperty(process, 'stdin', {
+      value: originalStdin,
+      configurable: true,
+    });
   });
 });

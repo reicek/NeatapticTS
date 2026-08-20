@@ -91,10 +91,7 @@ describe('delegate-skill-coverage gate', () => {
         () => import('./delegate-skill-coverage.gate.mjs'),
       );
       const result = await runDelegateSkillCoverageGate({
-        inventoryLoader: async () => [
-          desc('a', rp1, ''),
-          desc('b', rp2, ''),
-        ],
+        inventoryLoader: async () => [desc('a', rp1, ''), desc('b', rp2, '')],
       });
       assert.equal(result.pass, true);
       assert.equal(result.fixHint, null);
@@ -114,10 +111,7 @@ describe('delegate-skill-coverage gate', () => {
         () => import('./delegate-skill-coverage.gate.mjs'),
       );
       const result = await runDelegateSkillCoverageGate({
-        inventoryLoader: async () => [
-          desc('a', rp1, ''),
-          desc('b', rp2, ''),
-        ],
+        inventoryLoader: async () => [desc('a', rp1, ''), desc('b', rp2, '')],
       });
       assert.equal(result.pass, false);
       assert.deepEqual(result.evidence.missingDelegateAgents, ['a']);
@@ -137,10 +131,7 @@ describe('delegate-skill-coverage gate', () => {
         () => import('./delegate-skill-coverage.gate.mjs'),
       );
       const result = await runDelegateSkillCoverageGate({
-        inventoryLoader: async () => [
-          desc('a', rp1, ''),
-          desc('b', rp2, ''),
-        ],
+        inventoryLoader: async () => [desc('a', rp1, ''), desc('b', rp2, '')],
       });
       assert.equal(result.pass, true);
       assert.equal(result.evidence.agentReports.length, 1);
