@@ -108,13 +108,13 @@ export const NEATENSTEIN_FLOOR_GLOW_METHOD: 'double-stroke' | 'shadow-blur' =
   'double-stroke';
 
 /** Width in pixels of the bright core grid line. */
-export const NEATENSTEIN_FLOOR_LINE_WIDTH_PX = 1;
+export const NEATENSTEIN_FLOOR_LINE_WIDTH_PX = 2;
 
 /** Width in pixels of the halo stroke used by the double-stroke glow mode. */
-export const NEATENSTEIN_FLOOR_GLOW_WIDTH_PX = 3;
+export const NEATENSTEIN_FLOOR_GLOW_WIDTH_PX = 4;
 
 /** Alpha multiplier applied to the halo pass in double-stroke glow mode. */
-export const NEATENSTEIN_FLOOR_GLOW_ALPHA_MULTIPLIER = 0.35;
+export const NEATENSTEIN_FLOOR_GLOW_ALPHA_MULTIPLIER = 0.8;
 
 /** Shadow blur radius used by the shadow-blur glow mode. */
 export const NEATENSTEIN_FLOOR_SHADOW_BLUR_PX = 4;

@@ -31,7 +31,8 @@ export type {
  *
  * The lower 42% of each wall column is decorated with a deterministic circuit
  * board pattern: horizontal and vertical traces with pad nodes at intersections,
- * rendered in a dark neon blue that complements the existing wall palette.
+ * rendered in neon green (#00ff66 family, matching Flappy Bird pipes) with a
+ * brighter shine core (#bfffd4) at trace centers and pad interiors.
  *
  * The pattern uses 4 lanes with ~55% existence probability each (~2.2 lanes
  * average) for a sparse motherboard look, 45° diagonal connectors at ~10%
@@ -52,8 +53,15 @@ const CIRCUIT_PAD_RADIUS_SQ = CIRCUIT_PAD_RADIUS * CIRCUIT_PAD_RADIUS;
 const CIRCUIT_LANE_EXIST_THRESH = 140;
 const CIRCUIT_CONNECTOR_THRESH = 38;
 const CIRCUIT_DIAGONAL_THRESH = 26;
-const CIRCUIT_TRACE_RGB: ParsedRgb = { r: 0, g: 58, b: 92 };
-const CIRCUIT_PAD_RGB: ParsedRgb = { r: 0, g: 102, b: 153 };
+const CIRCUIT_TRACE_CORE_HALF_WIDTH = 1;
+const CIRCUIT_PAD_CORE_RADIUS = 4;
+const CIRCUIT_PAD_CORE_RADIUS_SQ =
+  CIRCUIT_PAD_CORE_RADIUS * CIRCUIT_PAD_CORE_RADIUS;
+
+// Neon green palette matching Flappy Bird pipe colors (#00ff66 family).
+const CIRCUIT_TRACE_RGB: ParsedRgb = { r: 0, g: 255, b: 102 };
+const CIRCUIT_PAD_RGB: ParsedRgb = { r: 45, g: 255, b: 120 };
+const CIRCUIT_SHINE_RGB: ParsedRgb = { r: 191, g: 255, b: 212 };
 
 /**
  * Precomputed per-column circuit trace data.
@@ -375,36 +383,53 @@ function precomputeCircuitColumn(
  *
  * @param virtualY - Stable vertical position on the virtual wall surface.
  * @param data - Precomputed column data from {@link precomputeCircuitColumn}.
- * @returns `'trace'` for a trace pixel, `'pad'` for a pad pixel, or `null` if
- *   the pixel is not on any circuit feature.
+ * @returns `'trace-core'` for a trace center pixel (shine), `'trace'` for a
+ *   trace edge pixel, `'pad-core'` for a pad center pixel (shine), `'pad'` for
+ *   a pad edge pixel, or `null` if the pixel is not on any circuit feature.
  */
 function resolveCircuitTraceTypeFast(
   virtualY: number,
   data: CircuitColumnData,
-): 'trace' | 'pad' | null {
+): 'trace-core' | 'trace' | 'pad-core' | 'pad' | null {
   if (virtualY < CIRCUIT_LOWER_START) {
     return null;
   }
 
   // Horizontal lanes: scan ALL existing lanes (fixes break-on-first-lane bug)
   let onHorizontal = false;
+  let onHorizontalCore = false;
   for (const laneY of data.existingLaneYs) {
-    if (Math.abs(virtualY - laneY) <= CIRCUIT_TRACE_HALF_WIDTH) {
+    const dy = Math.abs(virtualY - laneY);
+    if (dy <= CIRCUIT_TRACE_HALF_WIDTH) {
       onHorizontal = true;
+      if (dy <= CIRCUIT_TRACE_CORE_HALF_WIDTH) {
+        onHorizontalCore = true;
+      }
       break;
     }
   }
 
   // Vertical connector
   let onVertical = false;
+  let onVerticalCore = false;
   if (data.hasVertical && data.vertOnConnX) {
-    onVertical =
+    if (
       virtualY >= data.vertTopY - CIRCUIT_TRACE_HALF_WIDTH &&
-      virtualY <= data.vertBotY + CIRCUIT_TRACE_HALF_WIDTH;
+      virtualY <= data.vertBotY + CIRCUIT_TRACE_HALF_WIDTH
+    ) {
+      onVertical = true;
+      if (
+        virtualY >= data.vertTopY - CIRCUIT_TRACE_CORE_HALF_WIDTH &&
+        virtualY <= data.vertBotY + CIRCUIT_TRACE_CORE_HALF_WIDTH
+      ) {
+        onVerticalCore = true;
+      }
+    }
   }
 
   // Diagonal connector (45°)
   let onDiagonal = false;
+  let onDiagonalCore = false;
   if (data.hasDiagonal) {
     if (
       virtualY >= data.diagTopY - CIRCUIT_TRACE_HALF_WIDTH &&
@@ -414,21 +439,32 @@ function resolveCircuitTraceTypeFast(
         data.diagSlope > 0
           ? data.diagStartX + (virtualY - data.diagTopY)
           : data.diagStartX - (virtualY - data.diagTopY);
-      onDiagonal =
-        Math.abs(data.wallX - diagLineX) <=
-        CIRCUIT_TRACE_HALF_WIDTH * Math.SQRT2;
+      const diagDist = Math.abs(data.wallX - diagLineX);
+      if (diagDist <= CIRCUIT_TRACE_HALF_WIDTH * Math.SQRT2) {
+        onDiagonal = true;
+        if (diagDist <= CIRCUIT_TRACE_CORE_HALF_WIDTH * Math.SQRT2) {
+          onDiagonalCore = true;
+        }
+      }
     }
   }
 
   // Pads: INDEPENDENT of trace membership (fixes square-pad bug)
   for (const pad of data.padAnchors) {
     const dy = virtualY - pad.y;
-    if (pad.dxSq + dy * dy <= CIRCUIT_PAD_RADIUS_SQ) {
+    const distSq = pad.dxSq + dy * dy;
+    if (distSq <= CIRCUIT_PAD_RADIUS_SQ) {
+      if (distSq <= CIRCUIT_PAD_CORE_RADIUS_SQ) {
+        return 'pad-core';
+      }
       return 'pad';
     }
   }
 
   if (onHorizontal || onVertical || onDiagonal) {
+    if (onHorizontalCore || onVerticalCore || onDiagonalCore) {
+      return 'trace-core';
+    }
     return 'trace';
   }
   return null;
@@ -635,6 +671,7 @@ export function writeNeonWallColumn(
     : null;
   const foggedTraceBase = resolveFoggedWallColor(CIRCUIT_TRACE_RGB, fogT);
   const foggedPadBase = resolveFoggedWallColor(CIRCUIT_PAD_RGB, fogT);
+  const foggedShineBase = resolveFoggedWallColor(CIRCUIT_SHINE_RGB, fogT);
   const foggedTraceColor = hasTexcoord
     ? {
         r: Math.round(foggedTraceBase.r * brightness),
@@ -649,6 +686,13 @@ export function writeNeonWallColumn(
         b: Math.round(foggedPadBase.b * brightness),
       }
     : foggedPadBase;
+  const foggedShineColor = hasTexcoord
+    ? {
+        r: Math.round(foggedShineBase.r * brightness),
+        g: Math.round(foggedShineBase.g * brightness),
+        b: Math.round(foggedShineBase.b * brightness),
+      }
+    : foggedShineBase;
 
   // Interior rows (fully covered by the wall).
   const interiorStart = Math.max(0, startRow + 1);
@@ -668,8 +712,12 @@ export function writeNeonWallColumn(
       const virtualY =
         ((row - drawStart) / wallHeight) * CIRCUIT_WALL_VIRTUAL_HEIGHT;
       const traceType = resolveCircuitTraceTypeFast(virtualY, circuitData);
-      if (traceType === 'pad') {
+      if (traceType === 'pad-core') {
+        pixelColor = foggedShineColor;
+      } else if (traceType === 'pad') {
         pixelColor = foggedPadColor;
+      } else if (traceType === 'trace-core') {
+        pixelColor = foggedShineColor;
       } else if (traceType === 'trace') {
         pixelColor = foggedTraceColor;
       }

@@ -64,7 +64,7 @@ void main() {
 
   // Grid line width in world space at this depth.
   float pixelWorldSize = rowDistance / uFocalLength;
-  float glowWidth = pixelWorldSize * 3.0;  // GLOW_WIDTH_PX = 3
+  float glowWidth = pixelWorldSize * 6.0;  // GLOW_WIDTH_PX = 6
 
   if (minDist > glowWidth) {
     fragColor = vec4(uBackgroundColor, 1.0);

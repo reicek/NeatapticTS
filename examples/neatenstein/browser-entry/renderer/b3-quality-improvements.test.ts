@@ -480,16 +480,16 @@ describe('B3.7 — Per-pixel floor casting', () => {
 
   it('per-pixel caster replicates halo glow (GLOW_WIDTH_PX + 1px core)', async () => {
     // Per B3.6 double-stroke neon glow replication: the CPU per-pixel caster
-    // MUST replicate the halo glow (NEATENSTEIN_FLOOR_GLOW_WIDTH_PX = 3 + 1px core).
+    // MUST replicate the halo glow (NEATENSTEIN_FLOOR_GLOW_WIDTH_PX = 4 + 2px core).
     const floor = await import('./floor');
     expect(
       typeof (floor as unknown as Record<string, unknown>)
         .castNeatensteinFloorPerPixel,
     ).toBe('function');
     // The glow constants must be used by the per-pixel caster.
-    expect(NEATENSTEIN_FLOOR_GLOW_WIDTH_PX).toBe(3);
-    expect(NEATENSTEIN_FLOOR_LINE_WIDTH_PX).toBe(1);
-    expect(NEATENSTEIN_FLOOR_GLOW_ALPHA_MULTIPLIER).toBe(0.35);
+    expect(NEATENSTEIN_FLOOR_GLOW_WIDTH_PX).toBe(4);
+    expect(NEATENSTEIN_FLOOR_LINE_WIDTH_PX).toBe(2);
+    expect(NEATENSTEIN_FLOOR_GLOW_ALPHA_MULTIPLIER).toBe(0.8);
   });
 });
 

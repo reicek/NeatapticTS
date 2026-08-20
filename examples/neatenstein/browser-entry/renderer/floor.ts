@@ -372,8 +372,8 @@ export const __testOnlyStrokeNeatensteinGridBands = strokeNeatensteinGridBands;
  * and grid-line pixels are blended with the neon grid color using the unified
  * smoothstep fog factor alpha (B3.2).
  *
- * Halo glow is replicated using `NEATENSTEIN_FLOOR_GLOW_WIDTH_PX` (3px halo)
- * plus a `NEATENSTEIN_FLOOR_LINE_WIDTH_PX` (1px core), matching the
+ * Halo glow is replicated using `NEATENSTEIN_FLOOR_GLOW_WIDTH_PX` (6px halo)
+ * plus a `NEATENSTEIN_FLOOR_LINE_WIDTH_PX` (2px core), matching the
  * double-stroke glow method of the line-projection path.
  *
  * @param framebuffer - Flat RGBA framebuffer.
@@ -473,8 +473,25 @@ export function castNeatensteinFloorPerPixel(
 
     // World-space size of one screen pixel at this depth.
     const pixelWorldSize = rowDistance / focalLength;
-    const glowWorldWidth = pixelWorldSize * NEATENSTEIN_FLOOR_GLOW_WIDTH_PX;
-    const coreWorldWidth = pixelWorldSize * NEATENSTEIN_FLOOR_LINE_WIDTH_PX;
+
+    // Screen-space distance thresholds (perspective-corrected: shrink
+    // with distance so lines converge naturally toward the horizon).
+    const coreThresh = NEATENSTEIN_FLOOR_LINE_WIDTH_PX / rowDistance;
+    const glowThresh = NEATENSTEIN_FLOOR_GLOW_WIDTH_PX / rowDistance;
+    const coreThresh2 = coreThresh * coreThresh;
+    const glowThresh2 = glowThresh * glowThresh;
+
+    // Per-row anisotropic projection gradient terms.  Grid lines on
+    // different axes project through different gradients (row-direction
+    // vs column-direction), so we compute screen-space distance per axis
+    // to ensure horizontal and vertical lines have identical thickness
+    // at their intersections.
+    const cosYawAbs = Math.abs(cosYaw);
+    const sinYawAbs = Math.abs(sinYaw);
+    const rowOverVert = rowDistance / verticalPx;
+    const rowOverVertSq = rowOverVert * rowOverVert;
+    const sinTerm2 = pixelWorldSize * sinYawAbs * (pixelWorldSize * sinYawAbs);
+    const cosTerm2 = pixelWorldSize * cosYawAbs * (pixelWorldSize * cosYawAbs);
 
     const haloAlpha = alpha * NEATENSTEIN_FLOOR_GLOW_ALPHA_MULTIPLIER;
 
@@ -494,20 +511,38 @@ export function castNeatensteinFloorPerPixel(
       const fx = worldX - Math.floor(worldX);
       const fy = worldY - Math.floor(worldY);
 
-      // Distance to nearest grid line on each axis.
+      // World-space distance to nearest grid line on each axis.
       const distX = Math.min(fx, 1 - fx);
       const distY = Math.min(fy, 1 - fy);
-      const minDist = Math.min(distX, distY);
 
-      if (minDist > glowWorldWidth) {
+      // Convert world-space distance to screen-space distance per axis.
+      // Each axis has a row-direction gradient (varies per column via
+      // rayDir) and a column-direction gradient (per-row constant).  The
+      // combined gradient magnitude gives the true screen-space distance.
+      const gradX2 = rowOverVertSq * rayDirX * rayDirX + sinTerm2;
+      const gradY2 = rowOverVertSq * rayDirY * rayDirY + cosTerm2;
+      const screenDistX2 = (distX * distX) / (gradX2 + 1e-12);
+      const screenDistY2 = (distY * distY) / (gradY2 + 1e-12);
+      const minScreen2 = Math.min(screenDistX2, screenDistY2);
+
+      if (minScreen2 > glowThresh2) {
         continue;
       }
 
       const o = (y * width + x) * RGBA_CHANNELS;
 
-      // Determine core vs halo and blend accordingly.
-      const isCore = minDist <= coreWorldWidth;
-      const blendAlpha = isCore ? alpha : haloAlpha;
+      // Smooth blend in screen-space: full alpha in core, smoothstep
+      // fade in halo.  Both axes share the same screen-space threshold
+      // so horizontal and vertical lines have identical thickness.
+      const minScreen = Math.sqrt(minScreen2);
+      let blendAlpha: number;
+      if (minScreen <= coreThresh) {
+        blendAlpha = alpha;
+      } else {
+        const haloT = (minScreen - coreThresh) / (glowThresh - coreThresh);
+        const smooth = haloT * haloT * (3 - 2 * haloT);
+        blendAlpha = haloAlpha * (1 - smooth);
+      }
       const invAlpha = 1 - blendAlpha;
 
       framebuffer[o] = Math.round(gridR * blendAlpha + bgR * invAlpha);
