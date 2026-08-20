@@ -478,7 +478,6 @@ export function castNeatensteinFloorPerPixel(
     // with distance so lines converge naturally toward the horizon).
     const coreThresh = NEATENSTEIN_FLOOR_LINE_WIDTH_PX / rowDistance;
     const glowThresh = NEATENSTEIN_FLOOR_GLOW_WIDTH_PX / rowDistance;
-    const coreThresh2 = coreThresh * coreThresh;
     const glowThresh2 = glowThresh * glowThresh;
 
     // Per-row anisotropic projection gradient terms.  Grid lines on
