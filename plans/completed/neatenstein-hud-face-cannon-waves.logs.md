@@ -103,7 +103,7 @@ _Authoring-instance self-check (orchestrator verification pass still required be
 - `2026-08-07` — `node scripts/agent-customization/gates/slice-advancement.gate.mjs --json --slice-id=2b-05-green --changed-files=...display.worker.ts,waves.ts,tick.ts,episode.ts` — FAIL on `code-coverage` sub-gate because `display.worker.ts` is below 100% branch coverage. All other sub-gates pass.
 - `2026-08-07` — Review cycle 1 completed: 1 OK, 3 with blockers. Plan patched to address all reported blockers (slice file counts, red-first ordering, protocol dependencies, voxel cannon rewiring/deletion, old test orphaning, tick.ts firing-signal wiring, respawn helper extraction, visible-window smoke, invulnerability integration, contactIFrameMs clearing).
 - `2026-08-07` — Review cycle 2 completed: 3 OK, 1 with a blocker (`04-impl-renderer` → `04-impl-sim` type ordering). Plan patched by moving `types.ts` into `04-asset` so the `firing` field is declared before the renderer consumes it.
-- `2026-08-07` — Review cycle 3 completed: all 4 domain reviewers on `glm-5.2:cloud` returned `OK`.
+- `2026-08-07` — Review cycle 3 completed: all 4 domain reviewers on `glm-5.3-flash:cloud` returned `OK`.
 - Authoring instance completed plan authoring, schema validation, slice-advancement gate, and review consensus; statuses remain `[WIP]` pending the orchestrator verification green-light.
 - `2026-08-08` (05-green-testing wave-overlay green validation, ad-hoc — changed files: `examples/neatenstein/browser-entry/renderer/frame.ts`, `examples/neatenstein/browser-entry/worker/display.worker.ts`, `examples/neatenstein/browser-entry/host/hud.ts`, `examples/neatenstein/browser-entry/browser-entry.ts`, `examples/neatenstein/index.html`)
   - Bundle build: `npm run build:neatenstein` — PASS (produced `docs/assets/neatenstein.bundle.js` and `docs/assets/neatenstein.worker.js`).
@@ -642,7 +642,7 @@ PlanUpdate:
   next: 'Run 05-green-testing for final validation and attach coverage-guard evidence'
 ```
 
-- `2026-08-08T20:30-04:00` — fix-packet-03-green-iteration-2 RESOLVED by 04-implementing (glm-5.2:cloud).
+- `2026-08-08T20:30-04:00` — fix-packet-03-green-iteration-2 RESOLVED by 04-implementing (glm-5.3-flash:cloud).
   - Added 3 wave announcement tests to hud.test.ts: (1) error throw when container missing, (2) clearTimeout on double-show with fake timers, (3) full fade-out cycle with nested setTimeout cleanup.
   - Added 1 mugshot health ratio test to browser-entry.test.ts: sends frame with playerHealth=50, playerMaxHealth=100 via worker.onmessage, verifies 5/10 health segments active with amber color.
   - Evidence: tsc OK, eslint 0 issues, prettier OK, 153 tests passed (8 suites), all 5 Phase 3 files at 100% coverage.
@@ -659,7 +659,7 @@ PlanUpdate:
 
 ## Phase 2b Implementation Evidence (Phase 8)
 
-- `2026-08-08T13:00-04:00` — All 4 bug fix slices implemented by 04-implementing (glm-5.2:cloud).
+- `2026-08-08T13:00-04:00` — All 4 bug fix slices implemented by 04-implementing (glm-5.3-flash:cloud).
   - 2b-01: Moved applyEnemyDamage inside if(enemy) guard in tick.ts (fixes crash after 86 kills).
   - 2b-02: Added hero respawn at center with full health/ammo; deaths counter in types.ts/state.ts.
   - 2b-03: Always filter dead enemies from activeRoster (original approach).
@@ -695,7 +695,7 @@ PlanUpdate:
   - Phase 8 YAML block added (phase: 8, status: [WIP], goal: planning).
   - Step 08 YAML block added (step: 8, status: [WIP], goal: implementing, tdd_sequence: green-only, expansion: slices, auto_expand: true).
   - 5 slices: 2b-01-fix-stale-index (implementing, 2h), 2b-02-hero-respawn (implementing, 3h), 2b-03-spawn-at-corners (implementing, 2h), 2b-04-wait-for-all-dead (implementing, 3h), 2b-05-green (green-testing, 2h).
-  - Pragmatic mode mandate added to `## Mandates` section: broad slices (one per bug fix), bypass legacy ceremony, model glm-5.2:cloud.
+  - Pragmatic mode mandate added to `## Mandates` section: broad slices (one per bug fix), bypass legacy ceremony, model glm-5.3-flash:cloud.
   - Pre-existing status mismatches fixed: Phase 1 YAML [WIP]→[DONE], Phase 1 Step 01 YAML [WIP]→[DONE], Phase 2 YAML [PLANNED]→[DONE], Phase 2 Step 02 YAML [PLANNED]→[DONE].
   - Step 08 validation field fixed: changed from Jest CLI flag to `eslint.config.mjs` (matching all other steps).
   - `validate-plan-phase-packets`: PASS (0 errors, 0 warnings).
@@ -2343,7 +2343,7 @@ slice-advancement gate: 7/7 sub-gates PASS. plan-sync PASS, step-packet PASS, pl
 ### Decisions
 
 - Pragmatic mode: Same broad-slice, green-only pattern as Phase 8. Bypass plan-verification green-light cycle and per-AC gate calls.
-- Model mandate: glm-5.2:cloud in effect for all agents.
+- Model mandate: glm-5.3-flash:cloud in effect for all agents.
 - No deferred cleanup: Old MugshotMovement type removed in same slice as MugshotLook introduction.
 - Kills counter moved to left side to center mugshot portrait on screen, aligned with cannon.
 

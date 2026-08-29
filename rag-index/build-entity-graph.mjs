@@ -58,6 +58,18 @@ const DOC_ENTITY_SOURCES = [
     family: 'benchmark',
     patterns: ['benchmarks/README.md', 'benchmarks/**/*.test.ts'],
   },
+  {
+    family: 'skill',
+    patterns: ['.github/skills/**/SKILL.md'],
+  },
+  {
+    family: 'agent',
+    patterns: ['.github/agents/*.agent.md'],
+  },
+  {
+    family: 'copilot-instructions',
+    patterns: ['.github/copilot-instructions.md'],
+  },
 ];
 
 /**

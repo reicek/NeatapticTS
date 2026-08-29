@@ -70,29 +70,6 @@ describe('validate-index.mjs', () => {
       expect(result.stale_paths).toContain('src/stale.ts');
     });
 
-    it('reports over-age document when indexed_at exceeds maxStalenessMs', async () => {
-      const now = Date.now();
-      const oldIndexedAt = now - 25 * 60 * 60 * 1000; // 25 hours ago
-      const result = await validateSemanticIndex({
-        documents: [makeDoc('src/old.ts', { indexed_at: oldIndexedAt, sha256: 'abc', mtime_ms: oldIndexedAt })],
-        freshnessChecks: [{ file_path: 'src/old.ts', sha256: 'abc', file_size: 100, mtime_ms: oldIndexedAt }],
-        now,
-        maxStalenessMs: 24 * 60 * 60 * 1000,
-      });
-      expect(result.pass).toBe(false);
-      expect(result.over_age_paths).toContain('src/old.ts');
-    });
-
-    it('does not check over-age when indexed_at is falsy', async () => {
-      const result = await validateSemanticIndex({
-        documents: [makeDoc('src/no-date.ts', { indexed_at: 0 })],
-        freshnessChecks: [{ file_path: 'src/no-date.ts', sha256: 'abc', file_size: 100, mtime_ms: Date.now() }],
-      });
-      // indexed_at is 0 (falsy) → over-age check skipped
-      // But isFreshDocument might still pass
-      expect(result.pass).toBe(true);
-    });
-
     it('resolves fixHint with stale priority', async () => {
       const result = await validateSemanticIndex({
         documents: [makeDoc('src/stale.ts', { sha256: 'old' })],
@@ -101,30 +78,12 @@ describe('validate-index.mjs', () => {
       expect(result.fixHint).toContain('Stale paths detected');
     });
 
-    it('resolves fixHint with missing priority over over-age', async () => {
-      const now = Date.now();
-      const oldIndexedAt = now - 25 * 60 * 60 * 1000;
+    it('resolves fixHint with missing priority over stale', async () => {
       const result = await validateSemanticIndex({
-        documents: [
-          makeDoc('src/missing.ts', { indexed_at: oldIndexedAt, sha256: 'abc', mtime_ms: oldIndexedAt }),
-        ],
+        documents: [makeDoc('src/missing.ts')],
         freshnessChecks: [{ file_path: 'src/missing.ts', missing: true }],
-        now,
       });
-      // missing takes priority over over-age and stale
       expect(result.fixHint).toContain('Missing paths detected');
-    });
-
-    it('resolves fixHint with over-age when no stale or missing', async () => {
-      const now = Date.now();
-      const oldIndexedAt = now - 25 * 60 * 60 * 1000;
-      const result = await validateSemanticIndex({
-        documents: [makeDoc('src/old.ts', { indexed_at: oldIndexedAt, sha256: 'abc', mtime_ms: oldIndexedAt })],
-        freshnessChecks: [{ file_path: 'src/old.ts', sha256: 'abc', file_size: 100, mtime_ms: oldIndexedAt }],
-        now,
-        maxStalenessMs: 24 * 60 * 60 * 1000,
-      });
-      expect(result.fixHint).toContain('Over-age paths detected');
     });
 
     it('resolves generic fixHint for count failures only', async () => {

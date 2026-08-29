@@ -1,8 +1,8 @@
-﻿---
+---
 description: 'Use when: authoring failing tests, fixtures, mocks, or coverage strategy for a slice.'
 name: '03-red-testing'
 tier: 1
-model: glm-5.2:cloud
+model: glm-5.3-flash:cloud
 tools:
   [
     read,
@@ -58,7 +58,7 @@ handoffs:
     agent: '04-implementing'
     prompt: 'Implement the active slice. Load context via Cortex MCP and any declared pre_execute_hook/get_slice_context.'
     send: false
-    model: 'glm-5.2:cloud'
+    model: 'glm-5.3:cloud'
 ---
 
 ## CRITICAL RULE — NEVER RUN GIT
@@ -114,25 +114,25 @@ Create the smallest failing test, eval assertion, or property-based contract for
 When creating red tests for browser-related behavior, follow this decision tree:
 
 1. **Is this a browser-related red test?** (performance threshold, DOM state, memory limit)
-   - NO → Proceed with standard red testing workflow (no Chrome DevTools MCP needed).
-   - YES → Continue to step 2.
+   - NO ? Proceed with standard red testing workflow (no Chrome DevTools MCP needed).
+   - YES ? Continue to step 2.
 
 2. **Does it require a performance trace?** (CPU time, layout thrashing, paint events, JS execution)
-   - YES → Call `performance-trace-specialist` to capture and summarize a trace, then write a
+   - YES ? Call `performance-trace-specialist` to capture and summarize a trace, then write a
      red test asserting the metric threshold (e.g., `expect(summary.cpuTimeMs).toBeLessThan(100)`).
-   - NO → Continue to step 3.
+   - NO ? Continue to step 3.
 
 3. **Does it require multi-step UI interaction?** (navigate, click, type, verify layout)
-   - YES → Call `browser-ui-specialist` to interact with the demo and capture the failing
+   - YES ? Call `browser-ui-specialist` to interact with the demo and capture the failing
      state, then write a red test asserting the expected UI behavior (e.g., element text
      content, computed style, bounding box).
-   - NO → Continue to step 4.
+   - NO ? Continue to step 4.
 
 4. **Does it require memory profiling?** (heap snapshot, leak detection, memory threshold)
-   - YES → Call `browser-memory-specialist` to take heap snapshots and identify the leak,
+   - YES ? Call `browser-memory-specialist` to take heap snapshots and identify the leak,
      then write a red test asserting the memory threshold (e.g.,
      `expect(summary.deltaMB).toBeLessThan(10)`).
-   - NO → Use direct Chrome DevTools MCP tools for a quick DOM query or console check.
+   - NO ? Use direct Chrome DevTools MCP tools for a quick DOM query or console check.
 
 ### Browser-Related Red Test Patterns
 

@@ -54,7 +54,7 @@ to validate.
 Use model-routing-and-budget for the 03-red-testing agent frontmatter.
 Agent: .github/agents/03-red-testing.agent.md.
 Phase: 03 Red Testing.
-Desired tier: Full (glm-5.2:cloud).
+Desired tier: Full (glm-5.3-flash:cloud).
 Validation: advisory — confirm qualified name before committing.
 ```
 
@@ -65,9 +65,9 @@ Validation: advisory — confirm qualified name before committing.
 2. Treat session-local availability constraints as controlling for frontmatter
    edits. Under the current cost-tier restriction, `GPT-5.5 (copilot)` must
    not be written to frontmatter.
-3. Use `glm-5.2:cloud` for coding-heavy implementation and red-test
+3. Use `glm-5.3-flash:cloud` for coding-heavy implementation and red-test
    synthesis when available.
-4. Use `glm-5.2:cloud` for planning, documentation synthesis,
+4. Use `glm-5.3-flash:cloud` for planning, documentation synthesis,
    nuanced maintenance, and ambiguity-heavy coordination when available.
 5. Use `kimi-k2.7-code:cloud` for bounded research, validation, and subagent
    work where coding or tool strength still matters.
@@ -86,19 +86,19 @@ Validation: advisory — confirm qualified name before committing.
 
 | Phase             | Tier                 | Reason                                                                    |
 | ----------------- | -------------------- | ------------------------------------------------------------------------- |
-| 00 Helping        | glm-5.2:cloud        | Maintenance and gap resolution need nuanced synthesis plus safe fallback. |
-| 01 Planning       | glm-5.2:cloud        | Architecture decisions and cross-plan tradeoffs need broad reasoning.     |
+| 00 Helping        | glm-5.3-flash:cloud        | Maintenance and gap resolution need nuanced synthesis plus safe fallback. |
+| 01 Planning       | glm-5.3-flash:cloud        | Architecture decisions and cross-plan tradeoffs need broad reasoning.     |
 | 02 Research       | kimi-k2.7-code:cloud | Retrieval and summarization should be cheap and bounded.                  |
-| 03 Red Testing    | glm-5.2:cloud        | Test contracts need careful judgment.                                     |
-| 04 Implementation | glm-5.2:cloud        | Implementation needs deeper reasoning and edge-case handling.             |
+| 03 Red Testing    | glm-5.3-flash:cloud        | Test contracts need careful judgment.                                     |
+| 04 Implementation | glm-5.3-flash:cloud        | Implementation needs deeper reasoning and edge-case handling.             |
 | 05 Green Testing  | kimi-k2.7-code:cloud | Verification is mostly mechanical.                                        |
-| 06 Documentation  | glm-5.2:cloud        | Educational docs benefit from stronger writing after facts exist.         |
+| 06 Documentation  | glm-5.3-flash:cloud        | Educational docs benefit from stronger writing after facts exist.         |
 | 07 Logging        | kimi-k2.7-code:cloud | Summarization and tracker updates should be lightweight.                  |
 
 ## Decision Tree: Model Selection by Tier
 
 ```text
-Flowchart summary: "Need model for agent" → "What tier?"; "What tier?" → "glm-5.2:cloud" (Tier 0 (Agent Zero)), "glm-5.2:cloud" (Tier 1 (SDLC)), "kimi-k2.7-code:cloud" (Tier 2 (Coordinators)), "kimi-k2.7-code:cloud" (Tier 3 (Scouts)), "kimi-k2.7-code:cloud" (Tier 4 (Auxiliaries)); "glm-5.2:cloud"; "kimi-k2.7-code:cloud".
+Flowchart summary: "Need model for agent" → "What tier?"; "What tier?" → "glm-5.3-flash:cloud" (Tier 0 (Agent Zero)), "glm-5.3-flash:cloud" (Tier 1 (SDLC)), "kimi-k2.7-code:cloud" (Tier 2 (Coordinators)), "kimi-k2.7-code:cloud" (Tier 3 (Scouts)), "kimi-k2.7-code:cloud" (Tier 4 (Auxiliaries)); "glm-5.3-flash:cloud"; "kimi-k2.7-code:cloud".
 ```
 
 ## Before / After Examples
@@ -116,7 +116,7 @@ model: claude-sonnet
 ```yaml
 ---
 # Qualified name confirmed in the active Copilot client; tier budget matches phase default.
-model: glm-5.2:cloud
+model: glm-5.3-flash:cloud
 ---
 ```
 
@@ -128,7 +128,7 @@ model: glm-5.2:cloud
 - When a model is rejected by the active session, keep that session-local
   restriction out of frontmatter. Under the current cost-tier restriction,
   `GPT-5.5 (copilot)` must not be written to frontmatter.
-- Do not assign a Full-tier model (`glm-5.2:cloud`) to phases where a
+- Do not assign a Full-tier model (`glm-5.3-flash:cloud`) to phases where a
   light-tier model (`kimi-k2.7-code:cloud`) is sufficient; unnecessary cost
   undermines the budget design.
 - Do not write arrays into `model:` frontmatter in this repo; NeatapticTS

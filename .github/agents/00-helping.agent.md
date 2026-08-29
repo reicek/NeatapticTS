@@ -1,8 +1,8 @@
-﻿---
+---
 description: 'Use when: cross-tier help is needed for AI system maintenance, workflow gaps, or CI issues.'
 name: '00-helping'
 tier: 1
-model: glm-5.2:cloud
+model: glm-5.3:cloud
 tools:
   [
     read,
@@ -53,7 +53,7 @@ handoffs:
     agent: '01-planning'
     prompt: 'Plan the next SDLC step. Load context via Cortex MCP and any declared pre_execute_hook/get_slice_context.'
     send: false
-    model: 'glm-5.2:cloud'
+    model: 'glm-5.3:cloud'
 ---
 
 ## CRITICAL RULE — NEVER RUN GIT
@@ -76,10 +76,10 @@ local rules.
 
 **Out of scope (hand off instead):**
 
-- Authoring or patching plans → `01-planning`.
-- Substantive implementation/research/testing/docs/logging → the matching
+- Authoring or patching plans ? `01-planning`.
+- Substantive implementation/research/testing/docs/logging ? the matching
   numbered orchestrator (`02`–`07`).
-- Policy overrides or repo-wide standard changes → escalate to Agent Zero.
+- Policy overrides or repo-wide standard changes ? escalate to Agent Zero.
 - Anything failing the Low-Risk Checklist below.
 
 ## Cortex-First Search Policy
@@ -108,7 +108,7 @@ for its owned workflow rather than restating policy inline.
 
 | Skill                          | Use when                                                                              |
 | ------------------------------ | ------------------------------------------------------------------------------------- |
-| `execute`                      | Delegation discipline, tier graph, and RED→IMPLEMENT→GREEN loop enforcement.          |
+| `execute`                      | Delegation discipline, tier graph, and RED?IMPLEMENT?GREEN loop enforcement.          |
 | `routing-optimization-policy`  | Tier boundary, gate protocol, or routing-table freshness violations.                  |
 | `agent-frontmatter-standards`  | Agent frontmatter shape, validation, and tier-graph rules.                            |
 | `skill-frontmatter-standards`  | SKILL.md frontmatter shape and metadata validation.                                   |
@@ -167,7 +167,7 @@ Before any change, answer YES to ALL:
 
 1. Is the change local (single file/agent/skill)?
    - Example: Only editing `.github/agents/plan-scout.agent.md` is local.
-2. Is the change small (≤10 lines or 1 config field)?
+2. Is the change small (=10 lines or 1 config field)?
    - Example: Changing one field in `.github/workflows/ci.yml` is small.
 3. Is the change reversible (can be undone in one commit)?
    - Example: A single commit can revert the change.
@@ -208,7 +208,7 @@ artificial retry threshold; record each failure for audit.
 ## Default Flow
 
 1. **Classify** the request (maintenance, gap, config, CI, etc.).
-   - Example: "CI job fails due to missing field" → classify as CI/config.
+   - Example: "CI job fails due to missing field" ? classify as CI/config.
    - Before delegating, consult `.github/agent-skill-routing-table.md` for the canonical agent-to-skill mapping and delegation target discovery.
 2. **Apply** the low-risk checklist (above).
    - Example: Go through each checklist item and answer YES/NO.
@@ -234,7 +234,7 @@ regenerating the table.
 
 ```text
 1. Classify: routing-table drift (maintenance).
-2. Apply checklist: regenerate is local, small, reversible, validated → all YES.
+2. Apply checklist: regenerate is local, small, reversible, validated ? all YES.
 3. Consult neataptic-dispatch-mcp / build_dispatch_packet
    { target_agent: "helping-agent-maintenance-coordinator", caller_tier: 1,
     prompt: "Regenerate routing table and validate. Load context via Cortex MCP." }
@@ -251,7 +251,7 @@ CI fails on `npm ci` with a `package-lock.json` mismatch.
 ```text
 1. Classify: CI/config — npm install/lockfile drift (see CI Failure Pattern Catalog).
 2. Apply checklist: editing package-lock is NOT a single local file and affects
-   runtime → checklist item 5 is NO.
+   runtime ? checklist item 5 is NO.
 3. Do NOT self-fix. Apply the gap-resolution checklist in place (00-helping owns
    gap-resolution coordination). Classify the dependency gap and propose the
    smallest fix.

@@ -22,8 +22,8 @@ maintenance surfaces drift red on their own.
 
 ## When to Use
 
-- `validate-index.mjs` reports `stale_paths`, `missing_paths`, or
-  `over_age_paths`.
+- `validate-index.mjs` reports per-family freshness (`family_fresh`) plus
+  `stale_paths` and `missing_paths`.
 - Only part of the corpus appears stale after localized changes and you need the
   narrowest safe repair.
 - `rag-index/snapshots/semantic-snapshot.json` is older than the index or browser
@@ -72,8 +72,8 @@ Desired end state: validate-index passes, snapshot is current, and cortex-index 
 
 2. Start with the narrowest classifier:
    `node rag-index/validate-index.mjs --json`
-   Treat `stale_paths`, `missing_paths`, and `over_age_paths` as the decision
-   surface.
+   Treat `family_fresh` (per-family booleans), `stale_paths`, and `missing_paths`
+   as the decision surface.
 3. Choose the smallest safe repair:
    - **Over-age only**: run `npm run index:session-start` to touch still-fresh
      rows and rebuild only changed or new corpus files.
@@ -161,8 +161,10 @@ Desired end state: validate-index passes, snapshot is current, and cortex-index 
 - Do not invent manual per-path SQLite surgery for a small stale subset.
   `build-index.mjs` is already subset-aware through freshness proofs and is the
   correct targeted rebuild tool.
-- Use `npm run index:session-start` when rows are merely over-age and the
-  on-disk corpus still matches the stored proof.
+- Use `npm run index:session-start` for a lightweight incremental build when the
+  on-disk corpus still matches the stored freshness proofs and only the
+  `indexed_at` metadata is stale. The age gate was removed; freshness is now
+  content-hash-only (`sha256` + mtime + size) per family.
 - Reserve `--force` for suspected freshness-proof corruption, schema drift, or
   parser changes that make "unchanged" rows untrustworthy.
 - Rebuild the browser snapshot only after the index is green, because the
@@ -246,11 +248,25 @@ cortex-index gate: { pass: false }
 **After:**
 
 ```text
-# Repaired index with freshness proof
+# Repaired index with per-family freshness proof
 node rag-index/build-index.mjs --json
-validate-index: { stale_paths: [], missing_paths: [] }
+validate-index: {
+  stale_paths: [],
+  missing_paths: [],
+  family_fresh: {
+    readme: { fresh: true, stalePaths: [] },
+    'ts-source': { fresh: true, stalePaths: [] },
+    plan: { fresh: true, stalePaths: [] },
+    demo: { fresh: true, stalePaths: [] },
+    benchmark: { fresh: true, stalePaths: [] },
+    'root-doc': { fresh: true, stalePaths: [] },
+    'completed-plan': { fresh: true, stalePaths: [] }
+  },
+  index_fresh: true
+}
 search_corpus("network inference") → returns current results
-cortex-index gate: { pass: true, evidence: { index_fresh: true, ... } }
+cortex-index gate: { pass: true, evidence: { family_fresh: {...}, index_fresh: true, ... } }
+# Manifest location: rag-index/data/freshness-manifest.json
 ```
 
 ## Slice Context Retention

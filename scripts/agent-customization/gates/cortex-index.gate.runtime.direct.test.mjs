@@ -341,7 +341,6 @@ describe('resolveFixHint', () => {
         pass: false,
         stale_paths: ['foo.plans.md'],
         missing_paths: [],
-        over_age_paths: [],
       },
     };
 
@@ -358,7 +357,6 @@ describe('resolveFixHint', () => {
         pass: false,
         stale_paths: ['foo.plans.md'],
         missing_paths: ['bar.md'],
-        over_age_paths: [],
       },
     };
 
@@ -374,7 +372,6 @@ describe('resolveFixHint', () => {
         pass: false,
         stale_paths: ['foo.md'],
         missing_paths: [],
-        over_age_paths: [],
       },
     };
 
@@ -390,7 +387,6 @@ describe('resolveFixHint', () => {
         pass: false,
         stale_paths: ['foo.plans.md'],
         missing_paths: [],
-        over_age_paths: [],
       },
     };
 
@@ -537,7 +533,6 @@ describe('getDefaultDeps', () => {
         pass: false,
         stale_paths: ['x.plans.md'],
         missing_paths: [],
-        over_age_paths: [],
       },
       snapshotCurrency: { pass: true },
       corpusMcpReport: { pass: true },

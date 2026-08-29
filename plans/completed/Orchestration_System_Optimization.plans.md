@@ -223,7 +223,7 @@ validation:
 **Completion evidence:**
 
 - Created `.github/agents/implementation-executor.agent.md` with valid Tier 2 frontmatter
-- Model: `glm-5.2:cloud (ollama)` (qualified model string)
+- Model: `glm-5.3-flash:cloud (ollama)` (qualified model string)
 - Tools: `[read, search, edit, execute, todo, agent, neataptic-cortex-mcp/*, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*]`
 - Skills: `['implementation-standards', 'coverage-guard']`
 - Agents allow-list: `['boundary-mapper', 'docs-scout', 'browser-runtime-scout', 'worker-payload-scout', 'checkpoint-scout', 'determinism-scout', 'helping-gap-resolution-coordinator']`
@@ -240,7 +240,7 @@ validation:
 ```yaml
 name: implementation-executor
 tier: 2
-model: 'glm-5.2:cloud (ollama)'
+model: 'glm-5.3-flash:cloud (ollama)'
 tools:
  [
  read,
@@ -271,7 +271,7 @@ handoffs:
  agent: '05-green-testing'
  prompt: 'Continue from active plan and Step 02 implementation diff. Execute Step 05 validation for current phase.'
  send: false
- model: 'glm-5.2:cloud (ollama)'
+ model: 'glm-5.3-flash:cloud (ollama)'
 ```
 
 **Responsibility boundary:** Executes scoped file edits delegated from 04-implementing. Does not plan, does not coordinate scouts, does not synthesize research. Pure execution of implementation packets.
@@ -311,7 +311,7 @@ validation:
 ```yaml
 name: research-codebase-coordinator
 tier: 2
-model: 'glm-5.2:cloud (ollama)'
+model: 'glm-5.3-flash:cloud (ollama)'
 tools:
  [
  read,
@@ -341,7 +341,7 @@ handoffs:
  agent: '03-red-testing'
  prompt: 'Continue from active plan and Step 03 research evidence. Execute Step 03 test design for current phase.'
  send: false
- model: 'glm-5.2:cloud (ollama)'
+ model: 'glm-5.3-flash:cloud (ollama)'
 ```
 
 **Responsibility boundary:** Coordinates scout deployments for 02-researching, synthesizes results via research-synthesis-specialist, produces alignment briefs. Does not execute implementation, does not run tests.
@@ -381,7 +381,7 @@ validation:
 ```yaml
 name: research-synthesis-specialist
 tier: 3
-model: 'glm-5.2:cloud (ollama)'
+model: 'glm-5.3-flash:cloud (ollama)'
 tools:
   [
     read,
@@ -434,7 +434,7 @@ validation:
 ```yaml
 name: code-quality-auditor
 tier: 3
-model: 'glm-5.2:cloud (ollama)'
+model: 'glm-5.3-flash:cloud (ollama)'
 tools:
   [
     read,
@@ -488,7 +488,7 @@ validation:
 ```yaml
 name: test-coverage-analyst
 tier: 3
-model: 'glm-5.2:cloud (ollama)'
+model: 'glm-5.3-flash:cloud (ollama)'
 tools:
   [
     read,

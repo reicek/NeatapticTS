@@ -8,7 +8,7 @@
 
 **Sprite rendering resolution mandate:** All robot/enemy sprites are authored and rendered at a logical resolution of **48�48 pixels**, then scaled 4� to 192�192 for display. The renderer, sprite projection, raycasting collision checks, and voxel calculations must operate on the 48�48 logical grid and only scale at the final blit. This preserves the reference artwork exactly while keeping CPU cost ~16� lower than native 192�192 per-pixel operations. The `examples/neatenstein/robot-sprite-data.js` module is the source-of-truth encoded sprite set (8 directions � 4 poses: `stand`, `walk1`, `walk2`, `shoot`). Walk cycle: `stand ? walk1 ? stand ? walk2`. The `shoot` frame uses semitransparent muzzle-blast palette indices 7/8 so the blast can be overlaid on any walk frame with a natural glow; recoil and cannon pixels remain opaque. Art is user-approved and locked.
 
-**Model mandate:** All dispatches under this plan use `glm-5.2:cloud`. No Chrome MCP / browser DevTools MCP � validation is jest-based only (no visible-browser smoke tests via MCP specialists).
+**Model mandate:** All dispatches under this plan use `glm-5.3-flash:cloud`. No Chrome MCP / browser DevTools MCP � validation is jest-based only (no visible-browser smoke tests via MCP specialists).
 
 ---
 

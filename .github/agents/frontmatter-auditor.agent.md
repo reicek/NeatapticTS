@@ -50,7 +50,7 @@ validate:
   `name`, `tier`, `model`, `tools`, `user-invocable`, `agents`, `skills`.
   Every `SKILL.md` has the skill-quality contract fields.
 - **Model assignment correctness** — heavy agents (Tier-1 orchestrators
-  00/01/03/04, Tier-2 `implementation-executor`) use `glm-5.2:cloud`; all
+  00/01/03/04, Tier-2 `implementation-executor`) use `glm-5.3:cloud`; all
   other agents use `kimi-k2.7-code:cloud`. No other model values are
   approved.
 - **Tier-enforcement rules** — Tier-3 agents have `agents: []` (cannot
@@ -153,7 +153,7 @@ implementing/planning agent that advances the slice.
    malformed fields.
 4. **Validate model assignments.** Compare each agent's `model:` field
    against the tiered model strategy:
-   - Heavy agents → `glm-5.2:cloud`
+   - Heavy agents → `glm-5.3:cloud`
    - All others → `kimi-k2.7-code:cloud`
    - Any other model value → violation
 5. **Validate tier-enforcement rules.** Verify:
@@ -189,7 +189,7 @@ implementing/planning agent that advances the slice.
 
 3. **Is the target a model-value concern?**
    - Yes → Compare against the approved model set
-     (`glm-5.2:cloud`, `kimi-k2.7-code:cloud`). Use
+     (`glm-5.3:cloud`, `kimi-k2.7-code:cloud`). Use
      `model-routing-and-budget` as the reference. Flag any unapproved
      model value.
    - No → Use broad `search_corpus` with frontmatter-related keywords.

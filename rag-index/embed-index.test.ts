@@ -292,14 +292,16 @@ describe('embed-index.mjs A1 schema migration', () => {
           import { getFreshnessProof } from './rag-index/freshness.mjs';
 
           const databasePath = ${JSON.stringify(databasePath)};
-          const planFilePath = 'plans/completed/Cortex_Orchestration_Single_Source_of_Truth.plans.md';
+          const planFilePath = 'plans/completed/RAG_Index_Freshness_Strategy.plans.md';
           const absolutePlanPath = path.join(repoRoot, planFilePath);
           const proof = await getFreshnessProof(absolutePlanPath);
 
+          // The archived plan lives under plans/completed/, which belongs to
+          // the completed-plan corpus family (plan ignores plans/completed/**).
           const client = await initSemanticIndex({ databasePath });
           await client.execute({
             sql: \`INSERT INTO documents (doc_id, file_path, doc_family, mtime_ms, file_size, sha256, indexed_at)
-                  VALUES (1, ?, 'plan', ?, ?, ?, ?)\`,
+                  VALUES (1, ?, 'completed-plan', ?, ?, ?, ?)\`,
             args: [planFilePath, proof.mtime_ms, proof.size, proof.sha256, Date.now()],
           });
           const planBody = ${JSON.stringify(PLAN_CHUNK_BODY)};
@@ -320,7 +322,6 @@ describe('embed-index.mjs A1 schema migration', () => {
             client,
             minDocuments: 1,
             minChunks: 1,
-            maxStalenessMs: 86400000,
           });
           const info = await client.execute("PRAGMA table_info(chunks)");
           const columns = info.rows.map(row => row.name);

@@ -58,7 +58,7 @@
 
 ## Decisions
 
-- Used separate plan to honor `kimi-k2.7-code:cloud` model mandate while parent `neatenstein-auto-neat-mode.plans.md` requires `glm-5.2:cloud`.
+- Used separate plan to honor `kimi-k2.7-code:cloud` model mandate while parent `neatenstein-auto-neat-mode.plans.md` requires `glm-5.3-flash:cloud`.
 - Pragmatic mode: broad slices, skipped redundant red/green/doc sub-slices and strict author-verify loops.
 
 ## Risks / residual gaps

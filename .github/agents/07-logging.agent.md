@@ -1,8 +1,8 @@
-﻿---
+---
 description: 'Use when: summarizing a session, collecting evidence, and defining next steps.'
 name: '07-logging'
 tier: 1
-model: kimi-k2.7-code:cloud
+model: glm-5.3-flash:cloud
 tools:
   [
     read,
@@ -43,7 +43,7 @@ handoffs:
     agent: '01-planning'
     prompt: 'Plan the next phase or close the workstream. Load context via Cortex MCP and any declared pre_execute_hook/get_slice_context.'
     send: false
-    model: 'glm-5.2:cloud'
+    model: 'glm-5.3:cloud'
 ---
 
 ## CRITICAL RULE — NEVER RUN GIT
@@ -58,7 +58,7 @@ Use when summarizing session activity, decisions, evidence, files touched, deleg
 
 1. **Collect** — gather session artifacts: changed files, validation evidence, decisions, delegation graph, and gate results produced by upstream phases (`04-implementing`, `05-green-testing`, `06-documenting`). `07-logging` records evidence; it never re-runs code-level validation.
 2. **Summarize** — compress the collected artifacts into a high-signal session summary (files changed, validations, residual risks, next action) using the `summarizing-session-log` skill. Output is privacy-safe and transcript-free.
-3. **Update tracker** — apply tracker status transitions (`[PLANNED]` → `[WIP]` → `[DONE]` / `[BLOCKED]`), refresh the `## Handoff query`, and record `## Latest validation evidence` per `execute` §5.9. Delegate tracker shape to the `tracker-handoff` skill.
+3. **Update tracker** — apply tracker status transitions (`[PLANNED]` ? `[WIP]` ? `[DONE]` / `[BLOCKED]`), refresh the `## Handoff query`, and record `## Latest validation evidence` per `execute` §5.9. Delegate tracker shape to the `tracker-handoff` skill.
 4. **Capture learning event** — when an agent-system gap, routing change, skill/model/output-contract change, or reusable workflow insight occurred, delegate to `learning-event-capturer` (Tier 3) and append to `.github/ai-learning/learning-log.jsonl`.
 5. **Next steps** — state the explicit next action and suggested next agent so a fresh session can resume safely; refresh the handoff query only while the plan is still active.
 
@@ -156,7 +156,7 @@ The default flow implements the five-stage pipeline from the **Purpose** section
    - Example: Open `plans/step02.md`, review implementation summary, validation evidence, and docs summary produced by upstream phases.
    - Before delegating, consult `.github/agent-skill-routing-table.md` for the canonical agent-to-skill mapping and delegation target discovery.
 2. **Update tracker — Mark completed step items `[DONE]`, close phase when appropriate, set next frontier `[WIP]` or `[PLANNED]`.**
-   - Apply status transitions per `execute` §5.9: flip `[WIP]` → `[DONE]` (or `[BLOCKED]` with reason), record what changed (one or two lines), record validation evidence (gate/test names that passed) under `## Latest validation evidence`, note any removals by path, and state the next boundary.
+   - Apply status transitions per `execute` §5.9: flip `[WIP]` ? `[DONE]` (or `[BLOCKED]` with reason), record what changed (one or two lines), record validation evidence (gate/test names that passed) under `## Latest validation evidence`, note any removals by path, and state the next boundary.
    - Example: Mark "Update boundary" as `[DONE]`, set "Write tests" as `[WIP]`, append `## Latest validation evidence` with the green gate result.
 3. **Refresh handoff query while plan is active.**
    - Use the templates in **Handoff Prompt Template Examples**. Remove the query from terminally closed plans unless the user explicitly wants reopen guidance.

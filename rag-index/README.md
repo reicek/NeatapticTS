@@ -48,7 +48,7 @@ error.
 | ------------------------------------- | ----------------------------------------------------------------------------------------- |
 | `build-index.mjs`                     | CLI — scans corpus, chunks documents, writes the Turso corpus database                    |
 | `query-index.mjs`                     | CLI — BM25 full-text query with family filter and JSON output                             |
-| `validate-index.mjs`                  | CLI — asserts min row counts, freshness proofs, and max staleness                         |
+| `validate-index.mjs`                  | CLI — asserts min row counts, per-family freshness proofs, and writes the freshness manifest |
 | `init-schema.mjs`                     | Schema initializer — creates tables and FTS5 virtual table on first run                   |
 | `schema.sql`                          | Source-of-truth schema definition (read by `init-schema.mjs`)                             |
 | `chunker.mjs`                         | Text windowing — overlapping fixed-size windows + heading extraction                      |
@@ -223,7 +223,7 @@ Documents are collected in the following priority order and tagged with a family
 | Priority | Family label           | Glob                                              | Chunker                                  |
 | -------- | ---------------------- | ------------------------------------------------- | ---------------------------------------- |
 | 1        | `readme`               | `src/**/README.md`                                | Markdown heading-window                  |
-| 2        | `ts-source`            | `src/**/*.ts` (non-test, non-declaration)         | ts-morph symbol-level (`ts-chunker.mjs`) |
+| 2        | `ts-source`            | `src/**/*.ts` excluding `*.test.ts`, `*.spec.ts`, `*.d.ts` | ts-morph symbol-level (`ts-chunker.mjs`) |
 | 3        | `skill`                | `.github/skills/**/SKILL.md`                      | Markdown heading-window                  |
 | 4        | `agent`                | `.github/agents/*.agent.md`                       | Markdown heading-window                  |
 | 5        | `plan`                 | `plans/**/*.md` (excluding `plans/completed/`)    | Markdown heading-window                  |
@@ -257,8 +257,33 @@ it against the stored row:
 - **`--force` flag** → skips the freshness comparison and re-indexes every document.
 
 The validator (`validate-index.mjs`) re-computes the current on-disk triple for
-every stored document and fails if any row's triple no longer matches. Use
-`--max-age-ms` to enforce a maximum staleness window (default: 24 hours).
+every stored document. Freshness is evaluated **per corpus family**. The
+validator output contains a `family_fresh` map keyed by each `CORPUS_SOURCES`
+family, and the same per-family data is persisted in
+`rag-index/data/freshness-manifest.json` under the `families` key. Each entry
+contains:
+
+- `fresh` — `true` when every indexed file in the family still matches its
+  on-disk freshness proof and no file has been deleted.
+- `stalePaths` — sorted list of paths in that family whose stored proof no
+  longer matches or that are missing from disk.
+
+The top-level gate `pass` is the logical AND of all *gated* families. By default
+`completed-plan` is **not gated**: its freshness is reported in `family_fresh`
+but it cannot fail the gate. Other families are gated by default.
+
+`validate-index.mjs` also performs a deletion sweep: indexed paths are compared
+against the current on-disk glob for each family, and rows for files no longer
+present are removed from `documents` (and their chunks are cascaded).
+
+To reproduce a known-good index state from scratch:
+
+```sh
+node rag-index/build-index.mjs --force && node rag-index/embed-index.mjs --force
+```
+
+This reprocesses every document, rebuilds BM25 and dense records, and writes a
+fresh per-family manifest.
 
 ---
 
@@ -301,16 +326,17 @@ Options:
 
 ### validate-index.mjs
 
-Assert index health: minimum row counts, freshness proofs, and staleness age.
+Assert index health: minimum document and chunk row counts, per-document
+freshness proofs, per-family deletion sweep, and write the per-family freshness
+manifest to `rag-index/data/freshness-manifest.json`.
 
 ```
 node rag-index/validate-index.mjs [options]
 
 Options:
-  --json                Emit JSON validation result { ok, pass, documents, chunks, failures }
+  --json                Emit JSON validation result { ok, pass, documents, chunks, failures, stale_paths, family_fresh }
   --min-documents <n>   Minimum expected document rows (default: 1)
   --min-chunks <n>      Minimum expected chunk rows (default: 1)
-  --max-age-ms <ms>     Maximum row age in milliseconds (default: 86400000 / 24 h)
   --database <path>     Path to the Turso corpus database (default: rag-index/data/turso-replica.sqlite)
   --help                Show help
 ```

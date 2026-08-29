@@ -186,6 +186,34 @@ export async function readWorkspaceFile(relativePath) {
 }
 
 /**
+ * Reads a workspace file as raw bytes.
+ *
+ * Used for encoding checks before text decoding.
+ *
+ * @param relativePath - Path relative to {@link repoRoot}.
+ * @returns File contents as a Uint8Array.
+ */
+export async function readWorkspaceFileBytes(relativePath) {
+  const buffer = await readFile(path.join(repoRoot, relativePath));
+  return new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+}
+
+/**
+ * Checks whether a byte sequence is valid UTF-8.
+ *
+ * @param bytes - Raw file bytes.
+ * @returns `true` when the bytes decode cleanly as UTF-8.
+ */
+export function isValidUtf8(bytes) {
+  try {
+    new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Checks whether a regular file exists at the given repo-relative path.
  *
  * @param relativePath - Path relative to {@link repoRoot}.

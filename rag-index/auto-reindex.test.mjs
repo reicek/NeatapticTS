@@ -1,12 +1,17 @@
 import { jest } from '@jest/globals';
-import { reindexChangedPlans, resolveStalePlanFixHint, main } from './auto-reindex.mjs';
+import {
+  isReindexableFile,
+  reindexChangedFiles,
+  resolveStalePlanFixHint,
+  main,
+} from './auto-reindex.mjs';
 
 describe('auto-reindex.mjs', () => {
-  describe('reindexChangedPlans', () => {
+  describe('reindexChangedFiles', () => {
     it('detects changed plan files and runs reindex commands', async () => {
       const commands = [];
-      const result = await reindexChangedPlans({
-        changedFiles: ['plans/phase1.plans.md', 'src/neat.ts'],
+      const result = await reindexChangedFiles({
+        changedFiles: ['plans/phase1.plans.md', 'src/neat.test.ts'],
         runCommand: async (cmd) => {
           commands.push(cmd);
           return { success: true };
@@ -23,9 +28,9 @@ describe('auto-reindex.mjs', () => {
       expect(commands).toHaveLength(2);
     });
 
-    it('returns empty commands when no plan files changed', async () => {
-      const result = await reindexChangedPlans({
-        changedFiles: ['src/neat.ts', 'README.md'],
+    it('returns empty commands when no reindexable files changed', async () => {
+      const result = await reindexChangedFiles({
+        changedFiles: ['src/neat.test.ts', 'README.md'],
         runCommand: async () => ({ success: true }),
       });
 
@@ -36,7 +41,7 @@ describe('auto-reindex.mjs', () => {
     });
 
     it('records failures when command runner returns success=false', async () => {
-      const result = await reindexChangedPlans({
+      const result = await reindexChangedFiles({
         changedFiles: ['plans/phase1.plans.md'],
         runCommand: async (cmd) => {
           if (cmd[1].includes('embed-index')) return { success: false };
@@ -49,7 +54,7 @@ describe('auto-reindex.mjs', () => {
     });
 
     it('handles multiple plan files', async () => {
-      const result = await reindexChangedPlans({
+      const result = await reindexChangedFiles({
         changedFiles: ['plans/a.plans.md', 'plans/b.plans.md'],
         runCommand: async () => ({ success: true }),
       });
@@ -57,6 +62,32 @@ describe('auto-reindex.mjs', () => {
       expect(result.changed).toEqual(['plans/a.plans.md', 'plans/b.plans.md']);
       expect(result.commands[0]).toContain('--files=plans/a.plans.md');
       expect(result.commands[0]).toContain('--files=plans/b.plans.md');
+    });
+
+    it('includes new .github corpus families in reindex commands', async () => {
+      const commands = [];
+      const result = await reindexChangedFiles({
+        changedFiles: [
+          '.github/skills/repo-cortex-workflow/SKILL.md',
+          '.github/agents/04-implementing.agent.md',
+          '.github/copilot-instructions.md',
+          'src/foo.test.ts',
+        ],
+        runCommand: async (cmd) => {
+          commands.push(cmd);
+          return { success: true };
+        },
+      });
+
+      expect(result.changed).toEqual([
+        '.github/skills/repo-cortex-workflow/SKILL.md',
+        '.github/agents/04-implementing.agent.md',
+        '.github/copilot-instructions.md',
+      ]);
+      expect(result.commands).toHaveLength(2);
+      expect(result.commands[0]).toContain('--files=.github/skills/repo-cortex-workflow/SKILL.md');
+      expect(result.commands[0]).toContain('--files=.github/agents/04-implementing.agent.md');
+      expect(result.commands[0]).toContain('--files=.github/copilot-instructions.md');
     });
   });
 
@@ -99,12 +130,13 @@ describe('auto-reindex.mjs', () => {
     });
   });
 
-  describe('detectChangedPlanFiles via reindexChangedPlans', () => {
-    it('uses detectChangedPlanFiles when changedFiles not provided', async () => {
-      const result = await reindexChangedPlans({});
-      // Git is unavailable in test environment, detectChangedPlanFiles returns []
-      expect(result.changed).toEqual([]);
-      expect(result.commands).toEqual([]);
+  describe('detectChangedFiles via reindexChangedFiles', () => {
+    it('uses detectChangedFiles when changedFiles not provided', async () => {
+      const result = await reindexChangedFiles({});
+      // When git is unavailable, no files are detected. When git is available,
+      // only reindexable families are returned.
+      expect(result.changed.every((filePath) => isReindexableFile(filePath))).toBe(true);
+      expect(result.commands.length).toBe(result.changed.length > 0 ? 2 : 0);
       expect(result.failures).toEqual([]);
       expect(result.exitCode).toBe(0);
       expect(result.logPath).toBeTruthy();

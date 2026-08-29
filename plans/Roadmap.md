@@ -16,5 +16,6 @@ Active workstreams and their plan trackers.
 
 - Docs Quality Metrics Gap: `plans/docs-quality-metrics-gap.plans.md` — Phase 1 [DONE] (active tracker in `plans/`) — close the gaps in `npm run docs:quality:metrics` so the pipeline passes clean (coverage scope alignment, expanded scanner dimensions, real timestamp, coverage gating, symbol deduplication, manifest cleanup)
 - Root Folder Cleanup: `plans/Root_Folder_Cleanup.plans.md` — Phase 1 [DONE] (closed tracker in `plans/`) — audit and remove temporal/debug/snapshot files from repo root and relocate root scripts/docs to proper subdirectories
+- RAG Index Freshness Strategy: `plans/completed/RAG_Index_Freshness_Strategy.plans.md` — Phases 0-3 [DONE] (archived to `plans/completed/`) — replace the content-blind 24h age gate in `rag-index/validate-index.mjs` with a per-family, content-hash-only freshness model and synchronous post-save plan reindex hook
 
 Reserved for agentic workflow infrastructure and cross-cutting tooling plans.

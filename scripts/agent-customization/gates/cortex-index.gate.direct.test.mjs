@@ -1,6 +1,19 @@
 import { jest } from '@jest/globals';
 import { runCortexIndexGate, main } from './cortex-index.gate.mjs';
 
+function makeFamilyFresh(overrides = {}) {
+  return {
+    readme: { fresh: true, stalePaths: [] },
+    'ts-source': { fresh: true, stalePaths: [] },
+    plan: { fresh: true, stalePaths: [] },
+    demo: { fresh: true, stalePaths: [] },
+    benchmark: { fresh: true, stalePaths: [] },
+    'root-doc': { fresh: true, stalePaths: [] },
+    'completed-plan': { fresh: true, stalePaths: [] },
+    ...overrides,
+  };
+}
+
 function makeDeps(overrides = {}) {
   return {
     databasePath: 'test.sqlite',
@@ -8,7 +21,11 @@ function makeDeps(overrides = {}) {
     snapshotMaxAgeMs: 86_400_000,
     timeoutMs: 60_000,
     workflowPlanPath: 'plans/test.plans.md',
-    indexValidator: jest.fn().mockResolvedValue({ pass: true, documents: 7 }),
+    indexValidator: jest.fn().mockResolvedValue({
+      pass: true,
+      documents: 7,
+      family_fresh: makeFamilyFresh(),
+    }),
     mcpSmoke: jest.fn().mockResolvedValue({ pass: true }),
     workflowMcpCheck: jest.fn().mockResolvedValue({ pass: true }),
     snapshotCurrency: jest.fn().mockResolvedValue({
@@ -61,6 +78,9 @@ describe('runCortexIndexGate', () => {
     deps.indexValidator.mockResolvedValue({
       pass: false,
       stale_paths: ['foo.plans.md'],
+      family_fresh: makeFamilyFresh({
+        plan: { fresh: false, stalePaths: ['foo.plans.md'] },
+      }),
     });
 
     const result = await runCortexIndexGate({}, deps);
@@ -80,8 +100,18 @@ describe('runCortexIndexGate', () => {
 
   it('auto-rebuilds a stale index and re-validates on success', async () => {
     deps.indexValidator
-      .mockResolvedValueOnce({ pass: false, stale_paths: ['foo.plans.md'] })
-      .mockResolvedValueOnce({ pass: true, documents: 9 });
+      .mockResolvedValueOnce({
+        pass: false,
+        stale_paths: ['foo.plans.md'],
+        family_fresh: makeFamilyFresh({
+          plan: { fresh: false, stalePaths: ['foo.plans.md'] },
+        }),
+      })
+      .mockResolvedValueOnce({
+        pass: true,
+        documents: 9,
+        family_fresh: makeFamilyFresh(),
+      });
     deps.rebuildIndex.mockResolvedValue({ success: true });
 
     const result = await runCortexIndexGate({ autoRebuild: true }, deps);
@@ -101,6 +131,9 @@ describe('runCortexIndexGate', () => {
     deps.indexValidator.mockResolvedValue({
       pass: false,
       stale_paths: ['a.plans.md'],
+      family_fresh: makeFamilyFresh({
+        plan: { fresh: false, stalePaths: ['a.plans.md'] },
+      }),
     });
     deps.rebuildIndex.mockResolvedValue({
       success: false,
@@ -152,9 +185,11 @@ describe('runCortexIndexGate', () => {
   });
 
   it('uses option-level injected functions over deps', async () => {
-    const optIndexValidator = jest
-      .fn()
-      .mockResolvedValue({ pass: true, documents: 11 });
+    const optIndexValidator = jest.fn().mockResolvedValue({
+      pass: true,
+      documents: 11,
+      family_fresh: makeFamilyFresh(),
+    });
 
     const result = await runCortexIndexGate(
       { indexValidator: optIndexValidator },
@@ -172,6 +207,9 @@ describe('runCortexIndexGate', () => {
     deps.indexValidator.mockResolvedValue({
       pass: false,
       stale_paths: ['x.plans.md'],
+      family_fresh: makeFamilyFresh({
+        plan: { fresh: false, stalePaths: ['x.plans.md'] },
+      }),
     });
     const customResolveFixHint = jest.fn().mockReturnValue('custom fix hint');
 
@@ -201,7 +239,10 @@ describe('runCortexIndexGate', () => {
   });
 
   it('uses fallback values in evidence when reports omit optional fields', async () => {
-    deps.indexValidator.mockResolvedValue({ pass: true });
+    deps.indexValidator.mockResolvedValue({
+      pass: true,
+      family_fresh: makeFamilyFresh(),
+    });
     deps.snapshotCurrency.mockResolvedValue({
       pass: true,
       snapshotIndexedAt: '2024-02-01T00:00:00.000Z',
@@ -220,6 +261,9 @@ describe('runCortexIndexGate', () => {
     deps.indexValidator.mockResolvedValue({
       pass: false,
       stale_paths: ['a.plans.md'],
+      family_fresh: makeFamilyFresh({
+        plan: { fresh: false, stalePaths: ['a.plans.md'] },
+      }),
     });
     deps.rebuildIndex.mockResolvedValue({
       success: false,
@@ -269,6 +313,9 @@ describe('main CLI', () => {
     deps.indexValidator.mockResolvedValue({
       pass: false,
       stale_paths: ['bad.plans.md'],
+      family_fresh: makeFamilyFresh({
+        plan: { fresh: false, stalePaths: ['bad.plans.md'] },
+      }),
     });
 
     await main([], deps);
@@ -280,8 +327,14 @@ describe('main CLI', () => {
 
   it('passes auto-rebuild and override flags to runCortexIndexGate', async () => {
     deps.indexValidator
-      .mockResolvedValueOnce({ pass: false, stale_paths: ['p.plans.md'] })
-      .mockResolvedValueOnce({ pass: true });
+      .mockResolvedValueOnce({
+        pass: false,
+        stale_paths: ['p.plans.md'],
+        family_fresh: makeFamilyFresh({
+          plan: { fresh: false, stalePaths: ['p.plans.md'] },
+        }),
+      })
+      .mockResolvedValueOnce({ pass: true, family_fresh: makeFamilyFresh() });
 
     await main(
       [
