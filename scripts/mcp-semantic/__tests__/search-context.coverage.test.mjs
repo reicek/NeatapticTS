@@ -9,14 +9,41 @@
  * fallback, and follow-up ref construction.
  */
 
+import { jest } from '@jest/globals';
 import { createEnvIsolation } from './turso-test-helpers.mjs';
 
 const MODULE_PATH = '../tools/search-context.mjs';
 
 const { saveEnv, restoreEnv } = createEnvIsolation();
 
-beforeEach(() => {
+const mockEvaluateSelfHeal = jest.fn();
+const mockInvalidateDenseReadinessCache = jest.fn();
+
+jest.unstable_mockModule(
+  '../../agent-customization/cortex/cortex-health-guard.mjs',
+  () => ({
+    evaluateSelfHeal: mockEvaluateSelfHeal,
+    __esModule: true,
+  }),
+);
+
+jest.unstable_mockModule('../tools/search-corpus.mjs', () => ({
+  buildResponseFreshness: async () => ({
+    timestamp: Date.now(),
+    stale: false,
+    last_update_source: 'test',
+  }),
+  invalidateDenseReadinessCache: mockInvalidateDenseReadinessCache,
+  searchCorpus: jest.fn(),
+  __esModule: true,
+}));
+
+beforeEach(async () => {
   saveEnv();
+  mockEvaluateSelfHeal.mockReset();
+  mockInvalidateDenseReadinessCache.mockReset();
+  const { searchCorpus } = await import('../tools/search-corpus.mjs');
+  searchCorpus.mockReset();
 });
 
 afterEach(() => {
@@ -621,6 +648,154 @@ describe('searchContext — dense/rerank state', () => {
     expect(result.dense_degraded).toBe(true);
   });
 
+  it('uses guard guidance when dense_degraded and the guard returns guidanceFields', async () => {
+    mockEvaluateSelfHeal.mockResolvedValue({
+      action: 'started',
+      guidanceFields: {
+        state: 'model-only',
+        reason: 'embeddings missing',
+        action: 'started',
+        attempt: 1,
+        max_attempts: 3,
+        cooldown_s: 600,
+        next_allowed_at: 0,
+        est_duration_min: 1,
+        manual_recovery: null,
+        guidance: 'self-heal guidance text',
+      },
+    });
+
+    const { searchContext } = await loadModule();
+    const result = await searchContext({
+      query: 'q',
+      searchCorpusFn: async () =>
+        fakeSearchResponse([fakeChunk(1)], {
+          dense_degraded: true,
+          dense_state: 'model-only',
+          dense_reason: 'embeddings missing',
+        }),
+      assembleContextFn: async () => fakeAssembleResponse(),
+    });
+
+    expect(result.self_heal).toEqual(
+      expect.objectContaining({
+        state: 'model-only',
+        action: 'started',
+        guidance: 'self-heal guidance text',
+      }),
+    );
+    expect(mockInvalidateDenseReadinessCache).toHaveBeenCalled();
+  });
+
+  it('falls back to deterministic guidance when the guard yields no guidanceFields', async () => {
+    mockEvaluateSelfHeal.mockResolvedValue({
+      action: 'noop',
+    });
+
+    const { searchContext } = await loadModule();
+    const result = await searchContext({
+      query: 'q',
+      searchCorpusFn: async () =>
+        fakeSearchResponse([fakeChunk(1)], {
+          dense_degraded: true,
+          dense_state: 'model-only',
+          dense_reason: 'embeddings missing',
+        }),
+      assembleContextFn: async () => fakeAssembleResponse(),
+    });
+
+    expect(result.self_heal).toEqual(
+      expect.objectContaining({
+        state: 'model-only',
+        action: 'started',
+        guidance: expect.stringMatching(/self-heal/i),
+      }),
+    );
+  });
+
+  it('falls back to deterministic guidance when the guard throws', async () => {
+    mockEvaluateSelfHeal.mockRejectedValue(new Error('guard failure'));
+
+    const { searchContext } = await loadModule();
+    const result = await searchContext({
+      query: 'q',
+      searchCorpusFn: async () =>
+        fakeSearchResponse([fakeChunk(1)], {
+          dense_degraded: true,
+          dense_state: 'model-only',
+          dense_reason: 'embeddings missing',
+        }),
+      assembleContextFn: async () => fakeAssembleResponse(),
+    });
+
+    expect(result.self_heal).toEqual(
+      expect.objectContaining({
+        state: 'model-only',
+        action: 'started',
+        guidance: expect.stringMatching(/self-heal/i),
+      }),
+    );
+  });
+
+  it('invokes the guard probe and skips cache invalidation when action is not started', async () => {
+    mockEvaluateSelfHeal.mockImplementation(async ({ probe }) => {
+      const report = await probe();
+      return {
+        action: 'noop',
+        guidanceFields: {
+          state: report.state,
+          reason: report.reason,
+          action: 'noop',
+          attempt: 1,
+          max_attempts: 3,
+          cooldown_s: 600,
+          next_allowed_at: 0,
+          est_duration_min: 1,
+          manual_recovery: null,
+          guidance: 'self-heal guidance text',
+        },
+      };
+    });
+
+    const { searchContext } = await loadModule();
+    const result = await searchContext({
+      query: 'q',
+      searchCorpusFn: async () =>
+        fakeSearchResponse([fakeChunk(1)], {
+          dense_degraded: true,
+          dense_state: 'model-only',
+          dense_reason: 'embeddings missing',
+        }),
+      assembleContextFn: async () => fakeAssembleResponse(),
+    });
+
+    expect(mockEvaluateSelfHeal).toHaveBeenCalledTimes(1);
+    expect(result.self_heal).toEqual(
+      expect.objectContaining({
+        state: 'model-only',
+        action: 'noop',
+        guidance: 'self-heal guidance text',
+      }),
+    );
+    expect(mockInvalidateDenseReadinessCache).not.toHaveBeenCalled();
+  });
+
+  it('falls back to the default searchCorpus export when no searchCorpusFn is provided', async () => {
+    const { searchCorpus } = await import('../tools/search-corpus.mjs');
+    searchCorpus.mockResolvedValue(fakeSearchResponse([fakeChunk(1)]));
+
+    const { searchContext } = await loadModule();
+    const result = await searchContext({
+      query: 'q',
+      assembleContextFn: async () => fakeAssembleResponse(),
+    });
+
+    expect(searchCorpus).toHaveBeenCalledWith(
+      expect.objectContaining({ query: 'q' }),
+    );
+    expect(result.results).toHaveLength(1);
+  });
+
   it('omits dense_degraded when not set', async () => {
     const { searchContext } = await loadModule();
     const result = await searchContext({
@@ -935,18 +1110,33 @@ describe('searchContext — branch coverage', () => {
     const client = await createSchemaClient();
     try {
       await insertTestFixtures(client);
-      const { searchContext } = await loadModule();
+      const { searchContext } = await import('../tools/search-context.mjs');
       const result = await searchContext({
         query: 'tursouniqueword',
         client,
         use_dense: false,
         limit: 5,
         budget: 1024,
+        searchCorpusFn: async ({ query: q }) => ({
+          results: [
+            {
+              chunk_id: 'schema-chunk-1',
+              document_id: 'schema-doc',
+              title: 'Schema Doc',
+              content: `${q} content`,
+              metadata: { source: 'schema' },
+            },
+          ],
+          dense_state: 'bypassed',
+          dense_degraded: true,
+          dense_reason: 'schema-test',
+        }),
       });
       expect(result.context_format).toBe('markdown');
       expect(typeof result.context).toBe('string');
       expect(result.dense_state).toEqual(expect.any(String));
       expect(result.freshness).toEqual(expect.any(Object));
+      expect(result.results).toBeDefined();
     } finally {
       client.close?.();
     }
@@ -983,5 +1173,168 @@ describe('searchContext — branch coverage', () => {
     } finally {
       client.close?.();
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// searchContext — self-heal text prepend
+// ---------------------------------------------------------------------------
+
+describe('searchContext — self-heal text prepend', () => {
+  it('prepends the human guidance paragraph to markdown context when degraded', async () => {
+    mockEvaluateSelfHeal.mockResolvedValue({
+      action: 'noop',
+      guidanceFields: {
+        state: 'model-only',
+        reason: 'embeddings missing',
+        action: 'noop',
+        attempt: 1,
+        max_attempts: 3,
+        cooldown_s: 600,
+        next_allowed_at: 0,
+        est_duration_min: 1,
+        manual_recovery: null,
+        guidance: 'self-heal guidance text',
+      },
+    });
+
+    const { searchContext } = await loadModule();
+    const result = await searchContext({
+      query: 'q',
+      searchCorpusFn: async () =>
+        fakeSearchResponse([fakeChunk(1)], {
+          dense_degraded: true,
+          dense_state: 'model-only',
+          dense_reason: 'embeddings missing',
+        }),
+      assembleContextFn: async () => fakeAssembleResponse(),
+    });
+
+    expect(typeof result.context).toBe('string');
+    expect(result.context.startsWith('self-heal guidance text\n\n')).toBe(true);
+    expect(result.context).toContain('## Context');
+    expect(result.self_heal).toEqual(
+      expect.objectContaining({ guidance: 'self-heal guidance text' }),
+    );
+  });
+
+  it('does not prepend guidance when no self_heal block is present', async () => {
+    const { searchContext } = await loadModule();
+    const result = await searchContext({
+      query: 'q',
+      searchCorpusFn: async () => fakeSearchResponse([fakeChunk(1)]),
+      assembleContextFn: async () => fakeAssembleResponse(),
+    });
+
+    expect(result.context).toBe('## Context\n\nBody text here.');
+    expect(result.self_heal).toBeUndefined();
+  });
+
+  it('does not duplicate guidance when the context already starts with it', async () => {
+    mockEvaluateSelfHeal.mockResolvedValue({
+      action: 'noop',
+      guidanceFields: {
+        state: 'model-only',
+        reason: 'embeddings missing',
+        action: 'noop',
+        attempt: 1,
+        max_attempts: 3,
+        cooldown_s: 600,
+        next_allowed_at: 0,
+        est_duration_min: 1,
+        manual_recovery: null,
+        guidance: 'self-heal guidance text',
+      },
+    });
+
+    const { searchContext } = await loadModule();
+    const result = await searchContext({
+      query: 'q',
+      searchCorpusFn: async () =>
+        fakeSearchResponse([fakeChunk(1)], {
+          dense_degraded: true,
+          dense_state: 'model-only',
+          dense_reason: 'embeddings missing',
+        }),
+      assembleContextFn: async () =>
+        fakeAssembleResponse({
+          context: 'self-heal guidance text\n\n## Context\n\nBody text here.',
+        }),
+    });
+
+    expect(result.context).toBe(
+      'self-heal guidance text\n\n## Context\n\nBody text here.',
+    );
+  });
+
+  it('does not prepend guidance to a JSON context object', async () => {
+    mockEvaluateSelfHeal.mockResolvedValue({
+      action: 'noop',
+      guidanceFields: {
+        state: 'model-only',
+        reason: 'embeddings missing',
+        action: 'noop',
+        attempt: 1,
+        max_attempts: 3,
+        cooldown_s: 600,
+        next_allowed_at: 0,
+        est_duration_min: 1,
+        manual_recovery: null,
+        guidance: 'self-heal guidance text',
+      },
+    });
+
+    const { searchContext } = await loadModule();
+    const result = await searchContext({
+      query: 'q',
+      context_format: 'json',
+      searchCorpusFn: async () =>
+        fakeSearchResponse([fakeChunk(1)], {
+          dense_degraded: true,
+          dense_state: 'model-only',
+          dense_reason: 'embeddings missing',
+        }),
+      assembleContextFn: async () => fakeAssembleResponse(),
+    });
+
+    expect(typeof result.context).toBe('object');
+    expect(result.context.context).toBe('## Context\n\nBody text here.');
+    expect(result.self_heal).toEqual(
+      expect.objectContaining({ guidance: 'self-heal guidance text' }),
+    );
+  });
+
+  it('keeps context unchanged when self_heal guidance is not a string', async () => {
+    mockEvaluateSelfHeal.mockResolvedValue({
+      action: 'noop',
+      guidanceFields: {
+        state: 'model-only',
+        reason: 'embeddings missing',
+        action: 'noop',
+        attempt: 1,
+        max_attempts: 3,
+        cooldown_s: 600,
+        next_allowed_at: 0,
+        est_duration_min: 1,
+        manual_recovery: null,
+      },
+    });
+
+    const { searchContext } = await loadModule();
+    const result = await searchContext({
+      query: 'q',
+      searchCorpusFn: async () =>
+        fakeSearchResponse([fakeChunk(1)], {
+          dense_degraded: true,
+          dense_state: 'model-only',
+          dense_reason: 'embeddings missing',
+        }),
+      assembleContextFn: async () => fakeAssembleResponse(),
+    });
+
+    expect(result.context).toBe('## Context\n\nBody text here.');
+    expect(result.self_heal).toEqual(
+      expect.objectContaining({ state: 'model-only' }),
+    );
   });
 });

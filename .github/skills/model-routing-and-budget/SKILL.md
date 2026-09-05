@@ -86,13 +86,13 @@ Validation: advisory — confirm qualified name before committing.
 
 | Phase             | Tier                 | Reason                                                                    |
 | ----------------- | -------------------- | ------------------------------------------------------------------------- |
-| 00 Helping        | glm-5.3-flash:cloud        | Maintenance and gap resolution need nuanced synthesis plus safe fallback. |
-| 01 Planning       | glm-5.3-flash:cloud        | Architecture decisions and cross-plan tradeoffs need broad reasoning.     |
+| 00 Helping        | glm-5.3-flash:cloud  | Maintenance and gap resolution need nuanced synthesis plus safe fallback. |
+| 01 Planning       | glm-5.3-flash:cloud  | Architecture decisions and cross-plan tradeoffs need broad reasoning.     |
 | 02 Research       | kimi-k2.7-code:cloud | Retrieval and summarization should be cheap and bounded.                  |
-| 03 Red Testing    | glm-5.3-flash:cloud        | Test contracts need careful judgment.                                     |
-| 04 Implementation | glm-5.3-flash:cloud        | Implementation needs deeper reasoning and edge-case handling.             |
+| 03 Red Testing    | glm-5.3-flash:cloud  | Test contracts need careful judgment.                                     |
+| 04 Implementation | glm-5.3-flash:cloud  | Implementation needs deeper reasoning and edge-case handling.             |
 | 05 Green Testing  | kimi-k2.7-code:cloud | Verification is mostly mechanical.                                        |
-| 06 Documentation  | glm-5.3-flash:cloud        | Educational docs benefit from stronger writing after facts exist.         |
+| 06 Documentation  | glm-5.3-flash:cloud  | Educational docs benefit from stronger writing after facts exist.         |
 | 07 Logging        | kimi-k2.7-code:cloud | Summarization and tracker updates should be lightweight.                  |
 
 ## Decision Tree: Model Selection by Tier

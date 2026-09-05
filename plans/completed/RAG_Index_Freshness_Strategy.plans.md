@@ -307,7 +307,6 @@ complete. Full step packet, per-slice records, and evidence are compressed
 into `plans/RAG_Index_Freshness_Strategy.logs.md`
 (§ "Phase 0 — Full detail (moved from plan tracker, 2026-08-26)").
 
-
 ## Phase 0 — Step 2: Session-start cleanup + README docs [DONE — compressed 2026-08-26]
 
 [DONE] Step P0-S2 — goal: session-start touch pass simplification + README

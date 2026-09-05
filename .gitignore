@@ -34,6 +34,9 @@ rag-index/data/*.sqlite
 rag-index/data/*.sqlite-journal
 rag-index/data/hook-context/*.json
 rag-index/data/mcp-session-override.json
+rag-index/data/cortex-self-heal-state.json
+rag-index/data/cortex-self-heal.repair.lock
+rag-index/data/*.lock
 rag-index/models/
 rag-index/freshness-proofs/*/
 rag-index/snapshots/

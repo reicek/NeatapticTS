@@ -228,6 +228,26 @@ Prefer existing automation surfaces over bespoke shell glue:
 - **Dense-search consumers**: pair corpus rebuilds with `npm run index:prewarm`
   only in environments that actually need warm dense search.
 
+## Self-heal surface
+
+Cortex MCP search tools and the standalone `cortex-health-guard.mjs` decision
+engine can return a structured `self_heal` block when dense search is
+degraded. The canonical repair sequence is single-sourced in the self-heal
+automation:
+
+- Decision engine: `scripts/agent-customization/cortex/cortex-health-guard.mjs`
+- Detached repair orchestrator: `scripts/agent-customization/cortex/cortex-self-heal.mjs`
+- Shared state: `rag-index/data/cortex-self-heal-state.json`
+- Repair lock: `rag-index/data/cortex-self-heal.repair.lock`
+
+Do not duplicate the repair sequence into other skills or plans. When you
+receive a `self_heal` response, read its contract fields (`state`, `reason`,
+`action`, `attempt`, `max_attempts`, `cooldown_s`, `next_allowed_at`,
+`est_duration_min`, `manual_recovery`, `guidance`) and follow the action. For
+`exhausted` or `disabled`, use the `manual_recovery` commands. For `started`,
+`in_flight`, or `cooldown`, do not re-trigger repair; wait and fall back to
+native tools or reduced recall if needed.
+
 ## Decision Tree
 
 ```text

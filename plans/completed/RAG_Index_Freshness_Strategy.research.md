@@ -55,6 +55,7 @@ The user asked to "execute slice P0-S0" and report PASS/FAIL for acceptance crit
 ## Phase 1 Slice P1-S1 Re-validation Audit
 
 ### Question
+
 Do the current repository implementations of Phase 1 slice P1-S1 satisfy acceptance criteria AC-006 (`auto-reindex.mjs` post-commit glob extension) and AC-007 (`freshness-hooks.mjs` watcher glob extension) when audited against the real code?
 
 ### Evidence
@@ -71,7 +72,7 @@ Do the current repository implementations of Phase 1 slice P1-S1 satisfy accepta
   - `FAMILY_RULES` includes `skill`, `agent`, and `copilot-instructions` families.
   - `DEFAULT_IGNORE_GLOBS` filters `.test.ts`, `.spec.ts`, `.d.ts` before the incremental builder.
   - Test: `rag-index/__tests__/freshness-hooks.extended-glob.test.mjs` — 2/2 passed under `rag-index-mjs` project with `--experimental-vm-modules`.
-  - **Discrepancy**: `auto-reindex.mjs` matches *all* `.md` files under `.github/skills/` and `.github/agents/` (including reference/asset files and `.github/agents/README.md`). `freshness-hooks.mjs` only watches `.github/skills/**/SKILL.md` and `.github/agents/*.agent.md`. As of audit date, 23 skill `.md` files and 1 agent `.md` file are covered by post-commit but not by the watcher hook.
+  - **Discrepancy**: `auto-reindex.mjs` matches _all_ `.md` files under `.github/skills/` and `.github/agents/` (including reference/asset files and `.github/agents/README.md`). `freshness-hooks.mjs` only watches `.github/skills/**/SKILL.md` and `.github/agents/*.agent.md`. As of audit date, 23 skill `.md` files and 1 agent `.md` file are covered by post-commit but not by the watcher hook.
 
 - **Index health**: `node rag-index/validate-index.mjs --json` reports all 10 families fresh with no stale or missing paths (`ok: true, pass: true`).
 

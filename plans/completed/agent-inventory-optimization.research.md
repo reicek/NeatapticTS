@@ -241,19 +241,19 @@ Research of model options and cost optimization for GitHub Copilot custom agents
 
 **Recommended model assignment matrix:**
 
-| Agent Type                    | Recommended Model             | Justification                                |
-| ----------------------------- | ----------------------------- | -------------------------------------------- |
+| Agent Type                    | Recommended Model                   | Justification                                |
+| ----------------------------- | ----------------------------------- | -------------------------------------------- |
 | Heavy: Implementation/Editing | `glm-5.3-flash:cloud` (local, free) | Deep reasoning, edge-case handling. Free.    |
 | Heavy: Planning/Architecture  | `glm-5.3-flash:cloud` (local, free) | Broad reasoning needed. Free.                |
 | Heavy: Red Testing            | `glm-5.3-flash:cloud` (local, free) | Test contracts need careful judgment. Free.  |
-| Mid: Green Testing            | `kimi-k2.7-code:cloud`        | Verification mostly mechanical. Cheap cloud. |
-| Mid: Research/Exploration     | `kimi-k2.7-code:cloud`        | Retrieval/summarization. Cheap, fast.        |
-| Mid: Code Review/Security     | `kimi-k2.7-code:cloud`        | Read-only review. Cheap, fast.               |
-| Mid: Documentation            | `kimi-k2.7-code:cloud`        | Writing tasks. Cheap.                        |
-| Light: Logging/Summarization  | `kimi-k2.7-code:cloud`        | Most lightweight tasks. Cheapest cloud.      |
-| Light: Scouts (all)           | `kimi-k2.7-code:cloud`        | Read-only recon. Cheap, parallel-friendly.   |
-| Light: Browser specialists    | `kimi-k2.7-code:cloud`        | Narrow scoped. Cheap.                        |
-| Light: Learning events        | `kimi-k2.7-code:cloud`        | One-shot auxiliary. Cheapest.                |
+| Mid: Green Testing            | `kimi-k2.7-code:cloud`              | Verification mostly mechanical. Cheap cloud. |
+| Mid: Research/Exploration     | `kimi-k2.7-code:cloud`              | Retrieval/summarization. Cheap, fast.        |
+| Mid: Code Review/Security     | `kimi-k2.7-code:cloud`              | Read-only review. Cheap, fast.               |
+| Mid: Documentation            | `kimi-k2.7-code:cloud`              | Writing tasks. Cheap.                        |
+| Light: Logging/Summarization  | `kimi-k2.7-code:cloud`              | Most lightweight tasks. Cheapest cloud.      |
+| Light: Scouts (all)           | `kimi-k2.7-code:cloud`              | Read-only recon. Cheap, parallel-friendly.   |
+| Light: Browser specialists    | `kimi-k2.7-code:cloud`              | Narrow scoped. Cheap.                        |
+| Light: Learning events        | `kimi-k2.7-code:cloud`              | One-shot auxiliary. Cheapest.                |
 
 **Cost analysis:**
 

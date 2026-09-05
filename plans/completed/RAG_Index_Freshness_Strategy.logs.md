@@ -379,7 +379,7 @@ step_packet:
   pre-implementation (missing `warnings` field + missing
   `loadFreshnessManifest` export → TypeError/undefined), 18/18 pass
   post-implementation. Preflight: `npm run jest:mjs --
-  --testPathPatterns=validate-index` → 3 suites PASS, 45/45 tests
+--testPathPatterns=validate-index` → 3 suites PASS, 45/45 tests
   (max-age-sanity 18/18; pre-existing core + per-family suites unchanged);
   `npx tsc --noEmit -p tsconfig.test.json` exit 0 (updated d.mts
   type-clean); eslint on `validate-index.mjs` shows only pre-existing

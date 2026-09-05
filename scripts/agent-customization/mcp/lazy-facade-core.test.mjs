@@ -40,14 +40,23 @@ const baseConfig = {
   defaultSpawnCommand: ['node', 'server.mjs'],
 };
 
+const cortexConfig = {
+  name: 'cortex',
+  target: 'cortex',
+  title: 'NeatapticTS Repo Cortex',
+  version: '0.1.0',
+  defaultSnapshotPath: 'C:\\snap\\cortex.json',
+  defaultSpawnCommand: ['node', 'scripts/mcp-semantic/repo-cortex-mcp.mjs'],
+};
+
 function makeSnapshot(tools = []) {
   return JSON.stringify({ tools });
 }
 
-function makeRouterSnapshot() {
+function makeRouterSnapshot(name = 'test-facade') {
   return makeSnapshot([
     {
-      name: 'test-facade',
+      name,
       description: 'Router tool',
       inputSchema: { required: ['operation'] },
     },
@@ -431,6 +440,162 @@ describe('createLazyFacade', () => {
     });
     assert.strictEqual(res.result.isError, true);
     assert.ok(res.result.content[0].text.includes('spawn failed'));
+  });
+
+  it('renders T4 guidance text when the Cortex server fails to spawn', async () => {
+    childProcess.spawn.mockImplementation(() => {
+      throw new Error('spawn failed');
+    });
+    fs.readFileSync.mockReturnValue(makeRouterSnapshot('cortex'));
+    const facade = createLazyFacade(cortexConfig);
+    const res = await facade.dispatch({
+      jsonrpc: '2.0',
+      id: 20,
+      method: 'tools/call',
+      params: { name: 'cortex', arguments: { operation: 'search' } },
+    });
+    const payload = JSON.parse(res.result.content[0].text);
+    assert.strictEqual(res.result.isError, true);
+    assert.ok(payload.guidance.includes('Cortex MCP server failed to start'));
+    assert.ok(payload.guidance.includes('RAG search is UNAVAILABLE'));
+    assert.ok(payload.guidance.includes('grep/glob/view'));
+  });
+
+  it('includes T4 manual recovery commands in the spawn failure guidance', async () => {
+    childProcess.spawn.mockImplementation(() => {
+      throw new Error('spawn failed');
+    });
+    fs.readFileSync.mockReturnValue(makeRouterSnapshot('cortex'));
+    const facade = createLazyFacade(cortexConfig);
+    const res = await facade.dispatch({
+      jsonrpc: '2.0',
+      id: 21,
+      method: 'tools/call',
+      params: { name: 'cortex', arguments: { operation: 'search' } },
+    });
+    const payload = JSON.parse(res.result.content[0].text);
+    assert.ok(payload.guidance.includes('TURSO_DATABASE_URL'));
+    assert.ok(payload.guidance.includes('npm run index:session-start'));
+    assert.ok(payload.guidance.includes('npm run index:prewarm'));
+    assert.ok(
+      payload.guidance.includes(
+        'node scripts/mcp-semantic/repo-cortex-mcp.mjs',
+      ),
+    );
+  });
+
+  it('fills the T4 error summary with the spawn failure message', async () => {
+    childProcess.spawn.mockImplementation(() => {
+      throw new Error('spawn failed');
+    });
+    fs.readFileSync.mockReturnValue(makeRouterSnapshot('cortex'));
+    const facade = createLazyFacade(cortexConfig);
+    const res = await facade.dispatch({
+      jsonrpc: '2.0',
+      id: 26,
+      method: 'tools/call',
+      params: { name: 'cortex', arguments: { operation: 'search' } },
+    });
+    const payload = JSON.parse(res.result.content[0].text);
+    assert.ok(payload.guidance.includes('spawn failed'));
+  });
+
+  it('exposes self_heal block with action unavailable and full schema on spawn failure', async () => {
+    childProcess.spawn.mockImplementation(() => {
+      throw new Error('spawn failed');
+    });
+    fs.readFileSync.mockReturnValue(makeRouterSnapshot('cortex'));
+    const facade = createLazyFacade(cortexConfig);
+    const res = await facade.dispatch({
+      jsonrpc: '2.0',
+      id: 22,
+      method: 'tools/call',
+      params: { name: 'cortex', arguments: { operation: 'search' } },
+    });
+    const payload = JSON.parse(res.result.content[0].text);
+    assert.strictEqual(payload.self_heal.action, 'unavailable');
+    assert.ok(Array.isArray(payload.self_heal.manual_recovery));
+    assert.ok(
+      payload.self_heal.manual_recovery.includes('npm run index:session-start'),
+    );
+    assert.ok(
+      payload.self_heal.manual_recovery.includes('npm run index:prewarm'),
+    );
+    assert.deepStrictEqual(
+      Object.keys(payload.self_heal).sort(),
+      [
+        'action',
+        'attempt',
+        'cooldown_s',
+        'est_duration_min',
+        'guidance',
+        'manual_recovery',
+        'max_attempts',
+        'next_allowed_at',
+        'reason',
+        'state',
+      ].sort(),
+    );
+  });
+
+  it('omits fallbackHint from the spawn failure payload', async () => {
+    childProcess.spawn.mockImplementation(() => {
+      throw new Error('spawn failed');
+    });
+    fs.readFileSync.mockReturnValue(makeRouterSnapshot('cortex'));
+    const facade = createLazyFacade(cortexConfig);
+    const res = await facade.dispatch({
+      jsonrpc: '2.0',
+      id: 23,
+      method: 'tools/call',
+      params: { name: 'cortex', arguments: { operation: 'search' } },
+    });
+    const payload = JSON.parse(res.result.content[0].text);
+    assert.strictEqual(payload.fallbackHint, undefined);
+  });
+
+  it('propagates the original spawn error and does not retry spawn', async () => {
+    childProcess.spawn.mockImplementation(() => {
+      throw new Error('spawn failed');
+    });
+    fs.readFileSync.mockReturnValue(makeRouterSnapshot('cortex'));
+    const facade = createLazyFacade(cortexConfig);
+    const res1 = await facade.dispatch({
+      jsonrpc: '2.0',
+      id: 24,
+      method: 'tools/call',
+      params: { name: 'cortex', arguments: { operation: 'search' } },
+    });
+    assert.ok(
+      JSON.parse(res1.result.content[0].text).error.includes('spawn failed'),
+    );
+    assert.strictEqual(childProcess.spawn.mock.calls.length, 1);
+    await facade.dispatch({
+      jsonrpc: '2.0',
+      id: 25,
+      method: 'tools/call',
+      params: { name: 'cortex', arguments: { operation: 'search' } },
+    });
+    assert.strictEqual(childProcess.spawn.mock.calls.length, 1);
+  });
+
+  it('renders T4 guidance when Cortex spawn returns invalid child', async () => {
+    childProcess.spawn.mockReturnValue(null);
+    fs.readFileSync.mockReturnValue(makeRouterSnapshot('cortex'));
+    const facade = createLazyFacade(cortexConfig);
+    const res = await facade.dispatch({
+      jsonrpc: '2.0',
+      id: 27,
+      method: 'tools/call',
+      params: { name: 'cortex', arguments: { operation: 'search' } },
+    });
+    const payload = JSON.parse(res.result.content[0].text);
+    assert.strictEqual(res.result.isError, true);
+    assert.strictEqual(payload.self_heal.action, 'unavailable');
+    assert.ok(
+      payload.guidance.includes('Spawn returned an invalid child process.'),
+    );
+    assert.strictEqual(payload.fallbackHint, undefined);
   });
 
   it('handles spawn returning invalid child', async () => {

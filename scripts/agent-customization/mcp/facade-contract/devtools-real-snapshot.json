@@ -44,9 +44,7 @@
                 "description": "Whether to include a snapshot in the response. Default is false."
               }
             },
-            "required": [
-              "uid"
-            ],
+            "required": ["uid"],
             "additionalProperties": true,
             "$schema": "http://json-schema.org/draft-07/schema#"
           },
@@ -69,9 +67,7 @@
                 "description": "The ID of the page to close. Call list_pages to list pages."
               }
             },
-            "required": [
-              "pageId"
-            ],
+            "required": ["pageId"],
             "additionalProperties": true,
             "$schema": "http://json-schema.org/draft-07/schema#"
           },
@@ -102,10 +98,7 @@
                 "description": "Whether to include a snapshot in the response. Default is false."
               }
             },
-            "required": [
-              "from_uid",
-              "to_uid"
-            ],
+            "required": ["from_uid", "to_uid"],
             "additionalProperties": true,
             "$schema": "http://json-schema.org/draft-07/schema#"
           },
@@ -125,13 +118,7 @@
             "properties": {
               "networkConditions": {
                 "type": "string",
-                "enum": [
-                  "Offline",
-                  "Slow 3G",
-                  "Fast 3G",
-                  "Slow 4G",
-                  "Fast 4G"
-                ],
+                "enum": ["Offline", "Slow 3G", "Fast 3G", "Slow 4G", "Fast 4G"],
                 "description": "Throttle network. Omit to disable throttling."
               },
               "cpuThrottlingRate": {
@@ -150,11 +137,7 @@
               },
               "colorScheme": {
                 "type": "string",
-                "enum": [
-                  "dark",
-                  "light",
-                  "auto"
-                ],
+                "enum": ["dark", "light", "auto"],
                 "description": "Emulate the dark or the light mode. Set to \"auto\" to reset to the default."
               },
               "viewport": {
@@ -204,9 +187,7 @@
                 "description": "Handle dialogs while execution. \"accept\", \"dismiss\", or string for response of window.prompt. Defaults to accept."
               }
             },
-            "required": [
-              "function"
-            ],
+            "required": ["function"],
             "additionalProperties": true,
             "$schema": "http://json-schema.org/draft-07/schema#"
           },
@@ -237,10 +218,7 @@
                 "description": "Whether to include a snapshot in the response. Default is false."
               }
             },
-            "required": [
-              "uid",
-              "value"
-            ],
+            "required": ["uid", "value"],
             "additionalProperties": true,
             "$schema": "http://json-schema.org/draft-07/schema#"
           },
@@ -272,10 +250,7 @@
                       "description": "Value for the element. \"true\" or \"false\" for checkboxes and toggles, \"true\" for radio buttons."
                     }
                   },
-                  "required": [
-                    "uid",
-                    "value"
-                  ],
+                  "required": ["uid", "value"],
                   "additionalProperties": false
                 },
                 "description": "Elements from snapshot to fill out."
@@ -285,9 +260,7 @@
                 "description": "Whether to include a snapshot in the response. Default is false."
               }
             },
-            "required": [
-              "elements"
-            ],
+            "required": ["elements"],
             "additionalProperties": true,
             "$schema": "http://json-schema.org/draft-07/schema#"
           },
@@ -310,9 +283,7 @@
                 "description": "The msgid of a console message on the page from the listed console messages"
               }
             },
-            "required": [
-              "msgid"
-            ],
+            "required": ["msgid"],
             "additionalProperties": true,
             "$schema": "http://json-schema.org/draft-07/schema#"
           },
@@ -362,10 +333,7 @@
             "properties": {
               "action": {
                 "type": "string",
-                "enum": [
-                  "accept",
-                  "dismiss"
-                ],
+                "enum": ["accept", "dismiss"],
                 "description": "Whether to dismiss or accept the dialog"
               },
               "promptText": {
@@ -373,9 +341,7 @@
                 "description": "Optional prompt text to enter into the dialog."
               }
             },
-            "required": [
-              "action"
-            ],
+            "required": ["action"],
             "additionalProperties": true,
             "$schema": "http://json-schema.org/draft-07/schema#"
           },
@@ -402,9 +368,7 @@
                 "description": "Whether to include a snapshot in the response. Default is false."
               }
             },
-            "required": [
-              "uid"
-            ],
+            "required": ["uid"],
             "additionalProperties": true,
             "$schema": "http://json-schema.org/draft-07/schema#"
           },
@@ -424,19 +388,13 @@
             "properties": {
               "mode": {
                 "type": "string",
-                "enum": [
-                  "navigation",
-                  "snapshot"
-                ],
+                "enum": ["navigation", "snapshot"],
                 "default": "navigation",
                 "description": "\"navigation\" reloads & audits. \"snapshot\" analyzes current state."
               },
               "device": {
                 "type": "string",
-                "enum": [
-                  "desktop",
-                  "mobile"
-                ],
+                "enum": ["desktop", "mobile"],
                 "default": "desktop",
                 "description": "Device to emulate."
               },
@@ -608,12 +566,7 @@
             "properties": {
               "type": {
                 "type": "string",
-                "enum": [
-                  "url",
-                  "back",
-                  "forward",
-                  "reload"
-                ],
+                "enum": ["url", "back", "forward", "reload"],
                 "description": "Navigate the page by URL, back or forward in history, or reload."
               },
               "url": {
@@ -626,10 +579,7 @@
               },
               "handleBeforeUnload": {
                 "type": "string",
-                "enum": [
-                  "accept",
-                  "decline"
-                ],
+                "enum": ["accept", "decline"],
                 "description": "Whether to auto accept or beforeunload dialogs triggered by this navigation. Default is accept."
               },
               "initScript": {
@@ -675,9 +625,7 @@
                 "description": "Maximum wait time in milliseconds. If set to 0, the default timeout will be used."
               }
             },
-            "required": [
-              "url"
-            ],
+            "required": ["url"],
             "additionalProperties": true,
             "$schema": "http://json-schema.org/draft-07/schema#"
           },
@@ -704,10 +652,7 @@
                 "description": "The name of the Insight you want more information on. For example: \"DocumentLatency\" or \"LCPBreakdown\""
               }
             },
-            "required": [
-              "insightSetId",
-              "insightName"
-            ],
+            "required": ["insightSetId", "insightName"],
             "additionalProperties": true,
             "$schema": "http://json-schema.org/draft-07/schema#"
           },
@@ -788,9 +733,7 @@
                 "description": "Whether to include a snapshot in the response. Default is false."
               }
             },
-            "required": [
-              "key"
-            ],
+            "required": ["key"],
             "additionalProperties": true,
             "$schema": "http://json-schema.org/draft-07/schema#"
           },
@@ -817,10 +760,7 @@
                 "description": "Page height"
               }
             },
-            "required": [
-              "width",
-              "height"
-            ],
+            "required": ["width", "height"],
             "additionalProperties": true,
             "$schema": "http://json-schema.org/draft-07/schema#"
           },
@@ -847,9 +787,7 @@
                 "description": "Whether to focus the page and bring it to the top."
               }
             },
-            "required": [
-              "pageId"
-            ],
+            "required": ["pageId"],
             "additionalProperties": true,
             "$schema": "http://json-schema.org/draft-07/schema#"
           },
@@ -872,9 +810,7 @@
                 "description": "A path to a .heapsnapshot file to save the heapsnapshot to."
               }
             },
-            "required": [
-              "filePath"
-            ],
+            "required": ["filePath"],
             "additionalProperties": true,
             "$schema": "http://json-schema.org/draft-07/schema#"
           },
@@ -894,11 +830,7 @@
             "properties": {
               "format": {
                 "type": "string",
-                "enum": [
-                  "png",
-                  "jpeg",
-                  "webp"
-                ],
+                "enum": ["png", "jpeg", "webp"],
                 "default": "png",
                 "description": "Type of format to save the screenshot as. Default is \"png\""
               },
@@ -973,9 +905,7 @@
                 "description": "Optional key to press after typing. E.g., \"Enter\", \"Tab\", \"Escape\""
               }
             },
-            "required": [
-              "text"
-            ],
+            "required": ["text"],
             "additionalProperties": true,
             "$schema": "http://json-schema.org/draft-07/schema#"
           },
@@ -1006,10 +936,7 @@
                 "description": "Whether to include a snapshot in the response. Default is false."
               }
             },
-            "required": [
-              "uid",
-              "filePath"
-            ],
+            "required": ["uid", "filePath"],
             "additionalProperties": true,
             "$schema": "http://json-schema.org/draft-07/schema#"
           },
@@ -1040,9 +967,7 @@
                 "description": "Maximum wait time in milliseconds. If set to 0, the default timeout will be used."
               }
             },
-            "required": [
-              "text"
-            ],
+            "required": ["text"],
             "additionalProperties": true,
             "$schema": "http://json-schema.org/draft-07/schema#"
           },
