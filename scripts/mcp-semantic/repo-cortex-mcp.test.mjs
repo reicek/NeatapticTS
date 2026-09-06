@@ -715,3 +715,340 @@ describe('repo-cortex-mcp', () => {
     });
   });
 });
+
+describe('repo-cortex-mcp self-heal response augmentation', () => {
+  const mockEvaluateSelfHeal = jest.fn();
+  let localCreateRepoCortexTools;
+
+  beforeEach(async () => {
+    jest.resetModules();
+    mockEvaluateSelfHeal.mockReset();
+    mockEvaluateSelfHeal.mockResolvedValue({
+      action: 'started',
+      guidanceFields: {
+        state: 'model-only',
+        reason: 'embeddings missing',
+        action: 'started',
+        attempt: 1,
+        max_attempts: 3,
+        cooldown_s: 600,
+        next_allowed_at: 0,
+        est_duration_min: 1,
+        manual_recovery: null,
+        guidance: 'self-heal guidance text',
+      },
+      spawnDecision: { pid: 123, command: 'node cortex-self-heal.mjs' },
+    });
+    jest.unstable_mockModule(
+      '../agent-customization/cortex/cortex-health-guard.mjs',
+      () => ({
+        evaluateSelfHeal: mockEvaluateSelfHeal,
+        __esModule: true,
+      }),
+    );
+
+    // Keep createTool transparent so the handler itself is returned.
+    mockCreateTool.mockReset();
+    mockCreateTool.mockImplementation((obj) => obj);
+
+    const mod = await import('./repo-cortex-mcp.mjs');
+    localCreateRepoCortexTools = mod.createRepoCortexTools;
+  });
+
+  it('search_corpus handler augments a degraded response with self_heal when the tool omits it', async () => {
+    mockSearchCorpus.mockReset();
+    mockSearchCorpus.mockResolvedValue({
+      query: 'test',
+      results: [],
+      dense_degraded: true,
+      dense_state: 'model-only',
+      dense_reason: 'embeddings missing',
+    });
+
+    const tools = localCreateRepoCortexTools();
+    const tool = tools.find((t) => t.name === 'search_corpus');
+    const response = await tool.handler({ query: 'test' });
+
+    expect(response.self_heal).toBeDefined();
+    expect(response.self_heal.action).toBe('started');
+  });
+
+  it('search_context handler augments a degraded response with self_heal when the tool omits it', async () => {
+    mockSearchContext.mockReset();
+    mockSearchContext.mockResolvedValue({
+      context: 'bm25-only context',
+      token_count: 10,
+      tier_counts: { essential: 1, supporting: 0, supplementary: 0 },
+      dense_degraded: true,
+      dense_state: 'model-only',
+      dense_reason: 'embeddings missing',
+    });
+
+    const tools = localCreateRepoCortexTools();
+    const tool = tools.find((t) => t.name === 'search_context');
+    const response = await tool.handler({ query: 'test' });
+
+    expect(response.self_heal).toBeDefined();
+    expect(response.self_heal.action).toBe('started');
+  });
+
+  it('index_stats handler augments the response with self_heal on a dense mismatch', async () => {
+    mockIndexStats.mockReset();
+    mockIndexStats.mockResolvedValue({
+      total_documents: 1,
+      total_chunks: 2,
+      total_families: 1,
+      last_build_timestamp: new Date(1000).toISOString(),
+      feedback_stats: { total_events: 0, events_by_type: {} },
+      ann: {
+        strategy: 'none',
+        threshold: 50000,
+        current_chunk_count: 2,
+        build_status: 'not_applicable',
+      },
+    });
+
+    const tools = localCreateRepoCortexTools();
+    const tool = tools.find((t) => t.name === 'index_stats');
+    const response = await tool.handler({});
+
+    expect(response.self_heal).toBeDefined();
+    expect(response.self_heal.action).toMatch(
+      /started|in_flight|cooldown|exhausted|disabled/,
+    );
+  });
+
+  it('returns a non-object tool response unchanged', async () => {
+    mockSearchCorpus.mockReset();
+    mockSearchCorpus.mockResolvedValue(null);
+
+    const tools = localCreateRepoCortexTools();
+    const tool = tools.find((t) => t.name === 'search_corpus');
+    const response = await tool.handler({ query: 'test' });
+
+    expect(response).toBeNull();
+  });
+
+  it('makes an existing self_heal property enumerable on the wire', async () => {
+    mockSearchCorpus.mockReset();
+    mockSearchCorpus.mockResolvedValue({
+      query: 'test',
+      results: [],
+      dense_state: 'model-only',
+      self_heal: {
+        action: 'started',
+        guidance: 'tool-level self-heal',
+      },
+    });
+
+    const tools = localCreateRepoCortexTools();
+    const tool = tools.find((t) => t.name === 'search_corpus');
+    const response = await tool.handler({ query: 'test' });
+
+    expect(response.self_heal).toEqual(
+      expect.objectContaining({ guidance: 'tool-level self-heal' }),
+    );
+    expect(
+      Object.getOwnPropertyDescriptor(response, 'self_heal').enumerable,
+    ).toBe(true);
+  });
+
+  it('skips self-heal augmentation for warm responses', async () => {
+    mockSearchCorpus.mockReset();
+    mockSearchCorpus.mockResolvedValue({
+      query: 'test',
+      results: [],
+      dense_state: 'warm',
+    });
+
+    const tools = localCreateRepoCortexTools();
+    const tool = tools.find((t) => t.name === 'search_corpus');
+    const response = await tool.handler({ query: 'test' });
+
+    expect(response.self_heal).toBeUndefined();
+    expect(response.dense_state).toBe('warm');
+  });
+
+  it('falls back to deterministic guidance when the guard returns no guidanceFields', async () => {
+    const originalDenseForceState = process.env.DENSE_FORCE_STATE;
+    mockEvaluateSelfHeal.mockReset();
+    mockEvaluateSelfHeal.mockResolvedValue({ action: 'noop' });
+    delete process.env.DENSE_FORCE_STATE;
+
+    try {
+      mockSearchCorpus.mockReset();
+      mockSearchCorpus.mockResolvedValue({
+        query: 'test',
+        results: [],
+        dense_degraded: true,
+        dense_state: 'model-only',
+        dense_reason: 'embeddings missing',
+      });
+
+      const tools = localCreateRepoCortexTools();
+      const tool = tools.find((t) => t.name === 'search_corpus');
+      const response = await tool.handler({ query: 'test' });
+
+      expect(response.self_heal).toEqual(
+        expect.objectContaining({
+          action: 'started',
+          state: 'model-only',
+          guidance: expect.stringMatching(/self-heal/i),
+        }),
+      );
+    } finally {
+      if (originalDenseForceState === undefined) {
+        delete process.env.DENSE_FORCE_STATE;
+      } else {
+        process.env.DENSE_FORCE_STATE = originalDenseForceState;
+      }
+    }
+  });
+
+  it('falls back to deterministic guidance when the guard throws', async () => {
+    mockEvaluateSelfHeal.mockReset();
+    mockEvaluateSelfHeal.mockRejectedValue(new Error('guard failure'));
+
+    mockSearchCorpus.mockReset();
+    mockSearchCorpus.mockResolvedValue({
+      query: 'test',
+      results: [],
+      dense_degraded: true,
+      dense_state: 'model-only',
+    });
+
+    const tools = localCreateRepoCortexTools();
+    const tool = tools.find((t) => t.name === 'search_corpus');
+    const response = await tool.handler({ query: 'test' });
+
+    expect(response.self_heal).toEqual(
+      expect.objectContaining({ action: 'started' }),
+    );
+  });
+
+  it('invokes the guard probe and omits test-only seams outside the test environment', async () => {
+    const originalNodeEnv = process.env.NODE_ENV;
+    const originalDenseForceState = process.env.DENSE_FORCE_STATE;
+    process.env.NODE_ENV = 'production';
+    delete process.env.DENSE_FORCE_STATE;
+
+    try {
+      mockEvaluateSelfHeal.mockReset();
+      mockEvaluateSelfHeal.mockImplementation(async ({ probe }) => {
+        const report = await probe();
+        return {
+          action: 'noop',
+          guidanceFields: {
+            state: report.state,
+            reason: report.reason,
+            action: 'noop',
+            guidance: 'probe guidance',
+          },
+        };
+      });
+
+      mockSearchCorpus.mockReset();
+      mockSearchCorpus.mockResolvedValue({
+        query: 'test',
+        results: [],
+        dense_degraded: true,
+        dense_state: 'model-only',
+      });
+
+      const tools = localCreateRepoCortexTools();
+      const tool = tools.find((t) => t.name === 'search_corpus');
+      const response = await tool.handler({ query: 'test' });
+
+      const callArg = mockEvaluateSelfHeal.mock.calls[0][0];
+      expect(callArg.spawner).toBeUndefined();
+      expect(callArg.stateDir).toBeUndefined();
+      expect(response.self_heal).toEqual(
+        expect.objectContaining({
+          action: 'noop',
+          guidance: 'probe guidance',
+        }),
+      );
+    } finally {
+      process.env.NODE_ENV = originalNodeEnv;
+      if (originalDenseForceState === undefined) {
+        delete process.env.DENSE_FORCE_STATE;
+      } else {
+        process.env.DENSE_FORCE_STATE = originalDenseForceState;
+      }
+    }
+  });
+
+  it('uses explicit chunk_count and embedding_count when present', async () => {
+    mockEvaluateSelfHeal.mockReset();
+    mockEvaluateSelfHeal.mockImplementation(async ({ probe }) => {
+      const report = await probe();
+      return {
+        action: 'started',
+        guidanceFields: {
+          state: report.state,
+          reason: report.reason,
+          action: 'started',
+          guidance: 'count guidance',
+        },
+      };
+    });
+
+    mockSearchCorpus.mockReset();
+    mockSearchCorpus.mockResolvedValue({
+      query: 'test',
+      results: [],
+      dense_degraded: true,
+      dense_state: 'model-only',
+      chunk_count: 42,
+      embedding_count: 7,
+    });
+
+    const tools = localCreateRepoCortexTools();
+    const tool = tools.find((t) => t.name === 'search_corpus');
+    const response = await tool.handler({ query: 'test' });
+
+    expect(response.self_heal).toEqual(
+      expect.objectContaining({ guidance: 'count guidance' }),
+    );
+    const callArg = mockEvaluateSelfHeal.mock.calls[0][0];
+    const report = await callArg.probe();
+    expect(report.chunk_count).toBe(42);
+    expect(report.embedding_count).toBe(7);
+  });
+
+  it('exercises the test-only self-heal spawner seam', async () => {
+    mockEvaluateSelfHeal.mockReset();
+    mockEvaluateSelfHeal.mockImplementation(async (seams) => {
+      const spawnResult = await seams.spawner();
+      return {
+        action: 'started',
+        guidanceFields: {
+          state: 'model-only',
+          reason: 'embeddings missing',
+          action: 'started',
+          spawn_pid: spawnResult.pid,
+          guidance: 'spawner exercised',
+        },
+      };
+    });
+
+    mockSearchCorpus.mockReset();
+    mockSearchCorpus.mockResolvedValue({
+      query: 'test',
+      results: [],
+      dense_degraded: true,
+      dense_state: 'model-only',
+    });
+
+    const tools = localCreateRepoCortexTools();
+    const tool = tools.find((t) => t.name === 'search_corpus');
+    const response = await tool.handler({ query: 'test' });
+
+    expect(response.self_heal).toEqual(
+      expect.objectContaining({
+        spawn_pid: 0,
+        guidance: 'spawner exercised',
+      }),
+    );
+  });
+});

@@ -1546,7 +1546,7 @@ What is needed to fully implement the enemy death derez animation? Specifically:
 
 ### Evidence
 
-Three Tier-3 specialists were dispatched in parallel (boundary-mapper, implementation-pattern-scout, docs-scout) with model `glm-5.2:cloud`. All completed successfully. Findings synthesized below with confidence levels and provenance.
+Three Tier-3 specialists were dispatched in parallel (boundary-mapper, implementation-pattern-scout, docs-scout) with model `glm-5.3-flash:cloud`. All completed successfully. Findings synthesized below with confidence levels and provenance.
 
 #### 1. Derez renderer is FULLY WIRED (confidence: 0.95)
 

@@ -1,4 +1,4 @@
-﻿---
+---
 description: 'Use when: researching codebase patterns, APIs, dependencies, or prior art.'
 name: '02-researching'
 tier: 1
@@ -53,7 +53,7 @@ handoffs:
     agent: '03-red-testing'
     prompt: 'Design red tests for the active slice. Load context via Cortex MCP and any declared pre_execute_hook/get_slice_context.'
     send: false
-    model: 'glm-5.2:cloud'
+    model: 'glm-5.3-flash:cloud'
 ---
 
 ## CRITICAL RULE — NEVER RUN GIT
@@ -66,9 +66,9 @@ Tier-1 orchestrator for the research phase. Use when researching codebase patter
 
 Research scope spans three surfaces, each with a dedicated reviewer this orchestrator may dispatch:
 
-- **Compliance surface** — external-source license/attribution checks → `license-reviewer`.
-- **Supply-chain surface** — dependency additions, version drift, advisories → `dependency-audit-reviewer`.
-- **Performance surface** — benchmark gates and regression thresholds → `benchmark-gate-reviewer`.
+- **Compliance surface** — external-source license/attribution checks ? `license-reviewer`.
+- **Supply-chain surface** — dependency additions, version drift, advisories ? `dependency-audit-reviewer`.
+- **Performance surface** — benchmark gates and regression thresholds ? `benchmark-gate-reviewer`.
 
 The orchestrator fans out read-only scouts and reviewers in parallel, then synthesizes their outputs into a single source-grounded brief.
 
@@ -107,7 +107,7 @@ Every finding and every handoff decision is gated by certainty. End each synthes
 
 | Certainty | Action                                                                                                                                                    |
 | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| ≥ 0.85    | Act on the finding; record it in the plan and proceed to handoff.                                                                                         |
+| = 0.85    | Act on the finding; record it in the plan and proceed to handoff.                                                                                         |
 | 0.50–0.85 | Delegate deeper investigation to a specialist scout/reviewer; do NOT hand off as resolved.                                                                |
 | < 0.50    | Stop. State what is unknown, name the surfaces that need inspection, and ask the caller (or escalate to `01-planning`) to refine scope before proceeding. |
 
@@ -193,7 +193,7 @@ Canonical example: a hook such as `neataptic-workflow-mcp/get_slice_context` wit
 When a research request arrives, classify it and route to the correct specialist:
 
 ```text
-Flowchart summary: Research request → classify investigation type (bug, architecture, prior art, plan context, integration, dependency/API) → route to the appropriate scout → synthesize evidence and update the plan.
+Flowchart summary: Research request ? classify investigation type (bug, architecture, prior art, plan context, integration, dependency/API) ? route to the appropriate scout ? synthesize evidence and update the plan.
 ```
 
 ## Delegation Targets
@@ -250,15 +250,15 @@ SYNTHESIS:
 - finding: "RollingSnapshot.save() serializes RNG state via structuredClone (no transfer list)."
   confidence: 0.92
   provenance: { source: "runtime", path: "src/architecture/network/checkpoint.ts" }
-  action: ACT  # ≥ 0.85 → record in plan, proceed to handoff
+  action: ACT  # = 0.85 ? record in plan, proceed to handoff
 - finding: "Worker payload path re-serializes on every postMessage; suspected perf regression."
   confidence: 0.62
   provenance: { source: "static-code", path: "src/multithreading/pool.ts" }
-  action: DELEGATE  # 0.50–0.85 → re-dispatch benchmark-gate-reviewer for threshold check
+  action: DELEGATE  # 0.50–0.85 ? re-dispatch benchmark-gate-reviewer for threshold check
 - finding: "External activation snippet appears sourced from an unlicensed reference."
   confidence: 0.40
   provenance: { source: "docs", path: "examples/activation-demo.ts" }
-  action: STOP  # < 0.50 → escalate to license-reviewer; do not hand off
+  action: STOP  # < 0.50 ? escalate to license-reviewer; do not hand off
 GAP_TYPE: partial
 CONFLICTS:
   - "runtime says transferable; static-code says copy. Tie-break: runtime. Residual risk: code drift."

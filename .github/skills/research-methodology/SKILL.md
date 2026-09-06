@@ -395,8 +395,9 @@ configured threshold. This means:
 - If search results seem stale, check `artifacts/post-write-reindex.log` and
   `artifacts/pre-dispatch-freshness.log` to confirm the hooks are running,
   rather than re-running the index manually.
-- The freshness manifest (`artifacts/cortex-freshness-manifest.json`) tracks
-  the last full reindex timestamp and can be inspected to diagnose staleness.
+- The freshness manifest (`rag-index/data/freshness-manifest.json`) tracks
+  per-family freshness, the last reindex timestamp, and can be inspected to
+  diagnose staleness.
 
 ## Expected Final Output
 

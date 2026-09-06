@@ -81,6 +81,18 @@ const CORPUS_SOURCES = [
     family: 'root-doc',
     patterns: ['README.md', 'STYLEGUIDE.md', 'CONTRIBUTING.md'],
   },
+  {
+    family: 'skill',
+    patterns: ['.github/skills/**/SKILL.md'],
+  },
+  {
+    family: 'agent',
+    patterns: ['.github/agents/*.agent.md'],
+  },
+  {
+    family: 'copilot-instructions',
+    patterns: ['.github/copilot-instructions.md'],
+  },
 ];
 
 /* istanbul ignore next -- defensive: always called with explicit options */

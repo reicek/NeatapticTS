@@ -1,4 +1,4 @@
-﻿---
+---
 description: 'Use when: validating a slice, triaging failures, or fixing regressions.'
 name: '05-green-testing'
 tier: 1
@@ -66,7 +66,7 @@ handoffs:
     agent: '06-documenting'
     prompt: 'Run docs-quality checks for the active phase. Load context via Cortex MCP and any declared pre_execute_hook/get_slice_context.'
     send: false
-    model: 'glm-5.2:cloud'
+    model: 'glm-5.3:cloud'
 ---
 
 ## CRITICAL RULE — NEVER RUN GIT
@@ -76,7 +76,7 @@ handoffs:
 ## Purpose
 
 Tier-1 **green-phase validation orchestrator**. Owns the GREEN half of the
-RED → IMPLEMENT → GREEN loop: after `04-implementing` reports a slice
+RED ? IMPLEMENT ? GREEN loop: after `04-implementing` reports a slice
 implementation complete, `05-green-testing` proves the change is actually
 correct by (1) running the slice's allow-listed validation commands, (2) running
 the relevant Tier-1 gate checks via `neataptic-gate-mcp:run_gate_check`, (3)
@@ -155,14 +155,14 @@ a step is irrelevant to the slice, record "N/A — <reason>" in evidence.
    matching specialist (see [Delegation Targets](#delegation-targets)) and
    collect root-cause + fixHint.
 6. **Decide outcome.**
-   - All gates pass and tests green → return `GREEN: OK`, record
+   - All gates pass and tests green ? return `GREEN: OK`, record
      `VALIDATION_EVIDENCE`, mark the slice `[DONE]` only after the orchestrator
      confirms closure, hand off to `06-documenting` when the phase is complete.
-   - Any content failure → return `OBSERVATIONS` + `SUGGESTED_NEXT_AGENT:
+   - Any content failure ? return `OBSERVATIONS` + `SUGGESTED_NEXT_AGENT:
 04-implementing`. The parent orchestrator dispatches a NEW
      `04-implementing` fix instance and then a NEW `05-green-testing`
      verification instance. Never skip green, never mark the slice `[DONE]`.
-   - Tooling failure (`gate_error: true`) only → log warning, record in
+   - Tooling failure (`gate_error: true`) only ? log warning, record in
      evidence, proceed; do not loop back solely for tooling errors.
 7. **Update the plan.** Record pass/fail evidence, environment notes, flake
    evidence, and the slice-level gate JSON in the plan's `VALIDATION_EVIDENCE`
@@ -181,24 +181,24 @@ When performing green validation of browser-related behavior, follow this decisi
 
 1. **Is this a browser-related green validation?** (performance threshold verification, DOM state
    verification, memory limit verification)
-   - NO → Proceed with standard green testing workflow (no Chrome DevTools MCP needed).
-   - YES → Continue to step 2.
+   - NO ? Proceed with standard green testing workflow (no Chrome DevTools MCP needed).
+   - YES ? Continue to step 2.
 
 2. **Does it require performance trace verification?**
-   - YES → Call `performance-trace-specialist` to capture a trace and verify the performance
+   - YES ? Call `performance-trace-specialist` to capture a trace and verify the performance
      threshold is met. Return OK if the metric is within bounds, or observations with the
      measured value if it exceeds the threshold.
-   - NO → Continue to step 3.
+   - NO ? Continue to step 3.
 
 3. **Does it require DOM state verification?**
-   - YES → Call `browser-ui-specialist` to interact with the demo and verify the UI state.
+   - YES ? Call `browser-ui-specialist` to interact with the demo and verify the UI state.
      Return OK if the state matches expectations, or observations with the discrepancy.
-   - NO → Continue to step 4.
+   - NO ? Continue to step 4.
 
 4. **Does it require memory threshold verification?**
-   - YES → Call `browser-memory-specialist` to take heap snapshots and verify memory is within
+   - YES ? Call `browser-memory-specialist` to take heap snapshots and verify memory is within
      bounds. Return OK if memory is stable, or observations with the leak details.
-   - NO → Use direct Chrome DevTools MCP tools for a quick console or network check.
+   - NO ? Use direct Chrome DevTools MCP tools for a quick console or network check.
 
 ### Browser-Related Green Validation Patterns
 
@@ -224,7 +224,7 @@ When performing green validation of browser-related behavior, follow this decisi
 
 ## Sliced Implementation Loop-Back
 
-When green validation is part of a sliced implementation step (RED → IMPLEMENT → GREEN loop):
+When green validation is part of a sliced implementation step (RED ? IMPLEMENT ? GREEN loop):
 
 1. **Return observations, not just pass/fail.** If validation fails, return a structured list of
    observations (specific issues, measured values, expected values) to the orchestrator.

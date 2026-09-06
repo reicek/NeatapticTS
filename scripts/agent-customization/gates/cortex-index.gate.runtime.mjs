@@ -197,12 +197,10 @@ export function resolveFixHint(
   if (!indexReport.pass) {
     const stalePaths = indexReport.stale_paths ?? [];
     const missingPaths = indexReport.missing_paths ?? [];
-    const overAgePaths = indexReport.over_age_paths ?? [];
 
     if (
       stalePaths.length > 0 &&
       missingPaths.length === 0 &&
-      overAgePaths.length === 0 &&
       stalePaths.every(isPlanPath) &&
       typeof resolveStalePlanFixHint === 'function'
     ) {

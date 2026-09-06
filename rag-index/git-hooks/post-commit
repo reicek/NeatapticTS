@@ -1,5 +1,5 @@
 #!/bin/sh
-# Post-commit hook: re-index changed plans/*.plans.md files for the Cortex RAG index.
+# Post-commit hook: re-index changed corpus files for the Cortex RAG index.
 # This hook is tracked under rag-index/git-hooks/ so it survives clones.
 # Install with: git config core.hooksPath rag-index/git-hooks
 # It runs synchronously after the commit and always exits 0 so it never blocks git.

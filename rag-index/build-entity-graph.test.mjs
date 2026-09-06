@@ -752,8 +752,8 @@ describe('build-entity-graph: collectDocDocuments', () => {
 
     const result = await buildEntityGraph({ dryRun: true });
     expect(result.docEntityCount).toBe(2);
-    // fg should be called 4 times (4 DOC_ENTITY_SOURCES)
-    expect(mockFg).toHaveBeenCalledTimes(4);
+    // fg should be called 7 times (7 DOC_ENTITY_SOURCES)
+    expect(mockFg).toHaveBeenCalledTimes(7);
   });
 });
 

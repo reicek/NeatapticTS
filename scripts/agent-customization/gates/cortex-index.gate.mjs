@@ -43,6 +43,16 @@ export async function runCortexIndexGate(options = {}, deps = null) {
     }
   }
 
+  const familyFresh = indexReport?.family_fresh;
+  const manifestPresent =
+    familyFresh != null && typeof familyFresh === 'object';
+  const gatedFamilies = manifestPresent
+    ? Object.keys(familyFresh).filter((family) => family !== 'completed-plan')
+    : [];
+  const indexFresh =
+    manifestPresent &&
+    gatedFamilies.every((family) => familyFresh[family]?.fresh === true);
+
   const corpusMcpReport = await mcpSmoke({ databasePath });
   const workflowMcpReport = await workflowMcpCheck({
     timeoutMs,
@@ -58,7 +68,8 @@ export async function runCortexIndexGate(options = {}, deps = null) {
     index_documents: Number(
       indexReport.documents ?? snapshotCurrency.indexDocuments ?? 0,
     ),
-    index_fresh: Boolean(indexReport.pass),
+    index_fresh: indexFresh,
+    family_fresh: familyFresh ?? null,
     corpus_mcp_alive: Boolean(corpusMcpReport.pass),
     workflow_mcp_alive: Boolean(workflowMcpReport.pass),
     snapshot_age_seconds: Number(snapshotCurrency.snapshotAgeSeconds ?? 0),
@@ -67,20 +78,29 @@ export async function runCortexIndexGate(options = {}, deps = null) {
     auto_rebuild_success: autoRebuildSuccess,
     auto_rebuild_error: autoRebuildError,
   };
-  const pass =
-    evidence.index_fresh &&
-    evidence.corpus_mcp_alive &&
-    evidence.workflow_mcp_alive &&
-    snapshotCurrency.pass;
 
-  let fixHint = pass
-    ? null
-    : resolveFixHint({
+  let pass = manifestPresent && indexFresh;
+  let fixHint = null;
+
+  if (!manifestPresent) {
+    pass = false;
+    fixHint = 'freshness manifest missing — run validate-index';
+  } else {
+    pass =
+      pass &&
+      evidence.corpus_mcp_alive &&
+      evidence.workflow_mcp_alive &&
+      snapshotCurrency.pass;
+
+    if (!pass) {
+      fixHint = resolveFixHint({
         indexReport,
         snapshotCurrency,
         corpusMcpReport,
         workflowMcpReport,
       });
+    }
+  }
 
   if (!pass && autoRebuildError) {
     fixHint = `Auto-rebuild failed: ${autoRebuildError}${fixHint ? `. ${fixHint}` : ''}`;

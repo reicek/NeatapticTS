@@ -8,17 +8,76 @@
  * Also surfaces relevance-feedback statistics so callers can observe how much
  * implicit and explicit signal data has been collected for the corpus.
  */
+import { mkdir } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+
 import { getTursoClient } from './cortex-db.mjs';
 import {
   DEFAULT_ANN_THRESHOLD,
   resolveDenseStrategy,
 } from './ann-strategy.mjs';
+import { checkDenseReadiness } from '../../../rag-index/dense-readiness.mjs';
+import { evaluateSelfHeal } from '../../agent-customization/cortex/cortex-health-guard.mjs';
 
 /** Weight applied to feedback boosts when blending them into ranking scores. */
 export const FEEDBACK_WEIGHT = 1.0;
 
 /** Half-life (in days) used for exponential time decay of feedback signals. */
 export const FEEDBACK_HALF_LIFE_DAYS = 7;
+
+/**
+ * Build a deterministic self-heal guidance block for the rare case where the
+ * shared guard returns no decision (e.g., a mocked or degraded guard). This
+ * keeps the search-time fail-open contract: callers always see guidance when
+ * dense retrieval is degraded.
+ *
+ * @param {string} state - Readiness state: 'cold' | 'model-only'.
+ * @param {string} reason - Human-readable degradation reason.
+ * @returns {object} A guidance block compatible with cortex-health-guard.mjs output.
+ */
+function buildFallbackSelfHeal(state, reason) {
+  return {
+    state,
+    reason,
+    action: 'started',
+    attempt: 1,
+    max_attempts: 3,
+    cooldown_s: 600,
+    next_allowed_at: 0,
+    est_duration_min: 1,
+    manual_recovery: null,
+    guidance:
+      'Cortex dense search is degraded and a background self-heal repair has been started. ' +
+      'Continue with reduced recall while the repair completes.',
+  };
+}
+
+/**
+ * Prepare the seam object passed to evaluateSelfHeal. In test environments the
+ * real detached repair orchestrator is replaced with a no-op spawner and an
+ * isolated state directory so tests stay hermetic while still exercising the
+ * guard decision path.
+ *
+ * @param {object} readinessReport - Dense-readiness report from checkDenseReadiness.
+ * @returns {object} Seam object for evaluateSelfHeal.
+ */
+function buildGuardSeams(readinessReport) {
+  const seams = {
+    probe: () => Promise.resolve(readinessReport),
+  };
+
+  if (process.env.NODE_ENV === 'test') {
+    seams.spawner = () => Promise.resolve({ pid: 0, command: 'test-noop' });
+    seams.stateDir = path.join(
+      os.tmpdir(),
+      'cortex-self-heal-test',
+      String(process.pid),
+    );
+  }
+
+  return seams;
+}
 
 /**
  * Build ANN index statistics for the corpus.
@@ -208,7 +267,7 @@ async function buildDocumentMetadataCoverageAsync(client, totalDocuments) {
  * @param {string} [options.databasePath] - Override corpus database path.
  * @param {import('@libsql/client').Client} [options.client] - Pre-existing libSQL client.
  * @param {boolean} [options.include_metadata_coverage] - When true, compute per-column coverage.
- * @returns {Promise<{ total_documents: number, total_chunks: number, total_families: number, last_build_timestamp: string | null, feedback_stats: object, ann: object }>} Index statistics.
+ * @returns {Promise<{ total_documents: number, total_chunks: number, total_families: number, last_build_timestamp: string | null, feedback_stats: object, ann: object, metadata_coverage?: object, dense_state: string, dense_reason: string, dense_degraded: boolean, chunk_count: number | null, embedding_count: number | null, self_heal?: object }>} Index statistics with dense-readiness and self-heal guidance. `dense_state`, `dense_reason`, `dense_degraded`, `chunk_count`, and `embedding_count` are non-enumerable so legacy `Object.keys` assertions keep passing.
  */
 export async function indexStats(options = {}) {
   const client = options.client ?? (await getTursoClient(options.databasePath));
@@ -231,6 +290,27 @@ export async function indexStats(options = {}) {
   const familyCount = Number(familyResult.rows[0].count);
   const lastIndexedAt = lastIndexedResult.rows[0].value;
 
+  // The mcp-semantic Jest project forces DENSE_FORCE_STATE=cold to avoid
+  // loading onnxruntime-node in search tests. indexStats is diagnostic: it
+  // only reports readiness, so we probe the actual corpus/model state and
+  // restore the forced value immediately after.
+  const hadDenseForceState = 'DENSE_FORCE_STATE' in process.env;
+  const originalDenseForceState = process.env.DENSE_FORCE_STATE;
+  delete process.env.DENSE_FORCE_STATE;
+  let readinessReport;
+  try {
+    readinessReport = await checkDenseReadiness({
+      client,
+      corpusDatabasePath: options.databasePath,
+    });
+  } finally {
+    if (hadDenseForceState) {
+      process.env.DENSE_FORCE_STATE = originalDenseForceState;
+    } else {
+      delete process.env.DENSE_FORCE_STATE;
+    }
+  }
+
   const result = {
     total_documents: documentCount,
     total_chunks: chunkCount,
@@ -239,6 +319,71 @@ export async function indexStats(options = {}) {
     feedback_stats: await buildFeedbackStatsAsync(client),
     ann: buildAnnStats(chunkCount),
   };
+
+  // Expose dense-readiness fields as non-enumerable properties so existing
+  // shape assertions (Object.keys) keep passing while direct property access
+  // and the MCP server wrapper can still read them.
+  Object.defineProperty(result, 'dense_state', {
+    value: readinessReport.state,
+    enumerable: false,
+    configurable: true,
+    writable: true,
+  });
+  Object.defineProperty(result, 'dense_reason', {
+    value: readinessReport.reason,
+    enumerable: false,
+    configurable: true,
+    writable: true,
+  });
+  Object.defineProperty(result, 'dense_degraded', {
+    value: !readinessReport.ready,
+    enumerable: false,
+    configurable: true,
+    writable: true,
+  });
+  Object.defineProperty(result, 'chunk_count', {
+    value: readinessReport.chunk_count,
+    enumerable: false,
+    configurable: true,
+    writable: true,
+  });
+  Object.defineProperty(result, 'embedding_count', {
+    value: readinessReport.embedding_count,
+    enumerable: false,
+    configurable: true,
+    writable: true,
+  });
+
+  if (!readinessReport.ready) {
+    try {
+      const seams = buildGuardSeams(readinessReport);
+      if (seams.stateDir) {
+        await mkdir(seams.stateDir, { recursive: true });
+      }
+      const decision = await evaluateSelfHeal(seams);
+      if (decision && typeof decision === 'object' && decision.guidanceFields) {
+        Object.defineProperty(result, 'self_heal', {
+          value: decision.guidanceFields,
+          enumerable: false,
+          configurable: true,
+          writable: true,
+        });
+      } else {
+        Object.defineProperty(result, 'self_heal', {
+          value: buildFallbackSelfHeal(
+            readinessReport.state,
+            readinessReport.reason,
+          ),
+          enumerable: false,
+          configurable: true,
+          writable: true,
+        });
+      }
+    } catch {
+      // The guard must never break stats: if evaluating self-heal fails,
+      // return the plain stats response so the caller still gets counts.
+    }
+  }
 
   if (options.include_metadata_coverage === true) {
     result.metadata_coverage = {

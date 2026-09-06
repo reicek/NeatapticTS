@@ -72,6 +72,7 @@ import {
   DEFAULT_ANN_THRESHOLD,
   resolveDenseStrategy,
 } from './ann-strategy.mjs';
+import { evaluateSelfHeal } from '../../agent-customization/cortex/cortex-health-guard.mjs';
 
 /**
  * Default maximum number of corpus results returned by searchCorpus.
@@ -118,47 +119,15 @@ export function resetReadinessCaches() {
 }
 
 /**
- * Search the indexed corpus using BM25 or hybrid dense reranking.
+ * Invalidate only the dense-readiness process-lifetime cache.
  *
- * Selects the search strategy based on dense-index readiness and the
- * `use_dense` option. Sanitizes the raw query with {@link sanitizeFtsQuery}
- * before executing any SQL to prevent FTS5 operator injection.
- *
- * When `metadata.filter` is provided, the filter is compiled to SQL for
- * BM25-only searches (applied as WHERE conditions on the chunks/documents
- * tables) and applied as a post-retrieval filter for dense searches. When
- * both `family` and `metadata.filter` are provided, they are combined with AND.
- *
- * @param {object} [options={}] - Search options.
- * @param {string} options.query - Free-text query string (required for BM25; optional for dense).
- * @param {number} [options.limit=10] - Maximum result count, clamped to [1, 50].
- * @param {string} [options.family] - Optional document family filter.
- * @param {boolean} [options.use_dense=true] - Enable hybrid dense reranking when the index is warm.
- * @param {number} [options.alpha] - Deprecated legacy blend weight; retained for API compatibility but RRF ranking ignores it.
- * @param {string} [options.query_class] - Override query classification for routing. One of: simple_lookup, cross_boundary, multi_hop, exploratory, code_specific, plan_specific.
- * @param {object} [options.classification_hints] - Optional overrides for classification-derived alpha and family.
- * @param {number} [options.classification_hints.alpha] - Override alpha from classification routing.
- * @param {string} [options.classification_hints.family] - Override family filter from classification routing.
- * @param {object} [options.metadata] - Optional metadata filter with a `filter` predicate tree.
- * @param {object} [options.metadata.filter] - Structured filter predicate tree (14 ops: eq, neq, in, not_in, gt, gte, lt, lte, like, is_null, is_not_null, and, or, not).
- * @param {string} [options.slice_id] - Optional slice identifier filter; only chunks with `slice_id = ?` are returned.
- * @param {number} [options.step_number] - Optional step number filter; only chunks with `step_number = ?` are returned.
- * @param {string} [options.databasePath] - Override corpus SQLite database path.
- * @param {string} [options.modelDirectory] - Override ONNX model directory path.
- * @param {string} [options.modelId] - Override ONNX model identifier.
- * @param {Function} [options.denseQuery] - Override dense-query implementation (for testing).
- * @param {Function} [options.readinessProbe] - Override readiness probe (for testing).
- * @param {boolean} [options.use_rerank=false] - Enable cross-encoder re-ranking on hybrid search results.
- * @param {number} [options.rerank_candidates_count=50] - Number of hybrid candidates to re-rank (default: 50).
- * @param {string} [options.rerankerModelDirectory] - Override reranker model directory (for testing).
- * @param {string} [options.rerankerModelId] - Override reranker model identifier (for testing).
- * @param {Function} [options.rerankerReadinessProbe] - Override reranker readiness probe (for testing).
- * @param {Function} [options.rerankerFn] - Override rerankCandidates implementation (for testing).
- * @param {boolean | string} [options.expand_query=false] - Enable query expansion: `true` for full expansion, `'domain-only'` for domain associations only, `false` (default) for no expansion.
- * @param {string} [options.associationsPath] - Override domain associations file path (for testing).
- * @param {Function} [options.expandQueryFn] - Override expandQuery implementation (for testing).
- * @returns {Promise<object>} Search result payload including `query`, `limit`, `use_dense`, `results`, `latency_ms`, and, when an exact symbol match is found, `exact_symbol_match: true`.
+ * Exported so a completed self-heal repair (or a caller that knows the
+ * dense state has changed) can force the next search call to re-probe the
+ * embeddings store without restarting the server process.
  */
+export function invalidateDenseReadinessCache() {
+  cachedDenseReadiness = null;
+}
 
 /**
  * Determine the chunk count to use for dense-strategy selection.
@@ -908,8 +877,39 @@ export async function buildResponseFreshness(databasePath, client) {
  * and then schedules best-effort impression feedback recording for every
  * returned chunk without blocking the response.
  *
- * @param {object} [options={}] - Search options (same as {@link searchCorpusImpl}).
- * @returns {Promise<object>} Search result payload with `feedback_boost` and `feedback_signals` on each result.
+ * Selects the search strategy based on dense-index readiness and the
+ * `use_dense` option. Sanitizes the raw query with {@link sanitizeFtsQuery}
+ * before executing any SQL to prevent FTS5 operator injection.
+ *
+ * @param {object} [options={}] - Search options.
+ * @param {string} options.query - Free-text query string (required for BM25; optional for dense).
+ * @param {number} [options.limit=10] - Maximum result count, clamped to [1, 50].
+ * @param {string} [options.family] - Optional document family filter.
+ * @param {boolean} [options.use_dense=true] - Enable hybrid dense reranking when the index is warm.
+ * @param {number} [options.alpha] - Deprecated legacy blend weight; retained for API compatibility but RRF ranking ignores it.
+ * @param {string} [options.query_class] - Override query classification for routing. One of: simple_lookup, cross_boundary, multi_hop, exploratory, code_specific, plan_specific.
+ * @param {object} [options.classification_hints] - Optional overrides for classification-derived alpha and family.
+ * @param {number} [options.classification_hints.alpha] - Override alpha from classification routing.
+ * @param {string} [options.classification_hints.family] - Override family filter from classification routing.
+ * @param {object} [options.metadata] - Optional metadata filter with a `filter` predicate tree.
+ * @param {object} [options.metadata.filter] - Structured filter predicate tree (14 ops: eq, neq, in, not_in, gt, gte, lt, lte, like, is_null, is_not_null, and, or, not).
+ * @param {string} [options.slice_id] - Optional slice identifier filter; only chunks with `slice_id = ?` are returned.
+ * @param {number} [options.step_number] - Optional step number filter; only chunks with `step_number = ?` are returned.
+ * @param {string} [options.databasePath] - Override corpus SQLite database path.
+ * @param {string} [options.modelDirectory] - Override ONNX model directory path.
+ * @param {string} [options.modelId] - Override ONNX model identifier.
+ * @param {Function} [options.denseQuery] - Override dense-query implementation (for testing).
+ * @param {Function} [options.readinessProbe] - Override readiness probe (for testing).
+ * @param {boolean} [options.use_rerank=false] - Enable cross-encoder re-ranking on hybrid search results.
+ * @param {number} [options.rerank_candidates_count=50] - Number of hybrid candidates to re-rank (default: 50).
+ * @param {string} [options.rerankerModelDirectory] - Override reranker model directory (for testing).
+ * @param {string} [options.rerankerModelId] - Override reranker model identifier (for testing).
+ * @param {Function} [options.rerankerReadinessProbe] - Override reranker readiness probe (for testing).
+ * @param {Function} [options.rerankerFn] - Override rerankCandidates implementation (for testing).
+ * @param {boolean | string} [options.expand_query=false] - Enable query expansion: `true` for full expansion, `'domain-only'` for domain associations only, `false` (default) for no expansion.
+ * @param {string} [options.associationsPath] - Override domain associations file path (for testing).
+ * @param {Function} [options.expandQueryFn] - Override expandQuery implementation (for testing).
+ * @returns {Promise<object>} Search result payload including `query`, `limit`, `use_dense`, `results`, `latency_ms`, `response_tokens`, `freshness`, `dense_state`, `rerank_state`, `diskann_used`, `rrf_used`, and, when dense retrieval is degraded, `dense_degraded`, `dense_reason`, and `self_heal`. Each result carries `feedback_boost` and `feedback_signals`.
  */
 export async function searchCorpus(options = {}) {
   const startTime = performance.now();
@@ -1078,12 +1078,13 @@ function createEmptyBm25Response({
  * Build a BM25 response annotated with dense-degradation metadata.
  *
  * Called when dense search is requested but the embeddings index is cold or
- * model-only. Adds `dense_degraded: true`, `dense_reason`, and `dense_state`
- * to the BM25 result so callers can surface the degradation to the user and
- * know to run `npm run index:prewarm`.
+ * model-only. Adds `dense_degraded: true`, `dense_reason`, `dense_state`, and
+ * a structured `self_heal` block (from {@link evaluateSelfHeal}) to the BM25
+ * result so callers can surface the degradation to the user and know whether
+ * a background repair has been started.
  *
- * @param {{ classificationMetadata?: object | null, compiledFilter?: { sql: string, params: Array<string | number | null> } | null, databasePath?: string, family: string | null, limit: number, query: string, readinessReport: object }} params - Response parameters.
- * @returns {object} BM25 results with `dense_degraded: true` and degradation details.
+ * @param {{ alpha?: number, classificationMetadata?: object | null, client?: import('@libsql/client').Client, compiledFilter?: { sql: string, params: Array<string | number | null> } | null, databasePath?: string, family: string | null, limit: number, query: string, readinessReport: object }} params - Response parameters.
+ * @returns {object} BM25 results with `dense_degraded: true`, degradation details, and `self_heal` guidance.
  */
 async function createDegradedBm25Response({
   alpha,
@@ -1114,7 +1115,7 @@ async function createDegradedBm25Response({
         rawQuery: query,
       });
 
-  return {
+  const response = {
     ...bm25Response,
     dense_degraded: true,
     dense_reason: normalizeDenseReason(
@@ -1124,6 +1125,23 @@ async function createDegradedBm25Response({
     dense_state: readinessReport.state,
     use_dense: false,
   };
+
+  try {
+    const decision = await evaluateSelfHeal({
+      probe: () => Promise.resolve(readinessReport),
+    });
+    if (decision && typeof decision === 'object' && decision.guidanceFields) {
+      response.self_heal = decision.guidanceFields;
+      if (decision.action === 'started') {
+        invalidateDenseReadinessCache();
+      }
+    }
+  } catch {
+    // The guard must never break search: if evaluating self-heal fails,
+    // return the plain BM25 response so the caller still gets results.
+  }
+
+  return response;
 }
 
 /**

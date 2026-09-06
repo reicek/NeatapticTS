@@ -1,3 +1,4 @@
+/* global afterEach, beforeEach, console, describe, expect, it, setTimeout */
 /**
  * @module watch-plans.test
  * @description Comprehensive tests for watch-plans.mjs targeting 100% coverage.
@@ -10,7 +11,7 @@ import fs from 'node:fs';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-import { runPlanWatcher } from './watch-plans.mjs';
+import { createReindexPlanOnChange, runPlanWatcher } from './watch-plans.mjs';
 
 // ---------------------------------------------------------------------------
 // runPlanWatcher
@@ -239,4 +240,60 @@ describe('runPlanWatcher', () => {
     await new Promise((resolve) => setTimeout(resolve, 200));
     expect(watcher).toBeDefined();
   });
+
+  it('constructs without an explicit onChange (defaults to reindex hook)', async () => {
+    watcher = await runPlanWatcher({ planDirs: [] });
+    expect(typeof watcher.close).toBe('function');
+  });
 });
+
+// ---------------------------------------------------------------------------
+// createReindexPlanOnChange (P2-S1-A default wiring)
+// ---------------------------------------------------------------------------
+
+describe('createReindexPlanOnChange', () => {
+  it('forwards the changed file path to the injected reindexer', async () => {
+    const reindexPlanFamilyFn = jest
+      .fn()
+      .mockResolvedValue({ syncFresh: true });
+    const onChange = createReindexPlanOnChange({ reindexPlanFamilyFn });
+
+    await onChange(path.join(tempDirHelper(), 'app.plans.md'));
+
+    expect(reindexPlanFamilyFn).toHaveBeenCalledTimes(1);
+    const [files, options] = reindexPlanFamilyFn.mock.calls[0];
+    expect(files).toHaveLength(1);
+    expect(files[0].endsWith('app.plans.md')).toBe(true);
+    expect(options).toEqual({});
+  });
+
+  it('forwards reindexOptions to the injected reindexer', async () => {
+    const reindexPlanFamilyFn = jest
+      .fn()
+      .mockResolvedValue({ syncFresh: true });
+    const onChange = createReindexPlanOnChange({
+      reindexPlanFamilyFn,
+      reindexOptions: { maxSyncWaitMs: 5_000 },
+    });
+
+    await onChange('plans/app.plans.md');
+
+    expect(reindexPlanFamilyFn).toHaveBeenCalledWith(
+      ['plans/app.plans.md'],
+      { maxSyncWaitMs: 5_000 },
+    );
+  });
+
+  it('defaults to the production reindexPlanFamily when none is injected', async () => {
+    const onChange = createReindexPlanOnChange();
+    // Non-plan files short-circuit to trivially fresh without spawning.
+    const result = await onChange('README.md');
+
+    expect(result.planFresh).toBe(true);
+    expect(result.files).toEqual([]);
+  });
+});
+
+function tempDirHelper() {
+  return path.join(__dirname, '__tmp_watch_plans_test');
+}

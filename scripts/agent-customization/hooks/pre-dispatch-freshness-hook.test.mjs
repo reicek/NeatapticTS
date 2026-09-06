@@ -46,7 +46,6 @@ jest.unstable_mockModule('node:fs', () => ({
 const {
   checkStaleness,
   readManifestTimestamp,
-  updateManifest,
   runReindexBackground,
   runReindexSync,
   parseEnvInt,
@@ -98,12 +97,23 @@ describe('pre-dispatch-freshness-hook', () => {
       assert.strictEqual(readManifestTimestamp(), null);
     });
 
-    it('returns timestamp from manifest', () => {
+    it('returns families.plan.lastReindex from per-family manifest', () => {
       mockExistsSync.mockReturnValue(true);
       mockReadFileSync.mockReturnValue(
-        JSON.stringify({ lastReindex: 1700000000000 }),
+        JSON.stringify({
+          lastReindex: 1600000000000,
+          families: { plan: { lastReindex: 1700000000000 } },
+        }),
       );
       assert.strictEqual(readManifestTimestamp(), 1700000000000);
+    });
+
+    it('falls back to global lastReindex when families.plan is absent', () => {
+      mockExistsSync.mockReturnValue(true);
+      mockReadFileSync.mockReturnValue(
+        JSON.stringify({ lastReindex: 1650000000000 }),
+      );
+      assert.strictEqual(readManifestTimestamp(), 1650000000000);
     });
 
     it('returns null on malformed JSON', () => {
@@ -112,9 +122,13 @@ describe('pre-dispatch-freshness-hook', () => {
       assert.strictEqual(readManifestTimestamp(), null);
     });
 
-    it('returns null when lastReindex is not finite', () => {
+    it('returns null when families.plan.lastReindex is not finite', () => {
       mockExistsSync.mockReturnValue(true);
-      mockReadFileSync.mockReturnValue(JSON.stringify({ lastReindex: 'NaN' }));
+      mockReadFileSync.mockReturnValue(
+        JSON.stringify({
+          families: { plan: { lastReindex: 'NaN' } },
+        }),
+      );
       assert.strictEqual(readManifestTimestamp(), null);
     });
   });
@@ -157,22 +171,27 @@ describe('pre-dispatch-freshness-hook', () => {
     });
   });
 
-  describe('updateManifest', () => {
-    it('writes a manifest with the current timestamp', () => {
-      updateManifest();
-      assert.ok(mockMkdirSync.mock.calls.length >= 1);
-      assert.ok(mockWriteFileSync.mock.calls.length >= 1);
-      const content = mockWriteFileSync.mock.calls[0][1];
-      const parsed = JSON.parse(content);
-      assert.ok(parsed.lastReindex > 0);
-      assert.strictEqual(parsed.updatedBy, 'pre-dispatch-freshness-hook');
+  describe('manifest read-only contract', () => {
+    it('does not write the freshness manifest during staleness checks', () => {
+      mockExistsSync.mockReturnValue(false);
+      checkStaleness(300, 300);
+      assert.strictEqual(
+        mockWriteFileSync.mock.calls.filter((call) =>
+          String(call[0]).includes('freshness-manifest.json'),
+        ).length,
+        0,
+      );
     });
 
-    it('does not throw when writeFileSync fails', () => {
-      mockWriteFileSync.mockImplementationOnce(() => {
-        throw new Error('EACCES');
-      });
-      assert.doesNotThrow(() => updateManifest());
+    it('does not write the freshness manifest when triggering a background reindex', () => {
+      mockExistsSync.mockReturnValue(false);
+      runReindexBackground();
+      assert.strictEqual(
+        mockWriteFileSync.mock.calls.filter((call) =>
+          String(call[0]).includes('freshness-manifest.json'),
+        ).length,
+        0,
+      );
     });
   });
 

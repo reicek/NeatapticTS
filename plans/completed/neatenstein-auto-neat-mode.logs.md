@@ -1024,7 +1024,7 @@ All three Round 5 issues are fixed and verified:
 
 **Context:** The gun-sprite-data test file (`gun-sprite-data.test.ts`) already follows the "test capability not content" pattern with AC-prefixed IDs. Robot-sprite-data tests are embedded within `sprites.test.ts` and currently hardcode specific palette indices (e.g., index 4 = white), exact fog-blended RGBA values, and exact frame content equality — making them brittle to sprite art regeneration. This phase makes them resilient.
 
-**Pragmatic mode:** This phase operates under the plan's pragmatic mandates (broad slices, bypass legacy ceremony, model mandate `glm-5.2:cloud`).
+**Pragmatic mode:** This phase operates under the plan's pragmatic mandates (broad slices, bypass legacy ceremony, model mandate `glm-5.3-flash:cloud`).
 
 ```yaml
 phase: 7

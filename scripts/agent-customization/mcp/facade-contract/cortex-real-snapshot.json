@@ -84,9 +84,7 @@
                 },
                 {
                   "type": "string",
-                  "enum": [
-                    "domain-only"
-                  ]
+                  "enum": ["domain-only"]
                 }
               ]
             },
@@ -107,9 +105,7 @@
               "additionalProperties": false
             }
           },
-          "required": [
-            "query"
-          ],
+          "required": ["query"],
           "additionalProperties": false
         },
         "outputSchema": {
@@ -144,11 +140,7 @@
             },
             "rerank_state": {
               "type": "string",
-              "enum": [
-                "cold",
-                "model-only",
-                "warm"
-              ],
+              "enum": ["cold", "model-only", "warm"],
               "description": "Reranker readiness state: cold, model-only, or warm."
             },
             "rerank_reason": {
@@ -199,11 +191,7 @@
             },
             "dense_state": {
               "type": "string",
-              "enum": [
-                "cold",
-                "model-only",
-                "warm"
-              ],
+              "enum": ["cold", "model-only", "warm"],
               "description": "Dense-readiness provenance emitted on default-on dense responses: cold, model-only, or warm."
             },
             "dense_reason": {
@@ -221,12 +209,7 @@
               }
             }
           },
-          "required": [
-            "query",
-            "limit",
-            "use_dense",
-            "results"
-          ],
+          "required": ["query", "limit", "use_dense", "results"],
           "additionalProperties": true
         }
       },
@@ -249,10 +232,7 @@
             },
             "context_format": {
               "type": "string",
-              "enum": [
-                "markdown",
-                "json"
-              ]
+              "enum": ["markdown", "json"]
             },
             "use_dense": {
               "type": "boolean",
@@ -265,10 +245,7 @@
               "type": "number"
             },
             "expand_query": {
-              "type": [
-                "boolean",
-                "string"
-              ]
+              "type": ["boolean", "string"]
             },
             "rerank_candidates_count": {
               "type": "number"
@@ -289,17 +266,12 @@
             },
             "dedup_strategy": {
               "type": "string",
-              "enum": [
-                "exact",
-                "cosine"
-              ],
+              "enum": ["exact", "cosine"],
               "default": "exact",
               "description": "Deduplication strategy: exact (hash-based collapse) or cosine (embedding similarity collapse)."
             }
           },
-          "required": [
-            "query"
-          ],
+          "required": ["query"],
           "additionalProperties": false
         },
         "outputSchema": {
@@ -385,11 +357,7 @@
               }
             }
           },
-          "required": [
-            "context",
-            "token_count",
-            "tier_counts"
-          ],
+          "required": ["context", "token_count", "tier_counts"],
           "additionalProperties": true
         }
       },
@@ -481,9 +449,7 @@
               "additionalProperties": false
             }
           },
-          "required": [
-            "query"
-          ],
+          "required": ["query"],
           "additionalProperties": false
         },
         "outputSchema": {
@@ -636,9 +602,7 @@
               "description": "Optional originating query for click correlation and deduplication."
             }
           },
-          "required": [
-            "chunk_id"
-          ],
+          "required": ["chunk_id"],
           "additionalProperties": false
         },
         "outputSchema": {
@@ -719,9 +683,7 @@
               "description": "Chunk ID of a depth-1 sub-chunk whose parent to load."
             }
           },
-          "required": [
-            "chunk_id"
-          ],
+          "required": ["chunk_id"],
           "additionalProperties": false
         },
         "outputSchema": {
@@ -793,9 +755,7 @@
               "type": "string"
             }
           },
-          "required": [
-            "file_path"
-          ],
+          "required": ["file_path"],
           "additionalProperties": false
         },
         "outputSchema": {
@@ -870,9 +830,7 @@
           "properties": {
             "force": {
               "type": "string",
-              "enum": [
-                "diskann"
-              ],
+              "enum": ["diskann"],
               "description": "Override the automatically selected ANN strategy."
             },
             "validate_recall": {
@@ -1008,16 +966,9 @@
               "type": "array",
               "items": {
                 "type": "string",
-                "enum": [
-                  "high",
-                  "medium",
-                  "low"
-                ]
+                "enum": ["high", "medium", "low"]
               },
-              "default": [
-                "high",
-                "medium"
-              ],
+              "default": ["high", "medium"],
               "description": "Minimum confidence levels to follow."
             }
           },
@@ -1101,9 +1052,7 @@
                 },
                 {
                   "type": "string",
-                  "enum": [
-                    "domain-only"
-                  ]
+                  "enum": ["domain-only"]
                 }
               ]
             },
@@ -1120,9 +1069,7 @@
               "description": "Override query classification for expansion behavior. When provided, expansion behavior is determined by expansionBehaviorForClass()."
             }
           },
-          "required": [
-            "query"
-          ],
+          "required": ["query"],
           "additionalProperties": false
         },
         "outputSchema": {
@@ -1160,11 +1107,7 @@
               }
             }
           },
-          "required": [
-            "original_query",
-            "expanded_terms",
-            "expansion"
-          ],
+          "required": ["original_query", "expanded_terms", "expansion"],
           "additionalProperties": true
         }
       },
@@ -1180,12 +1123,7 @@
             },
             "signal_type": {
               "type": "string",
-              "enum": [
-                "reference",
-                "positive",
-                "negative",
-                "irrelevant"
-              ],
+              "enum": ["reference", "positive", "negative", "irrelevant"],
               "description": "Feedback signal type: reference (cited), positive (helpful), negative (not helpful), or irrelevant."
             },
             "signal_strength": {
@@ -1205,10 +1143,7 @@
               "description": "Optional agent identifier that submitted the feedback."
             }
           },
-          "required": [
-            "chunk_id",
-            "signal_type"
-          ],
+          "required": ["chunk_id", "signal_type"],
           "additionalProperties": false
         },
         "outputSchema": {
@@ -1272,18 +1207,13 @@
                     "type": "array"
                   }
                 },
-                "required": [
-                  "sql"
-                ],
+                "required": ["sql"],
                 "additionalProperties": false
               }
             },
             "fusion": {
               "type": "string",
-              "enum": [
-                "rrf",
-                "alpha"
-              ],
+              "enum": ["rrf", "alpha"],
               "default": "rrf",
               "description": "Fusion strategy for merging multi-query results. \"rrf\" uses Reciprocal Ranked Fusion (rank-based); \"alpha\" uses score-based weighted blend of normalized scores."
             },
@@ -1296,9 +1226,7 @@
               "description": "When true, include dense (embedding) query results in the parallel batch alongside BM25 queries. When false, only the provided queries are executed."
             }
           },
-          "required": [
-            "queries"
-          ],
+          "required": ["queries"],
           "additionalProperties": false
         },
         "outputSchema": {
@@ -1319,9 +1247,7 @@
               "description": "Per-query failure descriptors when individual queries fail. Omitted when all queries succeed."
             }
           },
-          "required": [
-            "results"
-          ],
+          "required": ["results"],
           "additionalProperties": true
         }
       },
@@ -1384,9 +1310,7 @@
               "description": "Maximum number of combined results to return."
             }
           },
-          "required": [
-            "query"
-          ],
+          "required": ["query"],
           "additionalProperties": false
         },
         "outputSchema": {
@@ -1445,10 +1369,7 @@
             },
             "action": {
               "type": "string",
-              "enum": [
-                "create",
-                "delete"
-              ],
+              "enum": ["create", "delete"],
               "default": "create",
               "description": "Whether to create (POST with seed) or delete (DELETE) the branch. Defaults to \"create\"."
             },
@@ -1465,10 +1386,7 @@
               "description": "Source database to branch from."
             }
           },
-          "required": [
-            "branch_name",
-            "action"
-          ],
+          "required": ["branch_name", "action"],
           "additionalProperties": false
         }
       },
@@ -1499,10 +1417,7 @@
               "description": "ISO-8601 timestamp within the PITR retention window of the source database."
             }
           },
-          "required": [
-            "database_name",
-            "timestamp"
-          ],
+          "required": ["database_name", "timestamp"],
           "additionalProperties": false
         }
       }

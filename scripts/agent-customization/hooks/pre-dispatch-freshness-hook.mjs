@@ -10,6 +10,12 @@
  * detached background process to run a full reindex (`build-index.mjs` +
  * `embed-index.mjs`).
  *
+ * The hook is read-only with respect to the freshness manifest. The validator
+ * (`rag-index/validate-index.mjs`) is the single writer of
+ * `rag-index/data/freshness-manifest.json`; the hook only reads the manifest
+ * to decide whether a reindex is needed. This avoids manifest write concurrency
+ * hazards between concurrent hook invocations.
+ *
  * The hook NEVER blocks dispatch. All tooling errors degrade gracefully: if
  * the freshness check cannot run (missing database, missing manifest, etc.),
  * the hook logs the error and returns `{ continue: true }`.
@@ -27,13 +33,7 @@
  * used sparingly as it blocks dispatch.
  */
 import { spawn, spawnSync } from 'node:child_process';
-import {
-  appendFileSync,
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  writeFileSync,
-} from 'node:fs';
+import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -45,8 +45,9 @@ const embedIndexPath = path.join(repoRoot, 'rag-index', 'embed-index.mjs');
 const logPath = path.join(repoRoot, 'artifacts', 'pre-dispatch-freshness.log');
 const manifestPath = path.join(
   repoRoot,
-  'artifacts',
-  'cortex-freshness-manifest.json',
+  'rag-index',
+  'data',
+  'freshness-manifest.json',
 );
 
 const DEFAULT_GRACE_WINDOW_S = 300;
@@ -85,7 +86,6 @@ async function main() {
     } else {
       runReindexBackground();
     }
-    updateManifest();
   } else {
     safeLog(
       `[pre-dispatch-freshness] index is fresh enough (age ${staleness.ageS}s, grace ${graceWindowS}s)`,
@@ -106,9 +106,9 @@ async function main() {
 /**
  * Determine whether the index is stale enough to warrant a reindex.
  *
- * Uses a manifest file (`artifacts/cortex-freshness-manifest.json`) that
- * records the last reindex timestamp. If no manifest exists, the index is
- * considered stale (age = Infinity).
+ * Uses the per-family freshness manifest (`rag-index/data/freshness-manifest.json`)
+ * and reads the plan family's `lastReindex` timestamp. If no manifest exists,
+ * the index is considered stale (age = Infinity).
  *
  * @param {number} graceWindowS - Grace window in seconds.
  * @param {number} stalenessThresholdS - Additional staleness threshold in seconds.
@@ -125,7 +125,12 @@ export function checkStaleness(graceWindowS, stalenessThresholdS) {
 }
 
 /**
- * Read the last reindex timestamp from the manifest file.
+ * Read the last plan-family reindex timestamp from the manifest file.
+ *
+ * Reads `families.plan.lastReindex` from the per-family freshness manifest,
+ * falling back to the top-level `lastReindex` field for backward compatibility
+ * with older manifests. Returns `null` when the manifest is absent or cannot
+ * be parsed.
  *
  * @returns {number|null} Timestamp in ms, or null if no manifest exists.
  */
@@ -134,33 +139,12 @@ export function readManifestTimestamp() {
     if (!existsSync(manifestPath)) return null;
     const content = readFileSync(manifestPath, 'utf8');
     const manifest = JSON.parse(content);
+    const familyTs = Number(manifest.families?.plan?.lastReindex);
+    if (Number.isFinite(familyTs)) return familyTs;
     const ts = Number(manifest.lastReindex);
     return Number.isFinite(ts) ? ts : null;
   } catch {
     return null;
-  }
-}
-
-/**
- * Update the manifest with the current timestamp, marking a reindex as started.
- */
-export function updateManifest() {
-  try {
-    mkdirSync(path.dirname(manifestPath), { recursive: true });
-    writeFileSync(
-      manifestPath,
-      JSON.stringify(
-        {
-          lastReindex: Date.now(),
-          updatedBy: 'pre-dispatch-freshness-hook',
-        },
-        null,
-        2,
-      ),
-      'utf8',
-    );
-  } catch {
-    // Best-effort; never throw.
   }
 }
 

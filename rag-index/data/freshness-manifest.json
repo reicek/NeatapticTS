@@ -1,0 +1,86 @@
+{
+  "lastReindex": 1788636565236,
+  "updatedBy": "validate-index.mjs",
+  "families": {
+    "readme": {
+      "fresh": true,
+      "stalePaths": [],
+      "lastReindex": 1788636565236,
+      "maxSyncWaitMs": 0,
+      "max_age_ms": null,
+      "gated": true
+    },
+    "ts-source": {
+      "fresh": true,
+      "stalePaths": [],
+      "lastReindex": 1788636565236,
+      "maxSyncWaitMs": 0,
+      "max_age_ms": null,
+      "gated": true
+    },
+    "plan": {
+      "fresh": true,
+      "stalePaths": [],
+      "lastReindex": 1788636565236,
+      "maxSyncWaitMs": 60000,
+      "max_age_ms": null,
+      "gated": true
+    },
+    "completed-plan": {
+      "fresh": true,
+      "stalePaths": [],
+      "lastReindex": 1788636565236,
+      "maxSyncWaitMs": 0,
+      "max_age_ms": null,
+      "gated": false
+    },
+    "demo": {
+      "fresh": true,
+      "stalePaths": [],
+      "lastReindex": 1788636565236,
+      "maxSyncWaitMs": 0,
+      "max_age_ms": null,
+      "gated": true
+    },
+    "benchmark": {
+      "fresh": true,
+      "stalePaths": [],
+      "lastReindex": 1788636565236,
+      "maxSyncWaitMs": 0,
+      "max_age_ms": null,
+      "gated": true
+    },
+    "root-doc": {
+      "fresh": true,
+      "stalePaths": [],
+      "lastReindex": 1788636565236,
+      "maxSyncWaitMs": 0,
+      "max_age_ms": null,
+      "gated": true
+    },
+    "skill": {
+      "fresh": true,
+      "stalePaths": [],
+      "lastReindex": 1788636565236,
+      "maxSyncWaitMs": 0,
+      "max_age_ms": null,
+      "gated": true
+    },
+    "agent": {
+      "fresh": true,
+      "stalePaths": [],
+      "lastReindex": 1788636565236,
+      "maxSyncWaitMs": 0,
+      "max_age_ms": null,
+      "gated": true
+    },
+    "copilot-instructions": {
+      "fresh": true,
+      "stalePaths": [],
+      "lastReindex": 1788636565236,
+      "maxSyncWaitMs": 0,
+      "max_age_ms": null,
+      "gated": true
+    }
+  }
+}

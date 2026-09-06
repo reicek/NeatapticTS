@@ -13,13 +13,13 @@ repository, the `model` field in `.github/agents/*.agent.md` frontmatter
 
 The Copilot CLI's native `agentsResolveCustomAgentModel` function resolves
 the frontmatter `model` value by appending a provider suffix (e.g.
-`(ollama)`). The suffixed model name (e.g. `glm-5.2:cloud (ollama)`) is
+`(ollama)`). The suffixed model name (e.g. `glm-5.3-flash:cloud (ollama)`) is
 sent to the Ollama API, which rejects it with **400 Bad Request** because
 model names cannot contain spaces or parentheses.
 
 When the `model` field is **omitted**, `agentsResolveCustomAgentModel`
 receives `void 0` and returns the session model directly (e.g.
-`glm-5.2:cloud`) without any suffix. The clean model name is sent to the
+`glm-5.3-flash:cloud`) without any suffix. The clean model name is sent to the
 Copilot API — the same path used by `general-purpose` and other built-in
 agents.
 
@@ -32,7 +32,7 @@ This means:
 
 1. **Do NOT add a `model:` field** to any `.agent.md` frontmatter file.
 2. To change the model for all agents, change the session model in the
-   Copilot CLI (e.g. `/model glm-5.2:cloud`).
+   Copilot CLI (e.g. `/model glm-5.3-flash:cloud`).
 3. To bulk-remove existing `model:` fields, run:
    `node scripts/agent-customization/update-agent-models.mjs --remove`
 4. After any frontmatter change, run:

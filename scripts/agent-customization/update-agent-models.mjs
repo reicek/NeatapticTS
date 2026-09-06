@@ -25,12 +25,12 @@
  *
  *   # Replace specific model string
  *   node scripts/agent-customization/update-agent-models.mjs \
- *     --from='glm-5.2:cloud (ollama)' \
- *     --to='glm-5.2:cloud'
+ *     --from='glm-5.3-flash:cloud (ollama)' \
+ *     --to='glm-5.3-flash:cloud'
  *
  *   # Replace ALL model strings with a single target (omit --from)
  *   node scripts/agent-customization/update-agent-models.mjs \
- *     --to='glm-5.2:cloud'
+ *     --to='glm-5.3-flash:cloud'
  *
  * Options:
  *   --remove          Remove all top-level frontmatter model: fields
@@ -96,7 +96,7 @@ Options:
 Why --remove is recommended:
   When a custom agent has a \`model:\` field in frontmatter, the CLI resolves
   it via agentsResolveCustomAgentModel, which appends a provider suffix like
-  "(ollama)". The suffixed name (e.g. "glm-5.2:cloud (ollama)") is sent to
+  "(ollama)". The suffixed name (e.g. "glm-5.3-flash:cloud (ollama)") is sent to
   the Ollama API, which rejects it with "400 invalid model name". Removing
   the model: field makes the agent inherit the session model directly,
   bypassing the problematic native resolver.

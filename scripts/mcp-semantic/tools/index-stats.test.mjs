@@ -3,6 +3,7 @@
  * @description Coverage tests for index-stats.mjs — metadata coverage,
  * feedback stats, ANN stats, and asIsoTimestamp edge cases.
  */
+import { jest } from '@jest/globals';
 import {
   createSchemaClient,
   insertTestFixtures,
@@ -102,6 +103,20 @@ describe('index-stats', () => {
         include_metadata_coverage: false,
       });
       expect(result.metadata_coverage).toBeUndefined();
+    });
+
+    it('returns zero metadata coverage for an empty corpus', async () => {
+      const emptyClient = await createSchemaClient();
+      try {
+        const result = await indexStats({
+          client: emptyClient,
+          include_metadata_coverage: true,
+        });
+        expect(result.metadata_coverage.chunks.context_header.percent).toBe(0);
+        expect(result.metadata_coverage.documents.arch_layer.percent).toBe(0);
+      } finally {
+        await emptyClient.close();
+      }
     });
   });
 
@@ -263,6 +278,215 @@ describe('index-stats', () => {
       expect(result.ann.index_id).toBeNull();
       expect(result.ann.index_type).toBe('diskann');
       expect(result.ann.current_chunk_count).toBe(60000);
+    });
+  });
+
+  describe('self-heal / dense mismatch', () => {
+    const mockEvaluateSelfHeal = jest.fn();
+    let localIndexStats;
+
+    beforeEach(async () => {
+      jest.resetModules();
+      mockEvaluateSelfHeal.mockReset();
+      mockEvaluateSelfHeal.mockResolvedValue({
+        action: 'started',
+        guidanceFields: {
+          state: 'model-only',
+          reason: 'embeddings incomplete',
+          action: 'started',
+          attempt: 1,
+          max_attempts: 3,
+          cooldown_s: 600,
+          next_allowed_at: 0,
+          est_duration_min: 1,
+          manual_recovery: null,
+          guidance: 'self-heal guidance text',
+        },
+        spawnDecision: { pid: 123 },
+      });
+      jest.unstable_mockModule(
+        '../../agent-customization/cortex/cortex-health-guard.mjs',
+        () => ({
+          evaluateSelfHeal: mockEvaluateSelfHeal,
+          __esModule: true,
+        }),
+      );
+      const mod = await import('./index-stats.mjs');
+      localIndexStats = mod.indexStats;
+    });
+
+    it('exposes dense mismatch fields required by the guard when embeddings are incomplete', async () => {
+      const result = await localIndexStats({ client });
+
+      expect(result.dense_state).toBe('model-only');
+      expect(result.dense_reason).toMatch(/embedding/i);
+      expect(result.dense_degraded).toBe(true);
+      expect(result.chunk_count).toBe(2);
+      expect(result.embedding_count).toBe(0);
+    });
+
+    it('includes a self_heal block when chunk/embedding counts mismatch', async () => {
+      const result = await localIndexStats({ client });
+
+      expect(result.self_heal).toBeDefined();
+      expect(result.self_heal.action).toMatch(
+        /started|in_flight|cooldown|exhausted|disabled/,
+      );
+      expect(mockEvaluateSelfHeal).toHaveBeenCalled();
+    });
+  });
+
+  describe('indexStats — self-heal branch coverage', () => {
+    const mockEvaluateSelfHeal = jest.fn();
+    const mockCheckDenseReadiness = jest.fn();
+    const mockGetTursoClient = jest.fn();
+    let localIndexStats;
+
+    beforeEach(async () => {
+      jest.resetModules();
+      mockEvaluateSelfHeal.mockReset();
+      mockCheckDenseReadiness.mockReset();
+      mockGetTursoClient.mockReset();
+      mockGetTursoClient.mockResolvedValue(client);
+      jest.unstable_mockModule(
+        '../../agent-customization/cortex/cortex-health-guard.mjs',
+        () => ({
+          evaluateSelfHeal: mockEvaluateSelfHeal,
+          __esModule: true,
+        }),
+      );
+      jest.unstable_mockModule(
+        '../../../rag-index/dense-readiness.mjs',
+        () => ({
+          checkDenseReadiness: mockCheckDenseReadiness,
+          __esModule: true,
+        }),
+      );
+      jest.unstable_mockModule('./cortex-db.mjs', () => ({
+        getTursoClient: mockGetTursoClient,
+        __esModule: true,
+      }));
+      const mod = await import('./index-stats.mjs');
+      localIndexStats = mod.indexStats;
+    });
+
+    it('skips self-heal when dense readiness reports ready', async () => {
+      delete process.env.DENSE_FORCE_STATE;
+      mockCheckDenseReadiness.mockResolvedValue({
+        ready: true,
+        state: 'warm',
+        reason: 'embeddings present',
+        chunk_count: 2,
+        embedding_count: 2,
+      });
+
+      const result = await localIndexStats({ client });
+
+      expect(result.dense_degraded).toBe(false);
+      expect(result.self_heal).toBeUndefined();
+      expect(mockEvaluateSelfHeal).not.toHaveBeenCalled();
+    });
+
+    it('uses guard guidanceFields when degraded', async () => {
+      mockEvaluateSelfHeal.mockResolvedValue({
+        action: 'started',
+        guidanceFields: {
+          action: 'started',
+          state: 'model-only',
+          guidance: 'guard guidance',
+        },
+      });
+      mockCheckDenseReadiness.mockResolvedValue({
+        ready: false,
+        state: 'model-only',
+        reason: 'embeddings incomplete',
+        chunk_count: 2,
+        embedding_count: 0,
+      });
+
+      const result = await localIndexStats({ client });
+
+      expect(result.self_heal).toEqual(
+        expect.objectContaining({ guidance: 'guard guidance' }),
+      );
+    });
+
+    it('falls back to deterministic guidance when the guard returns no guidanceFields', async () => {
+      mockEvaluateSelfHeal.mockResolvedValue({ action: 'noop' });
+      mockCheckDenseReadiness.mockResolvedValue({
+        ready: false,
+        state: 'model-only',
+        reason: 'embeddings incomplete',
+        chunk_count: 2,
+        embedding_count: 0,
+      });
+
+      const result = await localIndexStats({ client });
+
+      expect(result.self_heal).toEqual(
+        expect.objectContaining({
+          action: 'started',
+          state: 'model-only',
+          guidance: expect.stringMatching(/self-heal/i),
+        }),
+      );
+    });
+
+    it('swallows guard failures and returns plain stats', async () => {
+      mockEvaluateSelfHeal.mockRejectedValue(new Error('guard failure'));
+      mockCheckDenseReadiness.mockResolvedValue({
+        ready: false,
+        state: 'cold',
+        reason: 'model missing',
+        chunk_count: 2,
+        embedding_count: 0,
+      });
+
+      const result = await localIndexStats({ client });
+
+      expect(result.total_documents).toBe(1);
+      expect(result.self_heal).toBeUndefined();
+    });
+
+    it('omits test-only seams when NODE_ENV is not test', async () => {
+      const originalNodeEnv = process.env.NODE_ENV;
+      process.env.NODE_ENV = 'production';
+
+      try {
+        mockEvaluateSelfHeal.mockResolvedValue({ action: 'noop' });
+        mockCheckDenseReadiness.mockResolvedValue({
+          ready: false,
+          state: 'model-only',
+          reason: 'embeddings incomplete',
+          chunk_count: 2,
+          embedding_count: 0,
+        });
+
+        await localIndexStats({ client });
+
+        const callArg = mockEvaluateSelfHeal.mock.calls[0][0];
+        expect(callArg.stateDir).toBeUndefined();
+        expect(callArg.spawner).toBeUndefined();
+      } finally {
+        process.env.NODE_ENV = originalNodeEnv;
+      }
+    });
+
+    it('uses default options and the shared getTursoClient when called without arguments', async () => {
+      delete process.env.DENSE_FORCE_STATE;
+      mockCheckDenseReadiness.mockResolvedValue({
+        ready: true,
+        state: 'warm',
+        reason: 'embeddings present',
+        chunk_count: 2,
+        embedding_count: 2,
+      });
+
+      const result = await localIndexStats();
+
+      expect(mockGetTursoClient).toHaveBeenCalledWith(undefined);
+      expect(result.total_documents).toBe(1);
+      expect(result.self_heal).toBeUndefined();
     });
   });
 });

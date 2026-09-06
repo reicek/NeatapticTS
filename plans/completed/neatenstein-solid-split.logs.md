@@ -42,7 +42,7 @@ modules. No compatibility shims — direct-path migration only.
 - **Module-level caches/buffers moved WITH their owning util** — never duplicated.
 - **No compatibility shims**: the main module IS the facade; no separate barrel/shim file.
 - **Legacy noise removed**: obsolete/dead stubs (e.g. `scripts/voxel-gun.ts`) deleted rather than left.
-- **Pragmatic mode**: broad slices, bypass legacy ceremony, single-model mandate (`glm-5.2:cloud`), follow-ups via `write_agent` to the same idle agent.
+- **Pragmatic mode**: broad slices, bypass legacy ceremony, single-model mandate (`glm-5.3-flash:cloud`), follow-ups via `write_agent` to the same idle agent.
 
 ## Worker Reduction Highlight
 

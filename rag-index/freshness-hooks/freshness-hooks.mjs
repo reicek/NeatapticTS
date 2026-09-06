@@ -34,6 +34,9 @@ export const DEFAULT_CHANGED_FILE_GLOBS = Object.freeze([
   'src/**/*.ts',
   'scripts/**/*.mjs',
   'plans/**/*.md',
+  '.github/skills/**/*.md',
+  '.github/agents/**/*.md',
+  '.github/copilot-instructions.md',
 ]);
 
 /** @type {number} */
@@ -66,6 +69,25 @@ const FAMILY_RULES = Object.freeze([
     family: 'root-doc',
     patterns: ['README.md', 'STYLEGUIDE.md', 'CONTRIBUTING.md'],
   },
+  {
+    family: 'skill',
+    patterns: ['.github/skills/**/SKILL.md'],
+  },
+  {
+    family: 'agent',
+    patterns: ['.github/agents/*.agent.md'],
+  },
+  {
+    family: 'copilot-instructions',
+    patterns: ['.github/copilot-instructions.md'],
+  },
+]);
+
+/** Globs that should never trigger a build, even if they match an include glob. */
+const DEFAULT_IGNORE_GLOBS = Object.freeze([
+  'src/**/*.d.ts',
+  'src/**/*.test.ts',
+  'src/**/*.spec.ts',
 ]);
 
 // ---------------------------------------------------------------------------
@@ -150,11 +172,14 @@ export function createFreshnessHook(options = {}) {
 
     const indexedPaths = await collectIndexedPaths(databasePath, client);
 
-    const filteredPaths = paths.filter(
-      (filePath) =>
-        indexedPaths.has(filePath) ||
-        matchesAnyGlob(filePath, changedFileGlobs),
-    );
+    const filteredPaths = paths.filter((filePath) => {
+      if (matchesAnyGlob(filePath, DEFAULT_IGNORE_GLOBS)) {
+        return false;
+      }
+      return (
+        indexedPaths.has(filePath) || matchesAnyGlob(filePath, changedFileGlobs)
+      );
+    });
 
     if (filteredPaths.length === 0) {
       return { updated: [], failed: [] };

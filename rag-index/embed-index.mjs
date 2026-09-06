@@ -54,12 +54,13 @@ const BATCH_SIZE = 1000;
 
 /**
  * Build or incrementally update the dense embedding index in the consolidated
- * `chunks` table, including step-packet slice metadata for plan-family chunks.
+ * `chunks` table, including step-packet slice metadata for plan-family chunks
+ * (`plan` and `completed-plan`).
  *
  * Reads every chunk, computes an embedding with the configured embedder, and
  * writes the quantized vector to `chunks.embedding`. It also parses step-packet
- * YAML for `plan`-family chunks and persists `slice_id`, `step_number`,
- * `phase`, and `status` on each chunk row.
+ * YAML for `plan`/`completed-plan`-family chunks and persists `slice_id`,
+ * `step_number`, `phase`, and `status` on each chunk row.
  *
  * @param {object} [options={}] - Build options.
  * @param {string} [options.corpusDatabasePath] - Override path to the corpus database.
@@ -366,7 +367,10 @@ function extractSliceMetadata(bodyText, docFamily) {
     step_number: null,
   };
 
-  if (docFamily !== 'plan' || typeof bodyText !== 'string') {
+  if (
+    (docFamily !== 'plan' && docFamily !== 'completed-plan') ||
+    typeof bodyText !== 'string'
+  ) {
     return emptyMetadata;
   }
 

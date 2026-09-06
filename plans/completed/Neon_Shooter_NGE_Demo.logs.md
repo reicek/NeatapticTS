@@ -484,7 +484,7 @@ slices:
 - `NEATENSTEIN_RENDER_DISTANCE_CAP=30` (framebuffer.ts:47) is the hard render cap. Fog, sprite culling, and floor/ceiling projection must all terminate at this distance.
 - `NEATENSTEIN_MAX_VIEW_DIST=140` (framebuffer.ts:37) is the soft fog denominator. The fog fix changes the fog factor denominator to `RENDER_DISTANCE_CAP` so fog reaches 100% at the cap wall. `MAX_VIEW_DIST` may be removed if no longer referenced.
 - The rAF clock slice changes the host→worker timing contract. The worker remains message-driven (postMessage). The host converts from fixed-timestep + throttle to delta-time-based posting with FPS-scaled simulation stepping.
-- All agents use `glm-5.2:cloud`. No Chrome MCP — validation is jest-based only.
+- All agents use `glm-5.3-flash:cloud`. No Chrome MCP — validation is jest-based only.
 - No Deferred Cleanup: remove old fixed-timestep/throttle constants and code in the same slice that introduces the rAF clock.
 
 **Step 10.3 packet:**
@@ -698,7 +698,7 @@ slices:
 
 **Step objective:** Replace stub-based enemy AI with real MLP neural network activation. 6-input vision vectors matching asciiMaze compass+openness+progressDelta pattern, MLP topology [6,6,4,4] (90 params), activateMlp wired into controller for BFS re-ranking with fallback, real bounded rollouts replacing stub, Lamarckian warm-start with bounded backprop and deterministic re-application, navigation+combat composite fitness shaping. MLP does NOT replace BFS navigation — it adds intelligence on top by re-ranking BFS candidate directions.
 
-**Mandates (pragmatic mode):** Broad slices (up to 5 files per slice, topology cascade), bypass strict ceremony (green-only for topology-only changes), model mandate (glm-5.2:cloud), remove legacy noise (delete stub, no backward-compat wrappers).
+**Mandates (pragmatic mode):** Broad slices (up to 5 files per slice, topology cascade), bypass strict ceremony (green-only for topology-only changes), model mandate (glm-5.3-flash:cloud), remove legacy noise (delete stub, no backward-compat wrappers).
 
 **5 slices (all green-validated):**
 1. 10.5-vision-inputs — 6-element vision vector [compassScalar, openN/E/S/W, progressDelta] + previousStepDistance on ControlledEnemy (3h, 3 files: enemy-navigation.ts, enemy-controller.ts, enemy-controller.test.ts)
@@ -787,7 +787,7 @@ PlanUpdate:
   green_validation:
     status: 'GREEN: OK — all validations pass'
     timestamp: '2026-08-08T00:30:00Z'
-    agent: '05-green-testing (glm-5.2:cloud)'
+    agent: '05-green-testing (glm-5.3-flash:cloud)'
   preflight:
     - 'npx tsc --noEmit -p tsconfig.json → OK (exit 0, 55848 files checked)'
     - 'npm run lint → OK (exit 0, 0 issues)'
@@ -861,7 +861,7 @@ PlanUpdate:
 - types.ts: 14 tests pass (EnemyEpisodeTelemetry)
 - Full neatenstein suite: 1095/1097 tests pass (2 pre-existing failures: arms-race timing flake + generate-enemy-sprites ENOENT)
 - tsc: 0 errors, lint: 0 errors, prettier: clean
-- Green validation: 2026-08-08T00:30:00Z by 05-green-testing (glm-5.2:cloud)
+- Green validation: 2026-08-08T00:30:00Z by 05-green-testing (glm-5.3-flash:cloud)
 - Code coverage gate: pass (100% all metrics on fitness.ts)
 - Specialist review: N/A (pragmatic mode, severity TRIVIAL)
 - All 5 slices DONE — green-validated
@@ -4055,7 +4055,7 @@ verification_Phase4_Step02_patch:
     - 'Step 06 [PLANNED]: expansion: none, no slices, no tdd_sequence'
     - 'Step 07 [PLANNED]: expansion: none, no slices, no tdd_sequence'
     - 'No Deferred Cleanup Policy preserved in Step 03/06 acceptance criteria'
-    - 'Model mandate (glm-5.2:cloud) and No Chrome MCP mandate preserved'
+    - 'Model mandate (glm-5.3-flash:cloud) and No Chrome MCP mandate preserved'
   gate_outputs:
     - command: 'neataptic-gate-mcp:run_gate_check --gate=slice-advancement --json --args.slice-id=Phase4-Step02 --args.changed-files=plans/Neon_Shooter_NGE_Demo.plans.md'
       result: '{"pass":true,"sub_gates":[{"name":"plan-sync","pass":true,"fixHint":"All WIP plans are correctly registered in README and Roadmap.","gate_error":false},{"name":"step-packet","pass":true,"fixHint":"All active WIP phase/step packets conform to the new format.","gate_error":false},{"name":"plan-slice-quality","pass":true,"fixHint":"All WIP plan slices are within the 4-hour estimate limit and 5-slice-per-step limit.","gate_error":false},{"name":"plan-command-lint","pass":true,"fixHint":"Verify the plan path: plans/orchestration-fixes.plans.md","gate_error":false}],"evidence":{"gate":"slice-advancement","tier":1,"sliceId":"Phase4-Step02","severity":"TRIVIAL","specialistCount":0,"gatesRun":["plan-sync","step-packet","plan-slice-quality","plan-command-lint"],"gateCount":4,"results":[{"name":"plan-sync","pass":true,"fixHint":"All WIP plans are correctly registered in README and Roadmap.","gate_error":false},{"name":"step-packet","pass":true,"fixHint":"All active WIP phase/step packets conform to the new format.","gate_error":false},{"name":"plan-slice-quality","pass":true,"fixHint":"All WIP plan slices are within the 4-hour estimate limit and 5-slice-per-step limit.","gate_error":false},{"name":"plan-command-lint","pass":true,"fixHint":"Verify the plan path: plans/orchestration-fixes.plans.md","gate_error":false}],"failedGates":[],"erroredGates":[]},"fixHint":"All 4 gates passed for slice Phase4-Step02 (TRIVIAL).","owner":"orchestrator (Agent Zero)"}'
@@ -4146,7 +4146,7 @@ verification:
     - 'slice-advancement gate: pass (all 4 sub-gates: plan-sync, step-packet, plan-slice-quality, plan-command-lint)'
   notes:
     - 'maze-pathfinding slice at 4h is at the hard limit but cohesive (BFS + compass + openness + grid movement + NEAT + policy + cleanup). Splitting would create artificial boundaries. Acceptable.'
-    - 'Model mandate (glm-5.2:cloud) declared inline at line 11. No formal ## Mandates section but mandate is clearly stated and honored.'
+    - 'Model mandate (glm-5.3-flash:cloud) declared inline at line 11. No formal ## Mandates section but mandate is clearly stated and honored.'
     - 'No Chrome MCP mandate declared — jest-based validation only. Consistent with acceptance criteria.'
   blockers: []
 ```
@@ -4173,7 +4173,7 @@ verification_10.5:
     - 'mlp-wiring slice exceeds 3-file target (5 files: constants.ts, enemy-mlp.ts, enemy-controller.ts, enemy-controller.test.ts, select.ts). Pragmatic mode authorizes this because topology reduction cascades across constants → MLP backend → controller as one atomic intent. Splitting would create non-compilable intermediate states.'
     - 'episode-rollouts slice at 4h is at the hard limit but cohesive (stub deletion + snapshot materialization + maze environment + per-tick activation + fitness accumulation). Acceptable.'
     - 'warm-start slice at 4h is at the hard limit but cohesive (backprop implementation + curriculum design + deterministic re-application). Acceptable.'
-    - 'Model mandate (glm-5.2:cloud) declared in ## Mandates section. Properly structured.'
+    - 'Model mandate (glm-5.3-flash:cloud) declared in ## Mandates section. Properly structured.'
   blockers: []
 ```
 
@@ -4862,7 +4862,7 @@ verification_pass:
     - 'Slice count/size limits are trivially satisfied (no slices)'
     - 'Acceptance criteria are observable and implementation-agnostic with AC-### IDs and validation commands'
     - 'No Deferred Cleanup Policy is enforced via explicit AC criteria in implementation steps (Step 03, Step 06)'
-    - 'Model mandate (glm-5.2:cloud) and No Chrome MCP mandate preserved'
+    - 'Model mandate (glm-5.3-flash:cloud) and No Chrome MCP mandate preserved'
   gate_output:
     command: 'neataptic-gate-mcp:run_gate_check --gate=slice-advancement --json --args.slice-id=Phase4-Step02 --args.changed-files=plans/Neon_Shooter_NGE_Demo.plans.md'
     pass: true
@@ -5343,7 +5343,7 @@ verification_Phase4_Step02_patch:
     - 'Step 06 [PLANNED]: expansion: none, no slices, no tdd_sequence'
     - 'Step 07 [PLANNED]: expansion: none, no slices, no tdd_sequence'
     - 'No Deferred Cleanup Policy preserved in Step 03/06 acceptance criteria'
-    - 'Model mandate (glm-5.2:cloud) and No Chrome MCP mandate preserved'
+    - 'Model mandate (glm-5.3-flash:cloud) and No Chrome MCP mandate preserved'
   gate_outputs:
     - command: 'neataptic-gate-mcp:run_gate_check --gate=slice-advancement --json --args.slice-id=Phase4-Step02 --args.changed-files=plans/Neon_Shooter_NGE_Demo.plans.md'
       result: '{"pass":true,"sub_gates":[{"name":"plan-sync","pass":true,"fixHint":"All WIP plans are correctly registered in README and Roadmap.","gate_error":false},{"name":"step-packet","pass":true,"fixHint":"All active WIP phase/step packets conform to the new format.","gate_error":false},{"name":"plan-slice-quality","pass":true,"fixHint":"All WIP plan slices are within the 4-hour estimate limit and 5-slice-per-step limit.","gate_error":false},{"name":"plan-command-lint","pass":true,"fixHint":"Verify the plan path: plans/orchestration-fixes.plans.md","gate_error":false}],"evidence":{"gate":"slice-advancement","tier":1,"sliceId":"Phase4-Step02","severity":"TRIVIAL","specialistCount":0,"gatesRun":["plan-sync","step-packet","plan-slice-quality","plan-command-lint"],"gateCount":4,"results":[{"name":"plan-sync","pass":true,"fixHint":"All WIP plans are correctly registered in README and Roadmap.","gate_error":false},{"name":"step-packet","pass":true,"fixHint":"All active WIP phase/step packets conform to the new format.","gate_error":false},{"name":"plan-slice-quality","pass":true,"fixHint":"All WIP plan slices are within the 4-hour estimate limit and 5-slice-per-step limit.","gate_error":false},{"name":"plan-command-lint","pass":true,"fixHint":"Verify the plan path: plans/orchestration-fixes.plans.md","gate_error":false}],"failedGates":[],"erroredGates":[]},"fixHint":"All 4 gates passed for slice Phase4-Step02 (TRIVIAL).","owner":"orchestrator (Agent Zero)"}'
@@ -5434,7 +5434,7 @@ verification:
     - 'slice-advancement gate: pass (all 4 sub-gates: plan-sync, step-packet, plan-slice-quality, plan-command-lint)'
   notes:
     - 'maze-pathfinding slice at 4h is at the hard limit but cohesive (BFS + compass + openness + grid movement + NEAT + policy + cleanup). Splitting would create artificial boundaries. Acceptable.'
-    - 'Model mandate (glm-5.2:cloud) declared inline at line 11. No formal ## Mandates section but mandate is clearly stated and honored.'
+    - 'Model mandate (glm-5.3-flash:cloud) declared inline at line 11. No formal ## Mandates section but mandate is clearly stated and honored.'
     - 'No Chrome MCP mandate declared — jest-based validation only. Consistent with acceptance criteria.'
   blockers: []
 ```
@@ -5461,7 +5461,7 @@ verification_10.5:
     - 'mlp-wiring slice exceeds 3-file target (5 files: constants.ts, enemy-mlp.ts, enemy-controller.ts, enemy-controller.test.ts, select.ts). Pragmatic mode authorizes this because topology reduction cascades across constants → MLP backend → controller as one atomic intent. Splitting would create non-compilable intermediate states.'
     - 'episode-rollouts slice at 4h is at the hard limit but cohesive (stub deletion + snapshot materialization + maze environment + per-tick activation + fitness accumulation). Acceptable.'
     - 'warm-start slice at 4h is at the hard limit but cohesive (backprop implementation + curriculum design + deterministic re-application). Acceptable.'
-    - 'Model mandate (glm-5.2:cloud) declared in ## Mandates section. Properly structured.'
+    - 'Model mandate (glm-5.3-flash:cloud) declared in ## Mandates section. Properly structured.'
   blockers: []
 ```
 
@@ -6150,7 +6150,7 @@ verification_pass:
     - 'Slice count/size limits are trivially satisfied (no slices)'
     - 'Acceptance criteria are observable and implementation-agnostic with AC-### IDs and validation commands'
     - 'No Deferred Cleanup Policy is enforced via explicit AC criteria in implementation steps (Step 03, Step 06)'
-    - 'Model mandate (glm-5.2:cloud) and No Chrome MCP mandate preserved'
+    - 'Model mandate (glm-5.3-flash:cloud) and No Chrome MCP mandate preserved'
   gate_output:
     command: 'neataptic-gate-mcp:run_gate_check --gate=slice-advancement --json --args.slice-id=Phase4-Step02 --args.changed-files=plans/Neon_Shooter_NGE_Demo.plans.md'
     pass: true

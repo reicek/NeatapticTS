@@ -348,7 +348,7 @@ describe('validate-agent-frontmatter error-path coverage', () => {
       tempFiles.push(
         await createTempAgent(
           'zz-test-bad-skills.agent.md',
-          '---\nname: zz-test-bad-skills\ndescription: test\nskills: not-an-array\nmodel: glm-5.2:cloud\nuser-invocable: false\n---\n## Output format',
+          '---\nname: zz-test-bad-skills\ndescription: test\nskills: not-an-array\nmodel: glm-5.3-flash:cloud\nuser-invocable: false\n---\n## Output format',
         ),
       );
 
@@ -356,7 +356,7 @@ describe('validate-agent-frontmatter error-path coverage', () => {
       tempFiles.push(
         await createTempAgent(
           'zz-test-bad-target.agent.md',
-          '---\nname: zz-test-bad-target\ndescription: test\ntarget: bad-platform\ntools: [read]\nskills: []\nmodel: glm-5.2:cloud\nuser-invocable: false\n---\n## Output format',
+          '---\nname: zz-test-bad-target\ndescription: test\ntarget: bad-platform\ntools: [read]\nskills: []\nmodel: glm-5.3-flash:cloud\nuser-invocable: false\n---\n## Output format',
         ),
       );
 
@@ -364,7 +364,7 @@ describe('validate-agent-frontmatter error-path coverage', () => {
       tempFiles.push(
         await createTempAgent(
           'zz-test-subagent-errors.agent.md',
-          '---\nname: zz-test-subagent-errors\ndescription: test\ntools: [unknown-tool]\nagents: [zz-test-subagent-errors, nonexistent-agent]\nskills: [nonexistent-skill]\nmodel: glm-5.2:cloud\nuser-invocable: false\n---\n## Output format',
+          '---\nname: zz-test-subagent-errors\ndescription: test\ntools: [unknown-tool]\nagents: [zz-test-subagent-errors, nonexistent-agent]\nskills: [nonexistent-skill]\nmodel: glm-5.3-flash:cloud\nuser-invocable: false\n---\n## Output format',
         ),
       );
 
@@ -382,7 +382,7 @@ describe('validate-agent-frontmatter error-path coverage', () => {
       tempFiles.push(
         await createTempAgent(
           '03-zz-test-sdlc-wrong.agent.md',
-          '---\nname: 03-red-testing\ndescription: test\nskills: []\nmodel: glm-5.2:cloud\nuser-invocable: true\n---\n```structured-v1\nOUTPUT_CONTRACT: structured-v1\nTASK_STATUS: SUCCESS\nTIER: 1\nROLE: 03-red-testing\nTASK_RECEIVED: test\nFILES_READ:\nFILES_CHANGED:\nKEY_FINDINGS:\nACTIONS_TAKEN:\nVALIDATION_EVIDENCE:\nBLOCKERS:\nRISKS_OR_GAPS:\nLEARNING_EVENT_NEEDED: false\nSUGGESTED_NEXT_AGENT: none\nPHASE_COMPLETE: false\nSUB_ORCHESTRATORS_USED:\nSUMMARY: test\n```\n',
+          '---\nname: 03-red-testing\ndescription: test\nskills: []\nmodel: glm-5.3-flash:cloud\nuser-invocable: true\n---\n```structured-v1\nOUTPUT_CONTRACT: structured-v1\nTASK_STATUS: SUCCESS\nTIER: 1\nROLE: 03-red-testing\nTASK_RECEIVED: test\nFILES_READ:\nFILES_CHANGED:\nKEY_FINDINGS:\nACTIONS_TAKEN:\nVALIDATION_EVIDENCE:\nBLOCKERS:\nRISKS_OR_GAPS:\nLEARNING_EVENT_NEEDED: false\nSUGGESTED_NEXT_AGENT: none\nPHASE_COMPLETE: false\nSUB_ORCHESTRATORS_USED:\nSUMMARY: test\n```\n',
         ),
       );
 
@@ -390,7 +390,7 @@ describe('validate-agent-frontmatter error-path coverage', () => {
       tempFiles.push(
         await createTempAgent(
           'zz-test-hidden-no-contract.agent.md',
-          '---\nname: zz-test-hidden-no-contract\ndescription: test\nuser-invocable: false\nskills: []\nmodel: glm-5.2:cloud\n---\nbody without contract',
+          '---\nname: zz-test-hidden-no-contract\ndescription: test\nuser-invocable: false\nskills: []\nmodel: glm-5.3-flash:cloud\n---\nbody without contract',
         ),
       );
 
@@ -406,7 +406,7 @@ describe('validate-agent-frontmatter error-path coverage', () => {
       tempFiles.push(
         await createTempAgent(
           'flappy-architecture-polish.agent.md',
-          '---\nname: flappy-architecture-polish\ndescription: test\nuser-invocable: false\nskills: []\nmodel: glm-5.2:cloud\n---\n## Output format',
+          '---\nname: flappy-architecture-polish\ndescription: test\nuser-invocable: false\nskills: []\nmodel: glm-5.3-flash:cloud\n---\n## Output format',
         ),
       );
 
@@ -414,7 +414,7 @@ describe('validate-agent-frontmatter error-path coverage', () => {
       tempFiles.push(
         await createTempAgent(
           '03-zz-test-structured-bad.agent.md',
-          '---\nname: zz-test-structured-bad\ndescription: test\nskills: []\nmodel: glm-5.2:cloud\nuser-invocable: true\n---\n```structured-v1\nTIER: 2\nROLE: wrong-role\nOUTPUT_CONTRACT: wrong-value\nTASK_STATUS: SUCCESS\nthis line does not match\n```\n',
+          '---\nname: zz-test-structured-bad\ndescription: test\nskills: []\nmodel: glm-5.3-flash:cloud\nuser-invocable: true\n---\n```structured-v1\nTIER: 2\nROLE: wrong-role\nOUTPUT_CONTRACT: wrong-value\nTASK_STATUS: SUCCESS\nthis line does not match\n```\n',
         ),
       );
 
@@ -423,7 +423,7 @@ describe('validate-agent-frontmatter error-path coverage', () => {
       tempFiles.push(
         await createTempAgent(
           'green-test-failure-triage-coordinator.agent.md',
-          '---\nname: green-test-failure-triage-coordinator\ndescription: test\nuser-invocable: false\nskills: []\nmodel: glm-5.2:cloud\n---\n```structured-v1\nTIER: 2\nROLE: wrong-role\nOUTPUT_CONTRACT: wrong-value\nTASK_STATUS: SUCCESS\n```\n',
+          '---\nname: green-test-failure-triage-coordinator\ndescription: test\nuser-invocable: false\nskills: []\nmodel: glm-5.3-flash:cloud\n---\n```structured-v1\nTIER: 2\nROLE: wrong-role\nOUTPUT_CONTRACT: wrong-value\nTASK_STATUS: SUCCESS\n```\n',
         ),
       );
 

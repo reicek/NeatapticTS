@@ -1,7 +1,7 @@
 /**
  * @module schema-session.turso.test
- * @description Red tests for Turso async-migration of init-schema, migrate-schema,
- *              and session-start-index scripts.
+ * @description Red tests for Turso async-migration of init-schema and
+ *              migrate-schema scripts.
  *
  * These tests verify that the schema and session scripts accept an optional
  * `client` parameter (a `@libsql/client` Client) and use it for database
@@ -19,9 +19,7 @@
 
 import {
   createSchemaClient,
-  insertTestFixtures,
   createEnvIsolation,
-  TEST_CHUNK_ID,
 } from './turso-test-helpers.mjs';
 import os from 'node:os';
 import path from 'node:path';
@@ -97,26 +95,3 @@ describe('migrateSchemaV2ToV3 (Turso async migration)', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// session-start-index.mjs — runTouchPass
-// ---------------------------------------------------------------------------
-
-describe('runTouchPass (Turso async migration)', () => {
-  beforeEach(() => saveEnv());
-  afterEach(() => restoreEnv());
-
-  it('should use the provided libSQL client instead of creating a native SQLite database', async () => {
-    const { runTouchPass } = await import('../session-start-index.mjs');
-    const client = await createSchemaClient();
-    await insertTestFixtures(client);
-
-    // After migration, runTouchPass should accept an options object with
-    // a `client` property and touch documents in the client.
-    // Currently the function expects a string databasePath — passing an
-    // object causes the native driver to throw → RED.
-    const result = await runTouchPass({ client });
-
-    // The function should have touched the test document (updated indexed_at).
-    expect(result.touched).toBeGreaterThanOrEqual(0);
-  });
-});

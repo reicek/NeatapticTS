@@ -85,6 +85,11 @@ export const DEFAULT_FAMILY_PRIORITY = [
  * @property {string} context_header
  * @property {string} tier
  * @property {string} body_text
+ * @property {number|null} [indexed_at] - Document row `indexed_at` timestamp
+ *   (ms epoch) surfaced from the JOIN with `documents`; lets cross-family
+ *   queries show staleness per result. Intentionally non-deterministic
+ *   metadata: excluded from freshness equality (never asserted to a specific
+ *   clock value).
  */
 
 /**
@@ -220,7 +225,7 @@ export async function enrichChunks(chunks, options = {}) {
         c.char_start, c.char_end, c.parent_chunk_id, c.depth,
         c.context_header, c.symbol_name, c.signature_text, c.jsdoc_text,
         c.export_type, c.module_path, c.arch_layer, c.chunk_sha256,
-        d.file_path, d.doc_family AS family,
+        d.file_path, d.doc_family AS family, d.indexed_at,
         e.entity_type, e.qualified_name AS entity_name
       FROM chunks c
       JOIN documents d ON d.doc_id = c.doc_id
@@ -253,6 +258,7 @@ export async function enrichChunks(chunks, options = {}) {
       sha256: row.chunk_sha256,
       file_path: row.file_path,
       family: row.family,
+      indexed_at: row.indexed_at,
       entity_type: row.entity_type,
       entity_name: row.entity_name,
     });

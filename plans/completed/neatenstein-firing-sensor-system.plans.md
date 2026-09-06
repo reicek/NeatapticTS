@@ -6,7 +6,7 @@
 
 ## Mandates
 
-- `model: glm-5.2:cloud` for all dispatches under this plan. Every dispatch overrides the frontmatter `model` with `glm-5.2:cloud`. Do NOT use kimi-k2.7-code:cloud or any other model.
+- `model: glm-5.3-flash:cloud` for all dispatches under this plan. Every dispatch overrides the frontmatter `model` with `glm-5.3-flash:cloud`. Do NOT use kimi-k2.7-code:cloud or any other model.
 - Pragmatic mode: broad slices (one per gap area), bypass legacy ceremony (skip plan-verification green-light cycle, skip per-AC gate calls, skip fix-packet YAML ceremony). Ship working software.
 - Do not archive or supersede existing Neatenstein plans (`neatenstein-auto-neat-mode.plans.md`); this workstream is additive.
 - No deferred cleanup: when replacing code (placeholder fitness, duplicate constants, old sensor layout), remove the old code in the same slice that introduces the new code. No dual-path code, no backward-compatibility wrappers.

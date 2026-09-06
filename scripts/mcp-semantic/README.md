@@ -197,6 +197,43 @@ Representative output:
 }
 ```
 
+Degraded response example (dense search unavailable):
+
+```json
+{
+  "query": "network.activate",
+  "limit": 3,
+  "use_dense": true,
+  "compact": true,
+  "dense_state": "cold",
+  "dense_degraded": true,
+  "dense_reason": "Dense index is missing; run npm run index:prewarm to warm dense search.",
+  "self_heal": {
+    "state": "cold",
+    "reason": "Dense index is missing; run npm run index:prewarm to warm dense search.",
+    "action": "started",
+    "attempt": 1,
+    "max_attempts": 3,
+    "cooldown_s": 600,
+    "next_allowed_at": 0,
+    "est_duration_min": 1,
+    "manual_recovery": null,
+    "guidance": "Cortex dense search is degraded and a background self-heal repair has been started. Continue with reduced recall while the repair completes."
+  },
+  "results": [
+    {
+      "chunk_id": 42,
+      "file_path": "src/architecture/network/activate/network.activate.ts",
+      "family": "ts-source",
+      "symbol_name": "activate",
+      "text": "export function activate(network, input) { ... }",
+      "score": -8.31,
+      "feedback_boost": 0.05
+    }
+  ]
+}
+```
+
 Use `family` when the search should stay inside one indexed document family. When `query_class` is omitted, the server classifies the query automatically; `code_specific` queries boost the `ts-source` family by default so source chunks rank above generated READMEs.
 
 ### `search_context`
@@ -228,8 +265,8 @@ Schema:
     },
     "context_format": {
       "type": "string",
-      "default": "text",
-      "enum": ["text", "json"],
+      "default": "markdown",
+      "enum": ["markdown", "json"],
       "description": "Format of the returned context string."
     },
     "include_metadata": {
@@ -268,11 +305,6 @@ Schema:
       "type": "boolean",
       "default": true,
       "description": "Return full metadata and content for the highest-ranked result."
-    },
-    "follow_up_refs": {
-      "type": "boolean",
-      "default": true,
-      "description": "Include graph-discovered related chunks and symbols."
     }
   },
   "required": ["query"],
@@ -288,8 +320,7 @@ Example call:
   "arguments": {
     "query": "network.activate",
     "budget": 2048,
-    "read_top_result": true,
-    "follow_up_refs": true
+    "read_top_result": true
   }
 }
 ```
@@ -301,7 +332,7 @@ Representative output:
   "query": "network.activate",
   "budget": 2048,
   "context": "# [src/architecture/network/activate/network.activate.ts > activate]\n\nexport function activate(network, input) { ... }\n...",
-  "context_tokens": 412,
+  "token_count": 412,
   "top_result": {
     "chunk_id": 42,
     "file_path": "src/architecture/network/activate/network.activate.ts",
@@ -319,6 +350,7 @@ Representative output:
     { "chunk_id": 44, "relationship": "references", "symbol_name": "Network" }
   ],
   "dense_state": "warm",
+  "rerank_state": "not_requested",
   "freshness": {
     "timestamp": 1779540000000,
     "stale": false,
@@ -326,6 +358,8 @@ Representative output:
   }
 }
 ```
+
+When dense search is degraded, the response also includes `dense_degraded: true` and a `self_heal` block with actionable guidance; the guidance paragraph is prepended to the `context` string so text-only clients still see it.
 
 Use `search_context` when the next step is to pass evidence directly to a language model; use `search_corpus` when you only need a ranked result list.
 
@@ -634,16 +668,33 @@ When `file_path` is omitted, the tool checks every indexed document. A supplied 
 
 ### `index_stats`
 
-Return corpus row counts and the last indexed timestamp.
+Return corpus row counts, the last indexed timestamp, dense-readiness state,
+and self-heal guidance.
 
-Schema: no arguments.
+Schema:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "include_metadata_coverage": {
+      "type": "boolean",
+      "default": false,
+      "description": "When true, compute per-column chunk and document metadata coverage."
+    }
+  },
+  "additionalProperties": false
+}
+```
 
 Example call:
 
 ```json
 {
   "name": "index_stats",
-  "arguments": {}
+  "arguments": {
+    "include_metadata_coverage": true
+  }
 }
 ```
 
@@ -654,9 +705,61 @@ Representative output:
   "total_documents": 831,
   "total_chunks": 27703,
   "total_families": 9,
-  "last_build_timestamp": "2026-05-23T00:00:00.000Z"
+  "last_build_timestamp": "2026-05-23T00:00:00.000Z",
+  "feedback_stats": {
+    "total_events": 1234,
+    "events_by_type": { "click": 800, "reference": 434 },
+    "chunks_with_feedback": 42,
+    "feedback_weight": 1.0,
+    "feedback_half_life_days": 7
+  },
+  "ann": {
+    "strategy": "diskann",
+    "threshold": 10000,
+    "current_chunk_count": 27703,
+    "build_status": "ready",
+    "index_id": "chunks_embedding_idx",
+    "index_type": "diskann",
+    "vector_type": "F8_BLOB",
+    "quantization": "8-bit"
+  },
+  "metadata_coverage": {
+    "chunks": {
+      "symbol_name": { "total": 9204, "percent": 33.22 },
+      "jsdoc_text": { "total": 18408, "percent": 66.45 }
+    },
+    "documents": {
+      "arch_layer": {
+        "total": 831,
+        "percent": 100.0,
+        "distribution": { "core": 400, "adapter": 431 }
+      }
+    }
+  },
+  "dense_state": "warm",
+  "dense_reason": "Dense index and model are both available.",
+  "dense_degraded": false,
+  "chunk_count": 27703,
+  "embedding_count": 27703,
+  "self_heal": {
+    "state": "warm",
+    "reason": "Dense index and model are both available.",
+    "action": "none",
+    "attempt": 0,
+    "max_attempts": 3,
+    "cooldown_s": 600,
+    "next_allowed_at": 0,
+    "est_duration_min": 0,
+    "manual_recovery": null,
+    "guidance": "Dense search is healthy; no self-heal action needed."
+  }
 }
 ```
+
+`dense_state`, `dense_reason`, `dense_degraded`, `chunk_count`, and
+`embedding_count` are exposed as direct properties but are non-enumerable, so
+existing tests that assert on `Object.keys(result)` continue to pass. They are
+visible to the MCP server wrapper and to callers that read properties directly.
 
 ### `list_families`
 

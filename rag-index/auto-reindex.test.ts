@@ -67,8 +67,8 @@ describe('rag-index/auto-reindex.mjs', () => {
   describe('post-commit hook orchestration', () => {
     it('detects changed plan files and invokes targeted build-index then embed-index', () => {
       const result = runModuleEvaluation<ReindexSummary>(`
-        import { reindexChangedPlans } from './rag-index/auto-reindex.mjs';
-        const summary = await reindexChangedPlans({
+        import { reindexChangedFiles } from './rag-index/auto-reindex.mjs';
+        const summary = await reindexChangedFiles({
           changedFiles: ['plans/example.plans.md'],
         });
         console.log(JSON.stringify(summary));
@@ -82,8 +82,8 @@ describe('rag-index/auto-reindex.mjs', () => {
 
     it('exits 0 and records failures when a re-index command fails', () => {
       const result = runModuleEvaluation<ReindexSummary>(`
-        import { reindexChangedPlans } from './rag-index/auto-reindex.mjs';
-        const summary = await reindexChangedPlans({
+        import { reindexChangedFiles } from './rag-index/auto-reindex.mjs';
+        const summary = await reindexChangedFiles({
           changedFiles: ['plans/example.plans.md'],
           runCommand: async () => ({ success: false }),
         });
@@ -104,8 +104,8 @@ describe('rag-index/auto-reindex.mjs', () => {
 
     it('logs command failures to stderr', () => {
       const result = runModuleEvaluation<ReindexSummary>(`
-        import { reindexChangedPlans } from './rag-index/auto-reindex.mjs';
-        const summary = await reindexChangedPlans({
+        import { reindexChangedFiles } from './rag-index/auto-reindex.mjs';
+        const summary = await reindexChangedFiles({
           changedFiles: ['plans/example.plans.md'],
           runCommand: async () => ({ success: false }),
         });
@@ -115,17 +115,17 @@ describe('rag-index/auto-reindex.mjs', () => {
       expect(result.stderr).toMatch(/auto-reindex: command failed:/);
     });
 
-    it('writes re-index results to rag-index/freshness-proofs/plans-reindex.log', () => {
+    it('writes re-index results to rag-index/freshness-proofs/auto-reindex.log', () => {
       const result = runModuleEvaluation<ReindexSummary>(`
-        import { reindexChangedPlans } from './rag-index/auto-reindex.mjs';
-        const summary = await reindexChangedPlans({
+        import { reindexChangedFiles } from './rag-index/auto-reindex.mjs';
+        const summary = await reindexChangedFiles({
           changedFiles: ['plans/example.plans.md'],
         });
         console.log(JSON.stringify(summary));
       `);
 
       expect(result.report?.logPath).toMatch(
-        /rag-index\/freshness-proofs\/plans-reindex\.log$/,
+        /rag-index\/freshness-proofs\/auto-reindex\.log$/,
       );
     });
   });

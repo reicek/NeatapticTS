@@ -91,6 +91,9 @@ describe('DEFAULT_CHANGED_FILE_GLOBS', () => {
     expect(DEFAULT_CHANGED_FILE_GLOBS).toContain('src/**/*.ts');
     expect(DEFAULT_CHANGED_FILE_GLOBS).toContain('scripts/**/*.mjs');
     expect(DEFAULT_CHANGED_FILE_GLOBS).toContain('plans/**/*.md');
+    expect(DEFAULT_CHANGED_FILE_GLOBS).toContain('.github/skills/**/*.md');
+    expect(DEFAULT_CHANGED_FILE_GLOBS).toContain('.github/agents/**/*.md');
+    expect(DEFAULT_CHANGED_FILE_GLOBS).toContain('.github/copilot-instructions.md');
   });
 });
 
@@ -653,37 +656,53 @@ describe('inferFamily via defaultRunIncrementalBuild', () => {
     expect(doc.family).toBe('completed-plan');
   });
 
-  it('infers ts-source but ignores .d.ts files', async () => {
-    const mockClient = createMockClient([]);
-    mockBuildSemanticIndex.mockResolvedValue({ indexed: 1, skipped: 0, chunks: 1, elapsedMs: 50 });
+  it('does not run incremental build for .d.ts files', async () => {
+    const runIncrementalBuild = jest.fn().mockResolvedValue({ updated: [], failed: [] });
     const hook = createFreshnessHook({
       debounce_ms: 0,
-      client: mockClient,
+      runIncrementalBuild,
+      client: createMockClient([], []),
       skip_ann: true,
       changed_file_globs: ['src/**/*.ts'],
     });
     hook.notifyWrite('src/types.d.ts');
     await hook.flush();
-    const buildCall = mockBuildSemanticIndex.mock.calls[0][0];
-    const doc = buildCall.corpusDocuments.find((d) => d.filePath === 'src/types.d.ts');
-    // .d.ts matches src/**/*.ts but is in ignore list → falls through to unknown
-    expect(doc.family).toBe('unknown');
+    expect(runIncrementalBuild).not.toHaveBeenCalled();
   });
 
-  it('infers ts-source but ignores .test.ts files', async () => {
-    const mockClient = createMockClient([]);
-    mockBuildSemanticIndex.mockResolvedValue({ indexed: 1, skipped: 0, chunks: 1, elapsedMs: 50 });
+  it('does not run incremental build for .test.ts files', async () => {
+    const runIncrementalBuild = jest.fn().mockResolvedValue({ updated: [], failed: [] });
     const hook = createFreshnessHook({
       debounce_ms: 0,
-      client: mockClient,
+      runIncrementalBuild,
+      client: createMockClient([], []),
       skip_ann: true,
       changed_file_globs: ['src/**/*.ts'],
     });
     hook.notifyWrite('src/foo.test.ts');
     await hook.flush();
-    const buildCall = mockBuildSemanticIndex.mock.calls[0][0];
-    const doc = buildCall.corpusDocuments.find((d) => d.filePath === 'src/foo.test.ts');
-    expect(doc.family).toBe('unknown');
+    expect(runIncrementalBuild).not.toHaveBeenCalled();
+  });
+
+  it('filters .test.ts, .spec.ts, and .d.ts before incremental build', async () => {
+    const runIncrementalBuild = jest.fn().mockResolvedValue({ updated: [], failed: [] });
+    const hook = createFreshnessHook({
+      debounce_ms: 0,
+      runIncrementalBuild,
+      client: createMockClient([], []),
+      skip_ann: true,
+      changed_file_globs: ['src/**/*.ts'],
+    });
+    hook.notifyWrite('src/foo.test.ts');
+    hook.notifyWrite('src/bar.spec.ts');
+    hook.notifyWrite('src/types.d.ts');
+    hook.notifyWrite('src/valid.ts');
+    await hook.flush();
+    const calledPaths = runIncrementalBuild.mock.calls[0][0];
+    expect(calledPaths).toContain('src/valid.ts');
+    expect(calledPaths).not.toContain('src/foo.test.ts');
+    expect(calledPaths).not.toContain('src/bar.spec.ts');
+    expect(calledPaths).not.toContain('src/types.d.ts');
   });
 
   it('infers demo family for examples/**/*.ts', async () => {

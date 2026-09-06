@@ -1,4 +1,4 @@
-﻿---
+---
 description: 'Use when: writing docs, JSDoc, examples, or changelogs.'
 name: '06-documenting'
 tier: 1
@@ -54,7 +54,7 @@ handoffs:
     agent: '07-logging'
     prompt: 'Compress the completed phase into logs. Load context via Cortex MCP and any declared pre_execute_hook/get_slice_context.'
     send: false
-    model: 'glm-5.2:cloud'
+    model: 'glm-5.3-flash:cloud'
 ---
 
 ## CRITICAL RULE — NEVER RUN GIT
@@ -129,11 +129,11 @@ matching one rather than executing the work inline.
 
 **When to delegate (decision triggers):**
 
-- Generated README looks stale or drifts from source → `docs-scout` for the gap list, then `educational-docs`/`updating-js-docs` for the fix.
-- Public API signature, params, or examples in JSDoc may not match code → `api-contract-reviewer` for a contract check before publishing.
-- Docs cite an external source, Wikipedia link, or Wikimedia media → `license-reviewer` for attribution and license compliance.
-- Docs describe a browser example page or claim rendering/memory behavior → `browser-ui-specialist` (DOM/render) and/or `browser-memory-specialist` (memory) with `browser-harness-specialist` to launch the harness.
-- Repeated drift pattern with no owning specialist → `agent-maintenance-coordinator` to create a reusable skill.
+- Generated README looks stale or drifts from source ? `docs-scout` for the gap list, then `educational-docs`/`updating-js-docs` for the fix.
+- Public API signature, params, or examples in JSDoc may not match code ? `api-contract-reviewer` for a contract check before publishing.
+- Docs cite an external source, Wikipedia link, or Wikimedia media ? `license-reviewer` for attribution and license compliance.
+- Docs describe a browser example page or claim rendering/memory behavior ? `browser-ui-specialist` (DOM/render) and/or `browser-memory-specialist` (memory) with `browser-harness-specialist` to launch the harness.
+- Repeated drift pattern with no owning specialist ? `agent-maintenance-coordinator` to create a reusable skill.
 
 ## Gate Enforcement
 
@@ -157,7 +157,7 @@ Before completing any task, run relevant gate checks via `neataptic-gate-mcp:run
 
 Run these steps in order for every documentation task. If a step is irrelevant
 to the change, record "N/A — <reason>" in evidence. The pipeline is
-**extract → tone-apply → generate → validate**.
+**extract ? tone-apply ? generate ? validate**.
 
 1. **Load slice context.** Call `neataptic-workflow-mcp-get_slice_context`
    (or `neataptic-gate-mcp-get_slice_context`) with the active `slice_id` to
@@ -201,7 +201,7 @@ Do not mark `TASK_STATUS: SUCCESS` for the step if docs-quality gaps remain.
 When deciding how to fix a documentation issue, follow this decision tree:
 
 ```text
-Flowchart summary: Documentation issue found → classify doc type (generated README, manual README, source JSDoc, example page, changelog) → generated README? edit source JSDoc and rerun npm run docs; manual README? edit with atemporal language; source JSDoc? edit source then regenerate; example page? verify via browser-harness-specialist → run drift scan (docs-scout) and citation/license audit (license-reviewer, docs-academic-citation-audit).
+Flowchart summary: Documentation issue found ? classify doc type (generated README, manual README, source JSDoc, example page, changelog) ? generated README? edit source JSDoc and rerun npm run docs; manual README? edit with atemporal language; source JSDoc? edit source then regenerate; example page? verify via browser-harness-specialist ? run drift scan (docs-scout) and citation/license audit (license-reviewer, docs-academic-citation-audit).
 ```
 
 **Key rules:**

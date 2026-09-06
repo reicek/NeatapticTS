@@ -7,13 +7,42 @@
  *
  * Uses Node `fs.watch` so that active plan editing can drive near-real-time
  * targeted re-embedding without waiting for the next commit.
+ *
+ * When no explicit `onChange` callback is supplied, the watcher defaults to
+ * the synchronous plan-family hook (`reindexPlanFamily`), so a save produces
+ * a bounded (60 s) BM25 rebuild plus a background dense re-embed.
  */
 
 import { watch } from 'node:fs';
 import path from 'node:path';
+import { reindexPlanFamily } from './reindex-plan-family.mjs';
 
 const PLAN_FILE_SUFFIX = '.plans.md';
 const DEFAULT_DEBOUNCE_MS = 100;
+
+/**
+ * Build the default `onChange` callback for the plan watcher: a synchronous
+ * post-save plan-family reindex (P2-S1-A).
+ *
+ * The returned callback forwards the changed file path to
+ * `reindexPlanFamily` and never throws — failures degrade to a stale
+ * result with a warning, so a watcher tick cannot crash the loop.
+ *
+ * @param {object} [overrides] - Dependency injection seams for tests.
+ * @param {function(string[], object): Promise<object>} [overrides.reindexPlanFamilyFn]
+ *   Replacement reindex implementation; defaults to the production hook.
+ * @param {object} [overrides.reindexOptions] - Extra options forwarded to the
+ *   reindex call (e.g. `maxSyncWaitMs`, `runSync`, `runBackground`).
+ * @returns {function(string): Promise<object>} Async onChange callback.
+ */
+export function createReindexPlanOnChange(overrides = {}) {
+  const reindex = overrides.reindexPlanFamilyFn ?? reindexPlanFamily;
+  const reindexOptions = overrides.reindexOptions ?? {};
+
+  return function onChange(changedFilePath) {
+    return reindex([changedFilePath], reindexOptions);
+  };
+}
 
 /**
  * Watch plan directories and invoke a callback when `.plans.md` files change.
@@ -27,15 +56,17 @@ const DEFAULT_DEBOUNCE_MS = 100;
  * @param {string[]} options.planDirs - Absolute or relative paths to
  *   directories to watch.
  * @param {number} [options.debounceMs=100] - Debounce window in milliseconds.
- * @param {function(string): Promise<void>|void} options.onChange - Callback
- *   receiving the absolute path of the changed plan file.
+ * @param {function(string): Promise<void>|void} [options.onChange] - Callback
+ *   receiving the absolute path of the changed plan file. When omitted the
+ *   watcher uses the default synchronous reindex hook from
+ *   `createReindexPlanOnChange()`.
  * @returns {Promise<{close: () => void}>} A watcher handle with a `close`
  *   method that stops all watchers and pending timers.
  */
 export async function runPlanWatcher(options) {
   const planDirs = options.planDirs ?? [];
   const debounceMs = Number(options.debounceMs ?? DEFAULT_DEBOUNCE_MS);
-  const onChange = options.onChange;
+  const onChange = options.onChange ?? createReindexPlanOnChange();
 
   const watchers = [];
   const timers = new Map();

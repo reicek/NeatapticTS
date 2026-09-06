@@ -1,12 +1,14 @@
 #!/usr/bin/env node
 import {
   issue,
+  isValidUtf8,
   knownAgentTools,
   listMarkdownFiles,
   parseArgs,
   parseFrontmatter,
   printUsage,
   readWorkspaceFile,
+  readWorkspaceFileBytes,
   summarizeIssues,
   writeReport,
 } from './customization-utils.mjs';
@@ -102,7 +104,11 @@ const strictTier2StructuredFields = [
   'SUGGESTED_NEXT_AGENT',
   'SUMMARY',
 ];
-const strictAllowedModels = new Set(['glm-5.2:cloud', 'kimi-k2.7-code:cloud']);
+const strictAllowedModels = new Set([
+  'glm-5.3:cloud',
+  'kimi-k2.7-code:cloud',
+  'glm-5.3-flash:cloud',
+]);
 const allowedTargetValues = new Set(['vscode', 'github-copilot']);
 
 if (options.help) {
@@ -135,6 +141,23 @@ async function collectAgents() {
   );
   return Promise.all(
     paths.map(async (relativePath) => {
+      const bytes = await readWorkspaceFileBytes(relativePath);
+      if (!isValidUtf8(bytes)) {
+        return {
+          path: relativePath,
+          data: {},
+          raw: '',
+          body: '',
+          parseIssues: [
+            issue(
+              'error',
+              relativePath,
+              'Agent file is not valid UTF-8. Re-encode as UTF-8 (content may have been saved as Windows-1252).',
+            ),
+          ],
+          name: relativePath.split('/').at(-1)?.replace('.agent.md', ''),
+        };
+      }
       const text = await readWorkspaceFile(relativePath);
       const parsed = parseFrontmatter(text, relativePath);
       return {
@@ -358,7 +381,7 @@ function validateAgent(agent, agents, skillNames, { strict }) {
       issue(
         'error',
         relativePath,
-        'Model must be a qualified model string like glm-5.2:cloud.',
+        'Model must be a qualified model string like glm-5.3:cloud.',
       ),
     );
   }

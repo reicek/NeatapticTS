@@ -19,7 +19,7 @@ plan_meta:
 ### M1 — GLM 5.2 Only
 
 Every agent dispatched under this plan MUST run on the GLM 5.2 model
-(`glm-5.2:cloud`). No agent — orchestrator, coordinator, or specialist — may
+(`glm-5.3-flash:cloud`). No agent — orchestrator, coordinator, or specialist — may
 override to a different model. This is non-negotiable and applies to all tiers.
 
 ### M2 — Pragmatic Execution (Bypass Legacy Procedure)
@@ -87,7 +87,7 @@ title: 'Triage and Dispatch Flexibility'
 status: '[DONE]'
 goal: 'done'
 slice_id: 'P1-triage'
-model: 'glm-5.2:cloud'
+model: 'glm-5.3-flash:cloud'
 files_to_change:
   - 'scripts/agent-customization/dispatch/build-dispatch-packet.mjs'
   - 'scripts/agent-customization/dispatch/build-dispatch-packet.test.mjs'
@@ -136,7 +136,7 @@ title: 'Gate Consolidation and Reliability'
 status: '[DONE]'
 goal: 'done'
 slice_id: 'P2-gates'
-model: 'glm-5.2:cloud'
+model: 'glm-5.3-flash:cloud'
 files_to_change:
   - 'scripts/agent-customization/gates/slice-advancement.gate.mjs'
   - 'scripts/agent-customization/plan-slice-quality/'
@@ -198,7 +198,7 @@ title: 'Cortex Freshness and File-Lock Awareness'
 status: '[DONE]'
 goal: 'done'
 slice_id: 'P3-freshness-filelock'
-model: 'glm-5.2:cloud'
+model: 'glm-5.3-flash:cloud'
 files_to_change:
   - 'scripts/agent-customization/cortex/targeted-reindex.mjs'
   - 'scripts/agent-customization/cortex/targeted-reindex.test.mjs'
@@ -298,7 +298,7 @@ title: 'Skill and Documentation Updates'
 status: '[DONE]'
 goal: 'implementing'
 slice_id: 'P4-docs-routing'
-model: 'glm-5.2:cloud'
+model: 'glm-5.3-flash:cloud'
 files_to_change:
   - '.github/skills/execute/SKILL.md'
   - '.github/agents/*.agent.md'
@@ -341,7 +341,7 @@ title: 'Agent and Skill Orchestration Optimization'
 status: '[DONE]'
 goal: 'researching'
 slice_id: 'P5-agent-skill-opt'
-model: 'glm-5.2:cloud'
+model: 'glm-5.3-flash:cloud'
 files_to_change:
   - '.github/agents/*.agent.md'
   - '.github/agent-skill-routing-table.md'
@@ -598,7 +598,7 @@ PlanUpdate:
     - 'DELETED by orchestrator: scripts/agent-customization/hooks/pretool-workflow-cortex-preflight.mjs'
     - 'DELETED by orchestrator: scripts/agent-customization/hooks/runtime-enforcement-hooks.test.ts'
   orchestrator_finalization:
-    - 'webgpu-scout.agent.md model corrected to glm-5.2:cloud (ollama) to satisfy M1 GLM-only mandate + validator'
+    - 'webgpu-scout.agent.md model corrected to glm-5.3-flash:cloud (ollama) to satisfy M1 GLM-only mandate + validator'
     - 'routing-table regenerated (agents=67, skills=63); validate-agent-frontmatter ok=true 0 errors; validate-skill-frontmatter ok=true 0 errors; prettier clean'
   next: 'Plan complete — all 5 phases [DONE], archived. Deletion list executed by orchestrator. webgpu-scout model set to GLM 5.2. All validators green.'
 ```
@@ -673,7 +673,7 @@ PlanUpdate:
 - agent-graph gate: pass=true, issueCount=0, agentCount=23, byTier {1:8, 2:4, 3:10, 4:1}
 - tier-enforcement gate: pass=true, issueCount=0, userInvocableTotal=8
 - routing-table-freshness gate: pass=true, matchesExpectedBody=true
-- New merged agents use model 'glm-5.2:cloud (ollama)' (in strictAllowedModels) to satisfy GLM-only mandate + validator.
+- New merged agents use model 'glm-5.3-flash:cloud (ollama)' (in strictAllowedModels) to satisfy GLM-only mandate + validator.
 - tier-graph-utils.mjs TIER_2_AGENT_NAMES pruned to surviving coordinators + agent-maintenance-coordinator; TIER_4_AGENT_NAMES pruned to learning-event-capturer (deleted tier-4 sources removed).
 
 Claim: implementation-executor @ 2026-06-14T15:00:00Z
@@ -684,7 +684,7 @@ Claim: implementation-executor @ 2026-06-14T15:00:00Z
 PlanUpdate:
   slice_id: 'P5-multi-tier-tree'
   phase: 5
-  intent: 'Build the multi-tier agent/subagent TREE up from the 23-agent lean floor. Add 9 purposeful Tier-3 agents (POV reviewers + a shared slice-validator + a property-based test writer), wire shared/new agents into numbered rosters by genuine phase need, regenerate routing table, run all gates to green. Model for new agents: glm-5.2:cloud (ollama).'
+  intent: 'Build the multi-tier agent/subagent TREE up from the 23-agent lean floor. Add 9 purposeful Tier-3 agents (POV reviewers + a shared slice-validator + a property-based test writer), wire shared/new agents into numbered rosters by genuine phase need, regenerate routing table, run all gates to green. Model for new agents: glm-5.3-flash:cloud (ollama).'
   governing_principle: 'Sub-agent exists ONLY for (a) a specific point-of-view lens, (b) isolated context for parallel recon, or (c) genuine autonomous multi-step work — NOT thin skill-wrappers (all removed earlier).'
   changed_files:
     - '.github/agents/security-reviewer.agent.md'
@@ -783,7 +783,7 @@ PlanUpdate:
     - 'neataptic-gate-mcp:run_gate_check --gate=agent-graph'
     - 'neataptic-gate-mcp:run_gate_check --gate=tier-enforcement'
     - 'neataptic-gate-mcp:run_gate_check --gate=routing-table-freshness'
-  next: 'Multi-tier tree delivered: 23 -> 32 agents, 67 skills, 0 new skills. All validators green. New agents use glm-5.2:cloud (ollama).'
+  next: 'Multi-tier tree delivered: 23 -> 32 agents, 67 skills, 0 new skills. All validators green. New agents use glm-5.3-flash:cloud (ollama).'
 ```
 
 Validation evidence (P5-multi-tier-tree):
@@ -796,7 +796,7 @@ Validation evidence (P5-multi-tier-tree):
 - agent-graph gate: pass=true, issueCount=0, agentCount=32, byTier {1:8, 2:4, 3:19, 4:1}, userInvocableTotal=8
 - tier-enforcement gate: pass=true, issueCount=0, byTier {1:8, 2:4, 3:19, 4:1}
 - routing-table-freshness gate: pass=true, matchesExpectedBody=true
-- All 9 new agents: tier 3, user-invocable false, model 'glm-5.2:cloud (ollama)' (in strictAllowedModels), agents [] (no self-ref), tools include the skills they back — validated.
+- All 9 new agents: tier 3, user-invocable false, model 'glm-5.3-flash:cloud (ollama)' (in strictAllowedModels), agents [] (no self-ref), tools include the skills they back — validated.
 - No tier-graph-utils.mjs change required (Tier 3 = default fallback; TIER_2 and TIER_4 sets unchanged).
 
 Claim: 01-planning @ 2026-06-14T16:30:00Z

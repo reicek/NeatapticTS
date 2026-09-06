@@ -2,12 +2,13 @@
 /* global console, process */
 /**
  * @module auto-reindex
- * @description Post-commit hook orchestration for re-indexing changed plan files.
+ * @description Post-commit hook orchestration for re-indexing changed corpus files.
  *
- * Detects `plans/*.plans.md` files that changed in the most recent commit and
- * runs targeted `build-index.mjs` / `embed-index.mjs` passes over just those
- * files. Failures are logged but never block the git commit: the post-commit
- * wrapper exits 0.
+ * Detects files that changed in the most recent commit across the high-value
+ * corpus families (plans, source TypeScript, skills, agents, copilot
+ * instructions) and runs targeted `build-index.mjs` / `embed-index.mjs` passes
+ * over just those files. Failures are logged but never block the git commit:
+ * the post-commit wrapper exits 0.
  */
 
 import { spawnSync } from 'node:child_process';
@@ -23,23 +24,59 @@ const FRESHNESS_PROOFS_DIR = path.join(
   'rag-index',
   'freshness-proofs',
 );
-const REINDEX_LOG_PATH = path.join(FRESHNESS_PROOFS_DIR, 'plans-reindex.log');
+const REINDEX_LOG_PATH = path.join(FRESHNESS_PROOFS_DIR, 'auto-reindex.log');
+
+/** @type {Array<{name: string; test(filePath: string): boolean}>} */
+const REINDEXABLE_FAMILIES = [
+  {
+    name: 'plans',
+    test: (filePath) =>
+      filePath.startsWith('plans/') && filePath.endsWith(PLAN_FILE_SUFFIX),
+  },
+  {
+    name: 'src-ts',
+    test: (filePath) =>
+      filePath.startsWith('src/') &&
+      filePath.endsWith('.ts') &&
+      !filePath.endsWith('.test.ts') &&
+      !filePath.endsWith('.spec.ts') &&
+      !filePath.endsWith('.d.ts'),
+  },
+  {
+    name: 'skills',
+    test: (filePath) =>
+      filePath.startsWith('.github/skills/') && filePath.endsWith('.md'),
+  },
+  {
+    name: 'agents',
+    test: (filePath) =>
+      filePath.startsWith('.github/agents/') && filePath.endsWith('.md'),
+  },
+  {
+    name: 'copilot-instructions',
+    test: (filePath) => filePath === '.github/copilot-instructions.md',
+  },
+];
 
 /**
- * Re-index plan files that changed in the most recent commit.
+ * Re-index corpus files that changed in the most recent commit.
+ *
+ * Filters changed paths to the reindexable families defined by
+ * {@link isReindexableFile}, then runs targeted `build-index.mjs` and
+ * `embed-index.mjs` passes.
  *
  * @param {object} [options={}] - Options.
  * @param {string[]} [options.changedFiles] - Repo-relative changed file paths.
- *   When omitted, changed `plans/*.plans.md` files are detected from
+ *   When omitted, changed reindexable files are detected from
  *   `git diff --name-only HEAD~1 HEAD`.
  * @param {function(string[]): Promise<{success: boolean}>|{success: boolean}} [options.runCommand] - Injected command runner. Defaults to a `spawnSync` runner that treats the first element as the executable and the rest as arguments.
  * @returns {Promise<{ changed: string[]; commands: string[][]; exitCode: number; failures: string[][]; logPath: string }>}
  *   Summary of the re-index run.
  */
-export async function reindexChangedPlans(options = {}) {
-  const changedFiles = options.changedFiles ?? (await detectChangedPlanFiles());
-  const planFiles = changedFiles.filter(isPlanFile);
-  const commands = buildReindexCommands(planFiles);
+export async function reindexChangedFiles(options = {}) {
+  const changedFiles = options.changedFiles ?? (await detectChangedFiles());
+  const reindexableFiles = changedFiles.filter(isReindexableFile);
+  const commands = buildReindexCommands(reindexableFiles);
   const runCommand = options.runCommand ?? defaultRunner;
   const failures = [];
 
@@ -52,12 +89,12 @@ export async function reindexChangedPlans(options = {}) {
   }
 
   const logPath = await writeReindexLog({
-    changed: planFiles,
+    changed: reindexableFiles,
     commands,
     failures,
   });
 
-  return { changed: planFiles, commands, exitCode: 0, failures, logPath };
+  return { changed: reindexableFiles, commands, exitCode: 0, failures, logPath };
 }
 
 /**
@@ -82,10 +119,27 @@ function isPlanFile(filePath) {
   return typeof filePath === 'string' && filePath.endsWith(PLAN_FILE_SUFFIX);
 }
 
-function buildReindexCommands(planFiles) {
-  if (planFiles.length === 0) return [];
+/**
+ * Determine whether a repo-relative path belongs to a corpus family that
+ * should be reindexed after a commit.
+ *
+ * Matches plans, source TypeScript files (excluding tests/specs/declarations),
+ * skill and agent markdown files, and the root copilot instructions file.
+ *
+ * @param {string} filePath - Repo-relative file path.
+ * @returns {boolean} True when the file is in a reindexable family.
+ */
+export function isReindexableFile(filePath) {
+  return (
+    typeof filePath === 'string' &&
+    REINDEXABLE_FAMILIES.some((family) => family.test(filePath))
+  );
+}
 
-  const fileArgs = planFiles.map((filePath) => `--files=${filePath}`);
+function buildReindexCommands(reindexableFiles) {
+  if (reindexableFiles.length === 0) return [];
+
+  const fileArgs = reindexableFiles.map((filePath) => `--files=${filePath}`);
 
   return [
     ['node', 'rag-index/build-index.mjs', ...fileArgs],
@@ -93,7 +147,7 @@ function buildReindexCommands(planFiles) {
   ];
 }
 
-async function detectChangedPlanFiles() {
+async function detectChangedFiles() {
   try {
     const result = spawnSync('git', ['diff', '--name-only', 'HEAD~1', 'HEAD'], {
       cwd: repoRoot,
@@ -109,7 +163,7 @@ async function detectChangedPlanFiles() {
       .split('\n')
       .map((line) => line.trim())
       .filter((line) => line.length > 0)
-      .filter(isPlanFile);
+      .filter(isReindexableFile);
   } catch {
     /* istanbul ignore next -- defensive: spawnSync does not throw, errors are returned in result */
     return [];
@@ -141,7 +195,7 @@ async function writeReindexLog(summary) {
 }
 
 export async function main() {
-  const summary = await reindexChangedPlans();
+  const summary = await reindexChangedFiles();
   console.log(JSON.stringify(summary, null, 2));
 }
 

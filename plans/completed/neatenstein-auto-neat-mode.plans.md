@@ -13,7 +13,7 @@ deterministic seeded Levy walk. See the research artifact addendum
 "Fallback AI no-enemy exploration behavior" for full evidence, options,
 and risks.
 
-- `model: glm-5.2:cloud` for all dispatches under this plan. Every dispatch under this plan overrides the frontmatter `model` with `glm-5.2:cloud`. Do NOT use kimi-k2.7-code:cloud or any other model.
+- `model: glm-5.3-flash:cloud` for all dispatches under this plan. Every dispatch under this plan overrides the frontmatter `model` with `glm-5.3-flash:cloud`. Do NOT use kimi-k2.7-code:cloud or any other model.
 - Pragmatic mode: broad slices (one per gap area), bypass legacy ceremony (skip plan-verification green-light cycle, skip per-AC gate calls, skip fix-packet YAML ceremony). Ship working software.
 - Do not archive or supersede existing Neatenstein plans; this workstream is additive.
 - Remove legacy noise: delete the RNG-based `runEpisode` stub in `main-runner.ts` when replaced by real gameplay (no dual-path code, no backward-compatibility wrappers).

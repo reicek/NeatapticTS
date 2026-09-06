@@ -12,7 +12,7 @@
 
 The permanent `model:` field for each agent must be set based on task complexity, NOT universally:
 
-- **`glm-5.2:cloud` (local Ollama, free)** for HEAVY tasks requiring deep reasoning:
+- **`glm-5.3-flash:cloud` (local Ollama, free)** for HEAVY tasks requiring deep reasoning:
   - Tier-1 orchestrators: 00-helping, 01-planning, 03-red-testing, 04-implementing
   - Tier-2 coordinator: implementation-executor
   - These agents need careful judgment, edge-case handling, architecture decisions
@@ -27,9 +27,9 @@ The permanent `model:` field for each agent must be set based on task complexity
 - **05-green-testing** stays on kimi-k2.7 because verification is mostly mechanical
 - **00-helping** uses glm-5.2 because gap resolution needs nuanced synthesis
 - **Users may explicitly override** the default model per request based on budget
-- **Plan mandates** for implementing agents continue to use glm-5.2:cloud (the mandate applies to plans and the agents that implement them, not permanent agent fields)
+- **Plan mandates** for implementing agents continue to use glm-5.3-flash:cloud (the mandate applies to plans and the agents that implement them, not permanent agent fields)
 - **Cost rationale**: kimi-k2.7 is the cheapest Copilot cloud model with coding focus. Using it for scouts and parallel execution avoids cost overruns. glm-5.2 is free but hardware-limited, so reserve it for tasks that need its reasoning depth.
-- **NO OTHER MODELS APPROVED**: Only `glm-5.2:cloud` and `kimi-k2.7-code:cloud` are approved. Claude Sonnet, Claude Haiku, and any other models are NOT approved. Additional models may be added later only with explicit user approval.
+- **NO OTHER MODELS APPROVED**: Only `glm-5.3-flash:cloud` and `kimi-k2.7-code:cloud` are approved. Claude Sonnet, Claude Haiku, and any other models are NOT approved. Additional models may be added later only with explicit user approval.
 
 ### Other Mandates
 
@@ -46,7 +46,7 @@ The permanent `model:` field for each agent must be set based on task complexity
 - Bypass step-packet and plan-slice-quality gates — plan uses prose steps, not YAML step packets
 - Steps are dispatched by step ID (e.g., "Step 0.1") via RAG load
 - Validation is per-phase (run validation commands listed at end of each phase)
-- Tiered model mandate: glm-5.2:cloud for heavy agents (00-helping, 01-planning, 03-red-testing, 04-implementing, implementation-executor), kimi-k2.7-code:cloud for all others. Per-dispatch model override via task tool model parameter.
+- Tiered model mandate: glm-5.3-flash:cloud for heavy agents (00-helping, 01-planning, 03-red-testing, 04-implementing, implementation-executor), kimi-k2.7-code:cloud for all others. Per-dispatch model override via task tool model parameter.
 - Phase 6 multi-dispatch exception: 2 specialists per agent (Content Quality + Standards), batched by tier. The pragmatic mode's single-dispatch model does not apply to Phase 6.
 - Phase 6 ownership: dispatched by 05-green-testing (T1) which dispatches Tier-3 specialists sequentially (Ollama concurrency limit 2)
 - When pragmatic mode and "nothing deferred" conflict, lean toward thoroughness: keep validation gates, skip only plan-verification green-light cycle and fix-packet YAML ceremony
@@ -74,7 +74,7 @@ Phases are strictly sequential: Phase N+1 begins only after Phase N is [DONE] an
 
 <!-- step: aio-phase-0-step-0-1 -->
 
-**Step 0.1:** Set HEAVY agents to `glm-5.2:cloud` (5 agents):
+**Step 0.1:** Set HEAVY agents to `glm-5.3-flash:cloud` (5 agents):
 
 - 00-helping, 01-planning, 03-red-testing, 04-implementing, implementation-executor ✅ DONE
 
@@ -89,11 +89,11 @@ Phases are strictly sequential: Phase N+1 begins only after Phase N is [DONE] an
 
 <!-- step: aio-phase-0-step-0-3 -->
 
-**Step 0.3:** Add model-value allowlist to `validate-agent-frontmatter.mjs` — allow ONLY `glm-5.2:cloud` and `kimi-k2.7-code:cloud`. No other models are approved. Reject all other values. Also remove stale entries for `planning-test-strategy-coordinator` and `research-codebase-coordinator` from `strictTier2CoordinatorPathsByName` in `validate-agent-frontmatter.mjs`. Remove `anthropic/claude-sonnet-4-20250514` from the existing allowed models set — it is NOT approved. ✅ DONE
+**Step 0.3:** Add model-value allowlist to `validate-agent-frontmatter.mjs` — allow ONLY `glm-5.3-flash:cloud` and `kimi-k2.7-code:cloud`. No other models are approved. Reject all other values. Also remove stale entries for `planning-test-strategy-coordinator` and `research-codebase-coordinator` from `strictTier2CoordinatorPathsByName` in `validate-agent-frontmatter.mjs`. Remove `anthropic/claude-sonnet-4-20250514` from the existing allowed models set — it is NOT approved. ✅ DONE
 
 <!-- step: aio-phase-0-step-0-4 -->
 
-**Step 0.4:** Update `model-routing-and-budget` skill — remove ALL references to Claude Sonnet and Claude Haiku models. Neither Sonnet nor Haiku are approved models. Only `glm-5.2:cloud` and `kimi-k2.7-code:cloud` are approved. The skill's phase-based tier system must use only these two models: glm-5.2:cloud for heavy/full tasks, kimi-k2.7-code:cloud for light tasks. Remove the "Claude Haiku 4.6" reference (does not exist) and all Sonnet references. Document that additional models may be added later only with explicit user approval. ✅ DONE
+**Step 0.4:** Update `model-routing-and-budget` skill — remove ALL references to Claude Sonnet and Claude Haiku models. Neither Sonnet nor Haiku are approved models. Only `glm-5.3-flash:cloud` and `kimi-k2.7-code:cloud` are approved. The skill's phase-based tier system must use only these two models: glm-5.3-flash:cloud for heavy/full tasks, kimi-k2.7-code:cloud for light tasks. Remove the "Claude Haiku 4.6" reference (does not exist) and all Sonnet references. Document that additional models may be added later only with explicit user approval. ✅ DONE
 
 **Validation:** `validate-agent-frontmatter.mjs --json --strict`, `validate-agent-quality.mjs`, `validate-agent-graph.mjs --json`
 
@@ -590,7 +590,7 @@ phase-7-evidence:
 - agent-graph gate: PASS (38 agents, 0 issues)
 - tier-enforcement gate: PASS (8 user-invocable Tier-1 agents)
 - slice-advancement gate (aio-phase-7): PASS — 7/7 sub-gates pass (plan-sync, step-packet, plan-slice-quality, plan-command-lint, shared-validation, code-coverage, specialist-review)
-- Model assignment verification: PASS — 5 heavy agents on `glm-5.2:cloud` (00-helping, 01-planning, 03-red-testing, 04-implementing, implementation-executor); 33 light agents on `kimi-k2.7-code:cloud`; 0 other models
+- Model assignment verification: PASS — 5 heavy agents on `glm-5.3-flash:cloud` (00-helping, 01-planning, 03-red-testing, 04-implementing, implementation-executor); 33 light agents on `kimi-k2.7-code:cloud`; 0 other models
 - New agent existence verification: PASS — 8 new agents exist and pass validation (frontmatter-auditor, repo-cortex-scout, review-coordinator, session-summarizer, docs-writer, evolution-correctness-reviewer, onnx-parity-reviewer, webgpu-parity-reviewer)
 - Deleted agent file verification: PASS — `research-codebase-coordinator.agent.md` is deleted
 - `argument-hint` feature adoption: PASS — present on all 8 user-invocable Tier-1 agents
@@ -647,7 +647,7 @@ phase-7-evidence:
 **Step 7.2:** Verification scans:
 
 - Grep scan: zero phantom agent references remaining
-- Confirm model assignments: 5 heavy agents on glm-5.2:cloud, all others on kimi-k2.7-code:cloud
+- Confirm model assignments: 5 heavy agents on glm-5.3-flash:cloud, all others on kimi-k2.7-code:cloud
 - Confirm all new agents exist and pass validation
 - Confirm deleted agents are gone and no references remain
 - Confirm routing table is fresh
@@ -682,7 +682,7 @@ phase-7-evidence:
 
 ### Files to MODIFY (~20+ agents):
 
-- 5 heavy agents: model → glm-5.2:cloud (Phase 0)
+- 5 heavy agents: model → glm-5.3-flash:cloud (Phase 0)
 - 26 light agents: model stays kimi-k2.7-code:cloud (Phase 0)
 - 00-helping: phantom cleanup, add frontmatter-auditor + repo-cortex-scout
 - 01-planning through 07-logging: phantom reference cleanup
@@ -729,7 +729,7 @@ phase-7-evidence:
 
 1. **`argument-hint`** on user-invocable agents — improves UX in chat picker
 2. **Hooks (Preview)** — consider PostToolUse hooks on implementation agents to run `npx tsc --noEmit` after edits
-3. **Array-valued `model`** — consider `model: ['glm-5.2:cloud', 'kimi-k2.7-code:cloud']` for heavy agents as fallback
+3. **Array-valued `model`** — consider `model: ['glm-5.3-flash:cloud', 'kimi-k2.7-code:cloud']` for heavy agents as fallback
 4. **Customization Evaluations** — run on all agents after Phase 6 to catch contradictions
 5. **Copilot Memory** — store repository-level architecture decisions for cross-session persistence
 6. **Session Chronicle** — track agent work across sessions for cost analysis and standup reports
@@ -841,7 +841,7 @@ Session log: plans/session-log-2026-08-15.md
 
 Next: PLAN COMPLETE — all 8 phases (0-7) DONE. No further work required.
 
-Model mandate: glm-5.2:cloud for heavy tasks (00-helping, 01-planning, 03-red-testing, 04-implementing, implementation-executor). kimi-k2.7-code:cloud for light tasks (all others). NO OTHER MODELS APPROVED — only glm-5.2:cloud and kimi-k2.7-code:cloud. Users may override per request between these two models only. Plan mandates continue to use glm-5.2:cloud for implementing agents.
+Model mandate: glm-5.3-flash:cloud for heavy tasks (00-helping, 01-planning, 03-red-testing, 04-implementing, implementation-executor). kimi-k2.7-code:cloud for light tasks (all others). NO OTHER MODELS APPROVED — only glm-5.3-flash:cloud and kimi-k2.7-code:cloud. Users may override per request between these two models only. Plan mandates continue to use glm-5.3-flash:cloud for implementing agents.
 
 Validation commands:
 - node scripts/agent-customization/validate-agent-frontmatter.mjs --json --strict
@@ -863,13 +863,13 @@ Claim: 04-implementing @ 2026-08-15T20:30:00Z
 
 - Removed `planning-test-strategy-coordinator` and `research-codebase-coordinator` from `strictTier2CoordinatorPathsByName`
 - Removed `anthropic/claude-sonnet-4-20250514` from `strictAllowedModels`
-- Changed `glm-5.2:cloud (ollama)` → `glm-5.2:cloud` in `strictAllowedModels` to match actual agent frontmatter values
-- Updated error message to reference `glm-5.2:cloud` instead of `glm-5.2:cloud (ollama)`
+- Changed `glm-5.3-flash:cloud (ollama)` → `glm-5.3-flash:cloud` in `strictAllowedModels` to match actual agent frontmatter values
+- Updated error message to reference `glm-5.3-flash:cloud` instead of `glm-5.3-flash:cloud (ollama)`
 
 ### Step 0.4 — model-routing-and-budget SKILL.md
 
 - Removed all Claude Sonnet and Claude Haiku references from task packet, required workflow, phase defaults table, decision tree, before/after examples, and guardrails
-- Phase-based tier system now uses only `glm-5.2:cloud` (heavy/full) and `kimi-k2.7-code:cloud` (light)
+- Phase-based tier system now uses only `glm-5.3-flash:cloud` (heavy/full) and `kimi-k2.7-code:cloud` (light)
 - Added step 9 to Required Workflow: additional models require explicit user approval
 
 ### Preflight Results
@@ -896,7 +896,7 @@ PlanUpdate:
     - 'node scripts/agent-customization/validate-agent-quality.mjs'
     - 'node scripts/agent-customization/validate-agent-graph.mjs --json'
   rollback:
-    - 'Revert scripts/agent-customization/validate-agent-frontmatter.mjs: restore removed coordinator entries, restore anthropic/claude-sonnet-4-20250514 in strictAllowedModels, restore glm-5.2:cloud (ollama) string'
+    - 'Revert scripts/agent-customization/validate-agent-frontmatter.mjs: restore removed coordinator entries, restore anthropic/claude-sonnet-4-20250514 in strictAllowedModels, restore glm-5.3-flash:cloud (ollama) string'
     - 'Revert .github/skills/model-routing-and-budget/SKILL.md: restore Claude Sonnet/Haiku references and old tier labels'
   next: 'Run 05-green-testing to validate all agent frontmatter passes strict validation and no Claude references remain in skill docs'
 ```

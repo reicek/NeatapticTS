@@ -12,7 +12,7 @@
 - **Parallel execution**: Phases 1–5 can be dispatched in parallel (5 agents, one per layer) since they touch independent file sets. Phase 0 must complete first (shared constants). Phase 6 runs after all others.
 - **No RED/GREEN ceremony**: no failing tests first; just extract constants/types, update imports, validate.
 - **Validation mandatory per phase**: (1) targeted Jest for affected area, (2) `npx tsc --noEmit` from `examples/neatenstein`, (3) `node scripts/folder-quality-metrics.mjs --folder=examples/neatenstein`.
-- **Model mandate**: ALL agents must use `glm-5.2:cloud`.
+- **Model mandate**: ALL agents must use `glm-5.3-flash:cloud`.
 - **NEVER run git**: Git is UNINSTALLED. Use edit/create tools only.
 - **Update folder-quality-metrics.mjs**: Add `.constants.ts` and `.types.ts` to the UTIL_FILE_SUFFIX skip logic so they're exempt from missing-sibling-test-file check.
 - **Preserve public imports**: Main modules must re-export from new `.constants.ts`/.types.ts files so existing imports don't break.

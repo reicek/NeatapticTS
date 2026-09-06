@@ -48,6 +48,17 @@ Do NOT use for general corpus search or indexing - use `repo-cortex-workflow` in
 Flowchart summary: "Embedding request" → "Check ONNX model cache"; "Check ONNX model cache" → "Model loaded?"; "Model loaded?" → "Generate embeddings" (Yes), "Load model" (No); "Generate embeddings" → "Update Turso vector index (DiskANN)"; "Load model" → "Generate embeddings"; "Update Turso vector index (DiskANN)" → "Index warm?"; "Index warm?" → "Hybrid search available" (Yes), "BM25 only fallback" (No); "Hybrid search available"; "BM25 only fallback".
 ```
 
+## Degraded-state response
+
+When `dense_state` is `cold` or `model-only`, or when a Cortex MCP tool returns
+a `self_heal` block, treat that block as the authoritative signal. The
+`self_heal` response contract is documented in the `repo-cortex-workflow`
+skill under **Self-heal surface**. Use it to decide whether to wait
+(`started`, `in_flight`, `cooldown`), run the supplied `manual_recovery`
+commands (`exhausted`, `disabled`), or simply run `npm run index:prewarm`
+when no self-heal block is present. Do not invent parallel repair sequences
+or perform manual Turso surgery.
+
 ## Task Packet
 
 Pass a compact packet with the observed surface, known scope, and the

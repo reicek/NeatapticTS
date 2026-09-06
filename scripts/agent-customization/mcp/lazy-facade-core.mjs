@@ -99,6 +99,7 @@ export function createLazyFacade(config) {
         childTransport,
         facadeName: config.name,
         targetName: config.target,
+        spawnCommand,
         routingMode,
         localToolRegistry,
       });
@@ -123,6 +124,7 @@ export function createLazyFacade(config) {
       childTransport,
       facadeName: config.name,
       targetName: config.target,
+      spawnCommand,
       routingMode,
       localToolRegistry,
     });
@@ -334,11 +336,19 @@ async function handleToolCall(request, context) {
     }
     return applyFacadePrefixIfError(result, context.facadeName);
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+
+    if (context.targetName === 'cortex' && isSpawnFailureError(errorMessage)) {
+      return createToolErrorResult(
+        buildCortexSpawnFailurePayload(errorMessage, context.spawnCommand),
+      );
+    }
+
     return createToolErrorResult({
       facade: context.facadeName,
       target: context.targetName,
       available: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: errorMessage,
       fallbackHint: `Start the real ${context.targetName} server manually or check the spawn command.`,
     });
   }
@@ -374,6 +384,77 @@ function applyFacadePrefixIfError(result, facadeName) {
   }
 
   return { ...result, content };
+}
+
+/**
+ * Determine whether an error message describes a failure to spawn the real
+ * child process, as opposed to a runtime failure after the child started.
+ *
+ * @param {string} message - Error message to classify.
+ * @returns {boolean} True when the error originated during spawn.
+ */
+function isSpawnFailureError(message) {
+  return (
+    message.startsWith('Failed to spawn ') ||
+    message === 'Spawn returned an invalid child process.'
+  );
+}
+
+/**
+ * Build the T4 self-healing guidance payload for a Cortex spawn failure.
+ *
+ * The payload replaces the generic `fallbackHint` with explicit manual
+ * recovery instructions and a structured `self_heal` block that the host
+ * can surface when the Repo Cortex MCP server cannot be started.
+ *
+ * @param {string} errorMessage - Original spawn error message.
+ * @param {string[]} spawnCommand - Command/argv used to spawn Cortex.
+ * @returns {Record<string, unknown>} Diagnostic payload for the tool error result.
+ */
+function buildCortexSpawnFailurePayload(errorMessage, spawnCommand) {
+  const commandText = spawnCommand.join(' ');
+  const cooldownSeconds = 600;
+  const nextAllowedAt = new Date(Date.now() + cooldownSeconds * 1000);
+
+  const guidance = [
+    'Cortex MCP server failed to start.',
+    '',
+    'RAG search is UNAVAILABLE. Native fallback: grep/glob/view.',
+    '',
+    `Spawn command: ${commandText}`,
+    '',
+    'Error summary:',
+    errorMessage,
+    '',
+    'Environment checks:',
+    '- TURSO_DATABASE_URL must be set and the Turso database reachable.',
+    '',
+    'Manual recovery commands:',
+    '- npm run index:session-start',
+    '- npm run index:prewarm',
+    `- ${commandText}`,
+  ].join('\n');
+
+  return {
+    error: errorMessage,
+    guidance,
+    self_heal: {
+      action: 'unavailable',
+      attempt: 0,
+      cooldown_s: cooldownSeconds,
+      est_duration_min: 5,
+      guidance,
+      manual_recovery: [
+        'npm run index:session-start',
+        'npm run index:prewarm',
+        commandText,
+      ],
+      max_attempts: 3,
+      next_allowed_at: nextAllowedAt.toISOString(),
+      reason: 'Cortex MCP server spawn failure',
+      state: 'unavailable',
+    },
+  };
 }
 
 /**

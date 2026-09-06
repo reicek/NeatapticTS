@@ -22,9 +22,40 @@
  */
 
 import { requireString } from '../../agent-customization/mcp/mcp-utils.mjs';
+import { evaluateSelfHeal } from '../../agent-customization/cortex/cortex-health-guard.mjs';
 import { normalizeLimit } from './cortex-db.mjs';
-import { buildResponseFreshness, searchCorpus } from './search-corpus.mjs';
+import {
+  buildResponseFreshness,
+  invalidateDenseReadinessCache,
+  searchCorpus,
+} from './search-corpus.mjs';
 import { assembleContext } from '../../../rag-index/assemble-context.mjs';
+
+/**
+ * Build a deterministic self-heal guidance block for the rare case where the
+ * shared guard returns no decision. Keeps the degraded-path contract: a context
+ * response that fell back to BM25-only always carries actionable guidance.
+ *
+ * @param {string} state - Readiness state: 'cold' | 'model-only'.
+ * @param {string} reason - Human-readable degradation reason.
+ * @returns {object} A guidance block compatible with cortex-health-guard.mjs output.
+ */
+function buildFallbackSelfHeal(state, reason) {
+  return {
+    state,
+    reason,
+    action: 'started',
+    attempt: 1,
+    max_attempts: 3,
+    cooldown_s: 600,
+    next_allowed_at: 0,
+    est_duration_min: 1,
+    manual_recovery: null,
+    guidance:
+      'Cortex dense search is degraded and a background self-heal repair has been started. ' +
+      'BM25-only context is being returned; continue with reduced recall.',
+  };
+}
 
 /**
  * Default token budget for an assembled context window.
@@ -70,12 +101,25 @@ const DEFAULT_FORMAT = 'markdown';
 
 /**
  * @typedef {Object} SearchContextResult
- * @property {string|Object} context - Assembled context (Markdown string or JSON object).
+ * @property {string|Object} context - Assembled context (Markdown string or JSON object). Includes the self-heal guidance paragraph when dense search is degraded.
+ * @property {boolean} compact - Whether compact result mode was requested.
  * @property {number} token_count - Estimated tokens in the assembled context.
  * @property {{essential: number, supporting: number, supplementary: number}} tier_counts - Tier counts.
  * @property {string} dense_state - Dense-readiness state: 'cold', 'model-only', 'warm', or 'none'.
  * @property {boolean} [dense_degraded] - Present and true when dense search fell back to BM25.
+ * @property {string} rerank_state - Reranker readiness state, e.g. 'not_requested' or 'ready'.
  * @property {'markdown'|'json'} context_format - Effective output format.
+ * @property {number} total_chunks_retrieved - Chunks returned by the underlying corpus search.
+ * @property {number} chunks_in_context - Chunks actually included in the assembled context.
+ * @property {number} tokens_used - Same as token_count (legacy alias for budget tracking).
+ * @property {number} context_budget_consumed - Same as token_count.
+ * @property {number} budget_remaining - Tokens left within the requested budget.
+ * @property {string} dedup_strategy - Strategy used to collapse near-duplicate chunks.
+ * @property {Array<object>} results - Selected chunks, compact or full depending on `compact`.
+ * @property {Object} [top_result] - Full metadata for the highest-ranked chunk when `read_top_result` is true.
+ * @property {Array<{tool: string, args: object, reason: string}>} follow_up_refs - Suggested follow-up tool calls for deeper exploration.
+ * @property {object} [self_heal] - Structured guidance block present when dense retrieval is degraded.
+ * @property {object} freshness - Freshness stanza with timestamp, stale flag, and proof.
  * @property {Object} metadata - Provenance metadata for MCP consumers.
  */
 
@@ -231,6 +275,45 @@ export async function searchContext(options = {}) {
       ? searchResponse.rerank_state
       : 'not_requested';
 
+  // Propagate an existing self_heal block from the corpus search, or augment
+  // a degraded corpus response that omitted one.
+  let selfHeal = searchResponse.self_heal;
+  const needsSelfHeal =
+    selfHeal === undefined && searchResponse.dense_degraded === true;
+  if (needsSelfHeal) {
+    const readinessReport = {
+      state: denseState,
+      reason: searchResponse.dense_reason ?? 'Dense search is degraded.',
+      chunk_count: null,
+      embedding_count: null,
+      ready: false,
+    };
+    let guardDecision;
+    try {
+      guardDecision = await evaluateSelfHeal({
+        probe: () => Promise.resolve(readinessReport),
+      });
+    } catch {
+      // Guard failure must not break context assembly.
+    }
+    if (
+      guardDecision &&
+      typeof guardDecision === 'object' &&
+      guardDecision.guidanceFields
+    ) {
+      selfHeal = guardDecision.guidanceFields;
+      if (guardDecision.action === 'started') {
+        invalidateDenseReadinessCache();
+      }
+    }
+    if (selfHeal === undefined) {
+      selfHeal = buildFallbackSelfHeal(
+        readinessReport.state,
+        readinessReport.reason,
+      );
+    }
+  }
+
   const tierCounts = assembled.tierCounts ?? {
     essential: 0,
     supporting: 0,
@@ -302,6 +385,18 @@ export async function searchContext(options = {}) {
     context = `${context.slice(0, COMPACT_CONTEXT_THRESHOLD - 1)}…`;
   }
 
+  // For text-only harnesses, prepend the human self-heal summary paragraph
+  // to the assembled context so the warning is visible even when clients do
+  // not inspect the structured self_heal block.
+  if (
+    selfHeal !== undefined &&
+    typeof selfHeal.guidance === 'string' &&
+    typeof context === 'string' &&
+    !context.startsWith(selfHeal.guidance)
+  ) {
+    context = `${selfHeal.guidance}\n\n${context}`;
+  }
+
   return {
     context,
     compact,
@@ -318,6 +413,7 @@ export async function searchContext(options = {}) {
     dedup_strategy: dedupStrategy,
     results,
     ...(searchResponse.dense_degraded === true ? { dense_degraded: true } : {}),
+    ...(selfHeal !== undefined ? { self_heal: selfHeal } : {}),
     freshness:
       searchResponse.freshness ??
       (await buildResponseFreshness(options.databasePath, options.client)),
