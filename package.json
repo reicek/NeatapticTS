@@ -10,6 +10,7 @@
     "jest:base": "cross-env \"NODE_OPTIONS=--no-experimental-webstorage --max-old-space-size=8192\" jest --config=jest.config.mjs --testPathIgnorePatterns=.*\\.test\\.mjs$ --testPathIgnorePatterns=rag-index/.*\\.test\\.ts$ --testPathIgnorePatterns=/examples/asciiMaze/",
     "jest:esm-ts": "cross-env \"NODE_OPTIONS=--no-experimental-webstorage --max-old-space-size=8192 --experimental-vm-modules\" jest --config=jest.config.mjs --selectProjects rag-index-scripts --selectProjects analyze-trace-scripts",
     "jest:mjs": "cross-env \"NODE_OPTIONS=--no-experimental-webstorage --max-old-space-size=8192 --experimental-vm-modules\" jest --config=jest.config.mjs --selectProjects rag-index-mjs --selectProjects mcp-semantic-mjs --selectProjects trace-scripts-mjs --selectProjects agent-customization-mjs --coverageProvider=babel",
+    "test:ci": "npm run jest:base -- --no-cache --selectProjects default --testPathPatterns \"[\\\\/]src[\\\\/]\" --maxWorkers=4 --workerIdleMemoryLimit=1G",
     "test": "npm run jest:base -- --no-cache --coverage --collect-coverage --workerIdleMemoryLimit=1G --maxWorkers=4 --testPathIgnorePatterns=.e2e.test.ts --testPathIgnorePatterns=benchmark\\..*\\.test\\.ts$ --verbose && npm run jest:esm-ts -- --no-cache --runInBand --verbose && npm run jest:mjs -- --no-cache --runInBand --verbose",
     "pretest": "npm run build",
     "test:bench": "npm run jest:base -- --no-cache --runInBand --verbose --testPathPatterns=benchmark",

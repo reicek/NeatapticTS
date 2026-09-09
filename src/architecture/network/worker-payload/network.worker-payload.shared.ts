@@ -12,6 +12,7 @@ const SHARED_INFERENCE_READY_MESSAGE_TYPE = 'ready';
 const SHARED_INFERENCE_REQUEST_ERROR_MESSAGE_TYPE = 'request-error';
 const SHARED_INFERENCE_ASYNC_CONVERSION_THRESHOLD = 32_768;
 const SHARED_INFERENCE_ASYNC_CONVERSION_CHUNK_SIZE = 16_384;
+const SHARED_INFERENCE_HOST_WAIT_TIMEOUT_MS = 1000;
 
 import { getTransferList } from './network.worker-payload.utils';
 import type {
@@ -864,7 +865,7 @@ function ensureSharedWorkerOpen(
   fatalError: Error | undefined,
   isOpen: boolean,
 ): void {
-  if (isOpen) {
+  if (isOpen && fatalError === undefined) {
     return;
   }
 
@@ -887,6 +888,7 @@ async function waitForSharedStatus(
           typedArray: Int32Array,
           index: number,
           value: number,
+          timeout?: number,
         ) =>
           | { async: false; value: 'not-equal' | 'ok' | 'timed-out' }
           | {
@@ -895,7 +897,12 @@ async function waitForSharedStatus(
             });
 
     if (typeof waitAsync === 'function') {
-      const waitResult = waitAsync(controlView, statusIndex, currentStatus);
+      const waitResult = waitAsync(
+        controlView,
+        statusIndex,
+        currentStatus,
+        SHARED_INFERENCE_HOST_WAIT_TIMEOUT_MS,
+      );
 
       if (waitResult.async) {
         await waitResult.value;

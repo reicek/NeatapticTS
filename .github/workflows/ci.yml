@@ -28,7 +28,7 @@ jobs:
         run: npm run build:browser
       - name: Smoke test browser bundle
         run: npm run smoke:browser
-      - name: Run smoke tests
-        run: npm run test:smoke
+      - name: Run key tests
+        run: npm run test:ci
       - name: Run docs-quality metrics gate
         run: npm run docs:quality:gate

@@ -51,7 +51,7 @@ function setActivationSchedule(
 }
 
 function getNetworkRandomGenerator(network: Network): () => number {
-  return (Reflect.get(network, '_rand') as () => number) ?? Math.random;
+  return (Reflect.get(network, '_rand') as () => number) ?? (() => 0.5);
 }
 
 describe('network topology chapter', () => {

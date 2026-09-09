@@ -134,7 +134,7 @@ function buildMonoObjectiveEntryWithoutLineage(): TelemetryEntry {
 function createTelemetrySelectContext(): TelemetrySelectContextStub {
   return {
     generation: 0,
-    _getRNG: () => () => Math.random(),
+    _getRNG: () => () => 0.42,
     options: {},
   };
 }

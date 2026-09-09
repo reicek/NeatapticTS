@@ -33,7 +33,7 @@ import type {
 } from './network.worker-payload';
 import { SHARED_INFERENCE_REQUIRES_CROSS_ORIGIN_ISOLATION } from './network.worker-payload';
 
-jest.setTimeout(600000);
+jest.setTimeout(120000);
 
 type PortablePayload = PortableInferencePayload;
 type TransferablePayload = TransferableInferencePayload;
@@ -1259,61 +1259,71 @@ describe('network worker payload chapter', () => {
       it('resolves browser and node bootstrap contracts for the host transport helpers', () => {
         // Arrange
         const originalJestWorkerId = process.env.JEST_WORKER_ID;
-        process.env.JEST_WORKER_ID = '1';
 
         // Act
-        const result = withBrowserWorkerGlobals(() => {
-          const browserWorker =
-            INFERENCE_CHANNEL_HOST_INTERNALS.createBrowserInferenceChannelWorker(
-              'worker-entry.js',
-              'worker-entry.js',
-            );
-          const nodeSpecifier =
-            INFERENCE_CHANNEL_HOST_INTERNALS.resolveInferenceChannelWorkerSpecifier(
-              undefined,
-            );
-          const sourceWorkerPath =
-            INFERENCE_CHANNEL_HOST_INTERNALS.resolveNodeDefaultWorkerPath();
-          delete process.env.JEST_WORKER_ID;
-          const distWorkerPath =
-            INFERENCE_CHANNEL_HOST_INTERNALS.resolveNodeDefaultWorkerPath();
+        const result = (() => {
+          process.env.JEST_WORKER_ID = '1';
 
-          return {
-            browserWorkerScript: (
-              browserWorker.worker as unknown as { scriptUrl: string }
-            ).scriptUrl,
-            browserWorkerType: (
-              browserWorker.worker as unknown as {
-                options: { type: string };
-              }
-            ).options.type,
-            directMessage:
-              INFERENCE_CHANNEL_HOST_INTERNALS.resolveMessageEventData(
-                'direct-message',
-              ),
-            nodeOptionsForJs:
-              INFERENCE_CHANNEL_HOST_INTERNALS.resolveNodeInferenceChannelWorkerOptions(
-                'worker-entry.js',
-              ),
-            nodeOptionsForTs:
-              INFERENCE_CHANNEL_HOST_INTERNALS.resolveNodeInferenceChannelWorkerOptions(
-                'worker-entry.ts',
-              ),
-            plainObjectError: INFERENCE_CHANNEL_HOST_INTERNALS.asError({})
-              .message,
-            runtimeWorkerError:
-              INFERENCE_CHANNEL_HOST_INTERNALS.resolveWorkerError({}).message,
-            distWorkerPath,
-            nodeSpecifier,
-            nodeWorkerPath: sourceWorkerPath,
-            overrideSpecifier:
-              INFERENCE_CHANNEL_HOST_INTERNALS.resolveInferenceChannelWorkerSpecifier(
-                'custom-worker.js',
-              ),
-          };
-        });
+          try {
+            return withBrowserWorkerGlobals(() => {
+              const browserWorker =
+                INFERENCE_CHANNEL_HOST_INTERNALS.createBrowserInferenceChannelWorker(
+                  'worker-entry.js',
+                  'worker-entry.js',
+                );
+              const nodeSpecifier =
+                INFERENCE_CHANNEL_HOST_INTERNALS.resolveInferenceChannelWorkerSpecifier(
+                  undefined,
+                );
+              const sourceWorkerPath =
+                INFERENCE_CHANNEL_HOST_INTERNALS.resolveNodeDefaultWorkerPath();
+              delete process.env.JEST_WORKER_ID;
+              const distWorkerPath =
+                INFERENCE_CHANNEL_HOST_INTERNALS.resolveNodeDefaultWorkerPath();
 
-        process.env.JEST_WORKER_ID = originalJestWorkerId;
+              return {
+                browserWorkerScript: (
+                  browserWorker.worker as unknown as { scriptUrl: string }
+                ).scriptUrl,
+                browserWorkerType: (
+                  browserWorker.worker as unknown as {
+                    options: { type: string };
+                  }
+                ).options.type,
+                directMessage:
+                  INFERENCE_CHANNEL_HOST_INTERNALS.resolveMessageEventData(
+                    'direct-message',
+                  ),
+                nodeOptionsForJs:
+                  INFERENCE_CHANNEL_HOST_INTERNALS.resolveNodeInferenceChannelWorkerOptions(
+                    'worker-entry.js',
+                  ),
+                nodeOptionsForTs:
+                  INFERENCE_CHANNEL_HOST_INTERNALS.resolveNodeInferenceChannelWorkerOptions(
+                    'worker-entry.ts',
+                  ),
+                plainObjectError: INFERENCE_CHANNEL_HOST_INTERNALS.asError({})
+                  .message,
+                runtimeWorkerError:
+                  INFERENCE_CHANNEL_HOST_INTERNALS.resolveWorkerError({})
+                    .message,
+                distWorkerPath,
+                nodeSpecifier,
+                nodeWorkerPath: sourceWorkerPath,
+                overrideSpecifier:
+                  INFERENCE_CHANNEL_HOST_INTERNALS.resolveInferenceChannelWorkerSpecifier(
+                    'custom-worker.js',
+                  ),
+              };
+            });
+          } finally {
+            if (originalJestWorkerId === undefined) {
+              delete process.env.JEST_WORKER_ID;
+            } else {
+              process.env.JEST_WORKER_ID = originalJestWorkerId;
+            }
+          }
+        })();
 
         // Assert
         expect(result).toEqual({
@@ -3538,167 +3548,180 @@ describe('network worker payload chapter', () => {
         );
         const originalJestWorkerId = process.env.JEST_WORKER_ID;
         const originalSharedArrayBuffer = globalThis.SharedArrayBuffer;
-        process.env.JEST_WORKER_ID = '1';
-        Object.defineProperty(browserDocument, 'currentScript', {
-          configurable: true,
-          value: {
-            src: 'https://example.test/dist/neataptic.js',
-          },
-        });
+        let result: unknown;
+        try {
+          process.env.JEST_WORKER_ID = '1';
+          Object.defineProperty(browserDocument, 'currentScript', {
+            configurable: true,
+            value: {
+              src: 'https://example.test/dist/neataptic.js',
+            },
+          });
 
-        // Act
-        const result = withBrowserWorkerGlobals(() => {
-          const browserWorker =
-            SHARED_INFERENCE_HOST_INTERNALS.createBrowserSharedInferenceWorker(
-              'worker-entry.js',
+          // Act
+          result = withBrowserWorkerGlobals(() => {
+            const browserWorker =
+              SHARED_INFERENCE_HOST_INTERNALS.createBrowserSharedInferenceWorker(
+                'worker-entry.js',
+              );
+            const browserDefaultSpecifier = withProcessOverride(undefined, () =>
+              SHARED_INFERENCE_HOST_INTERNALS.resolveInferenceSharedWorkerSpecifier(
+                undefined,
+              ),
             );
-          const browserDefaultSpecifier = withProcessOverride(undefined, () =>
-            SHARED_INFERENCE_HOST_INTERNALS.resolveInferenceSharedWorkerSpecifier(
-              undefined,
-            ),
-          );
-          const browserDefaultWorker =
-            SHARED_INFERENCE_HOST_INTERNALS.createBrowserSharedInferenceWorker(
-              browserDefaultSpecifier,
-            );
-          const nodeSpecifier =
-            SHARED_INFERENCE_HOST_INTERNALS.resolveInferenceSharedWorkerSpecifier(
-              undefined,
-            );
-          const sourceWorkerPath =
-            SHARED_INFERENCE_HOST_INTERNALS.resolveNodeDefaultWorkerPath();
-          delete process.env.JEST_WORKER_ID;
-          const distWorkerPath =
-            SHARED_INFERENCE_HOST_INTERNALS.resolveNodeDefaultWorkerPath();
+            const browserDefaultWorker =
+              SHARED_INFERENCE_HOST_INTERNALS.createBrowserSharedInferenceWorker(
+                browserDefaultSpecifier,
+              );
+            const nodeSpecifier =
+              SHARED_INFERENCE_HOST_INTERNALS.resolveInferenceSharedWorkerSpecifier(
+                undefined,
+              );
+            const sourceWorkerPath =
+              SHARED_INFERENCE_HOST_INTERNALS.resolveNodeDefaultWorkerPath();
+            delete process.env.JEST_WORKER_ID;
+            const distWorkerPath =
+              SHARED_INFERENCE_HOST_INTERNALS.resolveNodeDefaultWorkerPath();
 
-          let closedError = '';
-          let plainClosedError = '';
-          let missingSharedArrayBufferError = '';
+            let closedError = '';
+            let plainClosedError = '';
+            let missingSharedArrayBufferError = '';
 
-          try {
+            try {
+              SHARED_INFERENCE_HOST_INTERNALS.ensureSharedWorkerOpen(
+                new Error('closed-shared-worker'),
+                false,
+              );
+            } catch (error) {
+              closedError = (error as Error).message;
+            }
+
+            try {
+              SHARED_INFERENCE_HOST_INTERNALS.ensureSharedWorkerOpen(
+                undefined,
+                false,
+              );
+            } catch (error) {
+              plainClosedError = (error as Error).message;
+            }
+
+            Reflect.set(globalThis, 'SharedArrayBuffer', undefined);
+
+            try {
+              SHARED_INFERENCE_HOST_INTERNALS.ensureSharedArrayBufferSupport();
+            } catch (error) {
+              missingSharedArrayBufferError = (error as Error).message;
+            }
+
+            Reflect.set(
+              globalThis,
+              'SharedArrayBuffer',
+              originalSharedArrayBuffer,
+            );
             SHARED_INFERENCE_HOST_INTERNALS.ensureSharedWorkerOpen(
-              new Error('closed-shared-worker'),
-              false,
-            );
-          } catch (error) {
-            closedError = (error as Error).message;
-          }
-
-          try {
-            SHARED_INFERENCE_HOST_INTERNALS.ensureSharedWorkerOpen(
               undefined,
-              false,
+              true,
             );
-          } catch (error) {
-            plainClosedError = (error as Error).message;
-          }
-
-          Reflect.set(globalThis, 'SharedArrayBuffer', undefined);
-
-          try {
             SHARED_INFERENCE_HOST_INTERNALS.ensureSharedArrayBufferSupport();
-          } catch (error) {
-            missingSharedArrayBufferError = (error as Error).message;
-          }
 
+            return {
+              browserDefaultSpecifier,
+              browserDefaultWorkerScript: (
+                browserDefaultWorker.worker as unknown as { scriptUrl: string }
+              ).scriptUrl,
+              browserWorkerAssetUrl: resolveBrowserWorkerAssetUrl(
+                'worker-entry.js',
+                {
+                  baseUrl: 'https://example.test/runtime.bundle.js',
+                },
+              ),
+              browserWorkerScript: (
+                browserWorker.worker as unknown as { scriptUrl: string }
+              ).scriptUrl,
+              browserWorkerType: (
+                browserWorker.worker as unknown as {
+                  options: { type: string };
+                }
+              ).options.type,
+              closedError,
+              customError: (() => {
+                const normalizedError = SHARED_INFERENCE_HOST_INTERNALS.asError(
+                  {
+                    message: 'custom failure',
+                    name: 'CustomError',
+                    stack: 'custom-stack',
+                  },
+                );
+
+                return {
+                  message: normalizedError.message,
+                  name: normalizedError.name,
+                  stack: normalizedError.stack,
+                };
+              })(),
+              dataMessage:
+                SHARED_INFERENCE_HOST_INTERNALS.resolveMessageEventData({
+                  data: 'payload',
+                }),
+              directMessage:
+                SHARED_INFERENCE_HOST_INTERNALS.resolveMessageEventData(
+                  'raw-message',
+                ),
+              directError: SHARED_INFERENCE_HOST_INTERNALS.asError(
+                new Error('boom'),
+              ).message,
+              distWorkerPath,
+              missingSharedArrayBufferError,
+              nodeOptionsForJs:
+                SHARED_INFERENCE_HOST_INTERNALS.resolveNodeSharedWorkerOptions(
+                  'worker-entry.js',
+                ),
+              nodeOptionsForTs:
+                SHARED_INFERENCE_HOST_INTERNALS.resolveNodeSharedWorkerOptions(
+                  'worker-entry.ts',
+                ),
+              nodeSpecifier,
+              nodeWorkerPath: sourceWorkerPath,
+              overrideSpecifier:
+                SHARED_INFERENCE_HOST_INTERNALS.resolveInferenceSharedWorkerSpecifier(
+                  'custom-worker.js',
+                ),
+              plainObjectError: SHARED_INFERENCE_HOST_INTERNALS.asError({})
+                .message,
+              plainClosedError,
+              runtimeWorkerError:
+                SHARED_INFERENCE_HOST_INTERNALS.resolveWorkerError({}).message,
+              stringError: SHARED_INFERENCE_HOST_INTERNALS.asError(
+                'shared-host-string-error',
+              ).message,
+              workerError: SHARED_INFERENCE_HOST_INTERNALS.resolveWorkerError({
+                error: new Error('worker exploded'),
+              }).message,
+            };
+          });
+        } finally {
+          if (originalJestWorkerId === undefined) {
+            delete process.env.JEST_WORKER_ID;
+          } else {
+            process.env.JEST_WORKER_ID = originalJestWorkerId;
+          }
           Reflect.set(
             globalThis,
             'SharedArrayBuffer',
             originalSharedArrayBuffer,
           );
-          SHARED_INFERENCE_HOST_INTERNALS.ensureSharedWorkerOpen(
-            undefined,
-            true,
-          );
-          SHARED_INFERENCE_HOST_INTERNALS.ensureSharedArrayBufferSupport();
-
-          return {
-            browserDefaultSpecifier,
-            browserDefaultWorkerScript: (
-              browserDefaultWorker.worker as unknown as { scriptUrl: string }
-            ).scriptUrl,
-            browserWorkerAssetUrl: resolveBrowserWorkerAssetUrl(
-              'worker-entry.js',
-              {
-                baseUrl: 'https://example.test/runtime.bundle.js',
-              },
-            ),
-            browserWorkerScript: (
-              browserWorker.worker as unknown as { scriptUrl: string }
-            ).scriptUrl,
-            browserWorkerType: (
-              browserWorker.worker as unknown as {
-                options: { type: string };
-              }
-            ).options.type,
-            closedError,
-            customError: (() => {
-              const normalizedError = SHARED_INFERENCE_HOST_INTERNALS.asError({
-                message: 'custom failure',
-                name: 'CustomError',
-                stack: 'custom-stack',
-              });
-
-              return {
-                message: normalizedError.message,
-                name: normalizedError.name,
-                stack: normalizedError.stack,
-              };
-            })(),
-            dataMessage:
-              SHARED_INFERENCE_HOST_INTERNALS.resolveMessageEventData({
-                data: 'payload',
-              }),
-            directMessage:
-              SHARED_INFERENCE_HOST_INTERNALS.resolveMessageEventData(
-                'raw-message',
-              ),
-            directError: SHARED_INFERENCE_HOST_INTERNALS.asError(
-              new Error('boom'),
-            ).message,
-            distWorkerPath,
-            missingSharedArrayBufferError,
-            nodeOptionsForJs:
-              SHARED_INFERENCE_HOST_INTERNALS.resolveNodeSharedWorkerOptions(
-                'worker-entry.js',
-              ),
-            nodeOptionsForTs:
-              SHARED_INFERENCE_HOST_INTERNALS.resolveNodeSharedWorkerOptions(
-                'worker-entry.ts',
-              ),
-            nodeSpecifier,
-            nodeWorkerPath: sourceWorkerPath,
-            overrideSpecifier:
-              SHARED_INFERENCE_HOST_INTERNALS.resolveInferenceSharedWorkerSpecifier(
-                'custom-worker.js',
-              ),
-            plainObjectError: SHARED_INFERENCE_HOST_INTERNALS.asError({})
-              .message,
-            plainClosedError,
-            runtimeWorkerError:
-              SHARED_INFERENCE_HOST_INTERNALS.resolveWorkerError({}).message,
-            stringError: SHARED_INFERENCE_HOST_INTERNALS.asError(
-              'shared-host-string-error',
-            ).message,
-            workerError: SHARED_INFERENCE_HOST_INTERNALS.resolveWorkerError({
-              error: new Error('worker exploded'),
-            }).message,
-          };
-        });
-
-        process.env.JEST_WORKER_ID = originalJestWorkerId;
-        Reflect.set(globalThis, 'SharedArrayBuffer', originalSharedArrayBuffer);
-        if (currentScriptDescriptor) {
-          Object.defineProperty(
-            browserDocument,
-            'currentScript',
-            currentScriptDescriptor,
-          );
-        } else {
-          Reflect.deleteProperty(browserDocument, 'currentScript');
-        }
-        if (shouldRestoreDocument) {
-          Reflect.deleteProperty(globalThis, 'document');
+          if (currentScriptDescriptor) {
+            Object.defineProperty(
+              browserDocument,
+              'currentScript',
+              currentScriptDescriptor,
+            );
+          } else {
+            Reflect.deleteProperty(browserDocument, 'currentScript');
+          }
+          if (shouldRestoreDocument) {
+            Reflect.deleteProperty(globalThis, 'document');
+          }
         }
 
         // Assert

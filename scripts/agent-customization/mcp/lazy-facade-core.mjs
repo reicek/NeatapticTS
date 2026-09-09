@@ -340,7 +340,12 @@ async function handleToolCall(request, context) {
 
     if (context.targetName === 'cortex' && isSpawnFailureError(errorMessage)) {
       return createToolErrorResult(
-        buildCortexSpawnFailurePayload(errorMessage, context.spawnCommand),
+        buildCortexSpawnFailurePayload(
+          errorMessage,
+          context.spawnCommand,
+          context.facadeName,
+          context.targetName,
+        ),
       );
     }
 
@@ -411,7 +416,12 @@ function isSpawnFailureError(message) {
  * @param {string[]} spawnCommand - Command/argv used to spawn Cortex.
  * @returns {Record<string, unknown>} Diagnostic payload for the tool error result.
  */
-function buildCortexSpawnFailurePayload(errorMessage, spawnCommand) {
+function buildCortexSpawnFailurePayload(
+  errorMessage,
+  spawnCommand,
+  facadeName,
+  targetName,
+) {
   const commandText = spawnCommand.join(' ');
   const cooldownSeconds = 600;
   const nextAllowedAt = new Date(Date.now() + cooldownSeconds * 1000);
@@ -436,6 +446,9 @@ function buildCortexSpawnFailurePayload(errorMessage, spawnCommand) {
   ].join('\n');
 
   return {
+    facade: facadeName,
+    target: targetName,
+    available: false,
     error: errorMessage,
     guidance,
     self_heal: {

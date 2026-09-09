@@ -389,9 +389,10 @@ describe('acceleration.variants', () => {
         buildParallelConfig(2),
       );
 
-      // Wait for the async backend-resolution to finish before asserting that
-      // the second variant's activate call has already started.
-      await new Promise((resolve) => setTimeout(resolve, 0));
+      // Yield to the event loop so the async backend-resolution and
+      // concurrent batch dispatch finish before we assert that the second
+      // variant's activate call has already started.
+      await new Promise<void>((resolve) => setImmediate(resolve));
 
       expect(secondActivateStarted).toBe(true);
 

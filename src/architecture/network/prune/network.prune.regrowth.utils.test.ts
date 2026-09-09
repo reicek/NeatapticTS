@@ -113,7 +113,7 @@ describe('network regrowth utility chapter', () => {
         let mathRandomCalled = false;
         Math.random = () => {
           mathRandomCalled = true;
-          return originalRandom();
+          return 0.5;
         };
         try {
           maybeRunRegrowth(

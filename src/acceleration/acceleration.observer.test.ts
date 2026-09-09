@@ -38,7 +38,7 @@ describe('acceleration.observer', () => {
         previous: null,
         current: 'gpu',
         reason: 'test',
-        timestamp: Date.now(),
+        timestamp: 1_700_000_000_000,
       });
 
       expect(getBackend()).toBe('gpu');
@@ -51,13 +51,13 @@ describe('acceleration.observer', () => {
         previous: null,
         current: 'gpu',
         reason: 'test',
-        timestamp: Date.now(),
+        timestamp: 1_700_000_000_000,
       });
       observer.onBackendChange!({
         previous: 'gpu',
         current: 'cpu',
         reason: 'test',
-        timestamp: Date.now(),
+        timestamp: 1_700_000_000_001,
       });
 
       expect(getBackend()).toBe('cpu');

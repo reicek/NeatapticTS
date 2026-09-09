@@ -81,7 +81,7 @@ jobs:
 
       - name: Test
         if: ${{ env.LOOP_SKIP == 'false' }}
-        run: npm test
+        run: npm run test:ci
 
       - name: Ensure unique version (auto bump patch if exists)
         if: ${{ env.LOOP_SKIP == 'false' && env.RUN_PUBLISH == 'true' && github.event_name != 'release' }}

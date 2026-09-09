@@ -23,7 +23,7 @@
  * Pure .mjs test — runs via Jest ESM project (mcp-semantic-mjs).
  */
 
-import { createClient } from '@libsql/client';
+import { jest } from '@jest/globals';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -34,6 +34,25 @@ import {
 } from '../../../rag-index/init-schema.mjs';
 
 const MODULE_PATH = '../tools/cortex-db.mjs';
+
+// Load the real libSQL client before mocking it so the in-memory test DB used
+// by setupTestDb() stays genuine while getTursoClient() embedded-replica
+// configuration can be unit-tested without attempting a remote TLS handshake.
+const actualCreateClient = (await import('@libsql/client')).createClient;
+
+jest.unstable_mockModule('@libsql/client', () => ({
+  __esModule: true,
+  createClient: (config) => {
+    if (config.syncUrl) {
+      return {
+        execute: jest.fn(),
+        close: jest.fn(),
+        ...config,
+      };
+    }
+    return actualCreateClient(config);
+  },
+}));
 
 /**
  * Env vars managed by these tests. Saved and restored around each test to
@@ -86,7 +105,7 @@ async function loadModule() {
  * @returns {Promise<import('@libsql/client').Client>} Configured in-memory client.
  */
 async function setupTestDb() {
-  const client = createClient({ url: ':memory:' });
+  const client = actualCreateClient({ url: ':memory:' });
 
   await client.execute({
     sql: `CREATE TABLE documents (
@@ -186,6 +205,8 @@ describe('getTursoClient', () => {
       const { getTursoClient } = await loadModule();
       const client = await getTursoClient();
       expect(typeof client.execute).toBe('function');
+      expect(client.syncUrl).toBe('libsql://dummy.turso.io');
+      expect(client.syncInterval).toBe(60);
       client.close?.();
     } finally {
       // On Windows, the native SQLite file handle may not release

@@ -323,7 +323,7 @@ describe('network bootstrap utility chapter', () => {
               new Node(
                 request?.type ?? 'hidden',
                 undefined,
-                request?.rng ?? Math.random,
+                request?.rng ?? (() => 0.5),
               ),
           );
         const network = createBootstrapNetwork();
