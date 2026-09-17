@@ -25,8 +25,9 @@ import {
 import type { HostArchitectureSelectorController } from '../host/host.types';
 import type {
   FlappyStatsTableCells,
-  NetworkVisualizationHandle,
+  PlaybackFrameStats,
 } from '../browser-entry.types';
+import type { NetworkVisualizationHandle } from '../../../shared/network-visualization/network-visualization.types';
 import type { WorkerChannelGenerationPayload } from '../worker-channel/worker-channel.types';
 import type { RuntimeStartupPreviewHandle } from './runtime.types';
 import type {
@@ -84,6 +85,7 @@ export interface RuntimeEvolutionLoopOptions {
   context: CanvasRenderingContext2D;
   statsValueByKey: FlappyStatsTableCells;
   renderNetworkArchitecture: NetworkVisualizationHandle['renderNetworkArchitecture'];
+  applyNetworkActivationOverlay?: NetworkVisualizationHandle['applyNetworkActivationOverlay'];
   availableArchitectureProfiles: ExampleArchitectureProfile[];
   initialArchitectureChampionByProfileId: RuntimeArchitectureChampionByProfileId;
   initialArchitectureHistoryByProfileId: RuntimeArchitectureHistoryByProfileId;
@@ -120,6 +122,7 @@ export async function runRuntimeEvolutionLoop(
     context,
     statsValueByKey,
     renderNetworkArchitecture,
+    applyNetworkActivationOverlay,
     availableArchitectureProfiles,
     initialArchitectureChampionByProfileId,
     initialArchitectureHistoryByProfileId,
@@ -235,6 +238,16 @@ export async function runRuntimeEvolutionLoop(
         context,
         evolutionWorker,
         (frameStats) => {
+          // Step 3.7.0: Paint the streamed champion activations onto the panel every frame.
+          if (applyNetworkActivationOverlay) {
+            applyRuntimeChampionActivationOverlay({
+              frameStats,
+              generationPopulationNetworks,
+              fallbackNetwork: bestNetwork,
+              applyNetworkActivationOverlay,
+            });
+          }
+
           // Step 3.7.1: Throttle HUD writes to reduce layout/repaint churn.
           if (frameStats.frameIndex % FLAPPY_HUD_UPDATE_INTERVAL_FRAMES !== 0) {
             return;
@@ -515,6 +528,73 @@ export function resolveGenerationPopulationSize(
   return generationPopulationNetworks.length > 0
     ? generationPopulationNetworks.length
     : fallbackPopulationSize;
+}
+
+/**
+ * Applies the streamed frame-winner activations to the champion network shown in the panel.
+ *
+ * Per-frame telemetry carries the winner's bird index and post-step node
+ * activations. The overlay targets the matching network from the browser-side
+ * generation population cache so the visualized payload and the streamed
+ * activations stay in sync; when the worker could not resolve a frame winner,
+ * the generation-best network is the fallback paint target.
+ *
+ * @param options - Frame stats plus the population cache, fallback network, and paint handle.
+ * @returns Nothing.
+ *
+ * @example
+ * ```ts
+ * const frameStats: PlaybackFrameStats = {
+ *   frameIndex: 7,
+ *   activeBirdCount: 1,
+ *   leaderPipesPassed: 4,
+ *   leaderFramesSurvived: 120,
+ *   activationCallsPerFrame: 3,
+ *   simulationStepsPerRaf: 1,
+ *   winnerBirdIndex: 0,
+ *   winnerNodeActivations: new Float32Array([0.2, -0.4, 0.9]),
+ * };
+ * applyRuntimeChampionActivationOverlay({
+ *   frameStats,
+ *   generationPopulationNetworks: [championNetwork],
+ *   fallbackNetwork: undefined,
+ *   applyNetworkActivationOverlay: (network, activations) => {
+ *     network.nodes.forEach((node, i) => {
+ *       node.activation = activations[i] ?? node.activation;
+ *     });
+ *   },
+ * });
+ * ```
+ */
+export function applyRuntimeChampionActivationOverlay(options: {
+  frameStats: PlaybackFrameStats;
+  generationPopulationNetworks: Network[];
+  fallbackNetwork: Network | undefined;
+  applyNetworkActivationOverlay: (
+    network: Network,
+    winnerNodeActivations: Float32Array,
+  ) => void;
+}): void {
+  const winnerBirdIndex = options.frameStats.winnerBirdIndex;
+  const winnerNodeActivations = options.frameStats.winnerNodeActivations;
+
+  // Step 1: Skip frames whose telemetry omits the winner activation stream.
+  if (typeof winnerBirdIndex !== 'number' || !winnerNodeActivations) {
+    return;
+  }
+
+  // Step 2: Resolve the champion network for the streamed winner bird index.
+  const championNetwork =
+    options.generationPopulationNetworks[winnerBirdIndex] ??
+    options.fallbackNetwork;
+
+  // Step 3: Skip overlays when no champion payload is available to paint.
+  if (!championNetwork) {
+    return;
+  }
+
+  // Step 4: Paint the streamed activations onto the resolved champion network.
+  options.applyNetworkActivationOverlay(championNetwork, winnerNodeActivations);
 }
 
 /**

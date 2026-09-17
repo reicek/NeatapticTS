@@ -118,7 +118,7 @@ without FPS collapse?
   visualizer (`examples/racing_curriculum/browser-entry/network-view/network-view.ts`).
 - The shared visualizer resolves a topology plan, positions every node, and
   draws every connection every frame
-  (`examples/flappy_bird/browser-entry/visualization/visualization.draw.service.ts`).
+  (`examples/shared/network-visualization/visualization/visualization.draw.service.ts`).
 - There is no level-of-detail, abstraction, spatial culling, or deferred
   rendering path. Complexity is O(nodes + edges) per frame.
 - At 109 nodes / 420 edges the live demo already drops to ~20–25 FPS, so a

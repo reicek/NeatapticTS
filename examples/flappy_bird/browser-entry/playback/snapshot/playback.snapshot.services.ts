@@ -4,6 +4,20 @@ import type {
 } from '../../browser-entry.types';
 
 /**
+ * Render state extended with the streamed winner activation fields.
+ *
+ * `PopulationRenderState` is owned by the simulation types module, so the
+ * winner stream fields surface through this local intersection until the
+ * simulation type gains them natively. Assigning `undefined` when a snapshot
+ * omits the stream intentionally clears stale winner state from previous
+ * frames.
+ */
+type PlaybackRenderStateWithWinnerStream = PopulationRenderState & {
+  winnerBirdIndex?: number;
+  winnerNodeActivations?: Float32Array;
+};
+
+/**
  * Snapshot synchronization helpers for playback.
  *
  * The worker streams packed typed-array snapshots, while the browser renderer
@@ -50,6 +64,28 @@ export function applyPlaybackSnapshot(
   renderState.visibleWorldHeightPx = snapshot.visibleWorldHeightPx;
   syncPlaybackSnapshotPipes(renderState, snapshot);
   syncPlaybackSnapshotBirds(renderState, snapshot);
+  syncPlaybackSnapshotWinnerStream(renderState, snapshot);
+}
+
+/**
+ * Surfaces the winner activation stream fields onto the render state.
+ *
+ * Snapshots that omit the stream (legacy worker builds) clear any stale
+ * winner state from earlier frames, so the visualization never renders
+ * activations from a previous generation.
+ *
+ * @param renderState - Mutable render state mirror used by the browser.
+ * @param snapshot - Worker playback snapshot for the current render tick.
+ * @returns Nothing.
+ */
+function syncPlaybackSnapshotWinnerStream(
+  renderState: PopulationRenderState,
+  snapshot: EvolutionPlaybackStepSnapshot,
+): void {
+  const renderStateWithWinnerStream = renderState as PlaybackRenderStateWithWinnerStream;
+  renderStateWithWinnerStream.winnerBirdIndex = snapshot.winnerBirdIndex;
+  renderStateWithWinnerStream.winnerNodeActivations =
+    snapshot.winnerNodeActivations;
 }
 
 /**

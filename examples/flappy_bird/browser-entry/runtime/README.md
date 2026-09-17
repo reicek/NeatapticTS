@@ -462,6 +462,52 @@ plays back that population on the canvas, then folds the outcome into the
 generation summary section and the cross-generation history used by the
 architecture selector.
 
+### applyRuntimeChampionActivationOverlay
+
+```ts
+applyRuntimeChampionActivationOverlay(
+  options: { frameStats: PlaybackFrameStats; generationPopulationNetworks: default[]; fallbackNetwork: default | undefined; applyNetworkActivationOverlay: (network: default, winnerNodeActivations: Float32Array<ArrayBufferLike>) => void; },
+): void
+```
+
+Applies the streamed frame-winner activations to the champion network shown in the panel.
+
+Per-frame telemetry carries the winner's bird index and post-step node
+activations. The overlay targets the matching network from the browser-side
+generation population cache so the visualized payload and the streamed
+activations stay in sync; when the worker could not resolve a frame winner,
+the generation-best network is the fallback paint target.
+
+Parameters:
+- `options` - Frame stats plus the population cache, fallback network, and paint handle.
+
+Returns: Nothing.
+
+Example:
+
+```ts
+const frameStats: PlaybackFrameStats = {
+  frameIndex: 7,
+  activeBirdCount: 1,
+  leaderPipesPassed: 4,
+  leaderFramesSurvived: 120,
+  activationCallsPerFrame: 3,
+  simulationStepsPerRaf: 1,
+  winnerBirdIndex: 0,
+  winnerNodeActivations: new Float32Array([0.2, -0.4, 0.9]),
+};
+applyRuntimeChampionActivationOverlay({
+  frameStats,
+  generationPopulationNetworks: [championNetwork],
+  fallbackNetwork: undefined,
+  applyNetworkActivationOverlay: (network, activations) => {
+    network.nodes.forEach((node, i) => {
+      node.activation = activations[i] ?? node.activation;
+    });
+  },
+});
+```
+
 ### attachWorkerRuntimeStatusHudUpdates
 
 ```ts

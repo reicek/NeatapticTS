@@ -63,6 +63,8 @@ describe('neatChat public contract behavior', () => {
         exampleContract.visualization.ownerModulePath,
       visualizationFrameResolverModulePath:
         exampleContract.visualization.frameResolverModulePath,
+      visualizationDrawModulePath:
+        exampleContract.visualization.drawModulePath,
     }).toEqual({
       exampleId: 'NEATchat',
       defaultArchitectureFamily: 'lstm',
@@ -103,7 +105,9 @@ describe('neatChat public contract behavior', () => {
       visualizationOwnerModulePath:
         'examples/flappy_bird/browser-entry/host/host.ts',
       visualizationFrameResolverModulePath:
-        'examples/flappy_bird/browser-entry/network-view/network-view.ts',
+        'examples/shared/network-visualization/network-view/network-view.ts',
+      visualizationDrawModulePath:
+        'examples/shared/network-visualization/visualization/visualization.draw.service.ts',
     });
   });
 

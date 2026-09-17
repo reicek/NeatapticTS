@@ -2,9 +2,9 @@
  * ASCII Maze adapter over the shared rich browser network visualizer.
  *
  * The maze demo should not own its own network-frame math. Instead it reuses
- * the same resolved frame, padding, node sizing, and connection drawing path
- * as Flappy Bird, while only swapping the semantic input labels and the short
- * output tags.
+ * the shared resolved frame, padding, node sizing, and connection drawing path
+ * while only swapping the semantic input labels and the short output tags to
+ * match the maze controller.
  */
 
 import type Network from '../../../../src/architecture/network';
@@ -14,18 +14,18 @@ import {
   resolveNetworkArchitectureLabel as resolveSharedNetworkArchitectureLabel,
   resolveNetworkVisualizationFrame as resolveSharedNetworkVisualizationFrame,
   type NetworkVisualizationResolvedFrame,
-} from '../../../flappy_bird/browser-entry/network-view/network-view';
-import type { InputLabelGroupDefinition } from '../../../flappy_bird/browser-entry/network-view/network-view.types';
+} from '../../../shared/network-visualization/network-view/network-view';
+import type { InputLabelGroupDefinition } from '../../../shared/network-visualization/network-view/network-view.types';
 import {
   resolveNetworkVisualizationTopologyPlan as resolveSharedNetworkVisualizationTopologyPlan,
   type NetworkVisualizationTopologyPlan,
-} from '../../../flappy_bird/browser-entry/network-view/network-view.topology.utils';
-import { resolveNetworkVisualizationColorScales } from '../../../flappy_bird/browser-entry/visualization/visualization.colors.utils';
+} from '../../../shared/network-visualization/network-view/network-view.topology.utils';
+import { resolveNetworkVisualizationColorScales } from '../../../shared/network-visualization/visualization/visualization.colors.utils';
 import type {
   NetworkVisualizationAnimatedHoveredNode,
   NetworkVisualizationHoverState,
   PositionedNetworkNodeLike,
-} from '../../../flappy_bird/browser-entry/browser-entry.visualization.types';
+} from '../../../shared/network-visualization/network-visualization.types';
 import {
   MAZE_GROUP_COLORS,
   MAZE_INPUT_GROUP_DEFS,
@@ -64,7 +64,7 @@ export interface MazeNetworkRenderResult {
 }
 
 /**
- * Draw the ASCII Maze network panel using the shared Flappy visualizer owner.
+ * Draw the ASCII Maze network panel using the shared network visualizer.
  *
  * @param canvas - Canvas element to render onto.
  * @param network - Runtime network used for architecture metadata and weights.

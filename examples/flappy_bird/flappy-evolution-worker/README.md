@@ -1072,6 +1072,33 @@ Returns: Updated playback runtime state after processing this step.
 
 ## flappy-evolution-worker/flappy-evolution-worker.snapshot.utils.ts
 
+Resolves transferable buffers for one packed playback snapshot.
+
+The returned buffers should be passed as the second argument to
+`postMessage(...)` so ownership moves to the host thread instead of copying
+the typed-array contents.
+
+That ownership transfer is a large part of why the worker can stream full
+population snapshots without forcing the main thread to pay unnecessary copy
+costs every frame.
+
+When cross-origin isolation is active, the helper uses `SharedArrayBuffer`
+backing stores. Those cannot be transferred with `postMessage`, so the transfer
+list is intentionally empty in that mode; the host already reads the same
+shared memory.
+
+Example:
+
+```ts
+const snapshot = createWorkerPlaybackSnapshot(playbackState);
+const transferList = resolveWorkerPlaybackSnapshotTransferList(snapshot);
+if (transferList.length > 0) {
+  postMessage({ type: 'playback-step', payload: snapshot }, transferList);
+} else {
+  postMessage({ type: 'playback-step', payload: snapshot });
+}
+```
+
 ### canReuseSharedSnapshotBuffers
 
 ```ts
@@ -1147,7 +1174,6 @@ Workers should send only structured-clone-safe payloads. This helper strips
 runtime-only references (e.g., network instances, sets) and keeps only
 renderer-relevant fields.
 
-Educational note:
 The snapshot is intentionally column-oriented. By packing values into typed
 arrays, the worker can transfer large bird populations to the host with much
 lower overhead than a per-frame array of nested objects.
@@ -1157,10 +1183,56 @@ pattern is unfamiliar, the Wikipedia article on "AoS and SoA" is a good short
 reference for why packed columns are often friendlier to hot-path data
 movement than arrays of rich objects.
 
+For the frame winner, the snapshot also includes a `winnerNodeActivations`
+stream. When the winner uses a transferable inference channel its live
+`network.nodes` activations are not populated by the fast path, so this
+helper runs one dedicated CPU activation pass on the winner's network before
+packing. That keeps the network visualizer labels live without forcing every
+bird through a redundant activation pass.
+
 Parameters:
 - `playbackState` - Current mutable playback state.
 
-Returns: Immutable frame snapshot for the host.
+Returns: Fresh frame snapshot. The returned object is a new reference, but
+its typed-array columns are mutable and may reuse shared backing memory
+across frames when cross-origin isolation allows.
+
+Example:
+
+```ts
+import { createSharedObservationMemoryState } from '../flappy.simulation.shared.utils';
+
+const playbackState = {
+  frameIndex: 12,
+  cumulativePipeTravelPx: 120,
+  visibleWorldWidthPx: 640,
+  visibleWorldHeightPx: 480,
+  nextPipeId: 0,
+  lastSpawnedPipeGapPx: 0,
+  lastSpawnedPipeGapCenterYPx: 0,
+  lastSpawnedPipeSpawnIntervalFrames: 0,
+  framesUntilNextPipeSpawn: 0,
+  pipes: [{ id: 0, xPx: 100, gapCenterYPx: 200, gapSizePx: 120 }],
+  birds: [
+    {
+      done: false,
+      yPx: 240,
+      velocityYPxPerFrame: 0,
+      pipesPassed: 2,
+      framesSurvived: 100,
+      passedPipeIds: new Set<number>(),
+      observationMemoryState: createSharedObservationMemoryState(),
+      network: {
+        activate: () => [0.5, -0.2],
+        nodes: [{ activation: 0.5 }, { activation: -0.2 }],
+      } as unknown as import('../../../src/architecture/network').default,
+    },
+  ],
+} as unknown as WorkerPlaybackState;
+
+const snapshot = createWorkerPlaybackSnapshot(playbackState);
+console.log(snapshot.winnerNodeActivations);
+```
 
 ### createWorkerPlaybackSnapshotBuffers
 
@@ -1168,6 +1240,7 @@ Returns: Immutable frame snapshot for the host.
 createWorkerPlaybackSnapshotBuffers(
   pipeCount: number,
   birdCount: number,
+  winnerNodeCount: number,
   useSharedBuffers: boolean,
 ): WorkerPlaybackSnapshotBuffers
 ```
@@ -1177,6 +1250,7 @@ Creates typed-array storage for one packed snapshot.
 Parameters:
 - `pipeCount` - Number of visible pipes to pack.
 - `birdCount` - Number of playback birds to pack.
+- `winnerNodeCount` - Number of winner network nodes to pack.
 - `useSharedBuffers` - Whether buffers should be reusable shared memory.
 
 Returns: Snapshot buffer shelf.
@@ -1196,6 +1270,77 @@ Parameters:
 
 Returns: True when the buffer can be passed through postMessage transfer list.
 
+### packBirdColumnsIntoSnapshot
+
+```ts
+packBirdColumnsIntoSnapshot(
+  birds: WorkerPopulationBird[],
+  buffers: WorkerPlaybackSnapshotBuffers,
+): void
+```
+
+Writes bird state into the snapshot's packed bird columns.
+
+Parameters:
+- `birds` - Playback birds from the current playback state.
+- `buffers` - Mutable snapshot buffer shelf.
+
+### packPipeColumnsIntoSnapshot
+
+```ts
+packPipeColumnsIntoSnapshot(
+  pipes: WorkerPopulationPipe[],
+  buffers: WorkerPlaybackSnapshotBuffers,
+): void
+```
+
+Writes pipe geometry into the snapshot's packed pipe columns.
+
+Parameters:
+- `pipes` - Visible pipes from the current playback state.
+- `buffers` - Mutable snapshot buffer shelf.
+
+### packWinnerNodeActivationsIntoSnapshot
+
+```ts
+packWinnerNodeActivationsIntoSnapshot(
+  winnerBird: WorkerPopulationBird | undefined,
+  winnerNodeCount: number,
+  winnerNodeActivations: Float32Array<ArrayBufferLike>,
+): void
+```
+
+Writes the winner bird's node activations into the snapshot column.
+
+Parameters:
+- `winnerBird` - Frame winner bird, or undefined when there is none.
+- `winnerNodeCount` - Number of winner network nodes to pack.
+- `winnerNodeActivations` - Mutable activation column to populate.
+
+### populateWinnerNodeActivationsBeforePacking
+
+```ts
+populateWinnerNodeActivationsBeforePacking(
+  playbackState: WorkerPlaybackState,
+  winnerBirdIndex: number,
+): void
+```
+
+Populates the winner bird's network node activations before snapshot packing.
+
+The transferable inference-channel fast path predicts outputs without writing
+activations back into the live `bird.network.nodes` shelf. Visualization
+needs the full node activation stream, so for the frame winner that is using
+an inference channel we run one dedicated CPU activation pass on the
+underlying network. This is winner-only so the cost stays bounded to one
+extra forward pass per frame.
+
+Parameters:
+- `playbackState` - Current mutable playback state.
+- `winnerBirdIndex` - Index of the bird whose activations should stream.
+
+Returns: Nothing.
+
 ### resolveWorkerPlaybackSnapshotBuffers
 
 ```ts
@@ -1203,6 +1348,7 @@ resolveWorkerPlaybackSnapshotBuffers(
   playbackState: WorkerPlaybackState,
   pipeCount: number,
   birdCount: number,
+  winnerNodeCount: number,
 ): WorkerPlaybackSnapshotBuffers
 ```
 
@@ -1212,6 +1358,7 @@ Parameters:
 - `playbackState` - Current mutable playback state.
 - `pipeCount` - Number of visible pipes to pack.
 - `birdCount` - Number of playback birds to pack.
+- `winnerNodeCount` - Number of winner network nodes to pack.
 
 Returns: Snapshot buffers sized for the current frame.
 
@@ -1237,6 +1384,44 @@ Parameters:
 - `snapshot` - Packed playback snapshot posted back to the browser host.
 
 Returns: Transfer list used to move typed-array buffers without copying.
+
+Example:
+
+```ts
+const snapshot = createWorkerPlaybackSnapshot(playbackState);
+const transferList = resolveWorkerPlaybackSnapshotTransferList(snapshot);
+postMessage({ type: 'playback-step', payload: snapshot }, transferList);
+```
+
+### resolveWorkerPlaybackWinnerBirdIndex
+
+```ts
+resolveWorkerPlaybackWinnerBirdIndex(
+  birds: WorkerPopulationBird[],
+): number
+```
+
+Resolves the frame's winner bird index for the activation stream.
+
+Live frames prefer the leading alive bird so the visualization highlights
+the current leader while frames stream. When every bird is done, the
+resolution falls back to the overall population winner so the final frame's
+activation stream stays consistent with the end-of-run winner summary.
+
+Parameters:
+- `birds` - Current mutable playback birds.
+
+Returns: Winner bird index, or -1 when no bird can be resolved.
+
+Example:
+
+```ts
+const birds = [
+  { done: false, pipesPassed: 2, framesSurvived: 100 },
+  { done: true, pipesPassed: 1, framesSurvived: 50 },
+] as unknown as WorkerPlaybackState['birds'];
+const winnerIndex = resolveWorkerPlaybackWinnerBirdIndex(birds);
+```
 
 ## flappy-evolution-worker/flappy-evolution-worker.simulation.types.ts
 

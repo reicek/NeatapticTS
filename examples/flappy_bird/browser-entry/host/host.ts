@@ -35,21 +35,21 @@ import {
   FLAPPY_NETWORK_INPUT_SIZE,
   FLAPPY_NETWORK_OUTPUT_SIZE,
 } from '../../constants/constants';
+import type { FlappyStatsTableCells } from '../browser-entry.types';
 import type {
-  FlappyStatsTableCells,
   NetworkVisualizationAnimatedHoveredNode,
   NetworkVisualizationHandle,
   NetworkVisualizationPositionedScene,
-} from '../browser-entry.types';
-import { clamp } from '../browser-entry.math.utils';
+} from '../../../shared/network-visualization/network-visualization.types';
+import { clamp } from '../../../shared/network-visualization/network-visualization.math.utils';
 import { renderStandaloneTitleBox } from '../browser-entry.text-frame.utils';
 import {
   drawResolvedNetworkVisualization,
   resolveNetworkVisualizationFrame,
   resolveNetworkVisualizationHeightPx,
   type NetworkVisualizationResolvedFrame,
-} from '../network-view/network-view';
-import { FLAPPY_NETWORK_HOVER_TRANSITION_DURATION_MS } from '../visualization/visualization.constants';
+} from '../../../shared/network-visualization/network-view/network-view';
+import { FLAPPY_HOST_NETWORK_VIEW_SETTINGS } from './host.network-view.settings';
 import {
   applyCanvasBackingSize,
   resolveNetworkCanvasSizePx,
@@ -62,10 +62,8 @@ import {
   FLAPPY_HOST_TABLE_HOST_PADDING,
 } from './host.constants';
 import { resolveRequiredCanvas2dContext } from './host.dom.service';
-import {
-  resolveHoveredNetworkVisualizationTooltipScene,
-  type NetworkVisualizationTooltipScene,
-} from './host.network-tooltip.service';
+import type { NetworkVisualizationTooltipScene } from '../../../shared/network-visualization/network-visualization.types';
+import { resolveNetworkVisualizationTooltipScene } from '../../../shared/network-visualization/network-visualization.tooltip.service';
 import { installResponsiveViewportSizing } from './resize/host.resize.service';
 import {
   createAndAttachHostStatsTable,
@@ -142,6 +140,7 @@ type HostNetworkVisualizationState = {
 
 type HostNetworkVisualizationController = {
   renderNetworkArchitecture: NetworkVisualizationHandle['renderNetworkArchitecture'];
+  applyNetworkActivationOverlay: NetworkVisualizationHandle['applyNetworkActivationOverlay'];
   resizeNetworkCanvasToHost: () => void;
   redrawCurrentNetworkArchitecture: () => void;
 };
@@ -162,31 +161,53 @@ const FLAPPY_NETWORK_TOOLTIP_TRANSITION =
  * Builds the browser demo host tree and returns rendering handles.
  *
  * This is the public host entrypoint used by the runtime startup path.
+ * The returned bundle includes both the simulation canvas and the network
+ * visualization callbacks, so the runtime can render the champion topology
+ * and stream live winner activations onto it each frame.
  *
  * @param containerElement - Root host container.
- * @returns Canvas handles, stats cells and network render callback.
+ * @param options - Host construction options, including architecture selector items.
+ * @returns Canvas handles, stats cells and network render/overlay callbacks.
+ *
+ * @example
+ * ```ts
+ * const container = document.getElementById('host')!;
+ * const host = createCanvasHost(container, {
+ *   architectureSelectorItems: [
+ *     { id: 'mlp', label: 'MLP', selected: true },
+ *   ],
+ * });
+ * host.renderNetworkArchitecture(championNetwork, 5, 2);
+ * host.applyNetworkActivationOverlay(
+ *   championNetwork,
+ *   new Float32Array([0.2, -0.4, 0.9]),
+ * );
+ * ```
  */
 export function createCanvasHost(
   containerElement: HTMLElement,
   options: CanvasHostOptions,
-): CanvasHostResult {
+): CanvasHostResult & NetworkVisualizationHandle {
   return createCanvasHostInternal(containerElement, options);
 }
 
 /**
  * Builds the browser demo host tree and returns rendering handles.
  *
- * The orchestration is deliberately step-shaped: clear old DOM, build layout,
- * create canvases, wire resize behavior, render placeholders, then return the
- * handles the runtime will mutate during execution.
+ * This is the internal host builder used by the public entrypoint and the
+ * browser-entry utils barrel. The orchestration is deliberately step-shaped:
+ * clear old DOM, build layout, create canvases, wire resize behavior, render
+ * placeholders, then return the handles the runtime will mutate during
+ * execution.
  *
  * @param containerElement - Root host container.
- * @returns Canvas handles, stats cells and network render callback.
+ * @param options - Visual/host options (sizes, IDs, renderer selection).
+ * @returns Canvas handles, stats cells and network render/overlay callbacks.
  */
 export function createCanvasHostInternal(
   containerElement: HTMLElement,
   options: CanvasHostOptions,
-): CanvasHostResult {
+): CanvasHostResult & NetworkVisualizationHandle {
   // Step 1: Reset the host container and resolve shared visual primitives.
   resetHostContainer(containerElement);
   const hostVisualPrimitives = resolveHostVisualPrimitives();
@@ -244,6 +265,8 @@ export function createCanvasHostInternal(
     statsValueByKey,
     renderNetworkArchitecture:
       hostNetworkVisualizationController.renderNetworkArchitecture,
+    applyNetworkActivationOverlay:
+      hostNetworkVisualizationController.applyNetworkActivationOverlay,
     architectureSelectorController,
   };
 }
@@ -536,12 +559,33 @@ function createHeaderFrameRenderer(
 /**
  * Creates the network visualization renderer and redraw controller.
  *
+ * Builds the hover, tooltip, resize, and draw machinery for the network
+ * architecture panel. The returned handle exposes both the initial render
+ * entry point and the per-frame activation overlay used during playback.
+ *
  * @param networkCanvasHost - Host element wrapping the network canvas.
  * @param networkCanvas - Network visualization canvas.
  * @param networkContext - Network visualization 2D context.
- * @returns Renderer and redraw callbacks for the network panel.
+ * @returns Renderer, activation-overlay, and redraw callbacks for the network panel.
+ *
+ * @example
+ * ```ts
+ * const hostElement = document.createElement('div');
+ * const canvas = document.createElement('canvas');
+ * const context = canvas.getContext('2d')!;
+ * const controller = createHostNetworkVisualizationController(
+ *   hostElement,
+ *   canvas,
+ *   context,
+ * );
+ * controller.renderNetworkArchitecture(network, 5, 2);
+ * controller.applyNetworkActivationOverlay(
+ *   network,
+ *   new Float32Array([0.1, 0.5, -0.2]),
+ * );
+ * ```
  */
-function createHostNetworkVisualizationController(
+export function createHostNetworkVisualizationController(
   networkCanvasHost: HTMLDivElement,
   networkCanvas: HTMLCanvasElement,
   networkContext: CanvasRenderingContext2D,
@@ -599,6 +643,8 @@ function createHostNetworkVisualizationController(
         hostNetworkVisualizationState.previousNetworkForVisualization,
         hostNetworkVisualizationState.previousVisualizationInputSize,
         hostNetworkVisualizationState.previousVisualizationOutputSize,
+        undefined,
+        FLAPPY_HOST_NETWORK_VIEW_SETTINGS,
       );
       hostNetworkVisualizationState.latestResolvedFrame = latestResolvedFrame;
       return latestResolvedFrame;
@@ -816,8 +862,50 @@ function createHostNetworkVisualizationController(
     requestNetworkVisualizationRedraw(true);
   };
 
+  /**
+   * Paints streamed winner activations onto the visualized network payload.
+   *
+   * The overlay mutates the currently visualized network instance in place so
+   * the coalesced repaint renders the real champion activations without
+   * rebuilding the layout scene. Stale payloads are rejected: a network that
+   * is not the visualized instance, or an activation stream whose length no
+   * longer matches the node count, leaves the panel untouched and queues no
+   * redraw.
+   *
+   * @param network - Network instance currently shown in the panel.
+   * @param winnerNodeActivations - Streamed post-step activations per node.
+   * @returns Nothing.
+   */
+  const applyNetworkActivationOverlay: NetworkVisualizationHandle['applyNetworkActivationOverlay'] =
+    (network, winnerNodeActivations) => {
+      // Step 1: Skip stale overlays that do not target the visualized payload.
+      if (
+        network !==
+        hostNetworkVisualizationState.previousNetworkForVisualization
+      ) {
+        return;
+      }
+
+      // Step 2: Skip activation streams that do not cover every node.
+      if (winnerNodeActivations.length !== network.nodes.length) {
+        return;
+      }
+
+      // Step 3: Copy the streamed activations into the visualized nodes.
+      network.nodes.forEach((node, nodeIndex) => {
+        node.activation = winnerNodeActivations[nodeIndex] ?? node.activation;
+      });
+
+      // Step 4: Invalidate the cached scene so the repaint shows fresh activations.
+      hostNetworkVisualizationState.latestResolvedFrame = undefined;
+
+      // Step 5: Request one coalesced repaint to render the painted labels.
+      requestNetworkVisualizationRedraw(false);
+    };
+
   return {
     renderNetworkArchitecture,
+    applyNetworkActivationOverlay,
     resizeNetworkCanvasToHost,
     redrawCurrentNetworkArchitecture,
   };
@@ -1016,7 +1104,7 @@ function syncNetworkVisualizationTooltip(
     return;
   }
 
-  const tooltipScene = resolveHoveredNetworkVisualizationTooltipScene(
+  const tooltipScene = resolveNetworkVisualizationTooltipScene(
     canvasPoint,
     positionedScene,
   );
@@ -1341,7 +1429,8 @@ function resolveNextHoveredNodeIntensity(
     return currentIntensity;
   }
 
-  const intensityStep = elapsedMs / FLAPPY_NETWORK_HOVER_TRANSITION_DURATION_MS;
+  const intensityStep =
+    elapsedMs / FLAPPY_HOST_NETWORK_VIEW_SETTINGS.hoverTransitionDurationMs!;
   if (targetIntensity > currentIntensity) {
     return Math.min(targetIntensity, currentIntensity + intensityStep);
   }

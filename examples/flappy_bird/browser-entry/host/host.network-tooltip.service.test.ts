@@ -1,11 +1,12 @@
 import { FLAPPY_NETWORK_INPUT_SIZE } from '../../constants/constants';
-import type { NetworkVisualizationPositionedScene } from '../browser-entry.types';
+import type { NetworkVisualizationPositionedScene } from '../../../shared/network-visualization/network-visualization.types';
 import {
   alignInputNodesToDescriptionScenes,
   resolveInputDescriptionScenes,
   resolveInputGroupLabelBandScenes,
-} from '../network-view/network-view.draw.service';
-import { resolveHoveredNetworkVisualizationTooltipScene } from './host.network-tooltip.service';
+} from '../../../shared/network-visualization/network-view/network-view.draw.service';
+import { FLAPPY_INPUT_LABEL_GROUP_DEFINITIONS } from './host.network-view.settings';
+import { resolveNetworkVisualizationTooltipScene } from '../../../shared/network-visualization/network-visualization.tooltip.service';
 
 const TEST_NODE_DIMENSIONS = {
   widthPx: 10,
@@ -15,7 +16,7 @@ const TEST_NODE_DIMENSIONS = {
 describe('resolveHoveredNetworkVisualizationTooltipScene', () => {
   it('reuses the input-description tooltip copy when the pointer is over an input node', () => {
     const positionedScene = createPositionedScene();
-    const hoveredTooltipScene = resolveHoveredNetworkVisualizationTooltipScene(
+    const hoveredTooltipScene = resolveNetworkVisualizationTooltipScene(
       {
         xPx: positionedScene.positionedNodes[0]!.xPx,
         yPx: positionedScene.positionedNodes[0]!.yPx,
@@ -37,7 +38,7 @@ describe('resolveHoveredNetworkVisualizationTooltipScene', () => {
   it('resolves the wider group tooltip span when the pointer is over a first-column group band', () => {
     const positionedScene = createPositionedScene();
     const firstGroupScene = positionedScene.inputGroupLabelBandScenes[0]!;
-    const hoveredTooltipScene = resolveHoveredNetworkVisualizationTooltipScene(
+    const hoveredTooltipScene = resolveNetworkVisualizationTooltipScene(
       {
         xPx: firstGroupScene.leftPx + 1,
         yPx: firstGroupScene.topPx + 1,
@@ -59,7 +60,7 @@ describe('resolveHoveredNetworkVisualizationTooltipScene', () => {
 
   it('reuses the recurrent-column tooltip copy when the pointer is over a hidden node inside that column', () => {
     const positionedScene = createHiddenColumnPositionedScene();
-    const hoveredTooltipScene = resolveHoveredNetworkVisualizationTooltipScene(
+    const hoveredTooltipScene = resolveNetworkVisualizationTooltipScene(
       {
         xPx: positionedScene.positionedNodes[0]!.xPx,
         yPx: positionedScene.positionedNodes[0]!.yPx,
@@ -86,7 +87,7 @@ describe('resolveHoveredNetworkVisualizationTooltipScene', () => {
         'Expected a hidden-column label scene for the recurrent tooltip test.',
       );
     }
-    const hoveredTooltipScene = resolveHoveredNetworkVisualizationTooltipScene(
+    const hoveredTooltipScene = resolveNetworkVisualizationTooltipScene(
       {
         xPx: hiddenColumnLabelScene.leftPx + 1,
         yPx: hiddenColumnLabelScene.topPx + 1,
@@ -107,7 +108,7 @@ describe('resolveHoveredNetworkVisualizationTooltipScene', () => {
 
   it('returns no tooltip when the pointer is outside the input overlay surfaces', () => {
     expect(
-      resolveHoveredNetworkVisualizationTooltipScene(
+      resolveNetworkVisualizationTooltipScene(
         {
           xPx: 400,
           yPx: 20,
@@ -134,6 +135,7 @@ function createPositionedScene(): NetworkVisualizationPositionedScene {
   const initialInputDescriptionScenes = resolveInputDescriptionScenes(
     initialPositionedNodes,
     TEST_NODE_DIMENSIONS,
+    FLAPPY_INPUT_LABEL_GROUP_DEFINITIONS,
   );
   const alignedPositionedNodes = alignInputNodesToDescriptionScenes(
     initialPositionedNodes,
@@ -142,11 +144,13 @@ function createPositionedScene(): NetworkVisualizationPositionedScene {
   const inputDescriptionScenes = resolveInputDescriptionScenes(
     alignedPositionedNodes,
     TEST_NODE_DIMENSIONS,
+    FLAPPY_INPUT_LABEL_GROUP_DEFINITIONS,
   );
   const inputGroupLabelBandScenes = resolveInputGroupLabelBandScenes(
     alignedPositionedNodes,
     TEST_NODE_DIMENSIONS,
     inputDescriptionScenes,
+    FLAPPY_INPUT_LABEL_GROUP_DEFINITIONS,
   );
 
   return {

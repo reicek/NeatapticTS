@@ -24,6 +24,7 @@ import type {
 } from './flappy-evolution-worker.types';
 import type { Neat } from '../../../src/neataptic';
 import { closeWorkerPopulationRenderState } from './flappy-evolution-worker.simulation.utils';
+import { resolveWorkerPlaybackWinnerBirdIndex } from './flappy-evolution-worker.snapshot.utils';
 
 /**
  * Creates a fresh worker playback session state from the current evolved population.
@@ -188,6 +189,10 @@ export async function processWorkerPlaybackStep(options: {
           snapshot,
           instrumentation: instrumentationPayload,
           done: false,
+          winnerBirdIndex: resolveWorkerPlaybackWinnerBirdIndex(
+            currentPlaybackState.birds,
+          ),
+          winnerNodeActivations: snapshot.winnerNodeActivations,
         },
       },
       snapshotTransferList,
@@ -259,6 +264,8 @@ export async function processWorkerPlaybackStep(options: {
         winnerPipesPassed: winnerBird?.pipesPassed ?? 0,
         winnerFramesSurvived: winnerBird?.framesSurvived ?? 0,
         winnerNetworkJson: winnerBird?.network.toJSON(),
+        winnerBirdIndex: playbackWinnerIndex,
+        winnerNodeActivations: snapshot.winnerNodeActivations,
       },
     },
     snapshotTransferList,

@@ -2,8 +2,8 @@ import type { ExampleArchitectureProfileId } from '../../../architectureProfiles
 import type {
   FlappyStatsKey,
   FlappyStatsTableCells,
-  NetworkVisualizationHandle,
 } from '../browser-entry.types';
+import type { NetworkVisualizationHandle } from '../../../shared/network-visualization/network-visualization.types';
 
 /**
  * Public type contracts for the browser-entry host boundary.

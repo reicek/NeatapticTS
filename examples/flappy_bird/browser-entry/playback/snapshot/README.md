@@ -47,6 +47,16 @@ Parameters:
 
 Returns: Nothing.
 
+### PlaybackRenderStateWithWinnerStream
+
+Render state extended with the streamed winner activation fields.
+
+`PopulationRenderState` is owned by the simulation types module, so the
+winner stream fields surface through this local intersection until the
+simulation type gains them natively. Assigning `undefined` when a snapshot
+omits the stream intentionally clears stale winner state from previous
+frames.
+
 ### syncPlaybackSnapshotBirds
 
 ```ts
@@ -84,6 +94,27 @@ needed and then mutates the existing records in place.
 Parameters:
 - `renderState` - Mutable render state mirror used by the browser.
 - `snapshot` - Packed worker playback snapshot for the current render tick.
+
+Returns: Nothing.
+
+### syncPlaybackSnapshotWinnerStream
+
+```ts
+syncPlaybackSnapshotWinnerStream(
+  renderState: PopulationRenderState,
+  snapshot: EvolutionPlaybackStepSnapshot,
+): void
+```
+
+Surfaces the winner activation stream fields onto the render state.
+
+Snapshots that omit the stream (legacy worker builds) clear any stale
+winner state from earlier frames, so the visualization never renders
+activations from a previous generation.
+
+Parameters:
+- `renderState` - Mutable render state mirror used by the browser.
+- `snapshot` - Worker playback snapshot for the current render tick.
 
 Returns: Nothing.
 

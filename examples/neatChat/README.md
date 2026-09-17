@@ -113,11 +113,11 @@ Those fields make it obvious when a pasted corpus is too noisy, too small, or to
 
 ## Visualizer baseline
 
-The first NEATchat visualization surface should reuse the existing Flappy Bird network-inspection boundary instead of inventing a second renderer:
+The first NEATchat visualization surface should reuse the shared `examples/shared/network-visualization/` network-inspection boundary instead of inventing a second renderer:
 
 - host owner: [../flappy_bird/browser-entry/host/host.ts](../flappy_bird/browser-entry/host/host.ts)
-- frame resolver: [../flappy_bird/browser-entry/network-view/network-view.ts](../flappy_bird/browser-entry/network-view/network-view.ts)
-- draw layer: [../flappy_bird/browser-entry/visualization/visualization.draw.service.ts](../flappy_bird/browser-entry/visualization/visualization.draw.service.ts)
+- frame resolver: [../shared/network-visualization/network-view/network-view.ts](../shared/network-visualization/network-view/network-view.ts)
+- draw layer: [../shared/network-visualization/visualization/visualization.draw.service.ts](../shared/network-visualization/visualization/visualization.draw.service.ts)
 
 That reuse rule keeps hover state, redraw ownership, and topology layout semantics consistent across demos while the chat loop is still being shaped.
 

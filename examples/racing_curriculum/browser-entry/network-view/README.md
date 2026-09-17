@@ -3,11 +3,30 @@
 Racing curriculum adapter over the shared rich browser network visualizer.
 
 The racing browser demo should not own its own network-frame math. Instead it
-reuses the same resolved frame, padding, node sizing, and connection drawing
-path as Flappy Bird and ASCII Maze, while only swapping the semantic input
-labels and the short output tags to match the Tier 1 racing controller.
+reuses the shared resolved frame, padding, node sizing, and connection drawing
+path while only swapping the semantic input labels and the short output tags
+to match the Tier 1 racing controller.
 
 ## browser-entry/network-view/network-view.ts
+
+### buildRacingNetworkViewSettings
+
+```ts
+buildRacingNetworkViewSettings(
+  inputSize: number,
+): NetworkVisualizationSettings
+```
+
+Builds the racing settings bag that drives the shared visualizer path.
+
+LOD stays force-enabled with the shared LOD defaults so dense curriculum
+networks collapse into the shared abstract renderer, while the semantic
+input labels flow through the settings bag the shared orchestrator reads.
+
+Parameters:
+- `inputSize` - Effective input-layer size for label group resolution.
+
+Returns: Racing settings bag for the shared visualizer.
 
 ### drawRacingNetworkVisualization
 
@@ -19,7 +38,7 @@ drawRacingNetworkVisualization(
 ): NetworkVisualizationPositionedScene
 ```
 
-Draw the racing curriculum network panel using the shared Flappy visualizer.
+Draw the racing curriculum network panel using the shared network visualizer.
 
 Parameters:
 - `canvas` - Canvas element to render onto.
@@ -61,6 +80,43 @@ until the network payload or canvas size changes.
 ### RacingNetworkRenderResult
 
 Full return value from `drawRacingNetworkVisualization`.
+
+### resolveNetworkVisualizationTooltipScene
+
+```ts
+resolveNetworkVisualizationTooltipScene(
+  canvasPoint: NetworkVisualizationCanvasPointLike,
+  positionedScene: NetworkVisualizationPositionedScene,
+): NetworkVisualizationTooltipScene | undefined
+```
+
+Resolves the tooltip scene for the current hovered network overlay target.
+
+Hit-test priority, from narrowest to broadest:
+1. Hidden-column node hit.
+2. Input node hit.
+3. Hidden-column label region.
+4. Input description region.
+5. Input group label band.
+
+Input descriptions and input nodes intentionally share the same tooltip copy,
+while semantic group bands resolve a broader group-level teaching tooltip.
+
+Parameters:
+- `canvasPoint` - Hover point in network-canvas coordinates.
+- `positionedScene` - Rendered positioned scene reused for hover hit testing.
+
+Returns: Tooltip scene model for the hovered overlay target, or undefined.
+
+Example:
+
+```ts
+const scene = resolveNetworkVisualizationFrame(context, network, inputSize, outputSize);
+const tooltip = resolveNetworkVisualizationTooltipScene({ xPx: 120, yPx: 80 }, scene);
+if (tooltip) {
+  showTooltip(tooltip.heading, tooltip.bodyParagraphs, tooltip.anchorCenterXPx, tooltip.anchorTopPx);
+}
+```
 
 ### resolveRacingArchitectureLabel
 
@@ -129,73 +185,6 @@ Parameters:
 - `network` - Network to visualize.
 
 Returns: Reusable resolved frame for subsequent draw passes.
-
-## browser-entry/network-view/network-view.lod.ts
-
-Level-of-detail (LOD) renderer for dense racing-curriculum network diagrams.
-
-The shared Flappy Bird visualizer draws every node and edge, which collapses
-FPS once networks grow past a few hundred nodes. This module replaces that
-full-detail path for the racing demo with a cheap abstraction:
-
-- input and output shelves are always rendered in full so tooltips and
-  output labels keep working;
-- hidden nodes above a threshold are collapsed into a handful of density
-  clusters;
-- hovering a hidden node expands a deterministic 2-hop ego neighborhood so
-  the user can still inspect local topology without redrawing the whole graph.
-
-### drawRacingNetworkLODFromFrame
-
-```ts
-drawRacingNetworkLODFromFrame(
-  context: CanvasRenderingContext2D,
-  resolvedFrame: RacingLODResolvedFrame,
-  hoveredNodeIndices: readonly number[] | undefined,
-  connectionLayerStyle: Partial<WeightedConnectionLayerStyle> | undefined,
-): NetworkVisualizationPositionedScene
-```
-
-Draw a previously resolved LOD frame, optionally expanding a hovered ego graph.
-
-### RacingLODResolvedFrame
-
-Frame brand used to route racing network-view drawing through the LOD path.
-
-### resolveRacingNetworkLODFrame
-
-```ts
-resolveRacingNetworkLODFrame(
-  context: CanvasRenderingContext2D,
-  network: default,
-): RacingLODResolvedFrame
-```
-
-Resolve a reusable LOD frame for a dense racing network.
-
-### shouldUseRacingNetworkLOD
-
-```ts
-shouldUseRacingNetworkLOD(
-  network: default | undefined,
-): boolean
-```
-
-Decide whether the racing network view should use the LOD abstraction.
-
-## browser-entry/network-view/network-view.fixture.ts
-
-### buildDenseRacingNetwork
-
-```ts
-buildDenseRacingNetwork(): default
-```
-
-Deterministic dense feed-forward network for level-of-detail red tests.
-
-The fixture intentionally starts with 4,000 hidden nodes so the LOD renderer
-has a strong reason to abstract the hidden graph while keeping every input
-and output node visible.
 
 ## browser-entry/network-view/network-view.constants.ts
 
@@ -321,7 +310,7 @@ Returns: One group definition with four node descriptions.
 
 Light neon ramp used for group band fills.
 
-Reuses the same Flappy Bird light neon ramp so the racing panel feels visually
+Reuses the same shared light neon ramp so the racing panel feels visually
 consistent with the other browser demos. Each group picks a deterministic
 color from this ramp in index order.
 
@@ -337,91 +326,15 @@ visualizer bands align exactly with the network's input shelf.
 
 Number of observation inputs consumed by the Tier 1 racing network.
 
-### RACING_LABEL_BAND_START_PX
-
-X offset where the group band starts.
-
-### RACING_LABEL_BAND_WIDTH_PX
-
-Width of the colored group band rectangle.
-
-### RACING_LABEL_CHIP_FONT_SIZE_PX
-
-Font size for chip label text.
-
-### RACING_LABEL_CHIP_LEFT_PX
-
-X offset where per-node chip labels start.
-
-### RACING_LABEL_CHIP_RADIUS_PX
-
-Corner radius for chip label rectangles.
-
-### RACING_LABEL_CHIP_RIGHT_GAP_PX
-
-Gap between the right edge of a chip and the node's left edge.
-
-### RACING_LABEL_CHIP_VERTICAL_GAP_PX
-
-Vertical breathing room added above and below a group's node span.
-
-### RACING_LABEL_LEFT_PADDING_PX
-
-Total left padding reserved for the input label panel (band + chip + gap).
-
-### RACING_LEGEND_ITEM_GAP_PX
-
-Vertical gap between legend items.
-
-### RACING_LEGEND_ITEM_HEIGHT_PX
-
-Height of each legend item row.
-
-### RACING_LEGEND_RIGHT_OFFSET_PX
-
-Right offset of the weight legend from the canvas edge.
-
-### RACING_LEGEND_SWATCH_SIZE_PX
-
-Size of the colored swatch square inside each legend row.
-
-### RACING_LEGEND_TEXT_FONT_SIZE_PX
-
-Font size for legend text labels.
-
-### RACING_LEGEND_TOP_OFFSET_PX
-
-Top offset of the weight legend from the canvas edge.
-
-### RACING_MONOSPACE_FONT
-
-Monospace font stack used throughout the label panel.
-
 ### RACING_NETWORK_CONNECTION_LAYER_STYLE
 
 Racing-specific connection layer style override.
 
-The shared Flappy visualizer defaults to a low default alpha (0.3) so dense
-Flappy networks stay legible. Racing's right-sidebar panel uses a much
-smaller controller snapshot against the same dark background, so connections
-are intentionally brighter and slightly thicker so the topology reads as a
-vivid neon graph instead of disappearing into the background.
-
-### RACING_NETWORK_CONNECTION_UNDERLAY_COLOR
-
-Bright neon underlay color used behind racing network connection strokes.
-
-### RACING_NETWORK_LOD_HIDDEN_CLUSTER_COUNT
-
-Number of abstract hidden clusters/density bins in the LOD view.
-
-### RACING_NETWORK_LOD_HIDDEN_NODE_THRESHOLD
-
-Hidden-node count above which the racing network view switches to an abstract cluster/density LOD.
-
-### RACING_NETWORK_LOD_HOVER_MAX_LOCAL_NODES
-
-Maximum number of local nodes rendered when hovering a hidden node in the LOD network view.
+The shared network visualizer defaults to a low default alpha (0.3) so dense
+networks stay legible. Racing's right-sidebar panel uses a much smaller
+controller snapshot against the same dark background, so connections are
+intentionally brighter and slightly thicker so the topology reads as a vivid
+neon graph instead of disappearing into the background.
 
 ### RACING_OUTPUT_LABELS
 

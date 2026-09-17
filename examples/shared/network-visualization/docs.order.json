@@ -1,0 +1,8 @@
+{
+  "introFile": "network-visualization.types.ts",
+  "fileOrder": [
+    "network-visualization.types.ts",
+    "network-visualization.constants.ts",
+    "network-visualization.math.utils.ts"
+  ]
+}

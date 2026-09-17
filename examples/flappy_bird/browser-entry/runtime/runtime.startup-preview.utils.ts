@@ -5,7 +5,8 @@ import {
   FLAPPY_STARTUP_PREVIEW_LEGEND_MAX_FONT_SIZE_PX,
   FLAPPY_STARTUP_PREVIEW_LEGEND_MIN_FONT_SIZE_PX,
 } from '../../constants/constants';
-import { clamp, clamp01 } from '../browser-entry.math.utils';
+import { clamp } from '../../../shared/network-visualization/network-visualization.math.utils';
+import { clamp01 } from '../browser-entry.math.utils';
 
 /**
  * Resolved visual state for one startup-preview render frame.

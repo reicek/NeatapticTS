@@ -26,9 +26,9 @@ host/runtime seam, start here rather than with the static shell.
 
 Read the folder in three passes. Start with this file for the public
 lifecycle contract. Continue into `runtime/` and `worker-channel/` for the
-bootstrap and protocol story. Finish with `host/`, `playback/`,
-`network-view/`, and `visualization/` for the teaching surface the browser
-renders around the worker-owned simulation.
+bootstrap and protocol story. Finish with `host/` and `playback/` for the
+browser-side teaching surface; the network-visualization implementation now
+lives in `examples/shared/network-visualization/`.
 
 ```mermaid
 flowchart LR
@@ -39,7 +39,7 @@ flowchart LR
   Runtime --> Host["host/\nDOM and canvas shell"]:::base
   Runtime --> Channel["worker-channel/\nworker protocol"]:::base
   Channel --> Playback["playback/\npopulation rendering"]:::base
-  Runtime --> Network["network-view + visualization/\nnetwork inspection"]:::base
+  Runtime --> Network["shared/network-visualization/\nnetwork inspection"]:::base
 ```
 
 ```mermaid
@@ -126,12 +126,12 @@ A practical reading order is:
 
 - runtime types for lifecycle and top-level handles,
 - worker types for protocol boundaries,
-- simulation/render types for playback state,
-- visualization types for the network panel.
+- simulation/render types for playback state.
 
 Use this file when you want the browser runtime's public contract map. Use
-the neighboring runtime, playback, host, worker-channel, and visualization
-folders when you want the actual implementation story.
+the neighboring runtime, playback, host, and worker-channel folders for
+browser-entry implementation details; the network-visualization drawing
+helpers and types live in `examples/shared/network-visualization/`.
 
 Browser runtime map:
 ```mermaid
@@ -139,7 +139,6 @@ flowchart TB
     PublicTypes["browser-entry.types"] --> Runtime["runtime types\nstart/stop lifecycle"]
     PublicTypes --> Worker["worker types\nprotocol and payloads"]
     PublicTypes --> Playback["simulation + render types\nframe state and HUD metrics"]
-    PublicTypes --> Viz["visualization types\nlegend and color scales"]
 ```
 
 ### BrowserDifficultyProfile
@@ -156,19 +155,6 @@ Bird shape used by utility winner/leader resolver helpers.
 ### BrowserPopulationPipeLike
 
 Pipe shape used by utility observation-vector helpers.
-
-### ColorLegendRow
-
-Legend row model for network visualization color legends.
-
-Each row labels a numeric interval and the color used to render it.
-
-### ColorTier
-
-Connection or bias tier used for color mapping ramps.
-
-Visualization buckets continuous weights into legible color bands so humans
-can scan sign and magnitude at a glance.
 
 ### CreateFlappyStatsTableRowsInput
 
@@ -255,70 +241,6 @@ Runtime lookup map of stat keys to writable value cells.
 This acts like a small DOM index so the update loop can mutate the correct
 cells directly without repeatedly querying the document.
 
-### NetworkHiddenColumnLabelScene
-
-Positioned hidden-column label scene reused by drawing and future hit testing.
-
-Recurrent-aware layouts use these scenes to explain what one hidden column
-means, for example an LSTM gate or a NARX delay shelf, without replacing the
-underlying node bias encoding.
-
-### NetworkInputDescriptionScene
-
-Positioned input-description row scene reused by drawing and hover hit testing.
-
-Each row maps one human-readable description to one input node so hovering
-the text can emphasize the same node the description explains.
-
-### NetworkInputGroupLabelBandScene
-
-Positioned input-group label band scene reused by drawing and hit testing.
-
-The host relies on this exact geometry when category hovers need to
-highlight every node in a semantic input group.
-
-### NetworkLegendLayout
-
-Precomputed legend panel layout used by visualization renderer.
-
-Layout is resolved up front so the draw path can stay focused on painting,
-not recomputing geometry every frame.
-
-### NetworkNodeDimensionsLike
-
-Pixel dimensions used for network-node rectangle rendering.
-
-Keeping node box dimensions explicit makes legend and topology layout easier
-to tune without hidden drawing constants.
-
-### NetworkVisualizationAnimatedHoveredNode
-
-Animated hovered-node intensity sample used during fade transitions.
-
-The host can keep several recent hover targets partially active at once so
-quick pointer motion produces overlapping line-emphasis fades
-instead of abrupt binary flicker.
-
-### NetworkVisualizationHandle
-
-Draw callback contract for network architecture panel updates.
-
-### NetworkVisualizationHoverState
-
-Browser-owned hover state used by interactive network visualization passes.
-
-Hover is resolved from the canvas pointer and then passed into drawing as a
-tiny UI-only contract. Supporting multiple node indices keeps direct node
-hover and category combo-hover on the same rendering path, while animated
-hover samples let the renderer fade highlights in and out.
-
-### NetworkVisualizationPositionedScene
-
-Reusable positioned-node snapshot returned by the network-view draw path.
-
-The host reuses this exact layout snapshot for pointer hit testing so hover
-logic can stay aligned with the scene that was actually rendered.
-
 ### PackedPlaybackBirdSnapshot
 
 Packed typed-array payload for playback bird snapshot transport.
@@ -363,13 +285,6 @@ Mutable render-state model consumed by the population frame renderer.
 The playback layer incrementally updates this state as worker snapshots
 arrive, which lets rendering stay deterministic without re-deriving world
 history from scratch each frame.
-
-### PositionedNetworkNodeLike
-
-Positioned node instance used by network visualization drawing.
-
-Layout and rendering are split: first a node is assigned screen coordinates,
-then the renderer paints it.
 
 ### RenderClosedOuterBoxInput
 
@@ -428,20 +343,6 @@ Viewport transform values for world-to-canvas rendering.
 
 These numbers answer the classic graphics question: how does one unit in the
 simulated world map into the current canvas rectangle?
-
-### VisualNetworkConnectionLike
-
-Lightweight connection shape used by network visualization drawing.
-
-The renderer only needs connectivity, weight, and enabled state, not the full
-training-time behavior of a connection object.
-
-### VisualNetworkNodeLike
-
-Lightweight node shape used by network visualization drawing.
-
-This shape keeps the renderer independent from the concrete Network class
-while still exposing the semantic fields that matter visually.
 
 ## browser-entry/browser-entry.stats.types.ts
 
@@ -693,113 +594,6 @@ Mutable trail cache keyed by bird index for frame rendering.
 This cache exists purely for visualization ergonomics; it is not part of the
 worker simulation state.
 
-## browser-entry/browser-entry.visualization.types.ts
-
-Network-visualization contracts for the Flappy Bird browser demo.
-
-One of the educational goals of the example is to let people watch evolved
-controllers as structures, not just as scores. These types describe the
-lightweight shapes used by the architecture panel so rendering logic can stay
-decoupled from the full internal network implementation.
-
-### ColorLegendRow
-
-Legend row model for network visualization color legends.
-
-Each row labels a numeric interval and the color used to render it.
-
-### ColorTier
-
-Connection or bias tier used for color mapping ramps.
-
-Visualization buckets continuous weights into legible color bands so humans
-can scan sign and magnitude at a glance.
-
-### NetworkHiddenColumnLabelScene
-
-Positioned hidden-column label scene reused by drawing and future hit testing.
-
-Recurrent-aware layouts use these scenes to explain what one hidden column
-means, for example an LSTM gate or a NARX delay shelf, without replacing the
-underlying node bias encoding.
-
-### NetworkInputDescriptionScene
-
-Positioned input-description row scene reused by drawing and hover hit testing.
-
-Each row maps one human-readable description to one input node so hovering
-the text can emphasize the same node the description explains.
-
-### NetworkInputGroupLabelBandScene
-
-Positioned input-group label band scene reused by drawing and hit testing.
-
-The host relies on this exact geometry when category hovers need to
-highlight every node in a semantic input group.
-
-### NetworkLegendLayout
-
-Precomputed legend panel layout used by visualization renderer.
-
-Layout is resolved up front so the draw path can stay focused on painting,
-not recomputing geometry every frame.
-
-### NetworkNodeDimensionsLike
-
-Pixel dimensions used for network-node rectangle rendering.
-
-Keeping node box dimensions explicit makes legend and topology layout easier
-to tune without hidden drawing constants.
-
-### NetworkVisualizationAnimatedHoveredNode
-
-Animated hovered-node intensity sample used during fade transitions.
-
-The host can keep several recent hover targets partially active at once so
-quick pointer motion produces overlapping line-emphasis fades
-instead of abrupt binary flicker.
-
-### NetworkVisualizationHandle
-
-Draw callback contract for network architecture panel updates.
-
-### NetworkVisualizationHoverState
-
-Browser-owned hover state used by interactive network visualization passes.
-
-Hover is resolved from the canvas pointer and then passed into drawing as a
-tiny UI-only contract. Supporting multiple node indices keeps direct node
-hover and category combo-hover on the same rendering path, while animated
-hover samples let the renderer fade highlights in and out.
-
-### NetworkVisualizationPositionedScene
-
-Reusable positioned-node snapshot returned by the network-view draw path.
-
-The host reuses this exact layout snapshot for pointer hit testing so hover
-logic can stay aligned with the scene that was actually rendered.
-
-### PositionedNetworkNodeLike
-
-Positioned node instance used by network visualization drawing.
-
-Layout and rendering are split: first a node is assigned screen coordinates,
-then the renderer paints it.
-
-### VisualNetworkConnectionLike
-
-Lightweight connection shape used by network visualization drawing.
-
-The renderer only needs connectivity, weight, and enabled state, not the full
-training-time behavior of a connection object.
-
-### VisualNetworkNodeLike
-
-Lightweight node shape used by network visualization drawing.
-
-This shape keeps the renderer independent from the concrete Network class
-while still exposing the semantic fields that matter visually.
-
 ## browser-entry/browser-entry.host.utils.ts
 
 ### createCanvasHostInternal
@@ -808,19 +602,22 @@ while still exposing the semantic fields that matter visually.
 createCanvasHostInternal(
   containerElement: HTMLElement,
   options: CanvasHostOptions,
-): CanvasHostResult
+): CanvasHostResult & NetworkVisualizationHandle
 ```
 
 Builds the browser demo host tree and returns rendering handles.
 
-The orchestration is deliberately step-shaped: clear old DOM, build layout,
-create canvases, wire resize behavior, render placeholders, then return the
-handles the runtime will mutate during execution.
+This is the internal host builder used by the public entrypoint and the
+browser-entry utils barrel. The orchestration is deliberately step-shaped:
+clear old DOM, build layout, create canvases, wire resize behavior, render
+placeholders, then return the handles the runtime will mutate during
+execution.
 
 Parameters:
 - `containerElement` - Root host container.
+- `options` - Visual/host options (sizes, IDs, renderer selection).
 
-Returns: Canvas handles, stats cells and network render callback.
+Returns: Canvas handles, stats cells and network render/overlay callbacks.
 
 ### updateStatsTableValues
 
@@ -1479,425 +1276,6 @@ Parameters:
 
 Returns: Tuple of first and second upcoming pipes.
 
-## browser-entry/browser-entry.network-view.utils.ts
-
-Compatibility facade for browser-entry network-view helpers.
-
-Legacy imports still use this file while the network-view subsystem is split
-into smaller topology, layout, label, and drawing modules.
-
-### drawNetworkVisualization
-
-```ts
-drawNetworkVisualization(
-  context: CanvasRenderingContext2D,
-  network: default | undefined,
-  inputSize: number,
-  outputSize: number,
-  hoverState: NetworkVisualizationHoverState | undefined,
-  inputLabelGroupDefinitions: readonly InputLabelGroupDefinition[] | undefined,
-  connectionLayerStyle: Partial<WeightedConnectionLayerStyle> | undefined,
-): NetworkVisualizationPositionedScene
-```
-
-Draws a complete, layer-based visualization of the active network.
-
-Conceptually, this is the main fold from network object to finished panel:
-resolve scene state, compute layout, paint the graph, then paint overlays.
-
-Parameters:
-- `context` - Canvas 2D drawing context.
-- `network` - Network to visualize.
-- `inputSize` - Input-layer size.
-- `outputSize` - Output-layer size.
-- `hoverState` - Optional host-owned hover state for interactive emphasis.
-- `inputLabelGroupDefinitions` - Optional semantic input-label group definitions.
-- `connectionLayerStyle` - Optional override for connection stroke visibility.
-
-Returns: Positioned node snapshot reused by host-side hover hit testing.
-
-Example:
-
-```ts
-drawNetworkVisualization(networkContext, bestNetwork, 12, 2);
-```
-
-### resolveNetworkArchitectureLabel
-
-```ts
-resolveNetworkArchitectureLabel(
-  network: default | undefined,
-  inputSize: number,
-  outputSize: number,
-): string
-```
-
-Resolves compact architecture label text for headers and HUD rows.
-
-The label compresses the active network into a short human-readable summary:
-input size, hidden-layer structure, output size, and graph size metadata.
-When a runtime network is present, explicit input/output role metadata is
-treated as the authoritative boundary size instead of the caller's fallback
-hints so the browser panel reflects the network's current public contract.
-The label can also append a compact scheduling line when the runtime exposes
-a non-standard activation contract such as recurrent execution or cycle
-fallback behavior.
-
-Parameters:
-- `network` - Network to describe.
-- `inputSize` - Configured input size.
-- `outputSize` - Configured output size.
-
-Returns: Readable architecture label.
-
-### resolveNetworkVisualizationHeightPx
-
-```ts
-resolveNetworkVisualizationHeightPx(
-  network: default | undefined,
-  inputSize: number,
-  outputSize: number,
-): number
-```
-
-Resolves responsive visualization canvas height from network shape.
-
-Dense or deeper networks need more vertical room to stay readable, so panel
-height is driven by topology rather than fixed to a single constant.
-
-Parameters:
-- `network` - Network to visualize.
-- `inputSize` - Input-layer size.
-- `outputSize` - Output-layer size.
-
-Returns: Recommended height in pixels.
-
-Example:
-
-```ts
-const recommendedHeightPx = resolveNetworkVisualizationHeightPx(network, 12, 2);
-```
-
-### resolveNetworkVisualizationLayers
-
-```ts
-resolveNetworkVisualizationLayers(
-  network: default | undefined,
-  inputSize: number,
-  outputSize: number,
-): VisualNetworkNodeLike[][]
-```
-
-Resolves layered node groups for network-view layout and rendering.
-
-Parameters:
-- `network` - Runtime network instance.
-- `inputSize` - Input count fallback.
-- `outputSize` - Output count fallback.
-
-Returns: Layered nodes for rendering.
-
-## browser-entry/browser-entry.visualization.utils.ts
-
-Compatibility facade for browser-entry network visualization helpers.
-
-Legacy imports still flow through this file while the visualization subsystem
-is organized into smaller, clearer modules under the dedicated folder.
-
-### createColorLegendRows
-
-```ts
-createColorLegendRows(
-  scale: DynamicColorScale,
-  symbol: "w" | "b",
-): ColorLegendRow[]
-```
-
-Creates legend rows from ordered tiers.
-
-Each row describes one closed numeric interval and the swatch used to paint
-it, making the dynamic color scale legible to a human reader.
-
-Parameters:
-- `scale` - Dynamic color scale containing bounds, tiers, and overflow color.
-- `symbol` - Label symbol.
-
-Returns: Legend rows.
-
-### createLogDivergingColorTiers
-
-```ts
-createLogDivergingColorTiers(
-  input: { maxAbsValue: number; centerBlueThreshold: number; negativePalette: readonly string[]; centerBluePalette: readonly string[]; positivePalette: readonly string[]; logarithmicSteepness: number; edgeStartAbsValue?: number | undefined; edgeTierCount?: number | undefined; },
-): ColorTier[]
-```
-
-Builds logarithmic diverging color tiers with a center band and edge extension.
-
-Diverging scales are useful here because network parameters naturally split
-around zero. Negative and positive values should feel visually related, but
-not identical.
-
-Parameters:
-- `input` - Tier creation options.
-
-Returns: Ordered tier list.
-
-### drawBiasNodesLayer
-
-```ts
-drawBiasNodesLayer(
-  context: CanvasRenderingContext2D,
-  positionedNodes: PositionedNetworkNodeLike[],
-  nodeDimensions: NetworkNodeDimensionsLike,
-  biasScale: DynamicColorScale,
-  animatedHoveredNodes: readonly NetworkVisualizationAnimatedHoveredNode[] | undefined,
-): void
-```
-
-Draws all network nodes with bias labels.
-
-The node layer pairs each rectangle with a compact bias label so the panel can
-show both topology and a lightweight hint of parameter state.
-
-Parameters:
-- `context` - Render context.
-- `positionedNodes` - Positioned nodes.
-- `nodeDimensions` - Node dimensions.
-- `biasScale` - Dynamic bias color scale.
-- `animatedHoveredNodes` - Optional animated hovered-node samples owned by the host canvas.
-
-Returns: Nothing.
-
-### drawNetworkColorLegend
-
-```ts
-drawNetworkColorLegend(
-  context: CanvasRenderingContext2D,
-  architectureLabel: string,
-  colorScales: NetworkVisualizationColorScales,
-): void
-```
-
-Draws the color legend for connections and node bias values.
-
-This legend is what turns the panel from "colorful art" into an interpretable
-instrument: it tells the viewer what each weight and bias color actually
-means numerically.
-
-Parameters:
-- `context` - Render context.
-- `architectureLabel` - Compact architecture description.
-- `colorScales` - Connection and bias color scales.
-
-Returns: Nothing.
-
-### drawNetworkVisualizationHeader
-
-```ts
-drawNetworkVisualizationHeader(
-  context: CanvasRenderingContext2D,
-  architectureLabel: string,
-): void
-```
-
-Draws network architecture header text.
-
-The header gives viewers a compact architecture summary before they inspect
-individual nodes and edges.
-
-Parameters:
-- `context` - Render context.
-- `architectureLabel` - Header label.
-
-Returns: Nothing.
-
-### drawWeightedConnectionsLayer
-
-```ts
-drawWeightedConnectionsLayer(
-  context: CanvasRenderingContext2D,
-  runtimeConnections: VisualNetworkConnectionLike[],
-  positionByNodeIndex: Map<number, PositionedNetworkNodeLike>,
-  connectionScale: DynamicColorScale,
-  animatedHoveredNodes: readonly NetworkVisualizationAnimatedHoveredNode[] | undefined,
-  connectionLayerStyle: Partial<WeightedConnectionLayerStyle> | undefined,
-): void
-```
-
-Draws weighted connection lines.
-
-Connection styling carries semantic meaning: color encodes magnitude and sign,
-while dash patterns help distinguish disabled or negative
-edges in a way that still reads quickly on a dense graph.
-
-Parameters:
-- `context` - Render context.
-- `runtimeConnections` - Runtime connection list.
-- `positionByNodeIndex` - Node layout map.
-- `connectionScale` - Dynamic connection color scale.
-- `animatedHoveredNodes` - Optional animated hovered-node samples owned by the host canvas.
-
-Returns: Nothing.
-
-### formatNodeActivationLabel
-
-```ts
-formatNodeActivationLabel(
-  activation: number,
-): string
-```
-
-Formats node activation labels with fixed precision.
-
-Two decimal places keep the compact node labels scannable while still giving
-enough precision to distinguish meaningfully different activation values.
-
-Parameters:
-- `activation` - Node activation value.
-
-Returns: Label text.
-
-### resolveBiasRangeColor
-
-```ts
-resolveBiasRangeColor(
-  nodeBias: number,
-): string
-```
-
-Resolves bias color for a raw node bias.
-
-Bias colors follow the same diverging logic as connection colors so the legend
-remains conceptually consistent across channels.
-
-Parameters:
-- `nodeBias` - Node bias.
-
-Returns: Tier color.
-
-### resolveConnectionRangeColor
-
-```ts
-resolveConnectionRangeColor(
-  connectionWeight: number,
-): string
-```
-
-Resolves connection color for a raw weight.
-
-This small helper is useful when one-off drawing code wants the same color
-semantics as the full dynamic scale machinery.
-
-Parameters:
-- `connectionWeight` - Connection weight.
-
-Returns: Tier color.
-
-### resolveDefaultNetworkLegendLayout
-
-```ts
-resolveDefaultNetworkLegendLayout(
-  context: CanvasRenderingContext2D,
-  network: default | undefined,
-): NetworkLegendLayout
-```
-
-Resolves default legend layout from internal tier definitions.
-
-This convenience helper is used when the caller wants a layout driven by the
-currently active network and does not need to assemble the intermediate rows
-manually.
-
-Parameters:
-- `context` - Render context.
-- `network` - Active network instance.
-
-Returns: Legend layout.
-
-### resolveNetworkLegendLayout
-
-```ts
-resolveNetworkLegendLayout(
-  context: CanvasRenderingContext2D,
-  connectionLegendRows: ColorLegendRow[],
-  biasLegendRows: ColorLegendRow[],
-): NetworkLegendLayout
-```
-
-Resolves network legend layout from canvas constraints.
-
-The legend layout adapts between regular and compact modes so the network
-panel can stay informative on smaller viewports without swallowing the whole
-canvas.
-
-Parameters:
-- `context` - Render context.
-- `connectionLegendRows` - Connection legend rows.
-- `biasLegendRows` - Bias legend rows.
-
-Returns: Computed legend layout.
-
-### resolveNetworkVisualizationColorScales
-
-```ts
-resolveNetworkVisualizationColorScales(
-  network: default | undefined,
-): NetworkVisualizationColorScales
-```
-
-Resolves dynamic connection/bias color scales from the active network range.
-
-The active network may contain only a narrow slice of the full theoretical
-value range, so the legend adapts to what is currently present instead of
-always rendering a fixed generic scale.
-
-Parameters:
-- `network` - Active network.
-
-Returns: Dynamic scales used by graph drawing and legend rows.
-
-### resolveNetworkVisualizationLayers
-
-```ts
-resolveNetworkVisualizationLayers(
-  network: default | undefined,
-  inputSize: number,
-  outputSize: number,
-): VisualNetworkNodeLike[][]
-```
-
-Resolves layered node groups for network-view layout and rendering.
-
-Parameters:
-- `network` - Runtime network instance.
-- `inputSize` - Input count fallback.
-- `outputSize` - Output count fallback.
-
-Returns: Layered nodes for rendering.
-
-### resolveTierColor
-
-```ts
-resolveTierColor(
-  value: number,
-  tiers: ColorTier[],
-  aboveTierColor: string,
-): string
-```
-
-Resolves a color from ordered tier definitions.
-
-This is the final classification step that maps one numeric weight or bias to
-the swatch color the renderer should paint.
-
-Parameters:
-- `value` - Numeric value to classify.
-- `tiers` - Ordered tier list.
-- `aboveTierColor` - Fallback color for values above the last tier.
-
-Returns: Resolved color string.
-
 ## browser-entry/browser-entry.worker-channel.utils.ts
 
 ### createEvolutionWorker
@@ -1931,7 +1309,7 @@ Returns: Next generation payload.
 requestWorkerPlaybackStep(
   evolutionWorker: Worker,
   playbackStepRequest: WorkerChannelPlaybackStepRequest,
-): Promise<{ requestId: number; snapshot: EvolutionPlaybackStepSnapshot; instrumentation?: { activationCallsPerFrame: number; simulationStepsPerRaf: number; } | undefined; done: boolean; averagePipesPassed?: number | undefined; p90FramesSurvived?: number | undefined; winnerPipesPassed?: number | undefined; winnerFramesSurvived?: number | undefined; winnerNetworkJson?: SerializedNetwork | undefined; }>
+): Promise<{ requestId: number; snapshot: EvolutionPlaybackStepSnapshot; instrumentation?: { activationCallsPerFrame: number; simulationStepsPerRaf: number; } | undefined; done: boolean; averagePipesPassed?: number | undefined; p90FramesSurvived?: number | undefined; winnerPipesPassed?: number | undefined; winnerFramesSurvived?: number | undefined; winnerNetworkJson?: SerializedNetwork | undefined; winnerBirdIndex?: number | undefined; winnerNodeActivations?: Float32Array<ArrayBufferLike> | undefined; }>
 ```
 
 Requests one playback batch step from the worker.

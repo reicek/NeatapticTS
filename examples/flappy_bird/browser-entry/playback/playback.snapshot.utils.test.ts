@@ -49,6 +49,30 @@ describe('applyPlaybackSnapshot', () => {
       ],
     });
   });
+
+  it('surfaces the streamed winner activations and winner bird index on the render state', () => {
+    const snapshot = createSnapshotWithWinnerActivationStream();
+    const renderState = createRenderState();
+
+    applyPlaybackSnapshot(renderState, snapshot);
+
+    expect(readWinnerActivationStreamState(renderState)).toEqual({
+      winnerBirdIndex: 0,
+      winnerNodeActivations: new Float32Array([0.5, -1.5, 2]),
+    });
+  });
+
+  it('clears stale winner activation state when the snapshot omits the winner stream', () => {
+    const snapshot = createSnapshot();
+    const renderState = createRenderStateWithStaleWinnerActivationStream();
+
+    applyPlaybackSnapshot(renderState, snapshot);
+
+    expect(readWinnerActivationStreamState(renderState)).toEqual({
+      winnerBirdIndex: undefined,
+      winnerNodeActivations: undefined,
+    });
+  });
 });
 
 function createSnapshot(): EvolutionPlaybackStepSnapshot {
@@ -117,5 +141,62 @@ function createRenderState(): PopulationRenderState {
     framesUntilNextPipeSpawn: 0,
     pipes: [],
     birds: [],
+  };
+}
+
+/**
+ * Builds a packed snapshot carrying the winner activation stream so the
+ * unpack contract has a deterministic surface to read.
+ *
+ * @returns Packed snapshot with winner activation stream fields attached.
+ */
+function createSnapshotWithWinnerActivationStream(): EvolutionPlaybackStepSnapshot {
+  return {
+    ...createSnapshot(),
+    winnerBirdIndex: 0,
+    winnerNodeActivations: new Float32Array([0.5, -1.5, 2]),
+  } as unknown as EvolutionPlaybackStepSnapshot;
+}
+
+/**
+ * Builds a render state pre-seeded with stale winner activation values so the
+ * unpack contract can prove legacy snapshots clear the stale stream.
+ *
+ * @returns Render state carrying stale winner activation state.
+ */
+function createRenderStateWithStaleWinnerActivationStream(): PopulationRenderState {
+  const renderState = createRenderState();
+  const staleWinnerStream = renderState as {
+    winnerBirdIndex?: number;
+    winnerNodeActivations?: Float32Array;
+  };
+
+  staleWinnerStream.winnerBirdIndex = 1;
+  staleWinnerStream.winnerNodeActivations = new Float32Array([9, 9, 9]);
+  return renderState;
+}
+
+/**
+ * Reads the winner activation stream fields from a render state.
+ *
+ * Returns a fresh projection containing only the winner stream fields so the
+ * assertion can compare against a narrow expected object (toEqual treats
+ * extra defined keys as mismatches, so returning the full render state would
+ * make the contract impossible to satisfy).
+ *
+ * @param renderState - Population render state under test.
+ * @returns Winner activation stream fields, or undefined when absent.
+ */
+function readWinnerActivationStreamState(renderState: PopulationRenderState): {
+  winnerBirdIndex?: number;
+  winnerNodeActivations?: Float32Array;
+} {
+  const winnerActivationStreamState = renderState as {
+    winnerBirdIndex?: number;
+    winnerNodeActivations?: Float32Array;
+  };
+  return {
+    winnerBirdIndex: winnerActivationStreamState.winnerBirdIndex,
+    winnerNodeActivations: winnerActivationStreamState.winnerNodeActivations,
   };
 }

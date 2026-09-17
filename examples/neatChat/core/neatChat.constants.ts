@@ -60,13 +60,13 @@ export const NEATCHAT_VISUALIZER_EXAMPLE_ID = 'flappy_bird' as const;
 export const NEATCHAT_VISUALIZER_OWNER_MODULE_PATH =
   'examples/flappy_bird/browser-entry/host/host.ts';
 
-/** Flappy frame resolver module reused by NEATchat. */
+/** Shared frame resolver module reused by NEATchat. */
 export const NEATCHAT_VISUALIZER_FRAME_RESOLVER_MODULE_PATH =
-  'examples/flappy_bird/browser-entry/network-view/network-view.ts';
+  'examples/shared/network-visualization/network-view/network-view.ts';
 
-/** Flappy draw module reused by NEATchat. */
+/** Shared draw module reused by NEATchat. */
 export const NEATCHAT_VISUALIZER_DRAW_MODULE_PATH =
-  'examples/flappy_bird/browser-entry/visualization/visualization.draw.service.ts';
+  'examples/shared/network-visualization/visualization/visualization.draw.service.ts';
 
 /** Docs/examples publication category used by NEATchat. */
 export const NEATCHAT_PUBLISHED_EXAMPLES_CATEGORY = 'flagship' as const;

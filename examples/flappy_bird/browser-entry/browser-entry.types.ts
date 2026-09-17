@@ -10,12 +10,12 @@
  *
  * - runtime types for lifecycle and top-level handles,
  * - worker types for protocol boundaries,
- * - simulation/render types for playback state,
- * - visualization types for the network panel.
+ * - simulation/render types for playback state.
  *
  * Use this file when you want the browser runtime's public contract map. Use
- * the neighboring runtime, playback, host, worker-channel, and visualization
- * folders when you want the actual implementation story.
+ * the neighboring runtime, playback, host, and worker-channel folders for
+ * browser-entry implementation details; the network-visualization drawing
+ * helpers and types live in `examples/shared/network-visualization/`.
  *
  * Browser runtime map:
  * ```mermaid
@@ -23,7 +23,6 @@
  *     PublicTypes["browser-entry.types"] --> Runtime["runtime types\nstart/stop lifecycle"]
  *     PublicTypes --> Worker["worker types\nprotocol and payloads"]
  *     PublicTypes --> Playback["simulation + render types\nframe state and HUD metrics"]
- *     PublicTypes --> Viz["visualization types\nlegend and color scales"]
  * ```
  */
 export type * from './browser-entry.runtime.types';
@@ -31,4 +30,3 @@ export type * from './browser-entry.stats.types';
 export type * from './browser-entry.worker.types';
 export type * from './browser-entry.simulation.types';
 export type * from './browser-entry.render.types';
-export type * from './browser-entry.visualization.types';
