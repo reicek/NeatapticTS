@@ -41,6 +41,7 @@ export function launchRuntimeEvolution(
     context: viewContext.context,
     statsValueByKey: viewContext.statsValueByKey,
     renderNetworkArchitecture: viewContext.renderNetworkArchitecture,
+    applyNetworkActivationOverlay: viewContext.applyNetworkActivationOverlay,
     availableArchitectureProfiles: config.availableArchitectureProfiles,
     initialArchitectureChampionByProfileId:
       config.architectureChampionByProfileId,

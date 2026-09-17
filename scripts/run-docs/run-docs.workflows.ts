@@ -61,6 +61,10 @@ export async function runFullDocsWorkflow(): Promise<void> {
       label: 'Racing Curriculum folder docs',
       scriptName: 'docs:folders:racing-curriculum:built',
     },
+    {
+      label: 'Shared network visualization folder docs',
+      scriptName: 'docs:folders:shared-network-visualization:built',
+    },
   ]);
 
   await runScriptTask({
@@ -97,6 +101,10 @@ export async function runFoldersWorkflow(): Promise<void> {
     {
       label: 'Racing Curriculum folder docs',
       scriptName: 'docs:folders:racing-curriculum:built',
+    },
+    {
+      label: 'Shared network visualization folder docs',
+      scriptName: 'docs:folders:shared-network-visualization:built',
     },
   ]);
 }

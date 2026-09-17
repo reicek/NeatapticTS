@@ -157,6 +157,14 @@ export interface WorkerPlaybackFrameSnapshot {
   birdCount: number;
   pipes: WorkerPackedPlaybackPipeSnapshot;
   birds: WorkerPackedPlaybackBirdSnapshot;
+  /**
+   * Winner node activations packed from the frame's winning bird network.
+   *
+   * The field is optional so host-side test doubles can stub snapshots without
+   * packing winner data, while production snapshots always include it (as a
+   * zero-length array when no winner can be resolved).
+   */
+  winnerNodeActivations?: Float32Array;
 }
 
 /**
@@ -290,6 +298,22 @@ export interface WorkerPlaybackStepMessage {
     winnerPipesPassed?: number;
     winnerFramesSurvived?: number;
     winnerNetworkJson?: SerializedNetwork;
+    /**
+     * Index of the bird whose node activations stream to the visualization.
+     *
+     * Live frames resolve the leading alive bird so the visualizer highlights
+     * the current leader as the frame streams. Done frames resolve the final
+     * population winner (matching `winnerNetworkJson`'s owner) so the last
+     * frame stays consistent with the end-of-run summary.
+     */
+    winnerBirdIndex?: number;
+    /**
+     * Packed winner node activations mirroring `snapshot.winnerNodeActivations`.
+     *
+     * Structured clone preserves the shared identity between the snapshot
+     * column and this payload field inside one message.
+     */
+    winnerNodeActivations?: Float32Array;
   };
 }
 

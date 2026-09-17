@@ -17,7 +17,6 @@
     "constants.birds.ts",
     "constants.pipe-render.ts",
     "constants.starfield.ts",
-    "constants.network-view.ts",
     "constants.palette.ts"
   ]
 }

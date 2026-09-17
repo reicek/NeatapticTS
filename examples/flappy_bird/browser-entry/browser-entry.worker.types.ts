@@ -117,6 +117,20 @@ export interface EvolutionPlaybackStepSnapshot {
   birdCount: number;
   pipes: PackedPlaybackPipeSnapshot;
   birds: PackedPlaybackBirdSnapshot;
+  /**
+   * Index of the frame's winner bird whose node activations stream to the
+   * visualization.
+   *
+   * The field is optional so legacy worker snapshots (and host-side test
+   * doubles) without the activation stream stay valid.
+   */
+  winnerBirdIndex?: number;
+  /**
+   * Winner node activations packed from the winner bird's network.
+   *
+   * Mirrors the worker-side packed column; omitted on legacy snapshots.
+   */
+  winnerNodeActivations?: Float32Array;
 }
 
 /**
@@ -141,6 +155,20 @@ export interface EvolutionPlaybackStepMessage {
     winnerPipesPassed?: number;
     winnerFramesSurvived?: number;
     winnerNetworkJson?: SerializedNetwork;
+    /**
+     * Index of the frame's winner bird for the activation stream.
+     *
+     * Live frames carry the current alive leader; done frames carry the final
+     * population winner (the same bird that owns `winnerNetworkJson`).
+     */
+    winnerBirdIndex?: number;
+    /**
+     * Packed winner node activations mirroring the snapshot column.
+     *
+     * Structured clone preserves identity with `snapshot.winnerNodeActivations`
+     * inside one message.
+     */
+    winnerNodeActivations?: Float32Array;
   };
 }
 
@@ -189,4 +217,17 @@ export interface PlaybackFrameStats {
   leaderFramesSurvived: number;
   activationCallsPerFrame: number;
   simulationStepsPerRaf: number;
+  /**
+   * Index of the frame's winner bird for the activation stream.
+   *
+   * Optional so legacy worker payloads without the stream still produce
+   * valid frame stats.
+   */
+  winnerBirdIndex?: number;
+  /**
+   * Packed winner node activations forwarded from the worker payload.
+   *
+   * Optional on legacy payloads; runtime consumers guard both fields.
+   */
+  winnerNodeActivations?: Float32Array;
 }

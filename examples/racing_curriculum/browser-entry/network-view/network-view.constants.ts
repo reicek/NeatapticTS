@@ -49,71 +49,17 @@ const TIER_TWO_SELF_RADIO_CHANNEL_COUNT = 7;
 /** Number of action outputs produced by the Tier 1 racing network. */
 export const RACING_OUTPUT_SIZE = 2;
 
-/** Hidden-node count above which the racing network view switches to an abstract cluster/density LOD. */
-export const RACING_NETWORK_LOD_HIDDEN_NODE_THRESHOLD = 2048;
-
-/** Maximum number of local nodes rendered when hovering a hidden node in the LOD network view. */
-export const RACING_NETWORK_LOD_HOVER_MAX_LOCAL_NODES = 64;
-
-/** Number of abstract hidden clusters/density bins in the LOD view. */
-export const RACING_NETWORK_LOD_HIDDEN_CLUSTER_COUNT = 4;
-
-/** Total left padding reserved for the input label panel (band + chip + gap). */
-export const RACING_LABEL_LEFT_PADDING_PX = 176;
-
-/** Width of the colored group band rectangle. */
-export const RACING_LABEL_BAND_WIDTH_PX = 12;
-
-/** X offset where the group band starts. */
-export const RACING_LABEL_BAND_START_PX = 3;
-
-/** X offset where per-node chip labels start. */
-export const RACING_LABEL_CHIP_LEFT_PX = 19;
-
-/** Gap between the right edge of a chip and the node's left edge. */
-export const RACING_LABEL_CHIP_RIGHT_GAP_PX = 8;
-
-/** Font size for chip label text. */
-export const RACING_LABEL_CHIP_FONT_SIZE_PX = 9;
-
-/** Corner radius for chip label rectangles. */
-export const RACING_LABEL_CHIP_RADIUS_PX = 3;
-
-/** Vertical breathing room added above and below a group's node span. */
-export const RACING_LABEL_CHIP_VERTICAL_GAP_PX = 4;
-
-/** Top offset of the weight legend from the canvas edge. */
-export const RACING_LEGEND_TOP_OFFSET_PX = 8;
-
-/** Right offset of the weight legend from the canvas edge. */
-export const RACING_LEGEND_RIGHT_OFFSET_PX = 10;
-
-/** Height of each legend item row. */
-export const RACING_LEGEND_ITEM_HEIGHT_PX = 13;
-
-/** Vertical gap between legend items. */
-export const RACING_LEGEND_ITEM_GAP_PX = 4;
-
-/** Size of the colored swatch square inside each legend row. */
-export const RACING_LEGEND_SWATCH_SIZE_PX = 10;
-
-/** Font size for legend text labels. */
-export const RACING_LEGEND_TEXT_FONT_SIZE_PX = 9;
-
-/** Monospace font stack used throughout the label panel. */
-export const RACING_MONOSPACE_FONT = '"Courier New", Courier, monospace';
-
 /** Bright neon underlay color used behind racing network connection strokes. */
-export const RACING_NETWORK_CONNECTION_UNDERLAY_COLOR = '#0f5a8a';
+const RACING_NETWORK_CONNECTION_UNDERLAY_COLOR = '#0f5a8a';
 
 /**
  * Racing-specific connection layer style override.
  *
- * The shared Flappy visualizer defaults to a low default alpha (0.3) so dense
- * Flappy networks stay legible. Racing's right-sidebar panel uses a much
- * smaller controller snapshot against the same dark background, so connections
- * are intentionally brighter and slightly thicker so the topology reads as a
- * vivid neon graph instead of disappearing into the background.
+ * The shared network visualizer defaults to a low default alpha (0.3) so dense
+ * networks stay legible. Racing's right-sidebar panel uses a much smaller
+ * controller snapshot against the same dark background, so connections are
+ * intentionally brighter and slightly thicker so the topology reads as a vivid
+ * neon graph instead of disappearing into the background.
  */
 export const RACING_NETWORK_CONNECTION_LAYER_STYLE = {
   lineWidthPx: 2.2,
@@ -128,7 +74,7 @@ export const RACING_NETWORK_CONNECTION_LAYER_STYLE = {
 /**
  * Light neon ramp used for group band fills.
  *
- * Reuses the same Flappy Bird light neon ramp so the racing panel feels visually
+ * Reuses the same shared light neon ramp so the racing panel feels visually
  * consistent with the other browser demos. Each group picks a deterministic
  * color from this ramp in index order.
  */

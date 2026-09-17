@@ -20,17 +20,37 @@ hand the runtime narrow handles for drawing and HUD updates.
 createCanvasHost(
   containerElement: HTMLElement,
   options: CanvasHostOptions,
-): CanvasHostResult
+): CanvasHostResult & NetworkVisualizationHandle
 ```
 
 Builds the browser demo host tree and returns rendering handles.
 
 This is the public host entrypoint used by the runtime startup path.
+The returned bundle includes both the simulation canvas and the network
+visualization callbacks, so the runtime can render the champion topology
+and stream live winner activations onto it each frame.
 
 Parameters:
 - `containerElement` - Root host container.
+- `options` - Host construction options, including architecture selector items.
 
-Returns: Canvas handles, stats cells and network render callback.
+Returns: Canvas handles, stats cells and network render/overlay callbacks.
+
+Example:
+
+```ts
+const container = document.getElementById('host')!;
+const host = createCanvasHost(container, {
+  architectureSelectorItems: [
+    { id: 'mlp', label: 'MLP', selected: true },
+  ],
+});
+host.renderNetworkArchitecture(championNetwork, 5, 2);
+host.applyNetworkActivationOverlay(
+  championNetwork,
+  new Float32Array([0.2, -0.4, 0.9]),
+);
+```
 
 ### createCanvasHostInternal
 
@@ -38,19 +58,22 @@ Returns: Canvas handles, stats cells and network render callback.
 createCanvasHostInternal(
   containerElement: HTMLElement,
   options: CanvasHostOptions,
-): CanvasHostResult
+): CanvasHostResult & NetworkVisualizationHandle
 ```
 
 Builds the browser demo host tree and returns rendering handles.
 
-The orchestration is deliberately step-shaped: clear old DOM, build layout,
-create canvases, wire resize behavior, render placeholders, then return the
-handles the runtime will mutate during execution.
+This is the internal host builder used by the public entrypoint and the
+browser-entry utils barrel. The orchestration is deliberately step-shaped:
+clear old DOM, build layout, create canvases, wire resize behavior, render
+placeholders, then return the handles the runtime will mutate during
+execution.
 
 Parameters:
 - `containerElement` - Root host container.
+- `options` - Visual/host options (sizes, IDs, renderer selection).
 
-Returns: Canvas handles, stats cells and network render callback.
+Returns: Canvas handles, stats cells and network render/overlay callbacks.
 
 ### createHeaderFrameRenderer
 
@@ -117,12 +140,34 @@ createHostNetworkVisualizationController(
 
 Creates the network visualization renderer and redraw controller.
 
+Builds the hover, tooltip, resize, and draw machinery for the network
+architecture panel. The returned handle exposes both the initial render
+entry point and the per-frame activation overlay used during playback.
+
 Parameters:
 - `networkCanvasHost` - Host element wrapping the network canvas.
 - `networkCanvas` - Network visualization canvas.
 - `networkContext` - Network visualization 2D context.
 
-Returns: Renderer and redraw callbacks for the network panel.
+Returns: Renderer, activation-overlay, and redraw callbacks for the network panel.
+
+Example:
+
+```ts
+const hostElement = document.createElement('div');
+const canvas = document.createElement('canvas');
+const context = canvas.getContext('2d')!;
+const controller = createHostNetworkVisualizationController(
+  hostElement,
+  canvas,
+  context,
+);
+controller.renderNetworkArchitecture(network, 5, 2);
+controller.applyNetworkActivationOverlay(
+  network,
+  new Float32Array([0.1, 0.5, -0.2]),
+);
+```
 
 ### installCanvasHostResizeHooks
 
@@ -496,35 +541,36 @@ Parameters:
 
 Returns: Nothing.
 
-## browser-entry/host/host.network-tooltip.service.ts
+## browser-entry/host/host.network-view.settings.ts
 
-### HostCanvasPointLike
+Flappy-branded network visualization settings.
 
-Canvas-space point used when resolving network tooltip targets.
+This module is the single source of demo-branded values injected into the
+shared network visualizer from the host. It lets the shared overlay stay
+generic while the Flappy host retains its neon/chrome identity.
 
-### NetworkVisualizationTooltipScene
-
-Tooltip scene model resolved from the hovered network overlay target.
-
-### resolveHoveredNetworkVisualizationTooltipScene
+Example:
 
 ```ts
-resolveHoveredNetworkVisualizationTooltipScene(
-  canvasPoint: HostCanvasPointLike,
-  positionedScene: NetworkVisualizationPositionedScene,
-): NetworkVisualizationTooltipScene | undefined
+drawNetworkVisualization(
+  canvasContext,
+  bestNetwork,
+  12,
+  2,
+  undefined,
+  undefined,
+  FLAPPY_HOST_NETWORK_VIEW_SETTINGS,
+);
 ```
 
-Resolves the educational tooltip scene for the current hovered network overlay target.
+### FLAPPY_HOST_NETWORK_VIEW_SETTINGS
 
-Input descriptions and input nodes intentionally share the same tooltip copy,
-while semantic group bands resolve a broader group-level teaching tooltip.
+Flappy-branded settings object passed to {@link drawNetworkVisualization}.
 
-Parameters:
-- `canvasPoint` - Hover point in network-canvas coordinates.
-- `positionedScene` - Rendered positioned scene reused for hover hit testing.
+### FLAPPY_INPUT_LABEL_GROUP_DEFINITIONS
 
-Returns: Tooltip scene model for the hovered overlay target.
+Flappy-branded input-label group fixture passed to the shared network
+visualizer from the host.
 
 ## browser-entry/host/host.architecture-selector.service.ts
 

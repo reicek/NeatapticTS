@@ -1,4 +1,4 @@
-import { clamp } from '../browser-entry/browser-entry.math.utils';
+import { clamp } from '../../shared/network-visualization/network-visualization.math.utils';
 import {
   commitObservationMemoryStep,
   resolveFlapDecision,

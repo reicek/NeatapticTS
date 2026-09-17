@@ -3,9 +3,9 @@
 ASCII Maze adapter over the shared rich browser network visualizer.
 
 The maze demo should not own its own network-frame math. Instead it reuses
-the same resolved frame, padding, node sizing, and connection drawing path
-as Flappy Bird, while only swapping the semantic input labels and the short
-output tags.
+the shared resolved frame, padding, node sizing, and connection drawing path
+while only swapping the semantic input labels and the short output tags to
+match the maze controller.
 
 ## browser-entry/network-view/network-view.ts
 
@@ -20,7 +20,7 @@ drawMazeNetworkVisualization(
 ): MazeNetworkRenderResult
 ```
 
-Draw the ASCII Maze network panel using the shared Flappy visualizer owner.
+Draw the ASCII Maze network panel using the shared network visualizer.
 
 Parameters:
 - `canvas` - Canvas element to render onto.

@@ -37,7 +37,6 @@
  *     Constants --> Observation["observation\nfeature scaling"]
  *     Constants --> Runtime["runtime + stats\nbrowser defaults and HUD"]
  *     Constants --> Rendering["frame + layout + birds + starfield\nvisual shell"]
- *     Constants --> NetworkView["network-view + palette\ninspection and legend"]
  * ```
  */
 
@@ -85,7 +84,6 @@ export * from './constants.frame';
 export * from './constants.palette';
 export * from './constants.layout';
 export * from './constants.stats';
-export * from './constants.network-view';
 export * from './constants.birds';
 export {
   FLAPPY_PIPE_ENTRY_RIM_INSET_PX,

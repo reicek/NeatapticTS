@@ -6,6 +6,9 @@ import {
   resolveRuntimeChampionCandidateNetworkJson,
   resolveWorkerInitPayload,
 } from './runtime.evolution-loop.service';
+import * as runtimeEvolutionLoopModule from './runtime.evolution-loop.service';
+import type { PlaybackFrameStats } from '../browser-entry.types';
+import Network from '../../../../src/architecture/network';
 
 function withNodeEnv<T>(nextNodeEnv: string, callback: () => T): T {
   const previousNodeEnv = process.env.NODE_ENV;
@@ -234,5 +237,165 @@ describe('resolveWorkerInitPayload', () => {
     } finally {
       consoleInfoSpy.mockRestore();
     }
+  });
+});
+
+type ApplyRuntimeChampionActivationOverlayContract = (options: {
+  frameStats: PlaybackFrameStats;
+  generationPopulationNetworks: Network[];
+  fallbackNetwork: Network | undefined;
+  applyNetworkActivationOverlay: (
+    network: Network,
+    winnerNodeActivations: Float32Array,
+  ) => void;
+}) => void;
+
+/**
+ * Resolves the runtime champion activation overlay helper from the runtime
+ * module.
+ *
+ * @returns The runtime overlay helper exported from the runtime module.
+ */
+function resolveApplyRuntimeChampionActivationOverlay(): ApplyRuntimeChampionActivationOverlayContract {
+  const candidate = (runtimeEvolutionLoopModule as Record<string, unknown>)[
+    'applyRuntimeChampionActivationOverlay'
+  ];
+
+  if (typeof candidate !== 'function') {
+    throw new Error(
+      'applyRuntimeChampionActivationOverlay is not exported from ./runtime.evolution-loop.service yet — implement and export per AC-213 in slice 02-host-overlay',
+    );
+  }
+
+  return candidate as ApplyRuntimeChampionActivationOverlayContract;
+}
+
+/**
+ * Builds per-frame telemetry that carries the streamed winner activation
+ * snapshot on top of the existing frame-stats fields.
+ *
+ * @param winnerBirdIndex - Frame winner bird index streamed by the worker.
+ * @param winnerNodeActivations - Winner post-step node activations.
+ * @returns Frame stats carrying the winner activation stream.
+ */
+function createWinnerActivationFrameStats(
+  winnerBirdIndex: number,
+  winnerNodeActivations: Float32Array,
+): PlaybackFrameStats {
+  return {
+    frameIndex: 12,
+    activeBirdCount: 1,
+    leaderPipesPassed: 5,
+    leaderFramesSurvived: 210,
+    activationCallsPerFrame: 3,
+    simulationStepsPerRaf: 1,
+    winnerBirdIndex,
+    winnerNodeActivations,
+  } as PlaybackFrameStats & {
+    winnerBirdIndex?: number;
+    winnerNodeActivations?: Float32Array;
+  };
+}
+
+/**
+ * Builds per-frame telemetry without a winner activation stream (the defensive
+ * fallback case where the worker omitted the snapshot).
+ *
+ * @returns Frame stats with no winner activation payload.
+ */
+function createFrameStatsWithoutWinnerStream(): PlaybackFrameStats {
+  return {
+    frameIndex: 3,
+    activeBirdCount: 4,
+    leaderPipesPassed: 2,
+    leaderFramesSurvived: 96,
+    activationCallsPerFrame: 3,
+    simulationStepsPerRaf: 1,
+  };
+}
+
+describe('applyRuntimeChampionActivationOverlay', () => {
+  it('applies the streamed winner activations to the exact winner population network', () => {
+    // Arrange
+    const applyNetworkActivationOverlay = jest.fn();
+    const winnerNetwork = new Network(2, 1, { seed: 42 });
+    const winnerNodeActivations = new Float32Array([0.25, -0.75, 0.5]);
+
+    // Act
+    resolveApplyRuntimeChampionActivationOverlay()({
+      frameStats: createWinnerActivationFrameStats(1, winnerNodeActivations),
+      generationPopulationNetworks: [
+        new Network(2, 1, { seed: 42 }),
+        winnerNetwork,
+      ],
+      fallbackNetwork: undefined,
+      applyNetworkActivationOverlay,
+    });
+
+    // Assert — the overlay targets the exact winner instance in the population.
+    expect(applyNetworkActivationOverlay).toHaveBeenCalledTimes(1);
+    expect(applyNetworkActivationOverlay.mock.calls[0]?.[0]).toBe(winnerNetwork);
+    expect(applyNetworkActivationOverlay.mock.calls[0]?.[1]).toEqual(
+      winnerNodeActivations,
+    );
+  });
+
+  it('falls back to the fallback network when the winner bird index has no population network', () => {
+    // Arrange — the worker sentinel -1 means no frame winner was resolvable.
+    const applyNetworkActivationOverlay = jest.fn();
+    const fallbackNetwork = new Network(2, 1, { seed: 42 });
+    const winnerNodeActivations = new Float32Array([0.25, -0.75, 0.5]);
+
+    // Act
+    resolveApplyRuntimeChampionActivationOverlay()({
+      frameStats: createWinnerActivationFrameStats(-1, winnerNodeActivations),
+      generationPopulationNetworks: [
+        new Network(2, 1, { seed: 42 }),
+        new Network(2, 1, { seed: 42 }),
+      ],
+      fallbackNetwork,
+      applyNetworkActivationOverlay,
+    });
+
+    // Assert — the overlay targets the fallback instance instead.
+    expect(applyNetworkActivationOverlay).toHaveBeenCalledTimes(1);
+    expect(applyNetworkActivationOverlay.mock.calls[0]?.[0]).toBe(
+      fallbackNetwork,
+    );
+  });
+
+  it('does not apply any overlay when the fallback network is missing for an out-of-range winner', () => {
+    // Arrange
+    const applyNetworkActivationOverlay = jest.fn();
+
+    // Act
+    resolveApplyRuntimeChampionActivationOverlay()({
+      frameStats: createWinnerActivationFrameStats(
+        -1,
+        new Float32Array([0.25, -0.75, 0.5]),
+      ),
+      generationPopulationNetworks: [new Network(2, 1, { seed: 42 })],
+      fallbackNetwork: undefined,
+      applyNetworkActivationOverlay,
+    });
+
+    // Assert
+    expect(applyNetworkActivationOverlay).not.toHaveBeenCalled();
+  });
+
+  it('does not apply any overlay when the frame stats omit the winner activation stream', () => {
+    // Arrange
+    const applyNetworkActivationOverlay = jest.fn();
+
+    // Act
+    resolveApplyRuntimeChampionActivationOverlay()({
+      frameStats: createFrameStatsWithoutWinnerStream(),
+      generationPopulationNetworks: [new Network(2, 1, { seed: 42 })],
+      fallbackNetwork: new Network(2, 1, { seed: 42 }),
+      applyNetworkActivationOverlay,
+    });
+
+    // Assert
+    expect(applyNetworkActivationOverlay).not.toHaveBeenCalled();
   });
 });

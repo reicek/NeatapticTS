@@ -18,7 +18,6 @@ import type {
   PlaybackChampionChangedEvent,
   PlaybackIterationContext,
   PlaybackLoopState,
-  PlaybackSessionContext,
 } from './playback.orchestration.types';
 import { syncPlaybackViewportDimensions } from './playback.session.services';
 import {
@@ -60,10 +59,7 @@ export async function runPlaybackIteration(
     await requestPlaybackStepPayload(iterationContext);
 
   // Step 2: Fold the worker snapshot into local render and trail state.
-  applyPlaybackStepSnapshot(
-    iterationContext.sessionContext,
-    playbackStepPayload.snapshot,
-  );
+  applyPlaybackStepSnapshot(iterationContext, playbackStepPayload);
 
   // Step 2.1: Notify runtime consumers when the red-bird champion changes.
   emitChampionChangedEvent(iterationContext);
@@ -118,19 +114,39 @@ export async function requestPlaybackStepPayload(
 /**
  * Applies the latest worker snapshot to render state and trail caches.
  *
- * @param sessionContext - Shared mutable playback session state.
- * @param snapshot - Worker snapshot for the current playback batch.
+ * The worker mirrors the winner activation stream at both the payload level
+ * and inside the packed snapshot. The merge below folds the payload-level
+ * fields onto this iteration's snapshot (the per-message structured clone is
+ * owned by this call, so the in-place merge is allocation-free) before
+ * hydration, which keeps `applyPlaybackSnapshot` as the single surface that
+ * render state reads winner data from.
+ *
+ * @param iterationContext - Shared loop dependencies and mutable playback state.
+ * @param playbackStepPayload - Worker playback result for the current iteration.
  * @returns Nothing.
  */
 export function applyPlaybackStepSnapshot(
-  sessionContext: PlaybackSessionContext,
-  snapshot: Parameters<typeof applyPlaybackSnapshot>[1],
+  iterationContext: PlaybackIterationContext,
+  playbackStepPayload: Awaited<ReturnType<typeof requestWorkerPlaybackStep>>,
 ): void {
-  // Step 1: Fold the worker snapshot into the mutable render state.
-  applyPlaybackSnapshot(sessionContext.renderState, snapshot);
+  // Step 1: Merge the payload-level winner stream onto the snapshot.
+  const { snapshot } = playbackStepPayload;
+  snapshot.winnerBirdIndex =
+    playbackStepPayload.winnerBirdIndex ?? snapshot.winnerBirdIndex;
+  snapshot.winnerNodeActivations =
+    playbackStepPayload.winnerNodeActivations ?? snapshot.winnerNodeActivations;
 
-  // Step 2: Refresh the bird trail cache from the updated render state.
-  updateTrailState(sessionContext.trailState, sessionContext.renderState);
+  // Step 2: Fold the worker snapshot into the mutable render state.
+  applyPlaybackSnapshot(
+    iterationContext.sessionContext.renderState,
+    snapshot,
+  );
+
+  // Step 3: Refresh the bird trail cache from the updated render state.
+  updateTrailState(
+    iterationContext.sessionContext.trailState,
+    iterationContext.sessionContext.renderState,
+  );
 }
 
 /**

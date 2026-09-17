@@ -25,9 +25,9 @@
  *
  * Read the folder in three passes. Start with this file for the public
  * lifecycle contract. Continue into `runtime/` and `worker-channel/` for the
- * bootstrap and protocol story. Finish with `host/`, `playback/`,
- * `network-view/`, and `visualization/` for the teaching surface the browser
- * renders around the worker-owned simulation.
+ * bootstrap and protocol story. Finish with `host/` and `playback/` for the
+ * browser-side teaching surface; the network-visualization implementation now
+ * lives in `examples/shared/network-visualization/`.
  *
  * ```mermaid
  * flowchart LR
@@ -38,7 +38,7 @@
  *   Runtime --> Host["host/\nDOM and canvas shell"]:::base
  *   Runtime --> Channel["worker-channel/\nworker protocol"]:::base
  *   Channel --> Playback["playback/\npopulation rendering"]:::base
- *   Runtime --> Network["network-view + visualization/\nnetwork inspection"]:::base
+ *   Runtime --> Network["shared/network-visualization/\nnetwork inspection"]:::base
  * ```
  *
  * ```mermaid

@@ -1,8 +1,14 @@
 # Roadmap
 
-Completed workstreams and their archived plan trackers. No active or pending plans remain.
+No active workstreams. All completed workstreams and their archived plan trackers are listed below.
+
+## Active demo workstream
+
+No active demo workstreams.
 
 ## Completed demo workstreams
+
+- Flappy Visualizer Activation Fix & Shared Network Visualization: `plans/completed/Flappy_Visualizer_Activation_Fix_Shared_Extraction.plans.md` — Phase 1 [DONE] (fix the flappy network visualizer 0.00-on-every-node regression by streaming the frame winner's real node activations from the evolution worker through the playback protocol, with host overlay + cache invalidation) | Phase 2 [DONE] (extract the rich network visualizer to `examples/shared/network-visualization/` behind a minimal `NetworkVisualizationSettings` seam so any example can render a network view; repoint flappy, racing_curriculum, asciiMaze, and neatChat path strings; delete dead facades; add missing sibling tests; rebuild bundles) | Phase 3 [DONE] (audit and migrate the racing curriculum LOD renderer, tooltip resolver, and racing-specific settings into the shared network visualizer; repoint the racing adapter; delete redundant racing modules; keep all racing suites green)
 
 - Neon_Shooter_NGE_Demo: `plans/completed/Neon_Shooter_NGE_Demo.plans.md` — Phase 4 [DONE] | Phase 5 [DONE] — NGE demo wiring and polish
 - Neatenstein Auto / NEAT Mode Wiring: `plans/completed/neatenstein-auto-neat-mode.plans.md` — Phases 0-9 [DONE] — wiring evolution harness into live game loop

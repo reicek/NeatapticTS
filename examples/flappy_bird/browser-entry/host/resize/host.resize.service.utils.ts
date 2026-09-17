@@ -1,4 +1,4 @@
-import { clamp } from '../../browser-entry.math.utils';
+import { clamp } from '../../../../shared/network-visualization/network-visualization.math.utils';
 import {
   FLAPPY_UI_NETWORK_HOST_FIXED_HEIGHT_PX,
   FLAPPY_VIEWPORT_MOBILE_MINIMAL_UI_BREAKPOINT_PX,

@@ -10,12 +10,10 @@ import { installRacingNetworkResize } from './host.resize.service';
 import {
   drawRacingNetworkVisualizationFromFrame,
   resolveRacingNetworkVisualizationFrame,
+  resolveRacingNetworkVisualizationTooltipScene,
   type NetworkVisualizationResolvedFrame,
 } from '../network-view/network-view';
-import {
-  resolveRacingNetworkTooltipScene,
-  type NetworkVisualizationPositionedScene,
-} from './host.network-tooltip.service';
+import type { NetworkVisualizationPositionedScene } from '../../../shared/network-visualization/network-visualization.types';
 
 /** Narrow viewport threshold used by the Tier 0 host layout seam. */
 export const RACING_NARROW_VIEWPORT_THRESHOLD_PX = 960;
@@ -336,7 +334,7 @@ function createHostNetworkVisualizationController(
       xPx: (clientX - bounds.left) * scaleX,
       yPx: (clientY - bounds.top) * scaleY,
     };
-    const scene = resolveRacingNetworkTooltipScene(
+    const scene = resolveRacingNetworkVisualizationTooltipScene(
       canvasPoint,
       positionedScene,
     );

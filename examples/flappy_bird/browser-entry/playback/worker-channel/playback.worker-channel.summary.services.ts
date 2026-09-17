@@ -38,6 +38,8 @@ export function resolvePlaybackFrameStats(
       playbackStepPayload.instrumentation?.activationCallsPerFrame ?? 0,
     simulationStepsPerRaf:
       playbackStepPayload.instrumentation?.simulationStepsPerRaf ?? 0,
+    winnerBirdIndex: playbackStepPayload.winnerBirdIndex,
+    winnerNodeActivations: playbackStepPayload.winnerNodeActivations,
   };
 }
 

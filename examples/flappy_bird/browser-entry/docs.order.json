@@ -5,8 +5,6 @@
     "runtime",
     "host",
     "worker-channel",
-    "playback",
-    "network-view",
-    "visualization"
+    "playback"
   ]
 }

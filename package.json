@@ -98,6 +98,8 @@
     "docs:folders:flappy-bird": "npm run docs:build-scripts && npm run docs:folders:flappy-bird:built",
     "docs:folders:racing-curriculum:built": "node ./dist-docs/scripts/generate-docs/generate-docs.js --target=racing-curriculum",
     "docs:folders:racing-curriculum": "npm run docs:build-scripts && npm run docs:folders:racing-curriculum:built",
+    "docs:folders:shared-network-visualization:built": "node ./dist-docs/scripts/generate-docs/generate-docs.js --target=shared-network-visualization",
+    "docs:folders:shared-network-visualization": "npm run docs:build-scripts && npm run docs:folders:shared-network-visualization:built",
     "docs:folders": "npm run docs:build-scripts && node ./dist-docs/scripts/run-docs.js folders",
     "docs:html:built": "node ./dist-docs/scripts/render-docs-html.js",
     "docs:html": "npm run docs:build-scripts && npm run docs:html:built",

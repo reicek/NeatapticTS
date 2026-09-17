@@ -2,9 +2,9 @@
  * Racing curriculum adapter over the shared rich browser network visualizer.
  *
  * The racing browser demo should not own its own network-frame math. Instead it
- * reuses the same resolved frame, padding, node sizing, and connection drawing
- * path as Flappy Bird and ASCII Maze, while only swapping the semantic input
- * labels and the short output tags to match the Tier 1 racing controller.
+ * reuses the shared resolved frame, padding, node sizing, and connection drawing
+ * path while only swapping the semantic input labels and the short output tags
+ * to match the Tier 1 racing controller.
  */
 
 import type Network from '../../../../src/architecture/network';
@@ -13,15 +13,24 @@ import {
   resolveNetworkArchitectureLabel as resolveSharedNetworkArchitectureLabel,
   resolveNetworkVisualizationFrame as resolveSharedNetworkVisualizationFrame,
   type NetworkVisualizationResolvedFrame,
-} from '../../../flappy_bird/browser-entry/network-view/network-view';
+} from '../../../shared/network-visualization/network-view/network-view';
 
 export type { NetworkVisualizationResolvedFrame };
-import type { InputLabelGroupDefinition } from '../../../flappy_bird/browser-entry/network-view/network-view.types';
+export { resolveNetworkVisualizationTooltipScene as resolveRacingNetworkVisualizationTooltipScene } from '../../../shared/network-visualization/network-visualization.tooltip.service';
+import type {
+  InputLabelGroupDefinition,
+  NetworkVisualizationSettings,
+} from '../../../shared/network-visualization/network-view/network-view.types';
 import type {
   NetworkVisualizationHoverState,
   PositionedNetworkNodeLike,
-} from '../../../flappy_bird/browser-entry/browser-entry.visualization.types';
-import type { NetworkVisualizationPositionedScene } from '../host/host.network-tooltip.service';
+} from '../../../shared/network-visualization/network-visualization.types';
+import type { NetworkVisualizationPositionedScene } from '../../../shared/network-visualization/network-visualization.types';
+import {
+  NETWORK_LOD_HIDDEN_CLUSTER_COUNT,
+  NETWORK_LOD_HIDDEN_NODE_THRESHOLD,
+  NETWORK_LOD_HOVER_MAX_LOCAL_NODES,
+} from '../../../shared/network-visualization/network-visualization.constants';
 import {
   RACING_GROUP_COLORS,
   RACING_INPUT_SIZE,
@@ -30,12 +39,6 @@ import {
   RACING_OUTPUT_SIZE,
   resolveRacingInputGroupDefinitions,
 } from './network-view.constants';
-import {
-  drawRacingNetworkLODFromFrame,
-  resolveRacingNetworkLODFrame,
-  shouldUseRacingNetworkLOD,
-  type RacingLODResolvedFrame,
-} from './network-view.lod';
 
 /** Minimum canvas backing-store width. */
 const MIN_CANVAS_WIDTH_PX = 320;
@@ -151,17 +154,40 @@ export function resolveRacingNetworkVisualizationFrame(
 ): NetworkVisualizationResolvedFrame {
   const inputSize = network?.input ?? RACING_INPUT_SIZE;
 
-  if (network && shouldUseRacingNetworkLOD(network)) {
-    return resolveRacingNetworkLODFrame(context, network);
-  }
-
   return resolveSharedNetworkVisualizationFrame(
     context,
     network,
     inputSize,
     RACING_OUTPUT_SIZE,
-    resolveRacingInputLabelGroupDefinitions(inputSize),
+    undefined,
+    buildRacingNetworkViewSettings(inputSize),
   );
+}
+
+/**
+ * Builds the racing settings bag that drives the shared visualizer path.
+ *
+ * LOD stays force-enabled with the shared LOD defaults so dense curriculum
+ * networks collapse into the shared abstract renderer, while the semantic
+ * input labels flow through the settings bag the shared orchestrator reads.
+ *
+ * @param inputSize - Effective input-layer size for label group resolution.
+ * @returns Racing settings bag for the shared visualizer.
+ */
+function buildRacingNetworkViewSettings(
+  inputSize: number,
+): NetworkVisualizationSettings {
+  return {
+    inputLabelGroupDefinitions: resolveRacingInputLabelGroupDefinitions(
+      inputSize,
+    ),
+    lod: {
+      enabled: true,
+      hiddenNodeThreshold: NETWORK_LOD_HIDDEN_NODE_THRESHOLD,
+      clusterCount: NETWORK_LOD_HIDDEN_CLUSTER_COUNT,
+      hoverMaxLocalNodes: NETWORK_LOD_HOVER_MAX_LOCAL_NODES,
+    },
+  };
 }
 
 /**
@@ -180,21 +206,6 @@ export function drawRacingNetworkVisualizationFromFrame(
   resolvedFrame: NetworkVisualizationResolvedFrame,
   hoveredNodeIndices?: readonly number[],
 ): NetworkVisualizationPositionedScene {
-  if (isRacingLODResolvedFrame(resolvedFrame)) {
-    const positionedScene = drawRacingNetworkLODFromFrame(
-      context,
-      resolvedFrame,
-      hoveredNodeIndices,
-      RACING_NETWORK_CONNECTION_LAYER_STYLE,
-    );
-    drawRacingOutputNodeLabels(
-      context,
-      resolveSortedOutputNodes(positionedScene.positionedNodes),
-    );
-
-    return positionedScene as unknown as NetworkVisualizationPositionedScene;
-  }
-
   const hoverState = resolveRacingHoverState(hoveredNodeIndices);
 
   const positionedScene = drawResolvedNetworkVisualization(
@@ -208,17 +219,11 @@ export function drawRacingNetworkVisualizationFromFrame(
     resolveSortedOutputNodes(positionedScene.positionedNodes),
   );
 
-  return positionedScene as unknown as NetworkVisualizationPositionedScene;
-}
-
-function isRacingLODResolvedFrame(
-  resolvedFrame: NetworkVisualizationResolvedFrame,
-): resolvedFrame is RacingLODResolvedFrame {
-  return '__racingLod' in resolvedFrame && resolvedFrame.__racingLod === true;
+  return positionedScene;
 }
 
 /**
- * Draw the racing curriculum network panel using the shared Flappy visualizer.
+ * Draw the racing curriculum network panel using the shared network visualizer.
  *
  * @param canvas - Canvas element to render onto.
  * @param network - Runtime network used for architecture metadata and weights.
