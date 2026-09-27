@@ -898,9 +898,7 @@ describe('resolveInputGroupLabelBandScenes', () => {
         inputDescriptionScenes[1]!.topPx +
         inputDescriptionScenes[1]!.heightPx +
         NETWORK_INPUT_GROUP_PADDING_PX,
-      topPx:
-        inputDescriptionScenes[0]!.topPx -
-        NETWORK_INPUT_GROUP_PADDING_PX,
+      topPx: inputDescriptionScenes[0]!.topPx - NETWORK_INPUT_GROUP_PADDING_PX,
     });
   });
 
@@ -1024,11 +1022,9 @@ function createStubContext(
 
 describe('drawNetworkVisualization overlay visibility', () => {
   it('produces input-group label band scenes when the host canvas is wide despite a narrow viewport', () => {
-    const network = new Network(
-      NETWORK_INPUT_SIZE,
-      NETWORK_OUTPUT_SIZE,
-      { seed: 42 },
-    );
+    const network = new Network(NETWORK_INPUT_SIZE, NETWORK_OUTPUT_SIZE, {
+      seed: 42,
+    });
     const { context } = createStubContext(900, 600);
     const positionedScene = drawNetworkVisualization(
       context,
@@ -1044,11 +1040,9 @@ describe('drawNetworkVisualization overlay visibility', () => {
   });
 
   it('produces input-description scenes when the host canvas is wide despite a narrow viewport', () => {
-    const network = new Network(
-      NETWORK_INPUT_SIZE,
-      NETWORK_OUTPUT_SIZE,
-      { seed: 42 },
-    );
+    const network = new Network(NETWORK_INPUT_SIZE, NETWORK_OUTPUT_SIZE, {
+      seed: 42,
+    });
     const { context } = createStubContext(900, 600);
     const positionedScene = drawNetworkVisualization(
       context,
@@ -1089,11 +1083,9 @@ describe('drawNetworkVisualization activation labels', () => {
 
 describe('NetworkVisualizationSettings threading', () => {
   it('renders no input-group bands when default empty settings are threaded', () => {
-    const network = new Network(
-      NETWORK_INPUT_SIZE,
-      NETWORK_OUTPUT_SIZE,
-      { seed: 42 },
-    );
+    const network = new Network(NETWORK_INPUT_SIZE, NETWORK_OUTPUT_SIZE, {
+      seed: 42,
+    });
     const { context } = createStubContext(900, 900);
     const settings: NetworkVisualizationSettings = {
       inputLabelGroupDefinitions: [],
@@ -1130,9 +1122,7 @@ describe('NetworkVisualizationSettings threading', () => {
     );
 
     expect(scene.inputGroupLabelBandScenes.length).toBe(2);
-    expect(scene.inputGroupLabelBandScenes[0]?.backgroundColor).toBe(
-      '#2bd9ff',
-    );
+    expect(scene.inputGroupLabelBandScenes[0]?.backgroundColor).toBe('#2bd9ff');
   });
 
   it('paints the canvas background from custom settings', () => {

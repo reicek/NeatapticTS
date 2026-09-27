@@ -261,7 +261,12 @@ function resolveNarxTemporalTopologyPlan(
     ? resolveModuleRoleColumns(inputDelayModule, nodeByGeneId, 0, lightNeonRamp)
     : { layers: [], annotations: [] };
   const outputDelayColumns = outputDelayModule
-    ? resolveModuleRoleColumns(outputDelayModule, nodeByGeneId, 3, lightNeonRamp)
+    ? resolveModuleRoleColumns(
+        outputDelayModule,
+        nodeByGeneId,
+        3,
+        lightNeonRamp,
+      )
     : { layers: [], annotations: [] };
   const denseHiddenColumns = resolveAuxiliaryHiddenColumns(
     remainingHiddenLayers,
@@ -411,7 +416,9 @@ function resolveAuxiliaryHiddenColumns(
         tooltipHeading: hiddenColumnTooltip.heading,
         tooltipBodyParagraphs: hiddenColumnTooltip.bodyParagraphs,
         backgroundColor:
-          lightNeonRamp[(colorOffset + hiddenLayerIndex) % lightNeonRamp.length] ??
+          lightNeonRamp[
+            (colorOffset + hiddenLayerIndex) % lightNeonRamp.length
+          ] ??
           lightNeonRamp[0] ??
           '#7fe8ff',
         nodeIndices: hiddenLayer.map((hiddenNode) => hiddenNode.index),

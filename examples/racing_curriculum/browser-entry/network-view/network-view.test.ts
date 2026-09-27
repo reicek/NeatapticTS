@@ -213,5 +213,4 @@ describe('racing network-view adapter', () => {
       ),
     ).toBe(true);
   });
-
 });

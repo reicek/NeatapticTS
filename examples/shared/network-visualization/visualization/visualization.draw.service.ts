@@ -83,7 +83,8 @@ const NETWORK_MULTILINE_LABEL_SEPARATOR = '\n';
 const NETWORK_CANVAS_TEXT_ALIGN_LEFT: CanvasTextAlign = 'left';
 const NETWORK_CANVAS_TEXT_ALIGN_CENTER: CanvasTextAlign = 'center';
 const NETWORK_CANVAS_TEXT_BASELINE_TOP: CanvasTextBaseline = 'top';
-const NETWORK_CANVAS_TEXT_BASELINE_ALPHABETIC: CanvasTextBaseline = 'alphabetic';
+const NETWORK_CANVAS_TEXT_BASELINE_ALPHABETIC: CanvasTextBaseline =
+  'alphabetic';
 const NETWORK_CANVAS_LINE_CAP_BUTT: CanvasLineCap = 'butt';
 const NETWORK_CANVAS_LINE_CAP_SQUARE: CanvasLineCap = 'square';
 const NETWORK_TRANSPARENT_CANVAS_COLOR = 'transparent';
@@ -156,7 +157,8 @@ function resolveNetworkVisualizationTheme(
     legendRowTextColor:
       settings?.theme?.legendRowText ?? NETWORK_LEGEND_ROW_TEXT_COLOR,
     overlayHiddenBreakpointPx:
-      settings?.overlayHiddenBreakpointPx ?? NETWORK_OVERLAY_HIDDEN_BREAKPOINT_PX,
+      settings?.overlayHiddenBreakpointPx ??
+      NETWORK_OVERLAY_HIDDEN_BREAKPOINT_PX,
   };
 }
 
@@ -362,7 +364,9 @@ export function drawNetworkVisualizationHeader(
   settings?: NetworkVisualizationSettings,
 ): void {
   // Step 1: Normalize the potentially multiline architecture label into rows.
-  const headerLines = architectureLabel.split(NETWORK_MULTILINE_LABEL_SEPARATOR);
+  const headerLines = architectureLabel.split(
+    NETWORK_MULTILINE_LABEL_SEPARATOR,
+  );
   const theme = resolveNetworkVisualizationTheme(settings);
 
   // Step 2: Paint the header block using the shared left-aligned text helper.
@@ -737,8 +741,7 @@ function resolveBiasNodePaintStyle(
   theme: ResolvedNetworkVisualizationTheme,
 ): BiasNodePaintStyle {
   // Step 1: Determine whether the node is an output node, which changes both color and emphasis.
-  const isOutputNode =
-    positionedNode.node.type === NETWORK_OUTPUT_NODE_TYPE;
+  const isOutputNode = positionedNode.node.type === NETWORK_OUTPUT_NODE_TYPE;
 
   // Step 2: Resolve the fill and stroke styles for the active node category.
   return {
@@ -989,9 +992,7 @@ function resolveLegendStackTopPx(
   legendHeightPx: number,
 ): number {
   const totalLegendStackHeightPx =
-    architectureHeightPx +
-    NETWORK_LEGEND_ARCHITECTURE_GAP_PX +
-    legendHeightPx;
+    architectureHeightPx + NETWORK_LEGEND_ARCHITECTURE_GAP_PX + legendHeightPx;
   const centeredLegendStackTopPx =
     (context.canvas.height - totalLegendStackHeightPx) * 0.5;
   const minimumLegendStackTopPx = Math.max(
@@ -1000,9 +1001,7 @@ function resolveLegendStackTopPx(
   );
   const maximumLegendStackTopPx = Math.max(
     minimumLegendStackTopPx,
-    context.canvas.height -
-      totalLegendStackHeightPx -
-      NETWORK_LEGEND_MARGIN_PX,
+    context.canvas.height - totalLegendStackHeightPx - NETWORK_LEGEND_MARGIN_PX,
   );
 
   return clamp(
@@ -1026,8 +1025,7 @@ function drawLegendArchitectureLabel(
   // Step 1: Paint the architecture lines aligned to the legend frame left edge.
   drawLeftAlignedTextRows(context, {
     lines: legendSceneContext.architectureLines,
-    leftPx:
-      legendSceneContext.legendLeftPx + NETWORK_LEGEND_BOX_PADDING_PX,
+    leftPx: legendSceneContext.legendLeftPx + NETWORK_LEGEND_BOX_PADDING_PX,
     topPx: legendSceneContext.architectureTextTopPx,
     lineHeightPx: NETWORK_HEADER_LINE_HEIGHT_PX,
     font: `${NETWORK_HEADER_FONT_SIZE_PX}px ${legendSceneContext.theme.fontFamily}`,
@@ -1088,8 +1086,7 @@ function drawLegendHeader(
   context.fillText(
     NETWORK_LEGEND_TITLE,
     legendSceneContext.legendLeftPx + NETWORK_LEGEND_BOX_PADDING_PX,
-    legendSceneContext.legendTopPx +
-      NETWORK_LEGEND_HEADER_TOP_PADDING_PX,
+    legendSceneContext.legendTopPx + NETWORK_LEGEND_HEADER_TOP_PADDING_PX,
   );
 }
 
@@ -1153,8 +1150,7 @@ function drawLegendConnectionRow(
   const sampleStartXPx =
     legendSceneContext.legendLeftPx + NETWORK_LEGEND_BOX_PADDING_PX;
   const sampleEndXPx =
-    legendSceneContext.legendLeftPx +
-    NETWORK_LEGEND_CONNECTION_SAMPLE_END_X_PX;
+    legendSceneContext.legendLeftPx + NETWORK_LEGEND_CONNECTION_SAMPLE_END_X_PX;
   const sampleYPx =
     connectionRowTopPx + NETWORK_LEGEND_CONNECTION_SAMPLE_Y_OFFSET_PX;
 
@@ -1181,8 +1177,7 @@ function drawLegendConnectionRow(
   context.fillStyle = legendSceneContext.theme.legendRowTextColor;
   context.fillText(
     connectionLegendRow.label,
-    legendSceneContext.legendLeftPx +
-      NETWORK_LEGEND_CONNECTION_LABEL_X_PX,
+    legendSceneContext.legendLeftPx + NETWORK_LEGEND_CONNECTION_LABEL_X_PX,
     connectionRowTopPx - 1,
   );
 }

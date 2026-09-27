@@ -178,9 +178,8 @@ function buildRacingNetworkViewSettings(
   inputSize: number,
 ): NetworkVisualizationSettings {
   return {
-    inputLabelGroupDefinitions: resolveRacingInputLabelGroupDefinitions(
-      inputSize,
-    ),
+    inputLabelGroupDefinitions:
+      resolveRacingInputLabelGroupDefinitions(inputSize),
     lod: {
       enabled: true,
       hiddenNodeThreshold: NETWORK_LOD_HIDDEN_NODE_THRESHOLD,

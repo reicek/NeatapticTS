@@ -218,4 +218,3 @@ validation transcripts, and fix-loop records are archived in
 
 This tracker and its logs have been moved to `plans/completed/`.
 AC-280 remains **SUSPENDED** pending the user's manual runtime confirmation.
-

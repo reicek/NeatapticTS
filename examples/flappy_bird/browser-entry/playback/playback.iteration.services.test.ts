@@ -1,4 +1,7 @@
-import { emitChampionChangedEvent, emitPlaybackFrameStats } from './playback.iteration.services';
+import {
+  emitChampionChangedEvent,
+  emitPlaybackFrameStats,
+} from './playback.iteration.services';
 import type { PlaybackFrameStats } from '../browser-entry.types';
 import type { PlaybackIterationContext } from './playback.orchestration.types';
 

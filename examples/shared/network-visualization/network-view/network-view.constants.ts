@@ -150,7 +150,8 @@ export const NETWORK_HIDDEN_NODE_STROKE_COLOR = '#9fdcff';
 export const NETWORK_OUTPUT_NODE_STROKE_COLOR = '#d8ffe9';
 
 /** Default fill color for output nodes. */
-export const NETWORK_OUTPUT_NODE_FILL_COLOR = NETWORK_NEON_PALETTE.currentRunText;
+export const NETWORK_OUTPUT_NODE_FILL_COLOR =
+  NETWORK_NEON_PALETTE.currentRunText;
 
 /** Default background fill for the color legend panel. */
 export const NETWORK_LEGEND_BACKGROUND = 'rgba(0, 0, 0, 0.72)';

@@ -107,9 +107,7 @@ describe('createWorkerPlaybackSnapshot', () => {
     expect({
       firstDefined: firstActivations !== undefined,
       secondDefined: secondActivations !== undefined,
-      firstHasNonZero: firstActivations?.some(
-        (activation) => activation !== 0,
-      ),
+      firstHasNonZero: firstActivations?.some((activation) => activation !== 0),
       secondHasNonZero: secondActivations?.some(
         (activation) => activation !== 0,
       ),

@@ -63,8 +63,7 @@ describe('neatChat public contract behavior', () => {
         exampleContract.visualization.ownerModulePath,
       visualizationFrameResolverModulePath:
         exampleContract.visualization.frameResolverModulePath,
-      visualizationDrawModulePath:
-        exampleContract.visualization.drawModulePath,
+      visualizationDrawModulePath: exampleContract.visualization.drawModulePath,
     }).toEqual({
       exampleId: 'NEATchat',
       defaultArchitectureFamily: 'lstm',

@@ -117,11 +117,7 @@ export const DOCS_TARGETS: Record<string, DocsTargetConfig> = {
   },
   'shared-network-visualization': {
     name: 'shared-network-visualization',
-    sourceDir: path.resolve(
-      'examples',
-      'shared',
-      'network-visualization',
-    ),
+    sourceDir: path.resolve('examples', 'shared', 'network-visualization'),
     docsDir: path.join(
       DOCS_DIR,
       'examples',

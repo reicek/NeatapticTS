@@ -168,8 +168,7 @@ export function resolveInputDescriptionChipWidthPx(
 
   return Math.max(
     NETWORK_INPUT_DESCRIPTION_MIN_WIDTH_PX,
-    widestLineCharacterCount *
-      NETWORK_INPUT_DESCRIPTION_CHARACTER_WIDTH_PX +
+    widestLineCharacterCount * NETWORK_INPUT_DESCRIPTION_CHARACTER_WIDTH_PX +
       NETWORK_INPUT_DESCRIPTION_TEXT_PADDING_PX * 2,
   );
 }

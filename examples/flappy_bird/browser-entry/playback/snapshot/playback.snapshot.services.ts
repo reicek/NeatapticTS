@@ -82,7 +82,8 @@ function syncPlaybackSnapshotWinnerStream(
   renderState: PopulationRenderState,
   snapshot: EvolutionPlaybackStepSnapshot,
 ): void {
-  const renderStateWithWinnerStream = renderState as PlaybackRenderStateWithWinnerStream;
+  const renderStateWithWinnerStream =
+    renderState as PlaybackRenderStateWithWinnerStream;
   renderStateWithWinnerStream.winnerBirdIndex = snapshot.winnerBirdIndex;
   renderStateWithWinnerStream.winnerNodeActivations =
     snapshot.winnerNodeActivations;

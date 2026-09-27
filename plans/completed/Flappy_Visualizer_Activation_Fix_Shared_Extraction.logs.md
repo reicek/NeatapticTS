@@ -478,6 +478,7 @@ visualizer shows live non-zero labels in a real visible browser window.
 **Phase objective:** The rich flappy network visualizer now lives in `examples/shared/network-visualization/`, is self-contained (zero shared→flappy import edges), and is consumed by flappy, racing_curriculum, asciiMaze, and neatChat with identical rendering.
 
 **Files changed:**
+
 - `examples/flappy_bird/browser-entry/network-view/*` and `visualization/*`: de-branded via `NetworkVisualizationSettings` and wired to flappy host settings.
 - `examples/flappy_bird/browser-entry/host/host.network-view.settings.ts`: new flappy-branded settings module.
 - `examples/shared/network-visualization/`: new shared domain containing `network-view/`, `visualization/`, and domain-root `network-visualization.{types,constants,math.utils}.ts`.
@@ -487,6 +488,7 @@ visualizer shows live non-zero labels in a real visible browser window.
 - Generated bundles refreshed: `docs/assets/flappy-bird.bundle.js`, `docs/assets/neat-chat.bundle.js`.
 
 **Validation evidence:**
+
 - `npx jest --config=jest.config.mjs --no-cache --selectProjects default --testPathPatterns "flappy_bird/browser-entry/(network-view|host)" --runInBand` → **PASS** (36/36).
 - `npx jest --config=jest.config.mjs --no-cache --selectProjects default --testPathPatterns "racing_curriculum/browser-entry/(network-view|host)" --runInBand` → **PASS** (30/30).
 - `npx jest --config=jest.config.mjs --no-cache --selectProjects asciiMaze-browser --testPathPatterns "asciiMaze/browser-entry/(network-view|host)" --runInBand` → **PASS** (7/7).
@@ -506,6 +508,7 @@ visualizer shows live non-zero labels in a real visible browser window.
 **Phase objective:** Racing’s LOD renderer, tooltip resolver, and racing semantic settings moved into the shared visualizer; redundant racing-specific modules deleted; racing behavior preserved via host-passed settings.
 
 **Files changed:**
+
 - New `examples/shared/network-visualization/network-visualization.tooltip.service.ts` + `.test.ts`; new `examples/shared/network-visualization/network-visualization.lod.service.ts` + `.test.ts`.
 - `examples/shared/network-visualization/network-visualization.{types,constants}.ts`: extended for tooltip and LOD settings.
 - Deleted: `examples/racing_curriculum/browser-entry/network-view/network-view.lod.ts`, `network-view.fixture.ts`; `examples/racing_curriculum/browser-entry/host/host.network-tooltip.service.ts` + `.test.ts`; `examples/flappy_bird/browser-entry/host/host.network-tooltip.service.ts` + `.test.ts`.
@@ -514,6 +517,7 @@ visualizer shows live non-zero labels in a real visible browser window.
 - Regenerated docs: `examples/flappy_bird/browser-entry/host/README.md`, `examples/racing_curriculum/browser-entry/host/README.md`, `examples/racing_curriculum/browser-entry/network-view/README.md`; `rag-index/snapshots/semantic-snapshot.json` and `docs/assets/semantic-snapshot.json` refreshed.
 
 **Validation evidence:**
+
 - Step 09 tooltip migration: shared 6 suites/59 tests, racing 56 suites/653 tests, flappy host 2 suites/9 tests; `npx tsc`, `npx eslint`, `npm run build`, `api-contract-reviewer` APPROVE → **PASS**.
 - Step 10 LOD migration: red tests resolved; shared + racing suites green.
 - Step 11 racing adapter: `npx jest --config=jest.config.mjs --no-cache --selectProjects default --testPathPatterns "racing_curriculum" --runInBand` → **PASS** (54 suites, 643 tests); `folder-quality` → **PASS**; `slice-advancement` → **PASS**.

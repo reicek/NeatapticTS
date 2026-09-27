@@ -137,10 +137,7 @@ export function applyPlaybackStepSnapshot(
     playbackStepPayload.winnerNodeActivations ?? snapshot.winnerNodeActivations;
 
   // Step 2: Fold the worker snapshot into the mutable render state.
-  applyPlaybackSnapshot(
-    iterationContext.sessionContext.renderState,
-    snapshot,
-  );
+  applyPlaybackSnapshot(iterationContext.sessionContext.renderState, snapshot);
 
   // Step 3: Refresh the bird trail cache from the updated render state.
   updateTrailState(

@@ -990,8 +990,7 @@ function resolveAdjustedGraphPaddingContext(
   const legendLayout = resolveDefaultNetworkLegendLayout(context, network);
   const legendMidpointPx =
     legendLayout.legendLeftPx +
-    legendLayout.legendWidthPx *
-      NETWORK_LEGEND_RIGHT_SIDE_THRESHOLD_RATIO;
+    legendLayout.legendWidthPx * NETWORK_LEGEND_RIGHT_SIDE_THRESHOLD_RATIO;
   if (
     legendMidpointPx >=
     canvasWidthPx * NETWORK_LEGEND_RIGHT_SIDE_THRESHOLD_RATIO
@@ -1000,9 +999,7 @@ function resolveAdjustedGraphPaddingContext(
       graphLeftPaddingPx: graphPaddingContext.graphLeftPaddingPx,
       graphRightPaddingPx: Math.max(
         graphPaddingContext.graphRightPaddingPx,
-        canvasWidthPx -
-          legendLayout.legendLeftPx +
-          NETWORK_LEGEND_GRAPH_GAP_PX,
+        canvasWidthPx - legendLayout.legendLeftPx + NETWORK_LEGEND_GRAPH_GAP_PX,
       ),
     };
   }
@@ -1108,8 +1105,7 @@ function resolveNetworkNodeDimensionsFromTopologySummary(
     availableNodeStackHeightPx / networkTopologySummary.maximumLayerNodeCount,
   );
   const minimumNodeHeightPx =
-    NETWORK_MIN_LABEL_HEIGHT_PX +
-    NETWORK_MIN_NODE_HEIGHT_LABEL_EXTRA_PX;
+    NETWORK_MIN_LABEL_HEIGHT_PX + NETWORK_MIN_NODE_HEIGHT_LABEL_EXTRA_PX;
   const effectiveMinimumNodeHeightPx = Math.min(
     minimumNodeHeightPx,
     strictMaximumNodeHeightByFitPx,
@@ -1166,8 +1162,7 @@ function resolveTopologyDrivenHeightPx(
 ): number {
   // Step 1: Resolve the minimum readable node side from label and padding requirements.
   const minimumNodeSidePx =
-    NETWORK_MIN_LABEL_HEIGHT_PX +
-    NETWORK_MIN_NODE_INNER_PADDING_PX * 2;
+    NETWORK_MIN_LABEL_HEIGHT_PX + NETWORK_MIN_NODE_INNER_PADDING_PX * 2;
 
   // Step 2: Stack the densest layer using the minimum node size and inter-node gaps.
   const minimumReadableStackHeightPx =
@@ -1213,12 +1208,8 @@ function resolveRecommendedNetworkHeightPx(
 
   // Step 2: Choose the larger of the topology minimum and baseline complexity model.
   return Math.max(
-    Math.ceil(
-      topologyDrivenHeightPx * NETWORK_TOPOLOGY_HEIGHT_MULTIPLIER,
-    ),
-    NETWORK_BASELINE_HEIGHT_PX +
-      nodeDensityHeightPx +
-      layerComplexityHeightPx,
+    Math.ceil(topologyDrivenHeightPx * NETWORK_TOPOLOGY_HEIGHT_MULTIPLIER),
+    NETWORK_BASELINE_HEIGHT_PX + nodeDensityHeightPx + layerComplexityHeightPx,
   );
 }
 
@@ -1231,11 +1222,7 @@ function resolveRecommendedNetworkHeightPx(
 function clampRecommendedNetworkHeightPx(recommendedHeightPx: number): number {
   // Step 1: Clamp the height into the configured min/max bounds and round down for canvas sizing.
   return Math.floor(
-    clamp(
-      recommendedHeightPx,
-      NETWORK_MIN_HEIGHT_PX,
-      NETWORK_MAX_HEIGHT_PX,
-    ),
+    clamp(recommendedHeightPx, NETWORK_MIN_HEIGHT_PX, NETWORK_MAX_HEIGHT_PX),
   );
 }
 

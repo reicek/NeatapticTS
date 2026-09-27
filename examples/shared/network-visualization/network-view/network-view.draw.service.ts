@@ -151,8 +151,7 @@ export function resolveInputGroupLabelBandScenes(
     }
 
     const groupTopYPx =
-      firstGroupedInputDescriptionScene.topPx -
-      NETWORK_INPUT_GROUP_PADDING_PX;
+      firstGroupedInputDescriptionScene.topPx - NETWORK_INPUT_GROUP_PADDING_PX;
     const groupBottomYPx =
       lastGroupedInputDescriptionScene.topPx +
       lastGroupedInputDescriptionScene.heightPx +
@@ -300,7 +299,8 @@ export function drawInputGroupLabelBands(
   settings?: NetworkVisualizationSettings,
 ): void {
   const fontFamily = settings?.fontFamily ?? NETWORK_FONT_FAMILY;
-  const statusText = settings?.palette?.statusText ?? NETWORK_NEON_PALETTE.statusText;
+  const statusText =
+    settings?.palette?.statusText ?? NETWORK_NEON_PALETTE.statusText;
 
   context.save();
   context.fillStyle = NETWORK_INPUT_GROUP_LABEL_TEXT_COLOR;
@@ -372,7 +372,8 @@ export function drawInputNodeDescriptions(
   settings?: NetworkVisualizationSettings,
 ): void {
   const fontFamily = settings?.fontFamily ?? NETWORK_FONT_FAMILY;
-  const statusText = settings?.palette?.statusText ?? NETWORK_NEON_PALETTE.statusText;
+  const statusText =
+    settings?.palette?.statusText ?? NETWORK_NEON_PALETTE.statusText;
 
   context.save();
   context.font = `${NETWORK_INPUT_DESCRIPTION_FONT_WEIGHT} ${NETWORK_INPUT_DESCRIPTION_FONT_SIZE_PX}px ${fontFamily}`;
@@ -505,10 +506,7 @@ export function resolveHiddenColumnLabelScenes(
         tooltipHeading: hiddenColumnAnnotation.tooltipHeading,
         tooltipBodyParagraphs: hiddenColumnAnnotation.tooltipBodyParagraphs,
         leftPx: columnCenterXPx - widthPx * 0.5,
-        topPx:
-          minimumNodeTopPx -
-          NETWORK_HIDDEN_COLUMN_LABEL_GAP_PX -
-          heightPx,
+        topPx: minimumNodeTopPx - NETWORK_HIDDEN_COLUMN_LABEL_GAP_PX - heightPx,
         widthPx,
         heightPx,
         backgroundColor:
@@ -539,7 +537,8 @@ export function drawHiddenColumnLabelScenes(
   }
 
   const fontFamily = settings?.fontFamily ?? NETWORK_FONT_FAMILY;
-  const statusText = settings?.palette?.statusText ?? NETWORK_NEON_PALETTE.statusText;
+  const statusText =
+    settings?.palette?.statusText ?? NETWORK_NEON_PALETTE.statusText;
 
   context.save();
   context.font = `${NETWORK_HIDDEN_COLUMN_LABEL_FONT_WEIGHT} ${NETWORK_HIDDEN_COLUMN_LABEL_FONT_SIZE_PX}px ${fontFamily}`;
@@ -714,8 +713,7 @@ function resolveInputOverlayLayouts(
         resolveGroupedDescriptionContentHeightPx(groupedDescriptionLayouts);
       const groupHeightPx = Math.max(
         NETWORK_INPUT_GROUP_LABEL_MIN_HEIGHT_PX,
-        groupedDescriptionContentHeightPx +
-          NETWORK_INPUT_GROUP_PADDING_PX * 2,
+        groupedDescriptionContentHeightPx + NETWORK_INPUT_GROUP_PADDING_PX * 2,
       );
       const descriptionContentTopYPx =
         runningTopYPx +

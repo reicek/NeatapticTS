@@ -196,7 +196,8 @@ function createInputTooltipScene(
   );
   const hoveredInputNodeRightEdgePx = hoveredInputNode
     ? hoveredInputNode.xPx + nodeWidthPx * 0.5
-    : hoveredInputDescriptionScene.leftPx + hoveredInputDescriptionScene.widthPx;
+    : hoveredInputDescriptionScene.leftPx +
+      hoveredInputDescriptionScene.widthPx;
   const tooltipAnchorWidthPx = Math.max(
     hoveredInputDescriptionScene.widthPx,
     hoveredInputNodeRightEdgePx - hoveredInputDescriptionScene.leftPx,

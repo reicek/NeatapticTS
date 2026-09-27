@@ -251,8 +251,7 @@ function createDynamicColorScale(
   const resolvedCenterBlueRamp =
     colorOptions?.centerBlueRamp ?? NETWORK_CENTER_BLUE_RAMP;
   const resolvedAboveTierFallbackColor =
-    colorOptions?.aboveTierFallbackColor ??
-    NETWORK_NEON_PALETTE.currentRunText;
+    colorOptions?.aboveTierFallbackColor ?? NETWORK_NEON_PALETTE.currentRunText;
 
   const dynamicTiers = resolveSignedDynamicTiers(
     minimumValue,

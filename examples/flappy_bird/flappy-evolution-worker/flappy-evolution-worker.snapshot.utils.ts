@@ -268,7 +268,8 @@ function packWinnerNodeActivationsIntoSnapshot(
 ): void {
   const winnerBirdNodes = winnerBird?.network.nodes ?? [];
   for (let nodeIndex = 0; nodeIndex < winnerNodeCount; nodeIndex += 1) {
-    winnerNodeActivations[nodeIndex] = winnerBirdNodes[nodeIndex]?.activation ?? 0;
+    winnerNodeActivations[nodeIndex] =
+      winnerBirdNodes[nodeIndex]?.activation ?? 0;
   }
 }
 

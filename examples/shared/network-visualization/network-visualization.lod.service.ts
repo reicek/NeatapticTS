@@ -76,8 +76,7 @@ const LOD_CLUSTER_DIMENSIONS = {
 };
 
 /** Branded resolved frame produced by the shared LOD renderer. */
-export interface NetworkVisualizationLODResolvedFrame
-  extends NetworkVisualizationResolvedFrame {
+export interface NetworkVisualizationLODResolvedFrame extends NetworkVisualizationResolvedFrame {
   __networkLod: true;
   sourceNetwork: Network;
   hoverMaxLocalNodes: number;
@@ -376,9 +375,8 @@ function resolveAbstractLodPositionedScene(
     nodeDimensions: LOD_NODE_DIMENSIONS,
     inputDescriptionScenes,
     inputGroupLabelBandScenes,
-    hiddenColumnLabelScenes: resolveLodHiddenClusterLabelScenes(
-      hiddenClusterNodes,
-    ),
+    hiddenColumnLabelScenes:
+      resolveLodHiddenClusterLabelScenes(hiddenClusterNodes),
   };
 }
 
@@ -491,8 +489,7 @@ function resolveLodHiddenClusterNodes(
       xPx: geometry.centerXPx,
       yPx:
         geometry.graphTopPx +
-        ((clusterIndex + 0.5) / resolvedClusterCount) *
-          geometry.graphHeightPx,
+        ((clusterIndex + 0.5) / resolvedClusterCount) * geometry.graphHeightPx,
     });
   }
 
@@ -640,9 +637,7 @@ function resolveHoveredEgoDetail(
 ): EgoDetailScene | undefined {
   // Step 1: Only hidden nodes expand into ego neighborhoods.
   const hoveredIndex = hoveredNodeIndices[0];
-  const hoveredNode = network.nodes.find(
-    (node) => node.index === hoveredIndex,
-  );
+  const hoveredNode = network.nodes.find((node) => node.index === hoveredIndex);
   if (!hoveredNode || hoveredNode.type !== 'hidden') {
     return undefined;
   }

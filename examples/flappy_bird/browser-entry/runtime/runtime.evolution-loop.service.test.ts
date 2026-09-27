@@ -334,7 +334,9 @@ describe('applyRuntimeChampionActivationOverlay', () => {
 
     // Assert — the overlay targets the exact winner instance in the population.
     expect(applyNetworkActivationOverlay).toHaveBeenCalledTimes(1);
-    expect(applyNetworkActivationOverlay.mock.calls[0]?.[0]).toBe(winnerNetwork);
+    expect(applyNetworkActivationOverlay.mock.calls[0]?.[0]).toBe(
+      winnerNetwork,
+    );
     expect(applyNetworkActivationOverlay.mock.calls[0]?.[1]).toEqual(
       winnerNodeActivations,
     );

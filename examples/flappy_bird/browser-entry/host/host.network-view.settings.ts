@@ -178,7 +178,8 @@ export const FLAPPY_HOST_NETWORK_VIEW_SETTINGS: NetworkVisualizationSettings = {
     statusText: FLAPPY_NEON_PALETTE.statusText,
   },
   fontFamily: FLAPPY_MONOSPACE_FONT_FAMILY,
-  overlayHiddenBreakpointPx: FLAPPY_VIEWPORT_NETWORK_OVERLAY_HIDDEN_BREAKPOINT_PX,
+  overlayHiddenBreakpointPx:
+    FLAPPY_VIEWPORT_NETWORK_OVERLAY_HIDDEN_BREAKPOINT_PX,
   hoverTransitionDurationMs: NETWORK_HOVER_TRANSITION_DURATION_MS,
   lightNeonRamp: FLAPPY_LIGHT_NEON_RAMP,
   regularNeonRamp: FLAPPY_REGULAR_NEON_RAMP,
