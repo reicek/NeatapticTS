@@ -2,7 +2,7 @@
 description: 'Use when: decomposing a request into a plan with risks, acceptance criteria, and test strategy.'
 name: '01-planning'
 tier: 1
-model: glm-5.3:cloud
+model: kimi-k2.7-code:cloud
 tools:
   [
     read,

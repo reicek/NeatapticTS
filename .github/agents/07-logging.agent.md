@@ -2,7 +2,7 @@
 description: 'Use when: summarizing a session, collecting evidence, and defining next steps.'
 name: '07-logging'
 tier: 1
-model: glm-5.3-flash:cloud
+model: kimi-k2.7-code:cloud
 tools:
   [
     read,
@@ -43,7 +43,7 @@ handoffs:
     agent: '01-planning'
     prompt: 'Plan the next phase or close the workstream. Load context via Cortex MCP and any declared pre_execute_hook/get_slice_context.'
     send: false
-    model: 'glm-5.3:cloud'
+    model: 'kimi-k2.7-code:cloud'
 ---
 
 ## CRITICAL RULE — NEVER RUN GIT

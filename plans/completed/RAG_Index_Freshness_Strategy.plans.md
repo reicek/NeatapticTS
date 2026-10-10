@@ -132,7 +132,7 @@ change with a tight, well-understood file set. The following mandates apply:
 - **Broad slices OK** — one dispatch per phase is acceptable; slices may span
   the full phase file set when the behavioral intent is cohesive.
 - **Single-model mandate** — all implementation via `04-implementing` with
-  `glm-5.3-flash:cloud`; no specialist model overrides.
+  `kimi-k2.7-code:cloud`; no specialist model overrides.
 - **Bypass legacy ceremony** — the plan-verification green-light cycle may be
   bypassed; the authoring instance self-checks with `slice-advancement` and
   returns.

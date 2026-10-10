@@ -43,6 +43,17 @@ import {
 const SERVER_NAME = 'neataptic_gate_mcp';
 const SERVER_VERSION = '0.1.0';
 
+/**
+ * Timeout (ms) for spawning a single Tier-1 gate script from run_gate_check.
+ *
+ * The FULL consolidated slice-advancement run executes shared-validation
+ * (build + lint + targeted tests) and measured ~37 s end to end, which
+ * exceeded the previous hard-coded 15 s and made MCP relays kill the gate
+ * mid-run and surface "Gate '<id>' did not return valid JSON". 120 s mirrors
+ * the per-sub-gate timeout slice-advancement itself applies to nested gates.
+ */
+const GATE_SPAWN_TIMEOUT_MS = 120_000;
+
 const TIER_1_GATES = [
   {
     id: 'plan-sync',
@@ -144,7 +155,7 @@ const TIER_1_GATES = [
     id: 'slice-advancement',
     owner: 'slice-advancement.gate.mjs',
     description:
-      'Master consolidated gate that runs all applicable per-slice gates in one call. Classifies slice as TRIVIAL or FULL and routes accordingly. TRIVIAL: plan-sync + step-packet + plan-slice-quality + plan-command-lint. FULL: also adds shared-validation + code-coverage + specialist-review. Pass --slice-id and --changed-files via run_gate_check args.',
+      'Master consolidated gate that runs all applicable per-slice gates in one call. Classifies slice as TRIVIAL or FULL and routes accordingly. TRIVIAL: plan-sync + step-packet + plan-slice-quality + plan-command-lint. FULL: also adds shared-validation + code-coverage + specialist-review. Pass --slice-id, --changed-files, and optionally --plan via run_gate_check args; the plan is forwarded to the plan-command-lint sub-gate instead of its stale default.',
   },
 ];
 
@@ -188,7 +199,7 @@ export function createGateTools() {
           args: {
             type: 'object',
             description:
-              'Optional extra CLI arguments for the gate script (e.g., { "slice-id": "C3-impl", "changed-files": "src/foo.ts" } for slice-advancement).',
+              'Optional extra CLI arguments for the gate script (e.g., { "slice-id": "C3-impl", "changed-files": "src/foo.ts", "plan": "plans/<Plan>.plans.md" } for slice-advancement; plan is forwarded to plan-command-lint).',
             additionalProperties: true,
           },
         },
@@ -211,7 +222,7 @@ export function createGateTools() {
           [scriptPath, '--json', ...extraArgs],
           {
             encoding: 'utf8',
-            timeout: 15_000,
+            timeout: GATE_SPAWN_TIMEOUT_MS,
             cwd: MCP_REPO_ROOT,
           },
         );

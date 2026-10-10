@@ -460,6 +460,9 @@ placement from the seed.
   `fogFactor = exp2(−(FOG_DENSITY_1_PER_M · d)²)`, density in 1/m, tuned
   against `NEATRACING_DRAW_DISTANCE_M`; TP-05/TP-16). javascript-racer's raw
   `5` (segment-length units) is NOT transcribed (G10).
+- **Signed normals** for §7 voxel meshes reconstruct per §7.3.1 (two-sided
+  view flip, per fragment — no per-vertex lighting; the §7.3.1 merge
+  invariant holds).
 - **Cheap bloom** for glow (G8, TP-10): brightness-threshold pass → **ONE
   separable blur pass** on a **half-res 640×360 target** (720/2 × 405/2
   derived from the fixed 720p backing store; named
@@ -553,8 +556,24 @@ A single JSON document per model (e.g. `assets/models/car-f1.model.json`):
   key is **(palette index, normal axis, face orientation)**. Because the key
   includes the palette index, merged quads share one flat color → flat
   single-light shading stays identical to unmerged rendering.
-- Output quad record: `{ position, normalAxis, width, height, paletteIndex }`
-  (face orientation implied by normal axis + winding).
+- Output quad record: `{ position, normalAxis, width, height, paletteIndex }`.
+  `normalAxis` is an **unsigned axis index 0..2**; records carry **no
+  winding or orientation field**. **Signed-face-orientation convention
+  (normative):** bins cannot reconstruct the per-face sign, so consumers
+  draw bins-derived meshes two-sided (`CULL_FACE` disabled) and reconstruct
+  the effective signed normal **per fragment** as the axis normal flipped to
+  face the viewer (flip when `dot(normal, viewDir) > 0`); sun and hemisphere
+  ambient consume the flipped normal. Quads are wound CCW as seen from the
+  +axis side (tangent mapping axis0 → (y,z), axis1 → (z,x), axis2 → (x,y))
+  for deterministic mesh construction; winding is not load-bearing while
+  culling is disabled. For opaque closed geometry every viewer-visible
+  fragment's true normal faces the viewer, so the flip reproduces the true
+  sign; merged runs share one axis normal, so the view-derived sign is
+  identical across a merged quad and the merge-contract shading invariant
+  above holds. The glass pass is unaffected (the mesher emits no glass
+  quads, so glass-pass geometry is not bins-derived; §6.5 state unchanged).
+  No mesher, codec, or `.bin` layout change is required — §7.3.2 remains
+  normative.
 - **T-junction cracking (G3):** greedy merging produces T-junctions where a
   long quad edge abuts two shorter quads. The mesher **welds all vertices on
   the integer voxel lattice into a shared indexed buffer** AND **splits long
@@ -576,7 +595,9 @@ A single JSON document per model (e.g. `assets/models/car-f1.model.json`):
 - **Header:** magic + version + dims + palette-with-glow (RGBA + glow byte per
   entry).
 - **Body:** greedy-meshed quad array (position, normal axis, w/h, palette
-  index).
+  index). `normalAxis` is an unsigned byte 0..2 and carries **no
+  orientation/winding field**; the signed-face-orientation convention of
+  §7.3.1 governs reconstruction (no format amendment).
 - Round-trip: writer output re-parsed by the loader is byte-identical;
   loader rejects bad magic/version (AC-010).
 - Build script (Node `.mjs`, run via npm script and server-triggered rebuild)

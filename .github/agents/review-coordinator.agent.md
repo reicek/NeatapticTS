@@ -19,18 +19,20 @@ disable-model-invocation: false
 target: vscode
 agents:
   [
-    'security-reviewer',
-    'performance-reviewer',
-    'determinism-reviewer',
     'api-contract-reviewer',
-    'dependency-audit-reviewer',
     'benchmark-gate-reviewer',
+    'dependency-audit-reviewer',
+    'determinism-reviewer',
     'evolution-correctness-reviewer',
     'onnx-parity-reviewer',
+    'performance-reviewer',
+    'security-reviewer',
+    'webgl2-glsl-render-reviewer',
     'webgpu-parity-reviewer',
   ]
 skills:
   [
+    'execute',
     'implementation-standards',
     'red-test-contracts',
     'security-review',
@@ -75,7 +77,7 @@ calling orchestrator.
 1. **Receive the slice packet** with changed files, domain hint, severity
    classification (TRIVIAL / FULL), and shared-validation artifact path.
 2. **If TRIVIAL**, return APPROVE immediately.
-3. **If FULL**, select the single best-matching reviewer from the 9-member
+3. **If FULL**, select the single best-matching reviewer from the 10-member
    roster below.
 4. **Build a dispatch packet** via `neataptic-dispatch-mcp-build_dispatch_packet`
    with `caller_tier: 2` and the selected reviewer name.
@@ -88,19 +90,20 @@ calling orchestrator.
 
 ## Reviewer Roster
 
-The roster contains exactly 9 current reviewers:
+The roster contains exactly 10 current reviewers:
 
-| Reviewer                         | Domain                                                 |
-| -------------------------------- | ------------------------------------------------------ |
-| `security-reviewer`              | Auth, secrets, untrusted input, injection surface.     |
-| `performance-reviewer`           | Hot loops, allocation, typed-array/cache paths.        |
-| `determinism-reviewer`           | RNG/seed, replay, worker ordering, reproducibility.    |
-| `api-contract-reviewer`          | Exported signatures, breaking changes, type contracts. |
-| `dependency-audit-reviewer`      | New/changed deps, license/supply-chain risk.           |
-| `benchmark-gate-reviewer`        | Performance delta vs baseline, benchmark thresholds.   |
-| `evolution-correctness-reviewer` | NGE/NEAT algorithm correctness, DNA, lifecycle.        |
-| `onnx-parity-reviewer`           | ONNX export/import roundtrip fidelity.                 |
-| `webgpu-parity-reviewer`         | WebGPU CPU-vs-GPU parity, kernel correctness.          |
+| Reviewer                         | Domain                                                     |
+| -------------------------------- | ---------------------------------------------------------- |
+| `api-contract-reviewer`          | Exported signatures, breaking changes, type contracts.     |
+| `benchmark-gate-reviewer`        | Performance delta vs baseline, benchmark thresholds.       |
+| `dependency-audit-reviewer`      | New/changed deps, license/supply-chain risk.               |
+| `determinism-reviewer`           | RNG/seed, replay, worker ordering, reproducibility.        |
+| `evolution-correctness-reviewer` | NGE/NEAT algorithm correctness, DNA, lifecycle.            |
+| `onnx-parity-reviewer`           | ONNX export/import roundtrip fidelity.                     |
+| `performance-reviewer`           | Hot loops, allocation, typed-array/cache paths.              |
+| `security-reviewer`              | Auth, secrets, untrusted input, injection surface.         |
+| `webgl2-glsl-render-reviewer`    | WebGL2/GLSL render-pass correctness, shader/render-state fidelity. |
+| `webgpu-parity-reviewer`         | WebGPU CPU-vs-GPU parity, kernel correctness.                |
 
 ### Selection Logic
 
@@ -112,6 +115,7 @@ The roster contains exactly 9 current reviewers:
 - Benchmark threshold claims → `benchmark-gate-reviewer`
 - NGE/NEAT algorithm correctness → `evolution-correctness-reviewer`
 - ONNX export/import → `onnx-parity-reviewer`
+- WebGL2/GLSL render pass → `webgl2-glsl-render-reviewer`
 - WebGPU parity → `webgpu-parity-reviewer`
 
 ## Gate Enforcement

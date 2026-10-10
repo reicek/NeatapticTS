@@ -54,7 +54,7 @@ handoffs:
     agent: '07-logging'
     prompt: 'Compress the completed phase into logs. Load context via Cortex MCP and any declared pre_execute_hook/get_slice_context.'
     send: false
-    model: 'glm-5.3-flash:cloud'
+    model: 'kimi-k2.7-code:cloud'
 ---
 
 ## CRITICAL RULE — NEVER RUN GIT

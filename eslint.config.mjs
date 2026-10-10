@@ -26,6 +26,11 @@ export default defineConfig([
     'node_modules/',
     'plans/',
     'scripts/',
+    // Runtime-generated NeatRacing dev-server bundle stubs (spec 8.2): the
+    // dev server recompiles assets/neatracing.bundle.js and
+    // editor/editor.bundle.js from esbuild on every start; they are build
+    // artifacts, never hand-edited source.
+    'examples/**/*.bundle.js',
   ]),
   {
     extends: compat.extends(

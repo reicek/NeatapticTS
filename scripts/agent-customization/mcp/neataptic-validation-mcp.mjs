@@ -12,6 +12,18 @@
  * with `shell: false`, so shell metacharacters (`|`, `&`, `;`, `<`, `>`) are
  * tokenizer-rejected before any process is launched.
  *
+ * ### MCP-Relay Pseudo-Commands
+ *
+ * Allow-listed entries of the form `server:tool` (e.g.
+ * `neataptic-gate-mcp:run_gate_check gate=slice-advancement`) are references
+ * to a tool on another MCP server, not shell-executable processes. Spawning
+ * them as executables fails with `ENOENT`, so
+ * `run_allowlisted_validation` classifies them before any spawn attempt and
+ * returns structured routing evidence naming the owning MCP server and tool
+ * instead of executing them. Self-check sampling treats these entries as
+ * routing checks (routing evidence present, no process spawned), not
+ * execution checks.
+ *
  * ### Plan-Path Resolution Chain
  *
  * Same three-level priority as the workflow MCP:
@@ -49,6 +61,25 @@ const SERVER_NAME = 'neataptic_validation_mcp';
 const SERVER_VERSION = '0.1.0';
 const SELF_CHECK_COMMAND_PATTERN =
   /neataptic-(workflow|validation)-mcp\.mjs|--self-check/iu;
+/**
+ * Detect allow-listed MCP-relay pseudo-commands of the form `server:tool ...`
+ * (e.g. `neataptic-gate-mcp:run_gate_check gate=cortex-index`). These entries
+ * reference a tool on another MCP server rather than a shell-executable
+ * process, so they must be routed (skipped with routing evidence) instead of
+ * spawned.
+ *
+ * Safety notes:
+ * - Anchored to the first token: `node ...` and `npm run ...` never match.
+ * - Windows drive-letter paths (`C:\foo`) do not match because the character
+ *   directly after the colon is not a word character.
+ * - Only word characters, dots, hyphens, and underscores are accepted for
+ *   server and tool names; the tool name must end at a whitespace, an `=`,
+ *   or end-of-string.
+ *
+ * @type {RegExp}
+ */
+const MCP_RELAY_COMMAND_PATTERN =
+  /^([A-Za-z0-9][A-Za-z0-9._-]*):([A-Za-z0-9][A-Za-z0-9._-]*)(?=$|[\s=])/u;
 const PLANS_ROOT = path.join(MCP_REPO_ROOT, 'plans');
 const SESSION_OVERRIDE_PATH = path.join(
   MCP_REPO_ROOT,
@@ -117,7 +148,7 @@ function createValidationTools(planPath) {
     createTool({
       name: 'run_allowlisted_validation',
       description:
-        'Run one exact command already named by the active step packet without using a shell.',
+        'Run one exact command already named by the active step packet without using a shell. MCP-relay pseudo-commands (server:tool entries) are not spawned; they return routing evidence naming the owning MCP server and tool.',
       annotations: { readOnlyHint: false },
       inputSchema: {
         type: 'object',
@@ -149,6 +180,33 @@ function createValidationTools(planPath) {
           );
         }
 
+        const relayMatch = MCP_RELAY_COMMAND_PATTERN.exec(requestedCommand);
+        if (relayMatch) {
+          // MCP-relay pseudo-commands (`server:tool ...`) reference a tool on
+          // another MCP server, not a shell-executable process. Spawning the
+          // reference fails with ENOENT, so return routing evidence for the
+          // owning server instead of attempting a spawn. The allow-list check
+          // above already passed, so this branch cannot weaken the boundary.
+          const [relayPrefix, relayServer, relayTool] = relayMatch;
+          return {
+            scope: 'direct-MCP',
+            plan: effectivePlanPath,
+            allowlistAuthority: 'active-step.validation',
+            command: requestedCommand,
+            executed: false,
+            executionClass: 'mcp-relay-pseudo-command',
+            mcpRelay: {
+              server: relayServer,
+              tool: relayTool,
+              status: 'routed-to-owning-mcp-server',
+              rawArgsText: requestedCommand
+                .slice(relayPrefix.length)
+                .trim(),
+              instruction: `Invoke the owning MCP server tool directly instead of process execution: tool "${relayTool}" on MCP server "${relayServer}" (via its stdio server or MCP facade). run_allowlisted_validation only executes shell-free process commands.`,
+            },
+          };
+        }
+
         const commandResult = await runShellFreeCommand(requestedCommand);
         return {
           scope: 'direct-MCP',
@@ -165,7 +223,10 @@ function createValidationTools(planPath) {
  * Run an end-to-end self-check of the validation MCP server.
  *
  * Validates protocol version, tool count, allow-list snapshot correctness, and
- * executes up to two non-recursive allow-listed commands. Also verifies that:
+ * executes up to two non-recursive allow-listed commands. MCP-relay
+ * pseudo-commands (`server:tool`) are not executed; up to two are checked to
+ * return routing evidence from the owning MCP server without spawning a
+ * process. Also verifies that:
  * - An out-of-list command is rejected with an error.
  * - The tokenizer rejects shell metacharacters.
  *
@@ -249,14 +310,22 @@ async function runValidationSelfCheck({ server, planPath }) {
     );
   }
 
-  const executableValidationCommands = (
+  const nonRecursiveValidationCommands = (
     allowlistSnapshot.validationCommands ?? []
   )
     .filter((command) => typeof command === 'string')
-    .filter((command) => !SELF_CHECK_COMMAND_PATTERN.test(command))
+    .filter((command) => !SELF_CHECK_COMMAND_PATTERN.test(command));
+  const executableValidationCommands = nonRecursiveValidationCommands
+    .filter((command) => !MCP_RELAY_COMMAND_PATTERN.test(command))
+    .slice(0, 2);
+  const relayValidationCommands = nonRecursiveValidationCommands
+    .filter((command) => MCP_RELAY_COMMAND_PATTERN.test(command))
     .slice(0, 2);
 
-  if (executableValidationCommands.length === 0) {
+  if (
+    executableValidationCommands.length === 0 &&
+    relayValidationCommands.length === 0
+  ) {
     issues.push(
       selfCheckError(
         effectivePlanPath,
@@ -284,6 +353,39 @@ async function runValidationSelfCheck({ server, planPath }) {
         selfCheckError(
           effectivePlanPath,
           `Allow-listed validation command failed during self-check: ${command}`,
+        ),
+      );
+    }
+  }
+
+  // MCP-relay pseudo-commands are sampled for routing evidence, not process
+  // execution: the tool call must succeed without spawning and must return
+  // explicit owning-server/tool evidence so consolidated gate relays remain
+  // verifiable in the self-check.
+  const relayCommandResults = [];
+  for (const command of relayValidationCommands) {
+    const toolCallResult = await invokeServerRequest(server, {
+      method: 'tools/call',
+      params: {
+        name: 'run_allowlisted_validation',
+        arguments: { command },
+      },
+    });
+
+    relayCommandResults.push(toolCallResult.structuredContent ?? null);
+    const relayPayload = toolCallResult.structuredContent ?? null;
+    const relayEvidence = relayPayload?.mcpRelay ?? null;
+    if (
+      toolCallResult.isError ||
+      !relayEvidence ||
+      relayPayload?.executed !== false ||
+      !relayEvidence.server ||
+      !relayEvidence.tool
+    ) {
+      issues.push(
+        selfCheckError(
+          effectivePlanPath,
+          `Allow-listed MCP-relay pseudo-command did not return routing evidence: ${command}`,
         ),
       );
     }
@@ -338,6 +440,7 @@ async function runValidationSelfCheck({ server, planPath }) {
       ? allowlistSnapshot.validationCommands.length
       : 0,
     sampledCommandResults: commandResults,
+    sampledRelayCommandResults: relayCommandResults,
     rejectedUnknownCommand: Boolean(rejectedUnknownCommand.isError),
     rejectedUnsafeCommand,
   });

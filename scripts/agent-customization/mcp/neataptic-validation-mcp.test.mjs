@@ -127,6 +127,9 @@ async function importModule(argv) {
   }
   process.argv = origArgv;
   process.exit = origExit;
+  // The server module sets process.exitCode for ok:false self-check runs;
+  // reset it so a passing test file does not leak a nonzero jest exit code.
+  process.exitCode = undefined;
 }
 
 describe('neataptic-validation-mcp', () => {
@@ -558,5 +561,181 @@ describe('neataptic-validation-mcp', () => {
     // Escaping path was rejected by resolvePlansScopedPath (throws, caught) and
     // fell back to the startup plan path.
     assert.ok(mockPlanUtils.loadActivePlanContext.mock.calls.length >= 1);
+  });
+
+  it('run_allowlisted_validation returns routing evidence for MCP-relay pseudo-commands', async () => {
+    mockMcpUtils.parseMcpCliArgs.mockReturnValue({
+      help: false,
+      selfCheck: false,
+      plan: 'plans/test.md',
+    });
+    mockMcpUtils.runStdioMcpServer.mockResolvedValue();
+    mockFs.existsSync.mockReturnValue(false);
+    const relayCommand = 'neataptic-gate-mcp:run_gate_check gate=cortex-index';
+    mockPlanUtils.loadActivePlanContext.mockResolvedValue({
+      activeStep: { number: 1, validationCommands: [relayCommand] },
+    });
+
+    await importModule([]);
+
+    const server = mockMcpUtils.createMcpServer.mock.calls[0][0];
+    const runTool = server.tools.find(
+      (t) => t.name === 'run_allowlisted_validation',
+    );
+    const result = await runTool.handler({ command: relayCommand });
+    assert.strictEqual(result.executed, false);
+    assert.strictEqual(result.executionClass, 'mcp-relay-pseudo-command');
+    assert.strictEqual(result.mcpRelay.server, 'neataptic-gate-mcp');
+    assert.strictEqual(result.mcpRelay.tool, 'run_gate_check');
+    assert.strictEqual(result.mcpRelay.rawArgsText, 'gate=cortex-index');
+    assert.ok(result.mcpRelay.instruction.includes('neataptic-gate-mcp'));
+    // No process was spawned for the pseudo-command, and no spawn result is
+    // present in the payload.
+    assert.strictEqual(mockMcpUtils.runShellFreeCommand.mock.calls.length, 0);
+    assert.strictEqual(result.exitCode, undefined);
+    assert.strictEqual(result.scope, 'direct-MCP');
+  });
+
+  it('treats Windows drive-letter paths as executable commands, not MCP relays', async () => {
+    mockMcpUtils.parseMcpCliArgs.mockReturnValue({
+      help: false,
+      selfCheck: false,
+      plan: 'plans/test.md',
+    });
+    mockMcpUtils.runStdioMcpServer.mockResolvedValue();
+    mockFs.existsSync.mockReturnValue(false);
+    const windowsCommand = 'C:\\NeatapticTS\\scripts\\demo.mjs';
+    mockPlanUtils.loadActivePlanContext.mockResolvedValue({
+      activeStep: { number: 1, validationCommands: [windowsCommand] },
+    });
+    mockMcpUtils.runShellFreeCommand.mockResolvedValue({
+      exitCode: 0,
+      stdout: 'ok',
+      stderr: '',
+    });
+
+    await importModule([]);
+
+    const server = mockMcpUtils.createMcpServer.mock.calls[0][0];
+    const runTool = server.tools.find(
+      (t) => t.name === 'run_allowlisted_validation',
+    );
+    const result = await runTool.handler({ command: windowsCommand });
+    assert.strictEqual(result.exitCode, 0);
+    assert.strictEqual(result.executed, undefined);
+    assert.strictEqual(mockMcpUtils.runShellFreeCommand.mock.calls.length, 1);
+  });
+
+  it('self-check verifies MCP-relay pseudo-commands return routing evidence', async () => {
+    mockMcpUtils.parseMcpCliArgs.mockReturnValue({
+      help: false,
+      selfCheck: true,
+      plan: 'plans/test.md',
+    });
+    mockFs.existsSync.mockReturnValue(false);
+    const relayCommand =
+      'neataptic-gate-mcp:run_gate_check gate=slice-advancement';
+    mockPlanUtils.loadActivePlanContext.mockResolvedValue({
+      activeStep: { number: 1, validationCommands: [relayCommand] },
+    });
+    mockMcpUtils.tokenizeShellSafeCommand.mockImplementation(() => {
+      throw new Error('shell metacharacter rejected');
+    });
+    mockMcpUtils.invokeServerRequest
+      .mockResolvedValueOnce({ protocolVersion: '2024-11-05' }) // initialize ok
+      .mockResolvedValueOnce({ tools: [{ name: 'a' }, { name: 'b' }] }) // tools/list ok
+      .mockResolvedValueOnce({
+        // allowlist contains only the relay pseudo-command
+        structuredContent: {
+          validationCommands: [relayCommand],
+          validationCommandsMatch: true,
+          activeStep: { number: 1 },
+          activePhase: { number: 1 },
+        },
+      })
+      .mockResolvedValueOnce({
+        // relay routing check returns routing evidence
+        isError: false,
+        structuredContent: {
+          command: relayCommand,
+          executed: false,
+          mcpRelay: {
+            server: 'neataptic-gate-mcp',
+            tool: 'run_gate_check',
+          },
+        },
+      })
+      .mockResolvedValueOnce({ isError: true }); // rejectedUnknownCommand rejected
+
+    await importModule(['--self-check']);
+
+    assert.ok(mockMcpUtils.emitSelfCheckReport.mock.calls.length >= 1);
+    const report = mockMcpUtils.createSelfCheckReport.mock.calls[0];
+    const issues = report[1];
+    // The relay-only allow-list is valid: no execution issue, no
+    // no-executable-command issue, and routing evidence was verified.
+    assert.strictEqual(
+      issues.length,
+      0,
+      `expected zero issues, got ${JSON.stringify(issues)}`,
+    );
+    const details = report[2];
+    assert.strictEqual(details.sampledRelayCommandResults.length, 1);
+    assert.strictEqual(
+      details.sampledRelayCommandResults[0].executed,
+      false,
+    );
+    assert.strictEqual(
+      details.sampledRelayCommandResults[0].mcpRelay.server,
+      'neataptic-gate-mcp',
+    );
+  });
+
+  it('self-check records an issue when a relay pseudo-command lacks routing evidence', async () => {
+    mockMcpUtils.parseMcpCliArgs.mockReturnValue({
+      help: false,
+      selfCheck: true,
+      plan: 'plans/test.md',
+    });
+    mockFs.existsSync.mockReturnValue(false);
+    const relayCommand =
+      'neataptic-gate-mcp:run_gate_check gate=slice-advancement';
+    mockPlanUtils.loadActivePlanContext.mockResolvedValue({
+      activeStep: { number: 1, validationCommands: [relayCommand] },
+    });
+    mockMcpUtils.tokenizeShellSafeCommand.mockImplementation(() => {
+      throw new Error('shell metacharacter rejected');
+    });
+    mockMcpUtils.invokeServerRequest
+      .mockResolvedValueOnce({ protocolVersion: '2024-11-05' }) // initialize ok
+      .mockResolvedValueOnce({ tools: [{ name: 'a' }, { name: 'b' }] }) // tools/list ok
+      .mockResolvedValueOnce({
+        structuredContent: {
+          validationCommands: [relayCommand],
+          validationCommandsMatch: true,
+          activeStep: { number: 1 },
+          activePhase: { number: 1 },
+        },
+      })
+      .mockResolvedValueOnce({
+        // relay response without routing evidence
+        isError: false,
+        structuredContent: { executed: false },
+      })
+      .mockResolvedValueOnce({ isError: true }); // rejectedUnknownCommand rejected
+
+    await importModule(['--self-check']);
+
+    assert.ok(mockMcpUtils.emitSelfCheckReport.mock.calls.length >= 1);
+    const report = mockMcpUtils.createSelfCheckReport.mock.calls[0];
+    const issues = report[1];
+    assert.ok(
+      issues.some((i) =>
+        /MCP-relay pseudo-command did not return routing evidence/.test(
+          i.message,
+        ),
+      ),
+      `expected relay evidence issue, got ${JSON.stringify(issues)}`,
+    );
   });
 });

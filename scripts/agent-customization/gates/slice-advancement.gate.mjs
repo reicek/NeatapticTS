@@ -23,8 +23,9 @@
  */
 
 import { execFileSync } from 'node:child_process';
+import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
-import { parseArgs } from '../customization-utils.mjs';
+import { extractStatus, parseArgs } from '../customization-utils.mjs';
 
 const REPO_ROOT = path.resolve(
   path.dirname(new URL(import.meta.url).pathname).replace(/^\/([A-Z]:)/, '$1'),
@@ -40,6 +41,12 @@ const GATES_DIR = path.join(
   'gates',
 );
 
+const SESSION_OVERRIDE_PATH = path.join(
+  REPO_ROOT,
+  'data',
+  'mcp-session-override.json',
+);
+
 const options = parseArgs(process.argv.slice(2));
 
 // parseArgs doesn't handle --slice-id or --changed-files, so parse them directly
@@ -52,6 +59,10 @@ const changedFilesRaw = (() => {
   const arg = rawArgv.find((a) => a.startsWith('--changed-files='));
   return arg ? arg.slice('--changed-files='.length) : '';
 })();
+const planArg = (() => {
+  const arg = rawArgv.find((a) => a.startsWith('--plan='));
+  return arg ? arg.slice('--plan='.length).trim() : '';
+})();
 
 if (!options.json && options.help !== undefined) {
   console.log(`slice-advancement gate — master consolidated gate
@@ -63,6 +74,9 @@ Options:
   --json               Output JSON gate contract
   --slice-id=<id>      Slice identifier (required)
   --changed-files=f1,f2  Comma-separated changed file paths
+  --plan=<path>        Forward the plan to plan-command-lint (auto-resolved
+                       from data/mcp-session-override.json or a unique [WIP]
+                       plan when omitted)
   --help               Show this help text
 `);
   process.exitCode = 0;
@@ -85,7 +99,7 @@ if (!sliceId) {
   } else {
     console.log('FAIL slice-advancement gate — missing --slice-id');
   }
-  process.exitCode = 1;
+  process.exit(1);
 }
 
 /**
@@ -178,6 +192,56 @@ function classifySeverity(files) {
   }
 }
 
+/**
+ * Resolve the plan path forwarded to the plan-command-lint sub-gate.
+ *
+ * Without a forwarded plan, plan-command-lint silently falls back to its own
+ * hard-coded DEFAULT_PLAN (plans/orchestration-fixes.plans.md), linting a
+ * stale plan instead of the active one. Precedence:
+ *   1. Explicit --plan CLI argument.
+ *   2. Active plan recorded in data/mcp-session-override.json (plan_path).
+ *   3. A unique top-level [WIP] plan in plans/ (mirrors the sibling
+ *      plan-slice-quality / step-packet scan convention).
+ * Returns null when nothing resolves, in which case plan-command-lint keeps
+ * its documented default rather than guessing.
+ *
+ * @returns {Promise<string|null>} Repo-relative plan path, or null.
+ */
+async function resolveLintPlanPath() {
+  if (planArg) {
+    return planArg;
+  }
+
+  try {
+    const override = JSON.parse(await readFile(SESSION_OVERRIDE_PATH, 'utf8'));
+    if (typeof override?.plan_path === 'string' && override.plan_path.trim()) {
+      return override.plan_path.trim();
+    }
+  } catch {
+    // Missing, malformed, or unreadable override file — fall through.
+  }
+
+  try {
+    const entries = await readdir(path.join(REPO_ROOT, 'plans'));
+    const wipPlans = [];
+    for (const name of entries) {
+      if (!name.endsWith('.plans.md')) continue;
+      const planPath = `plans/${name}`;
+      const text = await readFile(path.join(REPO_ROOT, planPath), 'utf8');
+      if (extractStatus(text) === 'WIP') {
+        wipPlans.push(planPath);
+      }
+    }
+    if (wipPlans.length === 1) {
+      return wipPlans[0];
+    }
+  } catch {
+    // plans/ unreadable — fall through to null.
+  }
+
+  return null;
+}
+
 // Parse changed files
 const changedFiles = changedFilesRaw
   .split(',')
@@ -186,6 +250,9 @@ const changedFiles = changedFilesRaw
 
 // Step 1: Classify severity
 const { severity, specialistCount } = classifySeverity(changedFiles);
+
+// Step 1b: Resolve the plan forwarded to plan-command-lint.
+const lintPlanPath = await resolveLintPlanPath();
 
 // Step 2: Run gates based on severity
 // TRIVIAL gates always run
@@ -213,6 +280,9 @@ const results = gatesToRun.map((gateName) => {
   if (gateName === 'code-coverage' && changedFiles.length > 0) {
     extraArgs.push(`--changed-files=${changedFiles.join(',')}`);
     extraArgs.push('--exemptions=coverage/coverage-exemptions.json');
+  }
+  if (gateName === 'plan-command-lint' && lintPlanPath) {
+    extraArgs.push(`--plan=${lintPlanPath}`);
   }
   return runSubGate(gateName, extraArgs);
 });
@@ -245,6 +315,7 @@ const result = {
     sliceId,
     severity,
     specialistCount,
+    planCommandLintPlan: lintPlanPath,
     gatesRun: gatesToRun,
     gateCount: gatesToRun.length,
     results: sub_gates,

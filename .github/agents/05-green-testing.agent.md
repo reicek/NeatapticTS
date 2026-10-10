@@ -66,7 +66,7 @@ handoffs:
     agent: '06-documenting'
     prompt: 'Run docs-quality checks for the active phase. Load context via Cortex MCP and any declared pre_execute_hook/get_slice_context.'
     send: false
-    model: 'glm-5.3:cloud'
+    model: 'kimi-k2.7-code:cloud'
 ---
 
 ## CRITICAL RULE — NEVER RUN GIT

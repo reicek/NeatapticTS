@@ -2,7 +2,7 @@
 description: 'Use when: authoring failing tests, fixtures, mocks, or coverage strategy for a slice.'
 name: '03-red-testing'
 tier: 1
-model: glm-5.3-flash:cloud
+model: kimi-k2.7-code:cloud
 tools:
   [
     read,
@@ -58,7 +58,7 @@ handoffs:
     agent: '04-implementing'
     prompt: 'Implement the active slice. Load context via Cortex MCP and any declared pre_execute_hook/get_slice_context.'
     send: false
-    model: 'glm-5.3:cloud'
+    model: 'kimi-k2.7-code:cloud'
 ---
 
 ## CRITICAL RULE — NEVER RUN GIT

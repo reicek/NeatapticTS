@@ -1,10 +1,10 @@
 # Roadmap
 
-No active workstreams. All completed workstreams and their archived plan trackers are listed below.
+One active workstream (Neat Racing Voxel Racer); completed workstreams and their archived plan trackers are listed below.
 
 ## Active demo workstream
 
-No active demo workstreams.
+- Neat Racing Voxel Racer (neatRacing): `plans/neatracing-voxel-racer.plans.md` — **[WIP]** Phase 1 [WIP] (graphics engine + manual keyboard driving, spec slices P1-S1..P1-S7) | Phase 2 [PLANNED] (AI migration with NGE growth engine, spec slices P2-S1..P2-S4) | Phase 3 [PLANNED] (polish + deprecation prep, spec slices P3-S1..P3-S2) — spec of record: `plans/neatracing-voxel-racer.spec.md`
 
 ## Completed demo workstreams
 

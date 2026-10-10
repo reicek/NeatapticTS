@@ -2,7 +2,7 @@
 description: 'Use when: implementing the smallest scoped code change via specialists.'
 name: '04-implementing'
 tier: 1
-model: glm-5.3:cloud
+model: kimi-k2.7-code:cloud
 tools:
   [
     read,

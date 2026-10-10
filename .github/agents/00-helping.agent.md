@@ -2,7 +2,7 @@
 description: 'Use when: cross-tier help is needed for AI system maintenance, workflow gaps, or CI issues.'
 name: '00-helping'
 tier: 1
-model: glm-5.3:cloud
+model: kimi-k2.7-code:cloud
 tools:
   [
     read,
@@ -53,7 +53,7 @@ handoffs:
     agent: '01-planning'
     prompt: 'Plan the next SDLC step. Load context via Cortex MCP and any declared pre_execute_hook/get_slice_context.'
     send: false
-    model: 'glm-5.3:cloud'
+    model: 'kimi-k2.7-code:cloud'
 ---
 
 ## CRITICAL RULE — NEVER RUN GIT
