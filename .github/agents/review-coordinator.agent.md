@@ -92,18 +92,18 @@ calling orchestrator.
 
 The roster contains exactly 10 current reviewers:
 
-| Reviewer                         | Domain                                                     |
-| -------------------------------- | ---------------------------------------------------------- |
-| `api-contract-reviewer`          | Exported signatures, breaking changes, type contracts.     |
-| `benchmark-gate-reviewer`        | Performance delta vs baseline, benchmark thresholds.       |
-| `dependency-audit-reviewer`      | New/changed deps, license/supply-chain risk.               |
-| `determinism-reviewer`           | RNG/seed, replay, worker ordering, reproducibility.        |
-| `evolution-correctness-reviewer` | NGE/NEAT algorithm correctness, DNA, lifecycle.            |
-| `onnx-parity-reviewer`           | ONNX export/import roundtrip fidelity.                     |
-| `performance-reviewer`           | Hot loops, allocation, typed-array/cache paths.              |
-| `security-reviewer`              | Auth, secrets, untrusted input, injection surface.         |
+| Reviewer                         | Domain                                                             |
+| -------------------------------- | ------------------------------------------------------------------ |
+| `api-contract-reviewer`          | Exported signatures, breaking changes, type contracts.             |
+| `benchmark-gate-reviewer`        | Performance delta vs baseline, benchmark thresholds.               |
+| `dependency-audit-reviewer`      | New/changed deps, license/supply-chain risk.                       |
+| `determinism-reviewer`           | RNG/seed, replay, worker ordering, reproducibility.                |
+| `evolution-correctness-reviewer` | NGE/NEAT algorithm correctness, DNA, lifecycle.                    |
+| `onnx-parity-reviewer`           | ONNX export/import roundtrip fidelity.                             |
+| `performance-reviewer`           | Hot loops, allocation, typed-array/cache paths.                    |
+| `security-reviewer`              | Auth, secrets, untrusted input, injection surface.                 |
 | `webgl2-glsl-render-reviewer`    | WebGL2/GLSL render-pass correctness, shader/render-state fidelity. |
-| `webgpu-parity-reviewer`         | WebGPU CPU-vs-GPU parity, kernel correctness.                |
+| `webgpu-parity-reviewer`         | WebGPU CPU-vs-GPU parity, kernel correctness.                      |
 
 ### Selection Logic
 

@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Neat Racing voxel racer demo trained live by NeatapticTS neuroevolution."
+    />
+    <title>Neat Racing (NeatapticTS)</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+      }
+
+      html,
+      body {
+        height: 100%;
+      }
+
+      body {
+        /* The demo owns the viewport; the canvas strategy (P1-S1-B) keeps
+           the page scroll-free under all viewport sizes. */
+        overflow: hidden;
+
+        background: #05070d;
+        color: #dbe7ff;
+        font-family: 'Courier New', Courier, monospace;
+      }
+
+      main {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+      }
+
+      #status {
+        position: fixed;
+        top: 0.75rem;
+        left: 0.75rem;
+        font-size: 0.85rem;
+        opacity: 0.85;
+      }
+
+      #neatracing-output {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        /* The letterboxed game canvas is absolutely positioned inside this
+           full-viewport container, so the computed offsets map directly to
+           the host box (P1-composition-green fix-packet). */
+        position: relative;
+        overflow: hidden;
+      }
+
+      #neatracing-hud-output {
+        /* Full-viewport overlay layer reserved for the boot HUD (top-left)
+           and race mode selector (top-right) mounts: the absolutely
+           positioned wrappers anchor to this fixed layer, above the
+           letterboxed canvas (AC-024 partial). */
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+
+        /* The layer never intercepts pointer events; mounted controls (the
+           race mode select) re-enable interaction for their own subtrees. */
+        pointer-events: none;
+      }
+
+      #neatracing-hud-output > * {
+        pointer-events: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p id="status" role="status" aria-live="polite">
+        Loading Neat Racing&hellip;
+      </p>
+      <div id="neatracing-output"></div>
+      <div id="neatracing-hud-output"></div>
+    </main>
+    <script>
+      (function () {
+        'use strict';
+
+        var statusEl = document.getElementById('status');
+        var repoPath = /\/examples\//.test(window.location.pathname);
+        // Full esbuild bundle pipeline lands in Phase 3 Step 02; until then
+        // `npm run build:neatRacing` (P1-S1-B) emits the host bundle here.
+        var bundlePath = repoPath
+          ? '../../docs/assets/neatracing.bundle.js?v=20260928-1'
+          : '../../assets/neatracing.bundle.js?v=20260928-1';
+
+        function setStatus(message) {
+          if (statusEl) {
+            statusEl.textContent = message;
+          }
+        }
+
+        function startDemo() {
+          if (typeof window.neatRacingStart !== 'function') {
+            setStatus('Failed to start: neatRacingStart was not registered.');
+            return;
+          }
+          window.neatRacingStart('neatracing-output');
+          setStatus('Neat Racing booted.');
+        }
+
+        window.addEventListener('load', function () {
+          var script = document.createElement('script');
+          script.src = bundlePath;
+          script.onload = startDemo;
+          script.onerror = function () {
+            setStatus(
+              'Failed to load neatracing.bundle.js ' +
+                '(run npm run build:neatRacing and reload).'
+            );
+          };
+          document.body.appendChild(script);
+        });
+      })();
+    </script>
+  </body>
+</html>

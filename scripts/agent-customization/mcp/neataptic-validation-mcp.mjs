@@ -199,9 +199,7 @@ function createValidationTools(planPath) {
               server: relayServer,
               tool: relayTool,
               status: 'routed-to-owning-mcp-server',
-              rawArgsText: requestedCommand
-                .slice(relayPrefix.length)
-                .trim(),
+              rawArgsText: requestedCommand.slice(relayPrefix.length).trim(),
               instruction: `Invoke the owning MCP server tool directly instead of process execution: tool "${relayTool}" on MCP server "${relayServer}" (via its stdio server or MCP facade). run_allowlisted_validation only executes shell-free process commands.`,
             },
           };

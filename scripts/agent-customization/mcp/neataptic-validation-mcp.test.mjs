@@ -681,10 +681,7 @@ describe('neataptic-validation-mcp', () => {
     );
     const details = report[2];
     assert.strictEqual(details.sampledRelayCommandResults.length, 1);
-    assert.strictEqual(
-      details.sampledRelayCommandResults[0].executed,
-      false,
-    );
+    assert.strictEqual(details.sampledRelayCommandResults[0].executed, false);
     assert.strictEqual(
       details.sampledRelayCommandResults[0].mcpRelay.server,
       'neataptic-gate-mcp',

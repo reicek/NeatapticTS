@@ -1,0 +1,64 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Neat Racing Shell Smoke (P1-S1-green)</title>
+  <style>
+    html, body { margin: 0; padding: 0; height: 100%; background: #05070d; }
+    #neatracing-output { width: 100%; height: 100%; }
+  </style>
+</head>
+<body>
+  <div id="neatracing-output"></div>
+  <script>
+    (function () {
+      'use strict';
+      var result = {
+        passed: false,
+        bundleLoaded: false,
+        neatRacingStartDefined: false,
+        canvasMounted: false,
+        consoleErrors: [],
+        notes: ''
+      };
+      try {
+        var script = document.createElement('script');
+        script.src = '../../assets/neatracing.bundle.js';
+        script.onload = function () {
+          result.bundleLoaded = true;
+          result.neatRacingStartDefined = typeof window.neatRacingStart === 'function';
+          if (result.neatRacingStartDefined) {
+            try {
+              var stop = window.neatRacingStart('neatracing-output');
+              result.canvasMounted = !!document.getElementById('neatracing-canvas');
+              if (result.canvasMounted) {
+                result.passed = true;
+                result.notes = 'Bundle loaded, neatRacingStart defined, canvas mounted';
+              } else {
+                result.notes = 'neatRacingStart executed but canvas not found';
+              }
+            } catch (mountErr) {
+              result.consoleErrors.push(String(mountErr));
+              result.notes = 'Mount threw: ' + String(mountErr);
+            }
+          } else {
+            result.notes = 'Bundle loaded but neatRacingStart was not registered';
+          }
+          window.neatRacingShellSmokeResult = result;
+        };
+        script.onerror = function () {
+          result.consoleErrors.push('Failed to load ../../assets/neatracing.bundle.js');
+          result.notes = 'Bundle network/load error';
+          window.neatRacingShellSmokeResult = result;
+        };
+        document.body.appendChild(script);
+      } catch (err) {
+        result.consoleErrors.push(String(err));
+        result.notes = 'Top-level error: ' + String(err);
+        window.neatRacingShellSmokeResult = result;
+      }
+    })();
+  </script>
+</body>
+</html>

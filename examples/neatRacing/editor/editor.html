@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Neat Racing voxel model editor served by the local dev server."
+    />
+    <title>Neat Racing Model Editor (NeatapticTS)</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+      }
+
+      html,
+      body {
+        height: 100%;
+      }
+
+      body {
+        /* The editor owns the viewport; the shell stays scroll-free under
+           all viewport sizes (AC-019). */
+        overflow: hidden;
+
+        background: #05070d;
+        color: #dbe7ff;
+        font-family: 'Courier New', Courier, monospace;
+      }
+
+      #neatracing-editor {
+        height: 100%;
+        display: flex;
+        flex-direction: row;
+      }
+
+      #neatracing-editor-preview {
+        /* The preview host fills the shell beside the tool frame (AC-019);
+           the mounted preview canvas is styled to 100% of this box. */
+        flex: 1 1 auto;
+        position: relative;
+        overflow: hidden;
+      }
+
+      #neatracing-editor-tools {
+        /* Tool frame rail beside the preview; controls land in step 09. */
+        flex: 0 0 auto;
+        width: 20rem;
+        border-left: 1px solid #1c2c4d;
+        padding: 0.75rem;
+        box-sizing: border-box;
+      }
+    </style>
+  </head>
+  <body>
+    <main id="neatracing-editor">
+      <section
+        id="neatracing-editor-preview"
+        aria-label="3D model preview"
+      ></section>
+      <aside
+        id="neatracing-editor-tools"
+        aria-label="Editor tools"
+      ></aside>
+    </main>
+    <script>
+      (function () {
+        'use strict';
+
+        // The dev server (spec 8.2) compiles editor-entry.ts into this bundle
+        // at server start and serves it under the stable name
+        // editor.bundle.js next to the editor page.
+        var bundleScript = document.createElement('script');
+        bundleScript.src = 'editor.bundle.js';
+        bundleScript.onload = function () {
+          window.neatRacingEditorStart('neatracing-editor-preview');
+        };
+        bundleScript.onerror = function () {
+          document.getElementById('neatracing-editor-preview').textContent =
+            'Failed to load the editor bundle. Check the dev server output.';
+        };
+        document.body.appendChild(bundleScript);
+      })();
+    </script>
+  </body>
+</html>
