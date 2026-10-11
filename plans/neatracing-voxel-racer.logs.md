@@ -12301,3 +12301,278 @@ next: "HAND OFF to 05-green-testing: run `npm run build:neatRacing`, restart `np
      P1-correctness-green `[DONE]` → close Step 14B (compress to logs) → Step 15
      (editor editing-loop composition, batch 105 patch, patch #2) → Phase 1 exit check,
      step closures, phase compression, Phase 2 dispatch.
+
+### Evidence batch 140 — Step 14B CLOSED + user request for Steps 14C/14D/14E (2026-10-11)
+
+**Gate close.** The user returned and confirmed the Step 14B final visual gate with the
+verbatim reply: `14B confirmed ready, great work!.` Per the do-not-self-close rule the
+gate had stayed [WIP] in batch 139; with this explicit confirmation the orchestrator
+flipped: Step 14B header status `[WIP]` → `[DONE]`; packet `status: '[DONE]'`;
+`P1-correctness-green` `[WIP]` → `[DONE]` (AC line annotated "CONFIRMED 2026-10-11:
+user reply ... (evidence batch 140)"); title suffix updated (user visual gate
+CONFIRMED batch 140); `next_step` chain set to prepare/execute 14C → 14D → 14E before
+Step 15. Current-state paragraph and the compact resume index updated. Compression:
+the verbose packet below was moved from the plan body to here (verbatim, with two
+lost-asterisk typos restored to `tmp_*.cjs`); the plan now carries a compact Done
+record plus a standing seam contract for 14C/14D/14E.
+
+#### Step 14B record (packet moved verbatim from the plan, 2026-10-11)
+
+```yaml
+phase: 1
+step: 14B
+title: 'Composition correctness pass: grid flat horizon + visible track + F1 car shape + four wheels + drivable physics (batch 108 user-gap patch; rounds 1-3 fixes applied: flat grid + ribbon + red body + ai boot race + axis-1 transposition + world handedness + wheel spin cap; user visual gate CONFIRMED batch 140)'
+status: '[DONE]'
+goal: implementing
+expansion: slices
+auto_expand: true
+tdd_sequence: green-only
+mode: fresh-session
+source_of_truth: 'plans/neatracing-voxel-racer.plans.md'
+copy_paste: true
+next_step: 'STEP CLOSED batch 140 with the user gate confirmed ("14B confirmed ready, great work!."); next = the user-requested steps 14C (turn + drift), 14D (right world), 14E (spec-compliance gap review) prepared and executed BEFORE Step 15, then the Phase 1 exit check, final closures, phase compression, and the Phase 2 dispatch (global steps 16-20)'
+pre_execute_hook:
+     tool: 'neataptic-workflow-mcp-get_slice_context'
+     args:
+       slice_id: 'P1-ground-composition'
+skills:
+     - implementation-standards
+     - red-test-contracts
+     - green-validation-gates
+validation:
+     - 'npm run jest:base -- --testPathPatterns="grid.pass|track.pass|track.slabs"'
+     - 'npm run jest:base -- --testPathPatterns="car.pass|materials|generate-car"'
+     - 'npm run jest:base -- --testPathPatterns="engine/lighting"'
+     - 'npm run jest:base -- --testPathPatterns="wheel.mount"'
+     - 'npm run jest:base -- --testPathPatterns="physics|input|race-session"'
+     - 'npm run jest:base -- --testPathPatterns="examples/neatRacing/browser-entry|examples/neatRacing/host"'
+     - 'npx tsc -p tsconfig.neatRacing.json --noEmit'
+     - 'manual: npm run build:neatRacing + visible-window browser smoke on the served / page: grid sits flat at the horizon, track ribbon is visible on the ground, the F1-style car shows four wheels and recognizable body color (not all black), and keyboard input makes the car move/drive; record screenshot/readback evidence'
+acceptance_criteria:
+     - 'AC-005 (completion): the ground grid is world-space flat, horizon-aligned, and world-anchored (not camera-relative or tilted), with stable pitch/direction as the player moves; grid passes its fragment-shader fwidth math tests and visible-browser check'
+     - 'AC-017 (completion): the track ribbon snaps to the 0.5 m coarse voxel slab grid, is greedy-meshed, extends across NEATRACING_DRAW_DISTANCE_M, and is plainly visible on the served game page (not missing behind the grid)'
+     - 'AC-022 (completion): npm run voxel:generate:car emits an F1-style car model + wheel model that pass schema validation, produce non-empty meshes, and render with body color/material contrast so the car is recognizable and not all black'
+     - 'AC-015 (completion): four wheel models are mounted at the car hub positions (pivot at disc geometric center, hub height = wheel radius, contact patch at y = 0), spin axis lateral, and spin capped at NEATRACING_MAX_VISUAL_WHEEL_REV_PER_S'
+     - 'AC-013 / AC-016 (completion): car materials apply lighting (sun + hemisphere + fog) and glass/glow semantics correctly; black voxels never glow, glass pass tinted, blob shadows under cars visible'
+     - 'AC-023 (completion): the physics step service implements the §5.2 arcade constants at 60 Hz fixed timestep and advances car speed/yawRate/slipAngle deterministically'
+     - 'AC-024 (completion): keyboard steer/throttle/brake drive the car end to end through the 60 Hz fixed-step loop; the car visibly moves on the served page; HUD updates speed/lap/time; mode selector present'
+slices:
+     - slice_id: 'P1-ground-composition'
+       title: 'Ground composition: flat horizon grid + visible track ribbon'
+       status: '[DONE]'
+       goal: implementing
+       estimate_hours: 3
+       files_to_change:
+         - 'examples/neatRacing/engine/passes/grid.pass.ts'
+         - 'examples/neatRacing/engine/passes/track.pass.ts'
+         - 'examples/neatRacing/track/track.slabs.ts'
+       acceptance_criteria:
+         - 'AC-005 (completion): grid pass draws a world-space, horizon-aligned ground plane with stable pitch/direction; the grid is not tilted or camera-relative; fragment-shader fwidth line-width math correct'
+         - 'AC-017 (completion): track slabs generate a closed-loop ribbon on the 0.5 m slab grid, track.pass draws it into the scene frame buffer, and it is visible behind/on the ground in the served page'
+       red_test:
+         - 'RED: grid.pass.test.ts / track.pass.test.ts / track.slabs.test.ts fail with the expected right-reason assertions: grid transform places lines flat at the horizon with no tilt, track slab mesh is non-empty and deterministic, both passes are called in the composer order'
+       parallelizable: true
+       dependencies:
+         - 'P1-composition-green'
+     - slice_id: 'P1-car-shape'
+       title: 'Car shape + materials: F1-style voxel body, team color contrast, glass/glow semantics'
+       status: '[DONE]'
+       goal: implementing
+       estimate_hours: 3
+       files_to_change:
+         - 'examples/neatRacing/scripts/generate-car-voxel.mjs'
+         - 'examples/neatRacing/engine/passes/car.pass.ts'
+         - 'examples/neatRacing/voxel/materials.ts'
+       acceptance_criteria:
+         - 'AC-022 (completion): generated car model is F1-shaped (nose, cockpit, rear wing, body sides), passes schema validation, produces non-empty greedy mesh'
+         - 'AC-013 / AC-016 (partial): car body renders with team-color remap, glass windows go through glass pass, black voxels never emit glow, blob shadows drawn under the car'
+       red_test:
+         - 'RED: generate-car-voxel + car.pass tests fail with TS2307 or missing fixture; asserts the generated model palette has body/glass/wheel colors, the car mesh is non-empty, and the car pass sets the correct GL state (depth-test, cull) before drawing'
+       parallelizable: true
+       dependencies:
+         - 'P1-composition-green'
+     - slice_id: 'P1-wheel-mount'
+       title: 'Four-wheel mount: hub positioning, lateral spin axis, spin cap'
+       status: '[DONE]'
+       goal: implementing
+       estimate_hours: 3
+       files_to_change:
+         - 'examples/neatRacing/voxel/wheel.mount.utils.ts'
+         - 'examples/neatRacing/assets/models/wheel.model.json'
+       acceptance_criteria:
+         - 'AC-015 (completion): four wheel instances are computed for the car (front-left, front-right, rear-left, rear-right), pivot at disc center, hub height = wheel radius, contact patch y = 0, spin axis lateral after 90° mount, spin quantized/capped at NEATRACING_MAX_VISUAL_WHEEL_REV_PER_S'
+       red_test:
+         - 'RED: wheel.mount.utils.test.ts fails while the four-hub transform table is missing or while wheel.model.json does not decode to a wheel-shaped mesh; asserts the 4 hub matrices, the lateral spin axis, and the rev/s cap'
+       parallelizable: true
+       dependencies:
+         - 'P1-car-shape'
+     - slice_id: 'P1-physics-drive'
+       title: 'Drivable physics: 60 Hz arcade step + keyboard input + race-session integration'
+       status: '[DONE]'
+       goal: implementing
+       estimate_hours: 3
+       files_to_change:
+         - 'examples/neatRacing/physics/physics.step.service.ts'
+         - 'examples/neatRacing/host/input.ts'
+         - 'examples/neatRacing/host/race-session.ts'
+       acceptance_criteria:
+         - 'AC-023 (completion): physics.step.service advances speed, yawRate, slipAngle with the §5.2 constants at the 60 Hz fixed timestep; deterministic for same seed + inputs'
+         - 'AC-024 (completion): each rAF frame samples keyboard input and applies it to every catch-up physics tick; the car position/heading update visibly; HUD receives speed/lap/time updates; mode selector present'
+       red_test:
+         - 'RED: physics.step.service.test.ts / input.test.ts / race-session.test.ts fail with the expected right-reason assertions: keyboard throttle applied across catch-up ticks, speed increases with throttle, car position changes over time, HUD updated after transitions'
+       parallelizable: false
+       dependencies:
+         - 'P1-ground-composition'
+         - 'P1-car-shape'
+         - 'P1-wheel-mount'
+     - slice_id: 'P1-ai-boot-race'
+       title: 'Round 2 fix loop: AI autopilot boot race + red team body + lap-detector axis fix'
+       status: '[DONE]'
+       goal: implementing
+       estimate_hours: 2
+       files_to_change:
+         - 'examples/neatRacing/physics/ai.autopilot.ts'
+         - 'examples/neatRacing/physics/ai.autopilot.fixtures.ts'
+         - 'examples/neatRacing/physics/ai.autopilot.test.ts'
+         - 'examples/neatRacing/host/race-session.ts'
+         - 'examples/neatRacing/host/mode-selector.ts'
+         - 'examples/neatRacing/browser-entry/browser-entry.ts'
+         - 'examples/neatRacing/host/race-session.test.ts'
+         - 'examples/neatRacing/host/mode-selector.test.ts'
+       acceptance_criteria:
+         - 'AC-024 (completion): the served page boots as a RUNNING race — race-session samples stepAutopilotInput(car, trackSpec.splineSamples) while mode = ai (INITIAL_RACE_MODE = MODE_OPTION_AI); manual stays selectable and its switch restarts the race (AC-033 carrier); HUD speed/lap/time advance live'
+         - 'AC-014 (completion): carPoseBag remaps NEATRACING_TEAM_ID_RED (slot-1 livery) at draw time so the F1 chassis reads against the cyan ground (was hardcoded cyan = invisible against the sky/starfield)'
+         - 'Lap counter: resolveForwardLapLineCrossing = along-track dot sign-flip gated by a 5 m lateral disc + 0.5 m along dead-zone with a latched baseline (no spurious flips at the spawn point, which lies ON segment 0 chord)'
+       red_test:
+         - 'RED (round 2): ai.autopilot 6 contracts + race-session mode-branch tests + mode-selector initial-mode pin failed before implementation; visible page parked at 0 km/h in manual. Evidence: logs archive batch 137.'
+       parallelizable: false
+       dependencies:
+         - 'P1-physics-drive'
+     - slice_id: 'P1-correctness-fixup'
+       title: 'Round 3 fix loop: axis-1 expansion transposition + world handedness + wheel spin cap + track mirror'
+       status: '[DONE]'
+       goal: implementing
+       estimate_hours: 3
+       files_to_change:
+         - 'examples/neatRacing/engine/passes/car.pass.ts'
+         - 'examples/neatRacing/browser-entry/browser-entry.ts'
+         - 'examples/neatRacing/track/track.slabs.ts'
+         - 'examples/neatRacing/voxel/wheel.mount.utils.ts'
+         - 'examples/neatRacing/engine/lighting.test.ts'
+         - 'examples/neatRacing/track/track.slabs.test.ts'
+         - 'examples/neatRacing/browser-entry/browser-entry.test.ts'
+         - 'examples/neatRacing/voxel/wheel.mount.utils.test.ts'
+       acceptance_criteria:
+         - 'AC-013/016 (wrap): car mesh expansion follows the shared greedy-mesher tangent rule on all axes — quadCornerGridX/quadCornerGridZ return position[0]+u / position[2]+v for axis 1 (was transposed: every non-square y-normal quad stretched to swapped extents = center/nose strips + see-through tires); engine/lighting pins the non-square case'
+         - 'AC-005/017 (wrap): scene handedness unit-pinned in browser-entry — carSceneWorldZ = -topDownY (+0 normalized), carSceneYawRad = PI/2 + heading (NEATRACING_CAR_SCENE_YAW_OFFSET_RAD), composer sceneForwardZ = -sin(heading), camera eye/lookAt/carPoseBag all mirrored; track.slabs paints/mirrors the ribbon (pointZ = -worldZ, mirrored lattice span) so ribbon + car + camera share one frame; physics/lap/autopilot/surface stay top-down untouched'
+         - 'AC-015 (wrap): visual spin = computeVisualWheelSpinDeltaRad (true omega v/r clamped to the 2 rev/s cap) accumulated per frame with session-swap + tick-wind-back reset — smoke shows solid tires, no strip artifacts, car rotates with the chase camera, A = screen-left / D = screen-right'
+       red_test:
+         - 'RED (round 3): engine/lighting axis-1 non-square fixture + track.slabs mirror test + browser-entry handedness TS2305 + wheel.mount spin-delta TS2305 — all four confirmed failing for the right reasons before the fixes. Evidence: logs archive batch 138.'
+       parallelizable: false
+       dependencies:
+         - 'P1-ai-boot-race'
+     - slice_id: 'P1-correctness-green'
+       title: 'Step 14B green validation: FINAL USER VISUAL GATE (round 3 evidence complete)'
+       status: '[DONE]'
+       goal: green-testing
+       estimate_hours: 1
+       files_to_change:
+         - 'plans/neatracing-voxel-racer.plans.md'
+       acceptance_criteria:
+         - 'Union lane green (rounds 1-3 evidence all recorded): AC-005 grid + AC-017 track + AC-022 car shape + AC-015 wheels + AC-013/016 materials + AC-023 physics + AC-024 driving; jest lanes grid.pass|track.pass|track.slabs 42/42, car.pass|materials|generate-car 17/17, wheel.mount 40/40, physics|input|race-session 108/108, examples/neatRacing/browser-entry|host 118/118, engine/lighting 45/45; npx tsc -p tsconfig.neatRacing.json --noEmit clean; visible smoke green (flat horizon at pixel row 433, visible ribbon, red F1 body, HUD moving, zero page errors)'
+         - 'USER GATE (the only remaining work): the user confirms on the served / page — F1 car nose-forward, solid four wheels, no strip artifacts at center/nose/wheels, car rotates with the chase camera on turn-in, A = left / D = right, race runs continuously — THEN mark this slice [DONE] and close Step 14B; never flip a user-gated status without user confirmation (standing do-not-self-close rule) — CONFIRMED 2026-10-11: user reply "14B confirmed ready, great work!." (evidence batch 140)'
+       parallelizable: false
+       dependencies:
+         - 'P1-ground-composition'
+         - 'P1-car-shape'
+         - 'P1-wheel-mount'
+         - 'P1-physics-drive'
+         - 'P1-ai-boot-race'
+         - 'P1-correctness-fixup'
+```
+
+Step 14B prose (status paragraph at closure): rounds 1-3 green (42/42 grid+track,
+17/17 car, 40/40 wheel.mount, 108/108 physics+input+race-session, 118/118
+browser-entry+host, 45/45 lighting, tsc clean; dev server relaunched HTTP 200;
+puppeteer smoke: boot race accelerating, manual drive 0 -> 160 km/h, A/D distinct
+frames, flat horizon at pixel row 433, red body + ribbon present, zero page errors).
+
+Standing seam contract (moved with the packet; agents loading 14C/14D/14E context MUST
+obey): shared mesher tangent rule `FACE_TANGENT_AXES` = {0:[1,2], 1:[0,2], 2:[0,1]},
+corner order 00/10/11/01 (corner 2 = (u,v) DIAGONAL; non-square quads = transposition
+detector); physics top-down (y = ground, heading CCW, spawn heading 0 along +x);
+visual mirror sceneZ = -topDownY, `NEATRACING_CAR_SCENE_YAW_OFFSET_RAD` = PI/2
+(A = screen left / D = screen right; camera + car + ribbon share one mirrored frame
+via pointZ = -worldZ); wheels hub = radius, contact patch y = 0, lateral axis, spin
+capped by `computeVisualWheelSpinDeltaRad` with session-swap + tick-wind-back reset;
+`lookAtInto` forward row pinned correct (batch 136 probe, rolled back). Dev lifecycle:
+esbuild bundles at server STARTUP ONLY — after any served-page edit stop the server,
+relaunch `npm run dev:neatRacing` (async), poll http://127.0.0.1:8787/ for HTTP 200,
+then visible-window smoke (puppeteer `headless: false`, args
+['--no-sandbox','--use-gl=angle','--enable-unsafe-webgpu'], viewport 1280x1024, HUD
+`#neatracing-hud-output`, selector `#neatracing-race-mode-selector`, page boots as a
+RUNNING ai race (`INITIAL_RACE_MODE = 'ai'`), favicon 404 harmless, tmp_* probes
+deleted so the tmp_* count ends at 0). Standing rules: NEVER run git (uninstalled);
+never self-close user-gated statuses; batch MCP gate calls only when there is
+something concrete to validate; new evidence batches append here under the
+moved-archive heading, not to step bodies; blocked-path escalation via
+00.cross-tier-helper.
+
+#### NEW USER REQUEST — verbatim (2026-10-11, immediately after the 14B gate confirmation)
+
+> /plan-alignment 14B confirmed ready, great work!.
+>
+> Now add 14C - turn and drift
+> - Turning left right should match with animation left/right of the front wheels
+> - Make the area on the cubes in the grid 2x bigger
+> - The edge of the road currently show as "below the transparent ground", make them hexagonal solid boxels, with the eges with a little (not too much glow, very short spead) glow an a hue slightly brighter than the filler of the hexagon, the goal is they look like each hexagon has neon light lines on the edges.
+> - The car doesn't drift when taking corners at high speed, while we want arcade style, some drift makes it more fun and challenging, also will teach the AI agents the importance of speed on a curve. Update @plans\neatracing-voxel-racer.spec.md as needed for this change too, code, tests and docs.
+>
+> 14D - Right World
+> - We need some decorations, a simplified neon style for the decorations ouside the racing area, like virtua racing but without trees, this is TRON inspired so no trees in a virtual world
+> - For the public, recycle if possible or replicate the agents in neateinstein, they can already show in different colors and while they are 2D, it would be a nice addition, and if I'm right, they would be cheap. Ideally we want to recycle them as much as possible and we already have sprites on how they look from any perspective.
+>   - If introducing their 2D nature is a problem, maybe using them as rerference a voxel version of it, like you did to the car? but this would be much more complex, so decide if it's worth it. Also what works best to showing public and maybe even some "mechanic crew" close to the race as decoration. I assume 2D sprites would be cheaper to add and animate, but if voxel is best, that's great too.
+> - Remember to scale them appropiately, everything must be in the scale of the cars, and distance should matter to projection too.
+>
+> 14E - Specs alignment, gap on code vs stale spec.
+> - Review that all @plans\neatracing-voxel-racer.spec.md are compliant, do not fix the gaps, add them as slices of a 14E, 14D is about finding the gaps, listing them and leave spaces for users to answer any clarifications you need, when possible add A, B, C options, only offer strong options, if you just 1 would make most sense for you, offer as an alternative to confirm. Do this when your confidence is <90% and therefore require clarification.
+>
+> Don't execute them, just prepare the phases and slices. Leave MCP ready and RAG orchestration ready to execute 14C on a new session.
+
+#### Orchestrator interpretation notes (batch 140)
+
+- "14D is about finding the gaps" inside the 14E bullet is read as a typo for **14E**:
+     14E owns gap discovery/List/clarifications; 14D owns world decorations.
+- "boxels" = hexagonal solid voxels (hexagonal-prism columns) for road edges; each
+     hexagon reads as neon-lit along its top edges: small glow, VERY SHORT spread,
+     edge hue slightly brighter than the hexagon filler (per-hexagon neon line frames).
+     Fixes the reported "edge shows below the transparent ground" composition bug.
+- "Make the area on the cubes in the grid 2x bigger" = double the grid cell AREA in
+     grid.pass (cell footprint x2; keep the world flat/horizon-aligned contract).
+- "neateinstein" = the repo example `examples/neatenstein` (exists; sprites render the
+     agents from any perspective, multiple colors). 14D public/mechanic-crew decoration
+     SHOULD prefer recycled 2D billboard sprites (cheapest, already authored); a voxel
+     re-interpretation is a fallback only if 2D proves unsuitable — the planner decides
+     and records the rationale in the 14D step.
+- 14C drift = a USER-DIRECTED spec amendment: the physics change updates
+     `plans/neatracing-vocal-racer.spec.md` §5.2 (drift model), adds ACs, and updates
+     code + tests + docs TOGETHER inside the 14C implementing slices. Spec edits happen
+     DURING 14C execution, not in this preparation session (14C slices include the spec
+     file in files_to_change).
+- 14E = gap REVIEW only: author slices that list code-vs-spec gaps with A/B/C
+     clarification option blocks (strong options only; single strong option offered as
+     "alternative to confirm" style); gaps are NOT fixed during authoring; execution
+     waits for user answers to the clarifications.
+- Explicit user instruction: DO NOT execute 14C/14D/14E in this session — prepare
+     phases + slices only, leave MCP ready and RAG orchestration ready to execute 14C
+     on a new session.
+
+#### Boundary (batch 140)
+
+1. Orchestrator (this session): compress 14B (done above) → dispatch `01-planning`
+      author to insert Steps 14C/14D/14E between Step 14B and Step 15 (sub-letter
+      numbering, no global renumber; update phase chain, placeholder step list, Step 14
+      stop conditions, Step 15 `next_step`, Current state, plans README/Roadmap rows) →
+      dispatch a NEW `01-planning` verification instance (no pragmatic bypass declared) →
+      RAG reindex + `cortex-index` gate + `get_slice_context` readiness proof on the 14C
+      first slice → evidence batch 141 → stop. Execution of 14C starts the next session.
