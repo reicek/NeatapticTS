@@ -11,8 +11,8 @@
  * embeds so the TypeScript mirror and the shader cannot drift.
  *
  * Locks the car pass contract (spec 6.5/7.3.1 + G9/AC-014): two-sided bins
- * meshes (CULL_FACE disabled), blob shadows drawn first at world y + 0.01 m
- * with depth-write off and SRC_ALPHA blending, cars sorted far -> near by
+ * meshes (CULL_FACE disabled), blob shadows drawn first above the road-edge
+ * paint layer with depth-write off and SRC_ALPHA blending, cars sorted far -> near by
  * camera distance, the four wheel sockets mounted through the G9 wheel-mount
  * contract, draw-time team remap (uTeamColor + NEATRACING_TEAM_REMAP_SLOT,
  * never baked into vertex data), the warmup seam under registry key 'car'
@@ -41,10 +41,16 @@ import {
   shadeLitSurface,
 } from './lighting';
 import {
+  CAR_LIT_FRAGMENT_SHADER_SOURCE,
+  CAR_LIT_UNIFORM_NAMES,
   CAR_MESH_FLOATS_PER_VERTEX,
   CAR_MESH_VERTEX_STRIDE_BYTES,
   NEATRACING_BLOB_SHADOW_BOUNDS_SCALE,
+  NEATRACING_BLOB_SHADOW_WHEEL_PATCH_SCALE_M,
   NEATRACING_BLOB_SHADOW_Y_OFFSET_M,
+  NEATRACING_TIRE_GRADIENT_BRIGHT_FACTOR,
+  NEATRACING_TIRE_GRADIENT_DARK_FACTOR,
+  NEATRACING_TIRE_GRADIENT_RUBBER_MAX_CHANNEL,
   createCarPass,
   expandVoxelBinModelToCarMesh,
   toCarWarmupProgram,
@@ -52,7 +58,13 @@ import {
 import { NEATRACING_DRAW_DISTANCE_M } from './passes/grid.pass';
 import { NEATRACING_VOXEL_WORLD_SIZE } from '../voxel/lod.distance.utils';
 import { NEATRACING_TEAM_REMAP_SLOT } from '../voxel/team-remap';
-import { NEATRACING_WHEEL_HUB_HEIGHT_M } from '../voxel/wheel.mount.utils';
+import {
+  NEATRACING_WHEEL_HUB_HEIGHT_M,
+  NEATRACING_WHEEL_TRACK_M,
+  NEATRACING_WHEEL_WHEELBASE_M,
+  NEATRACING_WHEEL_WORLD_RADIUS_M,
+} from '../voxel/wheel.mount.utils';
+import { NEATRACING_ROAD_EDGE_PAINT_Y_OFFSET_M } from '../track/road-edge';
 import {
   VOXEL_EMPTY_PALETTE_ENTRY,
   type VoxelPaletteEntry,
@@ -505,6 +517,51 @@ describe('voxel bin to car mesh expansion (pure)', () => {
     expect(tireBottomM).toBeCloseTo(-NEATRACING_WHEEL_HUB_HEIGHT_M, 12);
   });
 
+  it('lifts black wheel tire voxels to a uniform dark rubber base without a baked gradient (OBS-20)', () => {
+    const wheelBin: VoxelBinModel = {
+      dims: [4, 4, 4],
+      palette: CAR_FIXTURE_PALETTE,
+      quads: [
+        {
+          position: [0, 0, 0],
+          normalAxis: 2,
+          width: 4,
+          height: 4,
+          paletteIndex: 2,
+        },
+      ],
+    };
+    const mesh = expandVoxelBinModelToCarMesh(wheelBin, 'center');
+    let upperBrightnessSum = 0;
+    let upperCount = 0;
+    let lowerBrightnessSum = 0;
+    let lowerCount = 0;
+
+    for (let vertexIndex = 0; vertexIndex < mesh.vertexCount; vertexIndex++) {
+      const vertex = readCarVertex(mesh, vertexIndex);
+      const modelY = vertex[1];
+      const brightness = Math.max(vertex[3], vertex[4], vertex[5]);
+      if (modelY > 0) {
+        upperBrightnessSum += brightness;
+        upperCount += 1;
+      } else if (modelY < 0) {
+        lowerBrightnessSum += brightness;
+        lowerCount += 1;
+      }
+    }
+
+    expect(upperCount).toBeGreaterThan(0);
+    expect(lowerCount).toBeGreaterThan(0);
+    // The old baked vertical gradient has been moved into the fragment shader
+    // so the highlight stays fixed in world space and does not rotate with
+    // the wheel (OBS-20). Vertex colors are now uniform dark rubber.
+    expect(upperBrightnessSum / upperCount).toBeCloseTo(
+      lowerBrightnessSum / lowerCount,
+      6,
+    );
+    expect(upperBrightnessSum / upperCount).toBeGreaterThan(0);
+  });
+
   it('resolves vertex colors from the material table with glow/255 emissive', () => {
     const mesh = expandVoxelBinModelToCarMesh({ ...CAR_FIXTURE_BIN });
     const glowVertex = readCarVertex(mesh, 12);
@@ -561,7 +618,7 @@ describe('car pass WebGL2 orchestration', () => {
     ).toThrow(/viewProjection/);
   });
 
-  it('draws one drawArrays call per car stage: shadow + body + 4 wheels', () => {
+  it('draws one drawArrays call per car stage: body blob shadow + 4 wheel patch shadows + body + 4 wheels', () => {
     const harness = createCarMockWebGlHarness();
     const pass = createCarPass(harness.gl, {
       body: { ...CAR_FIXTURE_BIN },
@@ -575,7 +632,8 @@ describe('car pass WebGL2 orchestration', () => {
       ]),
     );
 
-    expect(harness.calls.drawArrays).toBe(12);
+    // 5 shadow draws + 5 lit draws per car (OBS-24 adds per-wheel patches).
+    expect(harness.calls.drawArrays).toBe(20);
     for (const draw of harness.drawArraysCalls) {
       expect(draw.mode).toBe(MOCK_GL_TRIANGLES);
       expect(draw.first).toBe(0);
@@ -621,13 +679,14 @@ describe('car pass WebGL2 orchestration', () => {
       ]),
     );
 
+    // 5 shadow draws per car (body blob + 4 wheel patches), then lit draws.
     const shadowDrawDepthMasks = harness.drawArraysCalls
-      .slice(0, 2)
+      .slice(0, 10)
       .map((draw) => draw.depthMask);
     const bodyDrawDepthMasks = harness.drawArraysCalls
-      .slice(2)
+      .slice(10)
       .map((draw) => draw.depthMask);
-    expect(shadowDrawDepthMasks).toEqual([false, false]);
+    expect(shadowDrawDepthMasks).toEqual(Array(10).fill(false));
     expect(bodyDrawDepthMasks.every((depthMask) => depthMask)).toBe(true);
   });
 
@@ -735,7 +794,7 @@ describe('car pass WebGL2 orchestration', () => {
     ).toBe(true);
   });
 
-  it('draws blob shadows at world y + 0.01 m with a square XZ footprint covering the full body footprint plus margin (G9)', () => {
+  it('draws blob shadows above the road-edge paint with a square XZ footprint covering the body plus wheels plus margin (OBS-21/OBS-24)', () => {
     const harness = createCarMockWebGlHarness();
     const pass = createCarPass(harness.gl, {
       body: { ...CAR_FIXTURE_BIN },
@@ -752,29 +811,59 @@ describe('car pass WebGL2 orchestration', () => {
     const shadowFeeds = matrixFeedsNamed(harness, 'uModel').filter((feed) =>
       isBlobShadowMatrix(feed.matrix),
     );
-    expect(shadowFeeds.length).toBe(2);
-    expect(NEATRACING_BLOB_SHADOW_Y_OFFSET_M).toBe(0.01);
+    // 2 cars × (1 body blob + 4 wheel patch shadows).
+    expect(shadowFeeds.length).toBe(10);
+    // Shadow must sit above the opaque honeycomb floor paint so it is not
+    // hidden by the road-edge layer (OBS-15).
+    expect(NEATRACING_BLOB_SHADOW_Y_OFFSET_M).toBe(
+      NEATRACING_ROAD_EDGE_PAINT_Y_OFFSET_M + 0.005,
+    );
+
+    const wheelReachHalfXz = Math.max(
+      NEATRACING_WHEEL_TRACK_M / 2 + NEATRACING_WHEEL_WORLD_RADIUS_M,
+      NEATRACING_WHEEL_WHEELBASE_M / 2 + NEATRACING_WHEEL_WORLD_RADIUS_M,
+    );
+    const expectedBodyScale = Math.fround(
+      2 * wheelReachHalfXz * NEATRACING_BLOB_SHADOW_BOUNDS_SCALE,
+    );
+    const expectedPatchScale = Math.fround(
+      NEATRACING_BLOB_SHADOW_WHEEL_PATCH_SCALE_M,
+    );
+
+    const bodyBlobFeeds = shadowFeeds.filter(
+      (feed) => feed.matrix[0] === expectedBodyScale,
+    );
+    const wheelPatchFeeds = shadowFeeds.filter(
+      (feed) => feed.matrix[0] === expectedPatchScale,
+    );
+    expect(bodyBlobFeeds.length).toBe(2);
+    expect(wheelPatchFeeds.length).toBe(8);
+
     for (const feed of shadowFeeds) {
       expect(feed.matrix[5]).toBe(1);
       expect(feed.matrix[0]).toBe(feed.matrix[10]);
-      // Full XZ footprint of the 4x4x4-voxel fixture (4 voxels = 4 x
-      // VOXEL_WORLD_SIZE_M) x 1.15 margin; matrix[0] for a yaw-0 car
-      // equals the shadow scale, fround'd through uniformMatrix4fv.
-      expect(feed.matrix[0]).toBe(
-        Math.fround(
-          4 * VOXEL_WORLD_SIZE_M * NEATRACING_BLOB_SHADOW_BOUNDS_SCALE,
-        ),
-      );
     }
+
+    // Body blobs are centered on each car.
+    const bodyX = bodyBlobFeeds.map((feed) => feed.matrix[12]);
+    const bodyZ = bodyBlobFeeds.map((feed) => feed.matrix[14]);
+    expect(bodyX).toContain(5);
+    expect(bodyX).toContain(-8);
+    expect(bodyZ).toContain(-3);
+    expect(bodyZ).toContain(12);
+
+    // Per-wheel contact patches sit at the socket offsets around each car.
+    const halfTrack = NEATRACING_WHEEL_TRACK_M / 2;
+    const halfWheelbase = NEATRACING_WHEEL_WHEELBASE_M / 2;
+    const nearCarPatches = wheelPatchFeeds.filter(
+      (feed) => feed.matrix[12] >= 5 - halfTrack - 0.1 && feed.matrix[12] <= 5 + halfTrack + 0.1 &&
+        feed.matrix[14] >= -3 - halfWheelbase - 0.1 && feed.matrix[14] <= -3 + halfWheelbase + 0.1,
+    );
+    expect(nearCarPatches.length).toBe(4);
+
     const shadowColorFeeds = uniform3fFeedsNamed(harness, 'uShadowColor');
     expect(shadowColorFeeds.length).toBe(1);
-    expect(shadowColorFeeds[0].channels).toEqual([8 / 255, 8 / 255, 10 / 255]);
-    const shadowXOrder = shadowFeeds.map((feed) => feed.matrix[12]);
-    const shadowZOrder = shadowFeeds.map((feed) => feed.matrix[14]);
-    expect(shadowXOrder).toContain(5);
-    expect(shadowXOrder).toContain(-8);
-    expect(shadowZOrder).toContain(-3);
-    expect(shadowZOrder).toContain(12);
+    expect(shadowColorFeeds[0].channels).toEqual([0 / 255, 0 / 255, 0 / 255]);
   });
 
   it('sorts cars far -> near by camera distance before drawing', () => {
@@ -794,7 +883,17 @@ describe('car pass WebGL2 orchestration', () => {
     const shadowFeeds = matrixFeedsNamed(harness, 'uModel').filter((feed) =>
       isBlobShadowMatrix(feed.matrix),
     );
-    expect(shadowFeeds.map((feed) => feed.matrix[14])).toEqual([60, 10]);
+    const wheelReachHalfXz = Math.max(
+      NEATRACING_WHEEL_TRACK_M / 2 + NEATRACING_WHEEL_WORLD_RADIUS_M,
+      NEATRACING_WHEEL_WHEELBASE_M / 2 + NEATRACING_WHEEL_WORLD_RADIUS_M,
+    );
+    const expectedBodyScale = Math.fround(
+      2 * wheelReachHalfXz * NEATRACING_BLOB_SHADOW_BOUNDS_SCALE,
+    );
+    const bodyBlobFeeds = shadowFeeds.filter(
+      (feed) => feed.matrix[0] === expectedBodyScale,
+    );
+    expect(bodyBlobFeeds.map((feed) => feed.matrix[14])).toEqual([60, 10]);
     const bodyFeeds = matrixFeedsNamed(harness, 'uModel').filter(
       (feed) =>
         feed.matrix[13] === 0 && feed.matrix[0] === 1 && feed.matrix[10] === 1,
@@ -905,14 +1004,11 @@ describe('car pass WebGL2 orchestration', () => {
     // (the wheel phase leaves the wheel VBO bound, so the per-car loop has
     // to rebind the body VBO or later cars corrupt their body draws).
     const shadowDrawBoundIds = harness.drawArraysCalls
-      .slice(0, 2)
+      .slice(0, 10)
       .map((draw) => boundArrayBufferIdAtDraw(harness, draw));
-    expect(shadowDrawBoundIds).toEqual([
-      CAR_MOCK_SHADOW_BUFFER_ID,
-      CAR_MOCK_SHADOW_BUFFER_ID,
-    ]);
+    expect(shadowDrawBoundIds).toEqual(Array(10).fill(CAR_MOCK_SHADOW_BUFFER_ID));
     const litDrawBoundIds = harness.drawArraysCalls
-      .slice(2)
+      .slice(10)
       .map((draw) => boundArrayBufferIdAtDraw(harness, draw));
     const expectedLitBoundIds: number[] = [];
     for (let slot = 0; slot < 2; slot += 1) {
@@ -922,6 +1018,79 @@ describe('car pass WebGL2 orchestration', () => {
       }
     }
     expect(litDrawBoundIds).toEqual(expectedLitBoundIds);
+  });
+});
+
+describe('fixed-space tire lighting (OBS-20)', () => {
+  it('implements the tire gradient in the fragment shader using the shared top-front light direction', () => {
+    expect(CAR_LIT_FRAGMENT_SHADER_SOURCE).toContain('uApplyTireGradient');
+    expect(CAR_LIT_FRAGMENT_SHADER_SOURCE).toContain('uTireGradientRadius');
+    expect(CAR_LIT_FRAGMENT_SHADER_SOURCE).toContain('uModel[3][1]');
+    expect(CAR_LIT_FRAGMENT_SHADER_SOURCE).toContain('uTireGradientThreshold');
+    expect(CAR_LIT_FRAGMENT_SHADER_SOURCE).toContain('uSunDirection');
+    expect(CAR_LIT_FRAGMENT_SHADER_SOURCE).toContain('Fixed-space tire lighting');
+
+    for (const name of [
+      'uApplyTireGradient',
+      'uTireGradientRadius',
+      'uTireGradientBrightFactor',
+      'uTireGradientDarkFactor',
+      'uTireGradientThreshold',
+    ]) {
+      expect(CAR_LIT_UNIFORM_NAMES).toContain(name);
+    }
+  });
+
+  it('feeds tire-gradient uniforms per draw: disabled for body, enabled for wheels', () => {
+    const harness = createCarMockWebGlHarness();
+    const pass = createCarPass(harness.gl, {
+      body: { ...CAR_FIXTURE_BIN },
+      wheel: { ...CAR_FIXTURE_BIN },
+    });
+
+    pass.draw(
+      makeDrawFrame([
+        { worldX: 0, worldZ: 0, yawRad: 0, teamColorId: 1, wheelSpinRad: 0 },
+        { worldX: 0, worldZ: 60, yawRad: 0, teamColorId: 0, wheelSpinRad: 0 },
+      ]),
+    );
+
+    const applyFeeds = harness.uniform1fFeeds.filter(
+      (feed) => feed.name === 'uApplyTireGradient',
+    );
+    // Each car feeds uApplyTireGradient twice: 0 before the body draw and
+    // 1 before the wheel group. The value persists across the four wheel
+    // draws of that group, so the recorded 1f sequence is [0,1,0,1,...].
+    expect(applyFeeds.map((feed) => feed.value)).toEqual([0, 1, 0, 1]);
+
+    const wheelRadiusFeeds = harness.uniform1fFeeds.filter(
+      (feed) => feed.name === 'uTireGradientRadius',
+    );
+    // Radius/bright/dark/threshold are only uploaded when the gradient is
+    // enabled (once per car, right before the wheel group).
+    expect(wheelRadiusFeeds).toHaveLength(2);
+    expect(
+      wheelRadiusFeeds.every(
+        (feed) => feed.value === NEATRACING_WHEEL_HUB_HEIGHT_M,
+      ),
+    ).toBe(true);
+
+    const thresholdFeeds = harness.uniform1fFeeds.filter(
+      (feed) => feed.name === 'uTireGradientThreshold',
+    );
+    expect(thresholdFeeds).toHaveLength(2);
+    expect(thresholdFeeds[0].value).toBe(
+      NEATRACING_TIRE_GRADIENT_RUBBER_MAX_CHANNEL / 255,
+    );
+  });
+
+  it('exports symmetric bright and dark tire gradient factors', () => {
+    expect(NEATRACING_TIRE_GRADIENT_BRIGHT_FACTOR).toBeGreaterThan(1);
+    expect(NEATRACING_TIRE_GRADIENT_DARK_FACTOR).toBeGreaterThan(0);
+    expect(NEATRACING_TIRE_GRADIENT_DARK_FACTOR).toBeLessThan(1);
+    expect(NEATRACING_TIRE_GRADIENT_BRIGHT_FACTOR).toBeGreaterThan(
+      NEATRACING_TIRE_GRADIENT_DARK_FACTOR,
+    );
   });
 });
 
@@ -941,7 +1110,7 @@ describe('car pass warmup seam (AC-040)', () => {
     expect(harness.calls.createProgram).toBe(2);
   });
 
-  it('draws the zero-pose shared path offscreen with six draw calls per car', () => {
+  it('draws the zero-pose shared path offscreen with ten draw calls per car', () => {
     const harness = createCarMockWebGlHarness();
     const warmup = toCarWarmupProgram(harness.gl);
     warmup.compileAndLink();
@@ -949,13 +1118,36 @@ describe('car pass warmup seam (AC-040)', () => {
 
     warmup.drawOffscreen(harness.gl);
 
-    expect(harness.calls.drawArrays - drawsBeforeWarmup).toBe(6);
+    // One car = 1 body blob shadow + 4 wheel patch shadows + body + 4 wheels.
+    expect(harness.calls.drawArrays - drawsBeforeWarmup).toBe(10);
     const shadowFeeds = matrixFeedsNamed(harness, 'uModel').filter((feed) =>
       isBlobShadowMatrix(feed.matrix),
     );
-    expect(shadowFeeds.length).toBe(1);
-    expect(shadowFeeds[0].matrix[12]).toBe(0);
-    expect(shadowFeeds[0].matrix[14]).toBe(0);
+    expect(shadowFeeds.length).toBe(5);
+
+    const wheelReachHalfXz = Math.max(
+      NEATRACING_WHEEL_TRACK_M / 2 + NEATRACING_WHEEL_WORLD_RADIUS_M,
+      NEATRACING_WHEEL_WHEELBASE_M / 2 + NEATRACING_WHEEL_WORLD_RADIUS_M,
+    );
+    const expectedBodyScale = Math.fround(
+      2 * wheelReachHalfXz * NEATRACING_BLOB_SHADOW_BOUNDS_SCALE,
+    );
+    const expectedPatchScale = Math.fround(
+      NEATRACING_BLOB_SHADOW_WHEEL_PATCH_SCALE_M,
+    );
+
+    const bodyBlobFeeds = shadowFeeds.filter(
+      (feed) => feed.matrix[0] === expectedBodyScale,
+    );
+    const wheelPatchFeeds = shadowFeeds.filter(
+      (feed) => feed.matrix[0] === expectedPatchScale,
+    );
+    expect(bodyBlobFeeds.length).toBe(1);
+    expect(wheelPatchFeeds.length).toBe(4);
+
+    // The single body blob is centered on the parked car at the origin.
+    expect(bodyBlobFeeds[0]!.matrix[12]).toBe(0);
+    expect(bodyBlobFeeds[0]!.matrix[14]).toBe(0);
   });
 
   it('disposes both programs and all three buffers', () => {

@@ -58,7 +58,6 @@ import type {
 } from './mode-selector';
 import { createInitialPhysicsCarState } from '../physics/physics.step.service';
 import type {
-  PhysicsCarSpawnPose,
   PhysicsCarState,
   PhysicsStepInput,
 } from '../physics/physics.step.service';
@@ -84,6 +83,8 @@ export interface NeatRacingRaceSessionState {
   car: PhysicsCarState;
   /** Latest pure race-rules state (replaced by every released tick). */
   rules: RaceRulesState;
+  /** Control sample replayed into the last set of released ticks (D5). */
+  input?: PhysicsStepInput;
 }
 
 /** Frame-level seams of the live drive loop (structural spy subsets). */
@@ -208,6 +209,7 @@ export function createRaceSession(
   const state: NeatRacingRaceSessionState = {
     car: createCar(),
     rules: deps.initialRulesState ?? createRaceRulesState(),
+    input: { throttle: 0, brake: 0, steer: 0 },
   };
 
   // AC-033 restart carrier: subscribe exactly once; each notification
@@ -229,14 +231,18 @@ export function createRaceSession(
     handleFrame(timestampMs: number): void {
       const stepCount = advanceFrameSteps(loop, timestampMs);
 
+      // D5: sample the driving surface ONCE per frame (keyboard in the manual
+      // mode, the autopilot seam when the selector is on `ai`); replay the
+      // SAME sample object into every catch-up tick. Sampling outside the
+      // step guard keeps `state.input` current for the composer on zero-step
+      // frames, so the front-wheel steer pose reflects the held key immediately.
+      const input: PhysicsStepInput =
+        deps.modeSelector.mode === 'ai' && deps.sampleAutoInput !== undefined
+          ? deps.sampleAutoInput(state.car)
+          : deps.sampleKeyboardInput(deps.presses);
+      state.input = input;
+
       if (stepCount > 0) {
-        // D5: sample the driving surface ONCE per frame (keyboard in the
-        // manual mode, the autopilot seam when the selector is on `ai`);
-        // replay the SAME sample object into every catch-up tick.
-        const input: PhysicsStepInput =
-          deps.modeSelector.mode === 'ai' && deps.sampleAutoInput !== undefined
-            ? deps.sampleAutoInput(state.car)
-            : deps.sampleKeyboardInput(deps.presses);
         for (let stepIndex = 0; stepIndex < stepCount; stepIndex += 1) {
           // The per-tick crossing flag resolves BEFORE the physics step:
           // the detector answers from the pose entering this tick, and the

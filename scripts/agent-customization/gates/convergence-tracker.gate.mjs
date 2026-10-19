@@ -207,21 +207,45 @@ function emit(json, result) {
  * Extracts the body of the `## Latest validation evidence` section from plan
  * text. Returns the empty string if the section is missing.
  *
+ * The live section heading can be preceded by backtick-quoted references
+ * earlier in the plan, so this resolves the last real heading that is not
+ * inside a fenced code block.
+ *
  * @param {string} planText - Raw plan Markdown text.
  * @returns {string} Section body, or empty string if not found.
  */
 function extractLatestValidationEvidence(planText) {
-  const index = planText.indexOf(EVIDENCE_HEADING);
-  if (index === -1) {
+  const lines = planText.split(/\r?\n/);
+  let inCodeFence = false;
+  let lastHeadingLine = -1;
+
+  for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
+    const trimmed = lines[lineIndex].trim();
+    if (trimmed.startsWith('```')) {
+      inCodeFence = !inCodeFence;
+      continue;
+    }
+    if (!inCodeFence && trimmed === EVIDENCE_HEADING) {
+      lastHeadingLine = lineIndex;
+    }
+  }
+
+  if (lastHeadingLine === -1) {
     return '';
   }
 
-  const afterHeading = planText.slice(index + EVIDENCE_HEADING.length);
-  const nextHeading = afterHeading.search(/^#{1,6}\s+/m);
-  const section =
-    nextHeading === -1 ? afterHeading : afterHeading.slice(0, nextHeading);
+  const afterHeadingLines = lines.slice(lastHeadingLine + 1);
+  const nextHeadingIndex = afterHeadingLines.findIndex((line) => {
+    const trimmed = line.trim();
+    return /^#{1,6}\s+/.test(trimmed);
+  });
 
-  return section;
+  const sectionLines =
+    nextHeadingIndex === -1
+      ? afterHeadingLines
+      : afterHeadingLines.slice(0, nextHeadingIndex);
+
+  return sectionLines.join('\n');
 }
 
 /**

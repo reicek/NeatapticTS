@@ -47,13 +47,15 @@ import {
   createGlassPass,
 } from '../engine/passes/glass.pass';
 import {
-  toGridWarmupProgram,
-  createGridPass,
-} from '../engine/passes/grid.pass';
-import {
   toTrackWarmupProgram,
   createTrackPass,
 } from '../engine/passes/track.pass';
+import {
+  createTrackGridPass,
+  toTrackGridWarmupProgram,
+} from '../track/grid.pass';
+import { createRightWorldPass } from '../track/right-world.pass';
+import type { RightWorldPassDrawState } from '../track/right-world.pass';
 import {
   collectActivePulses,
   createPulsePass,
@@ -67,6 +69,7 @@ import {
 } from '../engine/passes/starfield.pass';
 import { createFrameComposer } from '../host/frame-composer';
 import { computeVisualWheelSpinDeltaRad } from '../voxel/wheel.mount.utils';
+import { fillCarRenderPose } from '../car/generate-car';
 import type { NeatRacingFrameComposerFrame } from '../host/frame-composer';
 import type { NeatRacingHudState } from '../host/hud';
 import { createHud } from '../host/hud';
@@ -74,6 +77,7 @@ import { sampleKeyboardInput } from '../host/input';
 import type { NeatRacingRaceMode } from '../host/mode-selector';
 import { createRaceModeSelector } from '../host/mode-selector';
 import { createRaceSession } from '../host/race-session';
+import type { NeatRacingRaceSession } from '../host/race-session';
 import { NEATRACING_FIXED_TIMESTEP_SECONDS } from '../host/render-loop.utils';
 import { createTrackSurfaceResolver } from '../physics/collision.utils';
 import { stepRaceRules } from '../physics/race-rules';
@@ -378,21 +382,26 @@ function finishFallbackBoot(
  * starfield, grid, pulse, track, car, glass, bloom-threshold, bloom-blur,
  * bloom-additive (`NEATRACING_WARMED_PROGRAM_KEYS`).
  *
- * Every real pass exposes a lazy warmup seam (`to*WarmupProgram`), so the
- * entries compose without GL work until `runShaderWarmup` invokes them.
- * Rebuilt per boot against the live context, the registry handed to
- * `runShaderWarmup` carries exactly the nine pinned keys before frame 1.
+ * The legacy 1 m² engine grid pass has been replaced by the 2 m² track-grid
+ * pass (AC-045). The `grid` registry slot now warms the track-grid shader so
+ * the canonical key count stays unchanged and no dual-path draw code remains.
  *
  * @param gl - Live WebGL2 context the warmup programs compile against.
- * @returns The nine warmup programs in the pinned registry-key order.
+ * @returns The warmup programs in the pinned registry-key order, keyed so
+ *   the `grid` slot compiles the track-grid program.
  */
 function createBootProgramRegistry(
   gl: WebGL2RenderingContext,
 ): readonly ShaderWarmupProgram[] {
   const [bloomThreshold, bloomBlur, bloomAdditive] = toBloomWarmupPrograms(gl);
+  const trackGridWarmup = toTrackGridWarmupProgram(gl);
   return [
     toStarfieldWarmupProgram(gl),
-    toGridWarmupProgram(gl),
+    {
+      key: 'grid',
+      compileAndLink: trackGridWarmup.compileAndLink,
+      drawOffscreen: trackGridWarmup.drawOffscreen,
+    },
     toPulseWarmupProgram(gl),
     toTrackWarmupProgram(gl),
     toCarWarmupProgram(gl),
@@ -676,19 +685,9 @@ function startLiveDriveLoop(
   let lapLinePrevSide: number | null = null;
   // Session holder bound right after creation; frame/physics closures read
   // it only once the RAF loop starts (strictly after the binding below).
-  const driveHolder: {
-    session: {
-      state: {
-        car: {
-          x: number;
-          y: number;
-          heading: number;
-          speed: number;
-          tick: number;
-        };
-      };
-    } | null;
-  } = { session: null };
+  const driveHolder: { session: NeatRacingRaceSession | null } = {
+    session: null,
+  };
 
   // Keyboard: track a stable presses record on the window; the session
   // samples it once per frame (the phase-1 drive contract).
@@ -820,6 +819,7 @@ function startLiveDriveLoop(
     yawRad: 0,
     teamColorId: NEATRACING_TEAM_ID_RED,
     wheelSpinRad: 0,
+    steerAngleRad: 0,
   };
   const carsBag = [carPoseBag];
   // In-place ambient pulse bag (the frame property is a stable readonly
@@ -833,12 +833,19 @@ function startLiveDriveLoop(
   let wheelSpinAccumulatorRad = 0;
   let wheelSpinLastTick = 0;
   let wheelSpinBoundSession: object | null = null;
+  const rightWorldDrawState: RightWorldPassDrawState = {
+    viewProjection,
+    cameraWorld,
+    cameraRight: [1, 0, 0],
+    cameraUp: [0, 1, 0],
+  };
   const composerFrame: NeatRacingFrameComposerFrame = {
     viewProjection,
     cameraWorld,
     cameraPose,
     pulses: pulseListBag,
     cars: carsBag,
+    rightWorld: rightWorldDrawState,
     enabled: true,
   };
 
@@ -858,9 +865,6 @@ function startLiveDriveLoop(
       cameraWorld[0] = car.x - forwardX * NEATRACING_CHASE_CAMERA_BACK;
       cameraWorld[1] = NEATRACING_CHASE_CAMERA_HEIGHT;
       cameraWorld[2] = carSceneZ - sceneForwardZ * NEATRACING_CHASE_CAMERA_BACK;
-      carPoseBag.worldX = car.x;
-      carPoseBag.worldZ = carSceneZ;
-      carPoseBag.yawRad = carSceneYawRad(car.heading);
       if (
         wheelSpinBoundSession !== boundSession ||
         car.tick < wheelSpinLastTick
@@ -879,7 +883,15 @@ function startLiveDriveLoop(
           wheelRadius,
         );
       }
-      carPoseBag.wheelSpinRad = wheelSpinAccumulatorRad;
+      fillCarRenderPose(
+        carPoseBag,
+        car.x,
+        carSceneZ,
+        carSceneYawRad(car.heading),
+        wheelSpinAccumulatorRad,
+        NEATRACING_TEAM_ID_RED,
+        boundSession.state.input?.steer,
+      );
       // Ambient pulse window (TP-20): the pure time-window collector turns
       // the deterministic physics tick count into the alive-set, newest
       // first, so the expanding ground rings replay identically per seed.
@@ -903,16 +915,47 @@ function startLiveDriveLoop(
         NEATRACING_CHASE_CAMERA_NEAR,
         NEATRACING_CHASE_CAMERA_FAR,
       );
+      const targetX = car.x + forwardX * NEATRACING_CHASE_CAMERA_LOOKAHEAD;
+      const targetY = NEATRACING_CHASE_CAMERA_HEIGHT / 2;
+      const targetZ = carSceneZ + sceneForwardZ * NEATRACING_CHASE_CAMERA_LOOKAHEAD;
       lookAtInto(
         view,
         cameraWorld[0],
         cameraWorld[1],
         cameraWorld[2],
-        car.x + forwardX * NEATRACING_CHASE_CAMERA_LOOKAHEAD,
-        NEATRACING_CHASE_CAMERA_HEIGHT / 2,
-        carSceneZ + sceneForwardZ * NEATRACING_CHASE_CAMERA_LOOKAHEAD,
+        targetX,
+        targetY,
+        targetZ,
       );
       multiplyViewProjectionInto(viewProjection, view, projection);
+      // Right-world billboarding basis: derive normalized camera-right/up from
+      // the chase look direction so the public/agent sprites always face the
+      // active camera. The basis is refreshed in-place on the shared draw-state
+      // bag (zero per-frame allocation).
+      const toTargetX = targetX - cameraWorld[0];
+      const toTargetY = targetY - cameraWorld[1];
+      const toTargetZ = targetZ - cameraWorld[2];
+      const forwardDistance =
+        Math.hypot(toTargetX, toTargetY, toTargetZ) || 1;
+      const fX = toTargetX / forwardDistance;
+      const fY = toTargetY / forwardDistance;
+      const fZ = toTargetZ / forwardDistance;
+      const rX = fY * 0 - fZ * 1;
+      const rY = fZ * 0 - fX * 0;
+      const rZ = fX * 1 - fY * 0;
+      const rightLength = Math.hypot(rX, rY, rZ) || 1;
+      rightWorldDrawState.cameraRight[0] = rX / rightLength;
+      rightWorldDrawState.cameraRight[1] = rY / rightLength;
+      rightWorldDrawState.cameraRight[2] = rZ / rightLength;
+      rightWorldDrawState.cameraUp[0] =
+        rightWorldDrawState.cameraRight[1] * fZ -
+        rightWorldDrawState.cameraRight[2] * fY;
+      rightWorldDrawState.cameraUp[1] =
+        rightWorldDrawState.cameraRight[2] * fX -
+        rightWorldDrawState.cameraRight[0] * fZ;
+      rightWorldDrawState.cameraUp[2] =
+        rightWorldDrawState.cameraRight[0] * fY -
+        rightWorldDrawState.cameraRight[1] * fX;
     }
     return composerFrame;
   };
@@ -939,9 +982,10 @@ function startLiveDriveLoop(
         quads: meshVoxelModel(wheelModel).quads,
       };
       const starfieldPass = createStarfieldPass(gl);
-      const gridPass = createGridPass(gl);
       const pulsePass = createPulsePass(gl);
       const trackPass = createTrackPass(gl);
+      const trackGridPass = createTrackGridPass(gl);
+      const rightWorldPass = createRightWorldPass(gl);
       const carPass = createCarPass(gl, { body: bodyBins, wheel: wheelBins });
       const glassPass = createGlassPass(gl, {
         body: bodyModel,
@@ -952,9 +996,10 @@ function startLiveDriveLoop(
         gl,
         passes: {
           starfield: starfieldPass,
-          grid: gridPass,
           pulse: pulsePass,
           track: trackPass,
+          trackGrid: trackGridPass,
+          rightWorld: rightWorldPass,
           car: carPass,
           glass: glassPass,
           bloom: bloomPass,
@@ -967,10 +1012,11 @@ function startLiveDriveLoop(
       );
       disposeComposition = (): void => {
         composerSeam.dispose();
-        // Starfield and grid passes expose no dispose seam (construct-once
+        // Starfield and track-grid passes expose no dispose seam (construct-once
         // program handles that stay live for the page); the disposable
         // passes ride with the composer teardown below.
         pulsePass.dispose();
+        rightWorldPass.dispose();
         carPass.dispose();
         glassPass.dispose();
         bloomPass.dispose();

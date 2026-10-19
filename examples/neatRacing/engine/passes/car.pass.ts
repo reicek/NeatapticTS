@@ -55,6 +55,10 @@ import {
 } from '../../voxel/team-remap';
 import { NEATRACING_VOXEL_WORLD_SIZE } from '../../voxel/lod.distance.utils';
 import {
+  NEATRACING_WHEEL_HUB_HEIGHT_M,
+  NEATRACING_WHEEL_TRACK_M,
+  NEATRACING_WHEEL_WHEELBASE_M,
+  NEATRACING_WHEEL_WORLD_RADIUS_M,
   resolveVoxelWheelMountTransform,
   resolveVoxelWheelSockets,
   type VoxelWheelMountTransform,
@@ -67,6 +71,7 @@ import {
   VOXEL_EMPTY_PALETTE_ENTRY,
   type VoxelPaletteEntry,
 } from '../../voxel/model.schema';
+import { NEATRACING_ROAD_EDGE_PAINT_Y_OFFSET_M } from '../../track/road-edge';
 import type { VoxelBinModel, VoxelBinQuad } from '../../voxel/bin.codec';
 
 /** `gl.COMPILE_STATUS` (0x8B81) checked after every shader compile. */
@@ -111,8 +116,10 @@ const GL_TRIANGLES = 4;
 /** Pass label prefixing every compile/link/uniform rejection message. */
 const NEATRACING_CAR_PASS_LABEL = 'neatRacing car pass';
 
-/** Peak blob shadow alpha (soft ground-contact darkening). */
-const NEATRACING_BLOB_SHADOW_MAX_ALPHA = 0.55;
+/** Peak blob shadow alpha (soft ground-contact darkening). Tuned high so the
+ * shadow reads as a visible dark patch under the car body and tires (OBS-21).
+ */
+const NEATRACING_BLOB_SHADOW_MAX_ALPHA = 0.98;
 
 /** Exponent applied to the smoothstep shadow falloff (2 = quadratic edge).
  * Interpolated into the shadow fragment shader behind a float() constructor:
@@ -121,9 +128,12 @@ const NEATRACING_BLOB_SHADOW_MAX_ALPHA = 0.55;
  * shipped bundle, so the GLSL emission owns the float type. */
 const NEATRACING_BLOB_SHADOW_FALLOFF_POWER = 2;
 
-/** Dark blob shadow tint bytes; normalized to [0, 1] before any uniform feed. */
+/** Dark blob shadow tint bytes; normalized to [0, 1] before any uniform feed.
+ * Near-black so the blended decal is clearly darker than the painted road
+ * surface (OBS-21).
+ */
 const NEATRACING_BLOB_SHADOW_COLOR_BYTES: readonly [number, number, number] = [
-  8, 8, 10,
+  0, 0, 0,
 ];
 
 /** Byte divisor used when normalizing palette/tint colors into [0, 1]. */
@@ -137,19 +147,29 @@ const NEATRACING_BLOB_SHADOW_COLOR: readonly [number, number, number] = [
 ];
 
 /**
- * World y offset for blob shadows (spec section 6.6: shadows render at
- * y + 0.01 m with depth-write off so they read as ground decals without
- * z-fighting the road grid).
+ * World y offset for blob shadows (spec section 6.6). The shadow is drawn
+ * just above the opaque road-edge paint layer so it is not depth-tested
+ * away by the honeycomb floor paint; depth-write stays off so it reads as
+ * a ground decal.
  */
-export const NEATRACING_BLOB_SHADOW_Y_OFFSET_M = 0.01;
+export const NEATRACING_BLOB_SHADOW_Y_OFFSET_M =
+  NEATRACING_ROAD_EDGE_PAINT_Y_OFFSET_M + 0.005;
 
 /**
- * Blob shadow XZ scale margin over the body's FULL XZ footprint. The shadow
- * quad world width equals 2 x boundsHalfExtentXzM (the mesh bounds field is
- * a half extent) times this scale, so 1.15 covers the chassis footprint
- * plus a 15% margin.
+ * Blob shadow XZ scale margin over the car's full footprint including the
+ * tire contact patches. The shadow quad world width equals 2 x the combined
+ * body/wheel half extent times this scale, so 1.35 covers the full car
+ * footprint plus tires with a generous safety margin (OBS-21).
  */
-export const NEATRACING_BLOB_SHADOW_BOUNDS_SCALE = 1.15;
+export const NEATRACING_BLOB_SHADOW_BOUNDS_SCALE = 1.35;
+
+/**
+ * World-space side length of each per-wheel contact-patch shadow quad.
+ * Slightly larger than the tire radius so the darkened footprint covers the
+ * ground directly under every tire (OBS-24).
+ */
+export const NEATRACING_BLOB_SHADOW_WHEEL_PATCH_SCALE_M =
+  NEATRACING_WHEEL_WORLD_RADIUS_M * 1.5;
 
 /** Floats per expanded car vertex: position, color, axis, emissive, slot. */
 export const CAR_MESH_FLOATS_PER_VERTEX = 9;
@@ -205,12 +225,17 @@ const CAR_SHADOW_VERTEX_COUNT =
   CAR_SHADOW_QUAD_CORNERS.length / CAR_SHADOW_FLOATS_PER_VERTEX;
 
 /** Lit-program uniform names: shared lighting uniforms + car-specific feeds. */
-const CAR_LIT_UNIFORM_NAMES: readonly string[] = [
+export const CAR_LIT_UNIFORM_NAMES: readonly string[] = [
   ...NEATRACING_LIGHTING_UNIFORM_NAMES,
   'uViewProjection',
   'uModel',
   'uTeamColor',
   'uTeamSlot',
+  'uApplyTireGradient',
+  'uTireGradientRadius',
+  'uTireGradientBrightFactor',
+  'uTireGradientDarkFactor',
+  'uTireGradientThreshold',
 ];
 
 /** Blob-shadow program uniform names. */
@@ -260,6 +285,11 @@ precision highp float;
 uniform mat4 uModel;
 uniform vec3 uTeamColor;
 uniform float uTeamSlot;
+uniform float uApplyTireGradient;
+uniform float uTireGradientRadius;
+uniform float uTireGradientBrightFactor;
+uniform float uTireGradientDarkFactor;
+uniform float uTireGradientThreshold;
 ${NEATRACING_LIGHTING_GLSL_CHUNK}
 in vec3 vWorld;
 in vec3 vAlbedo;
@@ -283,6 +313,16 @@ void main() {
   vec3 albedo = vAlbedo;
   if (abs(vPaletteIndex - uTeamSlot) < 0.5) {
     albedo = uTeamColor;
+  }
+  // Fixed-space tire lighting (OBS-20): the highlight follows the shared
+  // scene sun direction (top-front of the car) and stays fixed while the wheel
+  // voxels spin through it. Bright rim/hub palette colors are protected by
+  // the brightness threshold.
+  if (uApplyTireGradient > 0.5 && max(max(albedo.r, albedo.g), albedo.b) <= uTireGradientThreshold) {
+    vec3 wheelCenter = vec3(uModel[3][0], uModel[3][1], uModel[3][2]);
+    float t = clamp(dot(vWorld - wheelCenter, uSunDirection) / (2.0 * uTireGradientRadius) + 0.5, 0.0, 1.0);
+    float factor = mix(uTireGradientDarkFactor, uTireGradientBrightFactor, t);
+    albedo *= factor;
   }
   vec3 lit = shadeLitSurface(albedo, worldNormal, vEmissive);
   fragColor = vec4(mix(uFogColor, lit, fogFactor(vFogDistance)), 1.0);
@@ -333,6 +373,28 @@ const NEATRACING_CAR_MISSING_MATERIAL: VoxelMaterial = {
 };
 
 /**
+ * Base dark-rubber color baked into black wheel tire voxels so the
+ * deterministic fixed-space lighting gradient has a visible dark baseline
+ * (OBS-14/OBS-20). Brighter rim/hub palette colors are left untouched.
+ */
+const NEATRACING_BAKED_TIRE_BASE_COLOR: readonly [number, number, number] = [
+  28, 28, 30,
+];
+
+/** Bright end of the fixed-space tire gradient (toward the top-front light). */
+export const NEATRACING_TIRE_GRADIENT_BRIGHT_FACTOR = 1.7;
+
+/** Dark end of the fixed-space tire gradient (away from the top-front light). */
+export const NEATRACING_TIRE_GRADIENT_DARK_FACTOR = 0.35;
+
+/**
+ * Palette colors at or below this max channel are treated as tire rubber and
+ * receive the fixed-space vertical gradient; brighter rim/hub colors are
+ * skipped.
+ */
+export const NEATRACING_TIRE_GRADIENT_RUBBER_MAX_CHANNEL = 80;
+
+/**
  * Mesh produced by {@link expandVoxelBinModelToCarMesh}: interleaved
  * non-indexed triangles ready for one FLOAT-attributed VBO per model.
  */
@@ -357,6 +419,12 @@ export interface CarPassCarState {
   readonly teamColorId: number;
   /** Wheel spin in radians shared by all four wheels. */
   readonly wheelSpinRad: number;
+  /**
+   * Optional visual front-wheel steer angle in radians (AC-044). Applied to
+   * the front-left and front-right wheels only; rear wheels ignore this
+   * value. Centered/neutral steering uses 0; omitted means 0.
+   */
+  readonly steerAngleRad?: number;
 }
 
 /** Per-frame draw state accepted by CarPass.draw. */
@@ -448,6 +516,7 @@ export function expandVoxelBinModelToCarMesh(
   const voxelSize = NEATRACING_VOXEL_WORLD_SIZE;
   const [dimX, dimY, dimZ] = model.dims;
   const latticeCenterRows = dimY * 0.5;
+  const isWheel = yAnchor === 'center';
   const vertexCount = model.quads.length * NEATRACING_CAR_VERTICES_PER_QUAD;
   const vertexData = new Float32Array(vertexCount * CAR_MESH_FLOATS_PER_VERTEX);
   let boundsHalfExtentXzM = 0;
@@ -455,9 +524,13 @@ export function expandVoxelBinModelToCarMesh(
   for (const quad of model.quads) {
     const material =
       materials[quad.paletteIndex] ?? NEATRACING_CAR_MISSING_MATERIAL;
-    const red = material.color[0] / NEATRACING_CAR_COLOR_BYTE_MAX;
-    const green = material.color[1] / NEATRACING_CAR_COLOR_BYTE_MAX;
-    const blue = material.color[2] / NEATRACING_CAR_COLOR_BYTE_MAX;
+    // LD-23 black exception is preserved for bodies; wheels get a dark rubber
+    // base so the fixed-space lighting gradient reads as a round tire
+    // (OBS-14 / OBS-20).
+    const overrideToRubber = isWheel && material.kind === 'black';
+    const baseColor = overrideToRubber
+      ? NEATRACING_BAKED_TIRE_BASE_COLOR
+      : material.color;
     const emissive = material.emissive / NEATRACING_CAR_COLOR_BYTE_MAX;
     for (const cornerIndex of NEATRACING_CAR_TRIANGLE_CORNER_INDICES) {
       const [uScale, vScale] = NEATRACING_CAR_QUAD_CORNER_SCALES[cornerIndex];
@@ -472,12 +545,15 @@ export function expandVoxelBinModelToCarMesh(
           ? (gridY - latticeCenterRows) * voxelSize
           : gridY * voxelSize;
       const modelZ = (gridZ - dimZ * 0.5) * voxelSize;
+      // Fixed-space tire lighting is applied in the fragment shader so the
+      // highlight follows the shared sun direction and does not rotate with
+      // the spinning voxels (OBS-20). Vertex colors stay uniform rubber.
       vertexData[writeOffset] = modelX;
       vertexData[writeOffset + 1] = modelY;
       vertexData[writeOffset + 2] = modelZ;
-      vertexData[writeOffset + 3] = red;
-      vertexData[writeOffset + 4] = green;
-      vertexData[writeOffset + 5] = blue;
+      vertexData[writeOffset + 3] = baseColor[0] / NEATRACING_CAR_COLOR_BYTE_MAX;
+      vertexData[writeOffset + 4] = baseColor[1] / NEATRACING_CAR_COLOR_BYTE_MAX;
+      vertexData[writeOffset + 5] = baseColor[2] / NEATRACING_CAR_COLOR_BYTE_MAX;
       vertexData[writeOffset + 6] = quad.normalAxis;
       vertexData[writeOffset + 7] = emissive;
       vertexData[writeOffset + 8] = quad.paletteIndex;
@@ -880,6 +956,9 @@ const NEATRACING_WHEEL_TRANSLATION_MATRIX = new Float32Array(16);
 /** Wheel mount yaw scratch. */
 const NEATRACING_WHEEL_MOUNT_YAW_MATRIX = new Float32Array(16);
 
+/** Front-wheel steer yaw scratch (AC-044: visual yaw around car up). */
+const NEATRACING_WHEEL_STEER_YAW_MATRIX = new Float32Array(16);
+
 /** Wheel spin scratch (about the pre-mount model depth axis). */
 const NEATRACING_WHEEL_SPIN_MATRIX = new Float32Array(16);
 
@@ -1149,12 +1228,22 @@ export function createCarPass(
     resolveVoxelWheelSockets().map((socket) =>
       resolveVoxelWheelMountTransform(socket.id),
     );
-  // The mesh bounds field is a HALF extent, so the body's full XZ footprint
-  // is 2 x boundsHalfExtentXzM; the shadow quad world width equals this
-  // scale (the unit quad is centered by the vertex shader), targeting full
-  // footprint x NEATRACING_BLOB_SHADOW_BOUNDS_SCALE.
+  // The shadow must cover the full car footprint including the tire contact
+  // patches, not just the body bounds. Combine the body's XZ half-extent with
+  // the worst-case wheel reach (socket offset + tire radius) and scale by the
+  // named margin constant.
+  const halfTrackM = NEATRACING_WHEEL_TRACK_M / 2;
+  const halfWheelbaseM = NEATRACING_WHEEL_WHEELBASE_M / 2;
+  const wheelReachHalfExtentXzM = Math.max(
+    Math.abs(halfTrackM) + NEATRACING_WHEEL_WORLD_RADIUS_M,
+    Math.abs(halfWheelbaseM) + NEATRACING_WHEEL_WORLD_RADIUS_M,
+  );
+  const combinedHalfExtentXzM = Math.max(
+    bodyMesh.boundsHalfExtentXzM,
+    wheelReachHalfExtentXzM,
+  );
   const shadowScale =
-    bodyMesh.boundsHalfExtentXzM * 2 * NEATRACING_BLOB_SHADOW_BOUNDS_SCALE;
+    combinedHalfExtentXzM * 2 * NEATRACING_BLOB_SHADOW_BOUNDS_SCALE;
 
   /**
    * Enables and points the five lit attributes on the currently bound
@@ -1210,9 +1299,12 @@ export function createCarPass(
   }
 
   /**
-   * Draws loop 1: one blob shadow quad per car, depth-write off, blended, at
-   * world y + NEATRACING_BLOB_SHADOW_Y_OFFSET_M, scaled to the body's full
-   * XZ footprint plus the NEATRACING_BLOB_SHADOW_BOUNDS_SCALE margin.
+   * Draws loop 1: one body blob shadow plus four per-wheel contact-patch
+   * shadows per car, depth-write off, blended, at world y +
+   * NEATRACING_BLOB_SHADOW_Y_OFFSET_M. The body blob is scaled to the full
+   * car XZ footprint plus the NEATRACING_BLOB_SHADOW_BOUNDS_SCALE margin;
+   * each wheel patch is a smaller dark quad centered on the tire contact
+   * point (OBS-24).
    *
    * @param state - Frame draw state.
    * @param carCount - Number of cars sorted into the scratch order.
@@ -1246,6 +1338,7 @@ export function createCarPass(
     for (let slot = 0; slot < carCount; slot += 1) {
       const carIndex = NEATRACING_CAR_SORT_ORDER_SCRATCH[slot];
       const car = state.cars[carIndex];
+      // Body blob shadow covering the full car footprint (OBS-21).
       translationMat4(
         NEATRACING_SHADOW_TRANSLATION_MATRIX,
         car.worldX,
@@ -1270,6 +1363,46 @@ export function createCarPass(
         NEATRACING_SHADOW_MATRIX,
       );
       gl.drawArrays(GL_TRIANGLES, 0, CAR_SHADOW_VERTEX_COUNT);
+
+      // Per-wheel contact-patch shadows (OBS-24): dark quads directly under
+      // each tire so the tires cast a visible shadow, not just the body.
+      const cos = Math.cos(car.yawRad);
+      const sin = Math.sin(car.yawRad);
+      for (const mount of wheelMounts) {
+        const localX = mount.position[0];
+        const localZ = mount.position[2];
+        const wheelWorldX = car.worldX + cos * localX + sin * localZ;
+        const wheelWorldZ = car.worldZ + (-sin) * localX + cos * localZ;
+        translationMat4(
+          NEATRACING_SHADOW_TRANSLATION_MATRIX,
+          wheelWorldX,
+          NEATRACING_BLOB_SHADOW_Y_OFFSET_M,
+          wheelWorldZ,
+        );
+        rotationYMat4(NEATRACING_SHADOW_YAW_MATRIX, car.yawRad);
+        multiplyMat4(
+          NEATRACING_CAR_MATRIX_SCRATCH_A,
+          NEATRACING_SHADOW_TRANSLATION_MATRIX,
+          NEATRACING_SHADOW_YAW_MATRIX,
+        );
+        scaleXYZMat4(
+          NEATRACING_SHADOW_SCALE_MATRIX,
+          NEATRACING_BLOB_SHADOW_WHEEL_PATCH_SCALE_M,
+          1,
+          NEATRACING_BLOB_SHADOW_WHEEL_PATCH_SCALE_M,
+        );
+        multiplyMat4(
+          NEATRACING_SHADOW_MATRIX,
+          NEATRACING_CAR_MATRIX_SCRATCH_A,
+          NEATRACING_SHADOW_SCALE_MATRIX,
+        );
+        gl.uniformMatrix4fv(
+          shadowUniforms.uModel,
+          false,
+          NEATRACING_SHADOW_MATRIX,
+        );
+        gl.drawArrays(GL_TRIANGLES, 0, CAR_SHADOW_VERTEX_COUNT);
+      }
     }
   }
 
@@ -1290,6 +1423,38 @@ export function createCarPass(
       teamRgb[2] / NEATRACING_CAR_COLOR_BYTE_MAX,
     );
     gl.uniform1f(litUniforms.uTeamSlot, NEATRACING_TEAM_REMAP_SLOT);
+  }
+
+  /**
+   * Feeds the fixed-space tire gradient uniforms (OBS-20). When disabled
+   * (body draws), the shader skips the gradient. When enabled (wheel draws),
+   * the radius is the wheel hub height and the dark/bright factors give the
+   * tire its round shading toward the fixed top-front light, independent of
+   * wheel spin.
+   *
+   * @param enabled - True for wheel draws, false for the car body.
+   */
+  function feedTireGradientUniforms(enabled: boolean): void {
+    gl.uniform1f(litUniforms.uApplyTireGradient, enabled ? 1.0 : 0.0);
+    if (enabled) {
+      gl.uniform1f(
+        litUniforms.uTireGradientRadius,
+        NEATRACING_WHEEL_HUB_HEIGHT_M,
+      );
+      gl.uniform1f(
+        litUniforms.uTireGradientBrightFactor,
+        NEATRACING_TIRE_GRADIENT_BRIGHT_FACTOR,
+      );
+      gl.uniform1f(
+        litUniforms.uTireGradientDarkFactor,
+        NEATRACING_TIRE_GRADIENT_DARK_FACTOR,
+      );
+      gl.uniform1f(
+        litUniforms.uTireGradientThreshold,
+        NEATRACING_TIRE_GRADIENT_RUBBER_MAX_CHANNEL /
+          NEATRACING_CAR_COLOR_BYTE_MAX,
+      );
+    }
   }
 
   /**
@@ -1372,9 +1537,11 @@ export function createCarPass(
       // (buffer-coupled client state, no VAO).
       gl.bindBuffer(GL_ARRAY_BUFFER, bodyBuffer);
       pointLitMeshAttributes();
+      feedTireGradientUniforms(false);
       drawLitMesh(NEATRACING_CAR_MODEL_MATRIX, bodyMesh.vertexCount, car);
       gl.bindBuffer(GL_ARRAY_BUFFER, wheelBuffer);
       pointLitMeshAttributes();
+      feedTireGradientUniforms(true);
       for (const mount of wheelMounts) {
         translationMat4(
           NEATRACING_WHEEL_TRANSLATION_MATRIX,
@@ -1393,14 +1560,26 @@ export function createCarPass(
           NEATRACING_CAR_MATRIX_SCRATCH_A,
           NEATRACING_WHEEL_MOUNT_YAW_MATRIX,
         );
-        rotationZMat4(NEATRACING_WHEEL_SPIN_MATRIX, car.wheelSpinRad);
+        const isFrontWheel =
+          mount.socketId === 'front-left' ||
+          mount.socketId === 'front-right';
+        rotationYMat4(
+          NEATRACING_WHEEL_STEER_YAW_MATRIX,
+          isFrontWheel ? (car.steerAngleRad ?? 0) : 0,
+        );
         multiplyMat4(
           NEATRACING_CAR_MATRIX_SCRATCH_A,
           NEATRACING_CAR_MATRIX_SCRATCH_B,
+          NEATRACING_WHEEL_STEER_YAW_MATRIX,
+        );
+        rotationZMat4(NEATRACING_WHEEL_SPIN_MATRIX, car.wheelSpinRad);
+        multiplyMat4(
+          NEATRACING_CAR_MATRIX_SCRATCH_B,
+          NEATRACING_CAR_MATRIX_SCRATCH_A,
           NEATRACING_WHEEL_SPIN_MATRIX,
         );
         drawLitMesh(
-          NEATRACING_CAR_MATRIX_SCRATCH_A,
+          NEATRACING_CAR_MATRIX_SCRATCH_B,
           wheelMesh.vertexCount,
           car,
         );

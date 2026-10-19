@@ -65,6 +65,10 @@ import type {
   BloomPass,
   BloomPassDrawFrame,
 } from '../engine/passes/bloom.pass';
+import type {
+  TrackGridPass,
+  TrackGridPassDrawState,
+} from '../track/grid.pass';
 
 /** `gl.FRAMEBUFFER` target enum (0x8D40) used by the FBO choreography pins. */
 const MOCK_GL_FRAMEBUFFER = 0x8d40;
@@ -457,7 +461,8 @@ interface TrackPassSeam {
 /** Recorded pass doubles, keyed by the pinned warmup-key draw order. */
 interface RecordingPassHandles {
   readonly starfield: StarfieldPass;
-  readonly grid: GridPass;
+  readonly grid?: GridPass;
+  readonly trackGrid?: TrackGridPass;
   readonly pulse: NeatRacingPulsePass;
   readonly track: TrackPassSeam;
   readonly car: CarPass;
@@ -469,6 +474,8 @@ interface RecordingPassHandles {
   readonly starfieldDrawCalls: readonly StarfieldCameraPose[];
   /** Draw states observed by the grid seam, in call order. */
   readonly gridDrawStates: readonly GridPassDrawState[];
+  /** Draw states observed by the track-grid seam, in call order. */
+  readonly trackGridDrawStates: readonly TrackGridPassDrawState[];
   /** Draw states observed by the car seam, in call order. */
   readonly carDrawStates: readonly CarPassDrawState[];
   /** Bloom frames observed by the bloom seam, in call order. */
@@ -483,10 +490,18 @@ interface RecordingPassHandles {
  * @param timeline - The harness choreography log to append draw tags to.
  * @returns The recording doubles for one test case.
  */
-function createRecordingPasses(timeline: string[]): RecordingPassHandles {
+function createRecordingPasses(
+  timeline: string[],
+  options: {
+    readonly includeGrid?: boolean;
+    readonly includeTrackGrid?: boolean;
+  } = {},
+): RecordingPassHandles {
+  const { includeGrid = true, includeTrackGrid = false } = options;
   const drawOrder: string[] = [];
   const starfieldDrawCalls: StarfieldCameraPose[] = [];
   const gridDrawStates: GridPassDrawState[] = [];
+  const trackGridDrawStates: TrackGridPassDrawState[] = [];
   const trackDrawStates: {
     readonly viewProjection: Float32Array;
     readonly cameraWorld: readonly [number, number, number];
@@ -508,13 +523,24 @@ function createRecordingPasses(timeline: string[]): RecordingPassHandles {
     getLayerLayout: (): StarfieldLayerLayout =>
       ({}) as unknown as StarfieldLayerLayout,
   };
-  const grid: GridPass = {
-    draw: (state): void => {
-      drawOrder.push('grid');
-      timeline.push('draw:grid');
-      gridDrawStates.push(state);
-    },
-  };
+  const grid: GridPass | undefined = includeGrid
+    ? {
+        draw: (state): void => {
+          drawOrder.push('grid');
+          timeline.push('draw:grid');
+          gridDrawStates.push(state);
+        },
+      }
+    : undefined;
+  const trackGrid: TrackGridPass | undefined = includeTrackGrid
+    ? {
+        draw: (state): void => {
+          drawOrder.push('track-grid');
+          timeline.push('draw:track-grid');
+          trackGridDrawStates.push(state);
+        },
+      }
+    : undefined;
   const pulse: NeatRacingPulsePass = {
     programKey: 'pulse',
     draw: (frame): void => {
@@ -558,6 +584,7 @@ function createRecordingPasses(timeline: string[]): RecordingPassHandles {
   return {
     starfield,
     grid,
+    trackGrid,
     pulse,
     track,
     car,
@@ -566,6 +593,7 @@ function createRecordingPasses(timeline: string[]): RecordingPassHandles {
     drawOrder,
     starfieldDrawCalls,
     gridDrawStates,
+    trackGridDrawStates,
     carDrawStates,
     bloomDrawFrames,
   };
@@ -611,6 +639,7 @@ function createTestComposer(
     passes: {
       starfield: handles.starfield,
       grid: handles.grid,
+      trackGrid: handles.trackGrid,
       pulse: handles.pulse,
       track: handles.track,
       car: handles.car,
@@ -662,6 +691,42 @@ describe('createFrameComposer (slice P1-frame-composer — AC-002 extension)', (
       composer.drawFrame(makeFrame());
       // Assert — order AND exactly-once-per-pass pinned by exact equality.
       expect(handles.drawOrder).toEqual(PINNED_DRAW_ORDER);
+    });
+
+    it('skips the optional legacy grid and draws the track-grid pass instead (OBS-5)', () => {
+      // Arrange
+      const harness = createMockComposerGlHarness();
+      const handles = createRecordingPasses(harness.timeline, {
+        includeGrid: false,
+        includeTrackGrid: true,
+      });
+      const composer = createFrameComposer({
+        gl: harness.gl,
+        passes: {
+          starfield: handles.starfield,
+          trackGrid: handles.trackGrid,
+          pulse: handles.pulse,
+          track: handles.track,
+          car: handles.car,
+          glass: handles.glass,
+          bloom: handles.bloom,
+        },
+      });
+      // Act
+      composer.drawFrame(makeFrame());
+      // Assert — the legacy grid is absent, track-grid is drawn, and the
+      // remaining world/bloom order is preserved.
+      expect(handles.drawOrder).not.toContain('grid');
+      expect(handles.drawOrder).toEqual([
+        'starfield',
+        'pulse',
+        'track',
+        'track-grid',
+        'car',
+        'glass',
+        'bloom',
+      ]);
+      expect(handles.trackGridDrawStates.length).toBe(1);
     });
   });
 

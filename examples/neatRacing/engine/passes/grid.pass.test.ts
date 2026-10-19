@@ -60,9 +60,6 @@ const MOCK_GL_DEPTH_TEST = 0x0b71;
 /** `gl.TRIANGLES` enum value (0x0004) asserted on the mock draw call. */
 const MOCK_GL_TRIANGLES = 0x0004;
 
-/** `gl.TRIANGLE_STRIP` enum value (0x0005) used by other passes. */
-const MOCK_GL_TRIANGLE_STRIP = 0x0005;
-
 /** Number of uniforms the pass resolves at creation (one call per uniform). */
 const GRID_UNIFORM_COUNT = 11;
 
@@ -171,20 +168,6 @@ function uniform1fValue(harness: MockGlHarness, uniformName: string): number {
     throw new Error(`uniform ${uniformName} was never set`);
   }
   return args[1] as number;
-}
-
-/** Reads the vec2 a `uniform2f` call set for `uniformName`. */
-function uniform2fValue(
-  harness: MockGlHarness,
-  uniformName: string,
-): readonly [number, number] {
-  const args = harness
-    .callsFor('uniform2f')
-    .find((call) => (call[0] as { name: string }).name === uniformName);
-  if (!args) {
-    throw new Error(`uniform ${uniformName} was never set`);
-  }
-  return [args[1] as number, args[2] as number];
 }
 
 /** Reads the vec3 a `uniform3f` call set for `uniformName`. */

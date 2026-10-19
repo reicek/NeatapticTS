@@ -24,10 +24,12 @@
 
 import { describe, expect, it } from '@jest/globals';
 import { NEATRACING_WARMED_PROGRAM_KEYS } from '../context.service';
+import type { TrackSlabMesh } from '../../track/track.slabs';
 import {
   NEATRACING_TRACK_PROGRAM_KEY,
   type TrackPass,
   type TrackPassDrawState,
+  buildTrackVboData,
   createTrackPass,
   toTrackWarmupProgram,
 } from './track.pass';
@@ -45,6 +47,9 @@ const MOCK_GL_DEPTH_TEST = 0x0b71;
 
 /** `gl.CULL_FACE` enum value (0x0B44) asserted as disabled every draw. */
 const MOCK_GL_CULL_FACE = 0x0b44;
+
+/** `gl.BLEND` enum value (0x0BE2) asserted as disabled every draw. */
+const MOCK_GL_BLEND = 0x0be2;
 
 /** `gl.TRIANGLES` enum value (0x0004) asserted as a plausible geometry mode. */
 const MOCK_GL_TRIANGLES = 0x0004;
@@ -195,6 +200,15 @@ describe('neatRacing track slab pass (AC-017)', () => {
     expect(harness.disableCalls).toContain(MOCK_GL_CULL_FACE);
   });
 
+  it('disables blending so the opaque track ribbon overwrites prior pixels', () => {
+    const harness = createTrackMockGlHarness();
+    const pass = createTrackPass(harness.gl);
+
+    pass.draw(createDrawState());
+
+    expect(harness.disableCalls).toContain(MOCK_GL_BLEND);
+  });
+
   it('feeds the camera view-projection matrix to the track shader', () => {
     const harness = createTrackMockGlHarness();
     const pass = createTrackPass(harness.gl);
@@ -228,5 +242,53 @@ describe('neatRacing track slab pass (AC-017)', () => {
     expect(harness.drawCalls.length - drawsBeforeWarmup).toBeGreaterThanOrEqual(
       1,
     );
+  });
+
+  it('renders slab top faces as a flat near-black matte base', () => {
+    const matte = 12 / 255;
+    const roadColor: readonly [number, number, number] = [64, 64, 68];
+    const mesh: TrackSlabMesh = {
+      palette: [{ type: 'road', color: roadColor }],
+      quads: [
+        // Top face at world y = 0, normalAxis = 1.
+        { position: [0, 0, 0], normalAxis: 1, width: 1, height: 1, paletteIndex: 0 },
+      ],
+    };
+
+    const vbo = buildTrackVboData(mesh);
+
+    expect(vbo[3]).toBeCloseTo(matte, 6);
+    expect(vbo[4]).toBeCloseTo(matte, 6);
+    expect(vbo[5]).toBeCloseTo(matte, 6);
+  });
+
+  it('keeps palette colors on slab side and bottom faces', () => {
+    const curbColor: readonly [number, number, number] = [214, 44, 44];
+    const grassColor: readonly [number, number, number] = [46, 156, 70];
+    const mesh: TrackSlabMesh = {
+      palette: [
+        { type: 'curb', color: curbColor },
+        { type: 'grass', color: grassColor },
+      ],
+      quads: [
+        // Vertical curb face, not a top face.
+        { position: [0, 0, 0], normalAxis: 0, width: 1, height: 0.5, paletteIndex: 0 },
+        // Bottom grass face at world y = -0.5.
+        { position: [0, -0.5, 0], normalAxis: 1, width: 1, height: 1, paletteIndex: 1 },
+      ],
+    };
+
+    const vbo = buildTrackVboData(mesh);
+
+    // Vertical face keeps curb color (first vertex color after position xyz).
+    expect(vbo[3]).toBeCloseTo(curbColor[0] / 255, 6);
+    expect(vbo[4]).toBeCloseTo(curbColor[1] / 255, 6);
+    expect(vbo[5]).toBeCloseTo(curbColor[2] / 255, 6);
+
+    // Bottom face keeps grass color (second quad starts at vertex 6).
+    const base = 6 * 6;
+    expect(vbo[base + 3]).toBeCloseTo(grassColor[0] / 255, 6);
+    expect(vbo[base + 4]).toBeCloseTo(grassColor[1] / 255, 6);
+    expect(vbo[base + 5]).toBeCloseTo(grassColor[2] / 255, 6);
   });
 });

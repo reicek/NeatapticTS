@@ -28,6 +28,10 @@ const config = {
           'ts-jest',
           { useESM: true, tsconfig: 'tsconfig.test.json', diagnostics: true },
         ],
+        '^.+robot-sprite-data\\.js$': [
+          'ts-jest',
+          { useESM: true, tsconfig: 'tsconfig.neatenstein.json', diagnostics: true },
+        ],
         '^.+assimilate-repo\\.mjs$': [
           '<rootDir>/scripts/agent-customization/mcp/__tests__/mjs-cjs-transformer.cjs',
         ],

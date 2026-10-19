@@ -55,10 +55,11 @@ const NEATRACING_FOG_B_BYTE = 225;
 
 /**
  * Sun direction components, authored in integer space and normalized below.
- * Up-dominant (y = 2) so the directional term reads as daylight with soft
- * east/west bias; unit-length in the exported constant.
+ * Up-dominant (y = 2) with a small forward (+z) component so the directional
+ * term reads as a fixed top-front light over the car and wheels (OBS-20);
+ * unit-length in the exported constant.
  */
-const NEATRACING_SUN_DIRECTION_AUTHORED = [1, 2, 1] as const;
+const NEATRACING_SUN_DIRECTION_AUTHORED = [0, 2, 0.5] as const;
 
 /** Fog extinction coefficient in 1/m (fogFactor = exp2(-(density * d)^2)). */
 export const NEATRACING_FOG_DENSITY_1_PER_M = 0.006;

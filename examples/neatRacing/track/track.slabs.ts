@@ -445,6 +445,159 @@ const TRACK_SLAB_PALETTE: readonly TrackSlabPaletteEntry[] = [
 ];
 
 /**
+ * Surface label for one cell of the track slab lattice, including the
+ * internal air/empty sentinel so callers can reason about boundaries.
+ */
+export type TrackSlabSurfaceCell = 'air' | TrackSlabSurfaceType;
+
+/**
+ * Classification of an arbitrary ground-plane point, including both the
+ * priority-winning surface label and the distance past the nearest track edge
+ * so consumers can place border geometry consistently with the ribbon.
+ */
+export interface TrackSlabSurfaceClassification {
+  /** Priority-winning surface label at the query point. */
+  readonly surface: TrackSlabSurfaceCell;
+  /**
+   * Signed distance from the query point to the nearest segment's road edge
+   * (positive means outside the roadway, negative means inside the half-width
+   * envelope). Always defined so consumers can place border geometry beyond the
+   * grass apron consistently with the ribbon.
+   */
+  readonly distancePastEdgeM: number;
+}
+
+/**
+ * Classifies an arbitrary ground-plane point using the same band logic that
+ * paints the 0.5 m slab lattice. This lets other builders (for example the
+ * road-edge flat paint) emit geometry whose cells sit exactly on the ribbon's
+ * road/curb/grass boundaries without duplicating classification logic.
+ *
+ * @param pointX - Ground-plane x of the sample point.
+ * @param pointZ - Ground-plane z of the sample point. Internally mirrored to
+ *   generator y via `-pointZ`, matching the `worldZ = -y` convention used by
+ *   the slab rasterizer.
+ * @param segments - Closed-loop segments defining the ribbon.
+ * @returns Surface label plus signed distance past the nearest track edge.
+ *   `distancePastEdgeM` is always defined: it is negative inside the roadway,
+ *   zero on the curb outer edge, and positive outside.
+ */
+export function classifyTrackSlabSurfaceAt(
+  pointX: number,
+  pointZ: number,
+  segments: readonly TrackSegment[],
+): TrackSlabSurfaceClassification {
+  let inRoadCore = false;
+  let inCurbBand = false;
+  let inGrassApron = false;
+  let minDistancePastEdgeM = Number.POSITIVE_INFINITY;
+
+  for (const segment of segments) {
+    const halfWidth = segment.width / 2;
+    // Mirror world z to generator y so the road-edge classifier uses the
+    // same handedness as the slab rasterizer (worldZ = -y).
+    const distance = distanceToSegment2D(pointX, -pointZ, segment);
+    const pastEdge = distance - halfWidth;
+
+    if (pastEdge < minDistancePastEdgeM) {
+      minDistancePastEdgeM = pastEdge;
+    }
+
+    if (distance <= halfWidth - TRACK_SLAB_CURB_WIDTH_M) {
+      inRoadCore = true;
+    } else if (distance <= halfWidth) {
+      inCurbBand = true;
+    } else if (distance <= halfWidth + TRACK_SLAB_GRASS_APRON_WIDTH_M) {
+      inGrassApron = true;
+    }
+  }
+
+  if (inRoadCore) {
+    return { surface: 'road', distancePastEdgeM: minDistancePastEdgeM };
+  }
+  if (inCurbBand) {
+    return { surface: 'curb', distancePastEdgeM: minDistancePastEdgeM };
+  }
+  if (inGrassApron) {
+    return { surface: 'grass', distancePastEdgeM: minDistancePastEdgeM };
+  }
+  return { surface: 'air', distancePastEdgeM: minDistancePastEdgeM };
+}
+
+/**
+ * Typed 2-D grid of track slab surface labels aligned to the same 0.5 m
+ * lattice used by {@link buildTrackSlabs}. This lets other builders emit
+ * geometry whose cells sit exactly on the ribbon's road/curb/grass boundaries
+ * without duplicating classification logic.
+ */
+export interface TrackSlabSurfaceGrid {
+  /** World-meter position of lattice cell [0, 0, 0]. */
+  readonly origin: readonly [number, number, number];
+  /** World-space pitch of every cell, in meters. */
+  readonly pitch: number;
+  /** Number of lattice cells along world x. */
+  readonly cellsX: number;
+  /** Number of lattice cells along world z. */
+  readonly cellsZ: number;
+  /**
+   * Surface labels indexed `rows[z][x]` matching the lattice handedness
+   * (`worldZ = -y`).
+   */
+  readonly rows: readonly (readonly TrackSlabSurfaceCell[])[];
+}
+
+/**
+ * Maps an internal lattice palette index to the exported surface label.
+ */
+function surfaceIndexToType(index: number): TrackSlabSurfaceCell {
+  if (index === TRACK_ROAD_SURFACE_INDEX) {
+    return 'road';
+  }
+  if (index === TRACK_CURB_SURFACE_INDEX) {
+    return 'curb';
+  }
+  if (index === TRACK_GRASS_SURFACE_INDEX) {
+    return 'grass';
+  }
+  return 'air';
+}
+
+/**
+ * Builds a typed surface grid for the deterministic track tuple, sharing the
+ * same 0.5 m lattice rasterization used by the slab mesh. The returned grid
+ * origin, pitch, and dimensions are exactly those the slab builder uses, so
+ * consumers can place geometry on the same cell centers.
+ *
+ * @param input - Deterministic build input
+ *   `{ seed, layoutVersion, sizeBucket }` matching the shared generator.
+ * @returns Typed surface grid with road, curb, grass, and air cells.
+ * @example
+ * ```ts
+ * const grid = buildTrackSlabSurfaceGrid({ seed: 42, layoutVersion: 1, sizeBucket: 'large' });
+ * grid.rows[0][0]; // 'air' | 'road' | 'curb' | 'grass'
+ * ```
+ */
+export function buildTrackSlabSurfaceGrid(
+  input: TrackSlabBuildInput,
+): TrackSlabSurfaceGrid {
+  const spec = generateTrack(input);
+  const lattice = synthesizeTrackSlabLattice(spec);
+  const pitch = NEATRACING_TRACK_SLAB_PITCH_M;
+
+  const rows: TrackSlabSurfaceCell[][] = lattice.model.slices.map((slice) =>
+    Array.from(slice, surfaceIndexToType),
+  );
+
+  return {
+    origin: lattice.origin,
+    pitch,
+    cellsX: lattice.model.dims[0],
+    cellsZ: lattice.model.dims[2],
+    rows,
+  };
+}
+
+/**
  * Builds the deterministic track slab mesh for a generateTrack fixture.
  *
  * Pipeline: recycled closed-loop generator (spec section 11) ->

@@ -6,6 +6,7 @@
 import { writeFile, unlink, readFile } from 'node:fs/promises';
 import path from 'node:path';
 
+import { jest } from '@jest/globals';
 import {
   loadActivePlanContext,
   resolveEffectivePlanPath,
@@ -429,6 +430,29 @@ goal: 'implement'
 ## Validation gates
 `;
 
+const SUB_LETTER_STEP_PLAN = `# Sub-Letter Step Test Plan
+
+## Implementation phases
+
+### Phase 15 — Sub-Letter Step [WIP]
+
+\`\`\`yaml
+expansion: steps
+auto_expand: false
+\`\`\`
+
+#### Step 14C — Sub-Letter Step [WIP]
+
+\`\`\`yaml
+agent: '04-implementing'
+goal: 'implement'
+\`\`\`
+
+**Step objective:** Implement with numeric step plus trailing letter.
+
+## Validation gates
+`;
+
 const NO_AGENT_NO_GOAL_PLAN = `# No Agent No Goal Test Plan
 
 ## Implementation phases
@@ -799,6 +823,15 @@ describe('loadActivePlanContext', () => {
     expect(ctx.activeStep.number).toBe('E1');
   });
 
+  it('handles numeric step identifier with trailing letter', async () => {
+    const planPath = await createPlanFile(
+      'test-cov-sub-letter-step.plans.md',
+      SUB_LETTER_STEP_PLAN,
+    );
+    const ctx = await loadActivePlanContext(planPath);
+    expect(ctx.activeStep.number).toBe('14C');
+  });
+
   it('throws ENOENT error for nonexistent plan file', async () => {
     await expect(
       loadActivePlanContext('plans/nonexistent-test-file-12345.plans.md'),
@@ -1101,5 +1134,78 @@ describe('createValidationAllowlistSnapshot', () => {
     const ctx = await loadActivePlanContext(planPath);
     const snapshot = createValidationAllowlistSnapshot(ctx);
     expect(snapshot.activeStep.agent).toBe('implement feature');
+  });
+});
+
+// ── parsePhaseMetadata catch branch coverage ──────────────────────────────
+
+describe('parsePhaseMetadata catch branch (mocked parsePlanYamlBlock)', () => {
+  let loadActivePlanContextMocked;
+
+  beforeAll(async () => {
+    jest.unstable_mockModule('../customization-utils.mjs', () => ({
+      parsePlanYamlBlock: jest.fn((yamlText) => {
+        if (typeof yamlText === 'string' && yamlText.includes('FORCE_THROW')) {
+          throw new Error('forced parse error');
+        }
+        return { agent: 'test-agent', goal: 'test-goal' };
+      }),
+      issue: jest.fn(),
+      summarizeIssues: jest.fn(() => ({
+        name: 'mock',
+        errorCount: 0,
+        warningCount: 0,
+        issues: [],
+      })),
+      writeReport: jest.fn(),
+    }));
+    jest.resetModules();
+    const mcpPlanUtils = await import('./mcp-plan-utils.mjs');
+    loadActivePlanContextMocked = mcpPlanUtils.loadActivePlanContext;
+  });
+
+  afterAll(() => {
+    jest.unstable_unmockModule('../customization-utils.mjs');
+    jest.resetModules();
+  });
+
+  it('returns empty phase metadata when the phase YAML parser throws', async () => {
+    const planText = `# Phase Throw Coverage Plan
+
+## Implementation phases
+
+### Phase 1 — Throw Phase [WIP]
+
+\`\`\`yaml
+FORCE_THROW: true
+expansion: steps
+auto_expand: false
+\`\`\`
+
+#### Step 01 — Normal Step [WIP]
+
+\`\`\`yaml
+agent: 'test-agent'
+goal: 'test goal'
+validation:
+  - 'npm test'
+\`\`\`
+
+**Step objective:** Cover the parsePhaseMetadata catch branch.
+
+**Required validation:**
+- \`npm test\`
+
+## Validation gates
+`;
+    const planPath = await createPlanFile(
+      'test-cov-phase-throw.plans.md',
+      planText,
+    );
+    const ctx = await loadActivePlanContextMocked(planPath);
+
+    expect(ctx.phaseMetadata).toEqual({});
+    expect(ctx.activeStep).not.toBeNull();
+    expect(ctx.activeStep.metadata.agent).toBe('test-agent');
   });
 });

@@ -465,5 +465,16 @@ describe('convergence-tracker.gate.mjs', () => {
 
       expect(result.evidence.iterationCount).toBe(1);
     });
+
+    it('ignores headings that only appear inside fenced code blocks', async () => {
+      const { runConvergenceTrackerGate } = await loadGate();
+      const result = runConvergenceTrackerGate({
+        planText:
+          '```yaml\n## Latest validation evidence\n- fix-loop: A6-impl iteration 99 status=failed\n```\n\n## Latest validation evidence\n\n- fix-loop: A6-impl iteration 1 status=failed\n- fix-loop: A6-impl iteration 2 status=failed',
+        sliceId: 'A6-impl',
+      });
+
+      expect(result.evidence.iterationCount).toBe(2);
+    });
   });
 });

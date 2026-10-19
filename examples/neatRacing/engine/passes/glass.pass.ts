@@ -269,6 +269,11 @@ export interface GlassPassCarState {
   readonly yawRad: number;
   /** Wheel spin in radians shared by all four wheels (LD-21 mount parity). */
   readonly wheelSpinRad: number;
+  /**
+   * Optional visual front-wheel steer angle in radians (AC-044). Applied to
+   * the front-left and front-right glass wheels only; omitted means 0.
+   */
+  readonly steerAngleRad?: number;
 }
 
 /** Per-frame draw state accepted by GlassPass.draw. */
@@ -619,6 +624,9 @@ const NEATRACING_GLASS_WHEEL_TRANSLATION_MATRIX = new Float32Array(16);
 
 /** Wheel mount yaw scratch. */
 const NEATRACING_GLASS_WHEEL_MOUNT_YAW_MATRIX = new Float32Array(16);
+
+/** Front-wheel steer yaw scratch (AC-044: visual yaw around car up). */
+const NEATRACING_GLASS_WHEEL_STEER_YAW_MATRIX = new Float32Array(16);
 
 /** Wheel spin scratch (about the pre-mount model depth axis). */
 const NEATRACING_GLASS_WHEEL_SPIN_MATRIX = new Float32Array(16);
@@ -1070,16 +1078,28 @@ export function createGlassPass(
         NEATRACING_GLASS_MATRIX_SCRATCH_A,
         NEATRACING_GLASS_WHEEL_MOUNT_YAW_MATRIX,
       );
-      rotationZMat4(NEATRACING_GLASS_WHEEL_SPIN_MATRIX, car.wheelSpinRad);
+      const isFrontWheel =
+        mount.socketId === 'front-left' ||
+        mount.socketId === 'front-right';
+      rotationYMat4(
+        NEATRACING_GLASS_WHEEL_STEER_YAW_MATRIX,
+        isFrontWheel ? (car.steerAngleRad ?? 0) : 0,
+      );
       multiplyMat4(
         NEATRACING_GLASS_MATRIX_SCRATCH_A,
         NEATRACING_GLASS_MATRIX_SCRATCH_B,
+        NEATRACING_GLASS_WHEEL_STEER_YAW_MATRIX,
+      );
+      rotationZMat4(NEATRACING_GLASS_WHEEL_SPIN_MATRIX, car.wheelSpinRad);
+      multiplyMat4(
+        NEATRACING_GLASS_MATRIX_SCRATCH_B,
+        NEATRACING_GLASS_MATRIX_SCRATCH_A,
         NEATRACING_GLASS_WHEEL_SPIN_MATRIX,
       );
       gl.uniformMatrix4fv(
         uniforms.uModel,
         false,
-        NEATRACING_GLASS_MATRIX_SCRATCH_A,
+        NEATRACING_GLASS_MATRIX_SCRATCH_B,
       );
       gl.drawArrays(GL_TRIANGLES, 0, wheelMesh.vertexCount);
     }

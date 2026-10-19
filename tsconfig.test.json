@@ -13,7 +13,7 @@
     // Allow explicit `.ts` import specifiers in ESM examples executed via ts-node.
     "allowImportingTsExtensions": true,
     // Allow importing from src with relative paths
-    "allowJs": false,
+    "allowJs": true,
     "noEmit": false,
     // Resolve package-level `neataptic` imports to the root source entry during tests.
     "paths": {

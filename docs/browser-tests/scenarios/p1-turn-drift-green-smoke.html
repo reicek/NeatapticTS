@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>P1 turn-drift-green smoke</title>
+<style>
+html, body { margin: 0; padding: 0; height: 100%; background: #05070d; overflow: hidden; }
+#neatracing-output { width: 100%; height: 100%; }
+#neatracing-hud-output { position: absolute; top: 0; left: 0; }
+</style>
+</head>
+<body>
+<div id="neatracing-output"></div>
+<div id="neatracing-hud-output"></div>
+<script>
+(function () {
+  'use strict';
+  var result = {
+    passed: false,
+    bundleLoaded: false,
+    neatRacingStartDefined: false,
+    canvasMounted: false,
+    hudMounted: false,
+    modeSwitchedToManual: false,
+    webglOk: false,
+    consoleErrors: [],
+    networkFailures: [],
+    checks: {},
+    notes: ''
+  };
+  window.p1TurnDriftGreenSmokeResult = result;
+
+  window.addEventListener('error', function (e) {
+    result.consoleErrors.push('error: ' + String(e.message));
+  });
+  window.addEventListener('unhandledrejection', function (e) {
+    result.consoleErrors.push('unhandledrejection: ' + String(e.reason));
+  });
+  var origConsoleError = console.error;
+  console.error = function () {
+    result.consoleErrors.push(Array.from(arguments).map(String).join(' '));
+    return origConsoleError.apply(this, arguments);
+  };
+
+  var shaderSources = new Map();
+  var programSources = new Map();
+  var locationName = new Map();
+  var currentProgram = null;
+  var currentArrayBuffer = null;
+  var gridDraws = 0;
+  var trackDraws = 0;
+  var shadowDraws = 0;
+  var capturedGridSpacing = null;
+  var capturedTrackVboData = null;
+  var carLitModelsThisFrame = [];
+  var litDrawBufferIdsThisFrame = [];
+  var wheelBufferIdsSeen = new Map();
+  var wheelBufferId = null;
+  var gridProgram = null;
+  var trackProgram = null;
+  var bufferDataMap = new Map();
+  var shadowColorFeeds = [];
+  var shadowModelScales = [];
+  var tireGradientApplySequence = [];
+  var currentTireGradientApply = 0;
+  var litApplyThisFrame = [];
+
+  function sourceOf(program) {
+    return programSources.get(program) || '';
+  }
+  function recordUniform(loc, value) {
+    if (!currentProgram) return;
+    var name = locationName.get(loc);
+    if (!name) return;
+    if (name === 'uSpacing' && sourceOf(currentProgram).indexOf('uSpacing') !== -1) {
+      capturedGridSpacing = value;
+      gridProgram = currentProgram;
+    }
+  }
+
+  function wrapGL(gl) {
+    if (!gl || gl.__patched) return gl;
+    gl.__patched = true;
+    var proto = Object.getPrototypeOf(gl);
+    function wrap(method, fn) {
+      var orig = proto[method];
+      proto[method] = function () {
+        return fn.call(this, orig, arguments);
+      };
+    }
+    wrap('shaderSource', function (orig, args) {
+      shaderSources.set(args[0], args[1]);
+      return orig.apply(this, args);
+    });
+    wrap('attachShader', function (orig, args) {
+      var src = shaderSources.get(args[1]) || '';
+      programSources.set(args[0], (programSources.get(args[0]) || '') + src);
+      return orig.apply(this, args);
+    });
+    wrap('useProgram', function (orig, args) {
+      currentProgram = args[0];
+      return orig.apply(this, args);
+    });
+    wrap('getUniformLocation', function (orig, args) {
+      var loc = orig.apply(this, args);
+      if (loc) locationName.set(loc, args[1]);
+      return loc;
+    });
+    wrap('uniform1f', function (orig, args) {
+      recordUniform(args[0], args[1]);
+      var name = locationName.get(args[0]);
+      if (name === 'uApplyTireGradient' && sourceOf(currentProgram).indexOf('shadeLitSurface') !== -1) {
+        currentTireGradientApply = args[1];
+        tireGradientApplySequence.push(args[1]);
+      }
+      return orig.apply(this, args);
+    });
+    wrap('uniform3f', function (orig, args) {
+      var name = locationName.get(args[0]);
+      if (name === 'uShadowColor') {
+        shadowColorFeeds.push([args[1], args[2], args[3]]);
+      }
+      return orig.apply(this, args);
+    });
+    wrap('uniformMatrix4fv', function (orig, args) {
+      var loc = args[0], data = args[2];
+      recordUniform(loc, data);
+      var src = sourceOf(currentProgram);
+      var name = locationName.get(loc);
+      if (src.indexOf('shadeLitSurface') !== -1 && name === 'uModel') {
+        var arr = new Float32Array(data.length);
+        arr.set(data);
+        carLitModelsThisFrame.push(arr);
+      }
+      if (src.indexOf('uShadowColor') !== -1 && name === 'uModel') {
+        shadowModelScales.push(data[0]);
+      }
+      return orig.apply(this, args);
+    });
+    wrap('bindBuffer', function (orig, args) {
+      if (args[0] === this.ARRAY_BUFFER) currentArrayBuffer = args[1];
+      return orig.apply(this, args);
+    });
+    wrap('bufferData', function (orig, args) {
+      var target = args[0], data = args[1];
+      if (target === this.ARRAY_BUFFER && data instanceof Float32Array && currentArrayBuffer) {
+        bufferDataMap.set(currentArrayBuffer, data.slice());
+      }
+      return orig.apply(this, args);
+    });
+    wrap('drawArrays', function (orig, args) {
+      var src = sourceOf(currentProgram);
+      if (src.indexOf('uSpacing') !== -1) {
+        gridDraws++;
+        gridProgram = currentProgram;
+      }
+      if (src.indexOf('vColor = aColor;') !== -1) {
+        trackDraws++;
+        trackProgram = currentProgram;
+        if (!capturedTrackVboData) {
+          var buf = this.getParameter(this.ARRAY_BUFFER_BINDING);
+          var d = bufferDataMap.get(buf);
+          if (d && d.length > 100) capturedTrackVboData = d.slice();
+        }
+      }
+      if (src.indexOf('uShadowColor') !== -1) {
+        shadowDraws++;
+      }
+      if (src.indexOf('shadeLitSurface') !== -1) {
+        litDrawBufferIdsThisFrame.push(currentArrayBuffer);
+        litApplyThisFrame.push(currentTireGradientApply);
+      }
+      return orig.apply(this, args);
+    });
+  }
+
+  var origGetContext = HTMLCanvasElement.prototype.getContext;
+  HTMLCanvasElement.prototype.getContext = function (type, attrs) {
+    var ctx = origGetContext.call(this, type, attrs);
+    if (type === 'webgl2' || type === 'experimental-webgl2') wrapGL(ctx);
+    return ctx;
+  };
+
+  function loadBundle() {
+    return new Promise(function (resolve, reject) {
+      var s = document.createElement('script');
+      s.src = '../../assets/neatracing.bundle.js';
+      s.onload = function () { result.bundleLoaded = true; resolve(); };
+      s.onerror = function () {
+        result.networkFailures.push('bundle load error');
+        reject(new Error('bundle load error'));
+      };
+      document.body.appendChild(s);
+    });
+  }
+
+  function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+  function dispatchKey(code, down) {
+    window.dispatchEvent(new KeyboardEvent(down ? 'keydown' : 'keyup', {
+      code: code, bubbles: true, cancelable: true, composed: true
+    }));
+  }
+  function yawFromMatrix(m) {
+    return Math.atan2(-m[2], m[0]);
+  }
+  function wrapAngle(a) {
+    while (a > Math.PI) a -= 2 * Math.PI;
+    while (a < -Math.PI) a += 2 * Math.PI;
+    return a;
+  }
+  function average(arr) {
+    if (!arr.length) return 0;
+    return arr.reduce(function (a, b) { return a + b; }, 0) / arr.length;
+  }
+
+  function setManualMode() {
+    var select = document.getElementById('neatracing-race-mode-selector');
+    if (!select) return false;
+    select.value = 'manual';
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    return true;
+  }
+
+  function analyzeTrackVbo() {
+    var data = capturedTrackVboData;
+    if (!data) return { ok: false, error: 'no track VBO captured' };
+    var n = data.length / 6;
+    var minY = Infinity, maxY = -Infinity, edgeMaxY = -Infinity;
+    var paintMinY = Infinity;
+    var red = 0, yellow = 0, green = 0, teal = 0, neonCount = 0;
+    var matteCount = 0, fillCount = 0, edgeCount = 0;
+    var topOldColors = 0, topLayerCount = 0;
+    var roadPoints = [];
+    var redPoints = [], yellowPoints = [], greenPoints = [];
+    var blackOutlineCount = 0;
+    var PAINT_Y_THRESHOLD = 0.015;
+    var NEAR_BLACK_THRESHOLD = 0.12;
+    var TOP_Y_THRESHOLD = 0.005;
+    var BAND_EDGE_WIDTH_M = 0.5;
+    var OLD_ROAD = [64 / 255, 64 / 255, 68 / 255];
+    var OLD_CURB = [214 / 255, 44 / 255, 44 / 255];
+    var OLD_GRASS = [46 / 255, 156 / 255, 70 / 255];
+    function isOldColor(r, g, b) {
+      return (
+        (Math.abs(r - OLD_ROAD[0]) < 0.05 && Math.abs(g - OLD_ROAD[1]) < 0.05 && Math.abs(b - OLD_ROAD[2]) < 0.05) ||
+        (Math.abs(r - OLD_CURB[0]) < 0.05 && Math.abs(g - OLD_CURB[1]) < 0.05 && Math.abs(b - OLD_CURB[2]) < 0.05) ||
+        (Math.abs(r - OLD_GRASS[0]) < 0.05 && Math.abs(g - OLD_GRASS[1]) < 0.05 && Math.abs(b - OLD_GRASS[2]) < 0.05)
+      );
+    }
+    function avg(arr) {
+      if (!arr.length) return 0;
+      var s = 0;
+      for (var k = 0; k < arr.length; k++) s += arr[k];
+      return s / arr.length;
+    }
+    function nearestRoadDistance(x, z) {
+      var best = Infinity;
+      for (var k = 0; k < roadPoints.length; k++) {
+        var dx = x - roadPoints[k][0];
+        var dz = z - roadPoints[k][1];
+        var d2 = dx * dx + dz * dz;
+        if (d2 < best) best = d2;
+      }
+      return Math.sqrt(best);
+    }
+    for (var i = 0; i < n; i++) {
+      var x = data[i * 6], y = data[i * 6 + 1], z = data[i * 6 + 2];
+      var r = data[i * 6 + 3], g = data[i * 6 + 4], b = data[i * 6 + 5];
+      minY = Math.min(minY, y); maxY = Math.max(maxY, y);
+      var mx = Math.max(r, g, b);
+      // Paint-colored vertices (non-matte) reveal the single-plane paint y.
+      if (mx > 0.15) {
+        paintMinY = Math.min(paintMinY, y);
+      }
+      if (y >= PAINT_Y_THRESHOLD && mx <= NEAR_BLACK_THRESHOLD) {
+        blackOutlineCount++;
+      }
+      if (y >= TOP_Y_THRESHOLD) {
+        topLayerCount++;
+        if (isOldColor(r, g, b)) topOldColors++;
+      }
+      if (mx <= 0.15) {
+        matteCount++;
+      } else if (b > 0.8 && r < 0.25) {
+        edgeCount++;
+        teal++;
+        roadPoints.push([x, z]);
+      } else if (g > 0.3 && b > 0.3 && r < 0.15) {
+        fillCount++;
+        teal++;
+        roadPoints.push([x, z]);
+      } else if ((r > 0.5 && g < 0.25 && b < 0.25) || (r > 0.8 && g < 0.35 && b < 0.35)) {
+        red++;
+        redPoints.push({ x: x, z: z });
+      } else if ((r > 0.5 && g > 0.5 && b < 0.25) || (r > 0.8 && g > 0.8 && b < 0.35)) {
+        yellow++;
+        yellowPoints.push({ x: x, z: z });
+      } else if ((g > 0.5 && r < 0.25 && b < 0.25) || (g > 0.8 && r < 0.35 && b < 0.35)) {
+        green++;
+        greenPoints.push({ x: x, z: z });
+      }
+      if (mx > 0.9) {
+        neonCount++;
+        edgeMaxY = Math.max(edgeMaxY, y);
+      }
+    }
+    var greenEdgeDists = [];
+    for (var gi = 0; gi < greenPoints.length; gi++) {
+      greenEdgeDists.push(nearestRoadDistance(greenPoints[gi].x, greenPoints[gi].z));
+    }
+    var yellowEdgeDists = [];
+    for (var yi = 0; yi < yellowPoints.length; yi++) {
+      yellowEdgeDists.push(nearestRoadDistance(yellowPoints[yi].x, yellowPoints[yi].z));
+    }
+    var redEdgeDists = [];
+    for (var ri = 0; ri < redPoints.length; ri++) {
+      redEdgeDists.push(nearestRoadDistance(redPoints[ri].x, redPoints[ri].z));
+    }
+    var greenMeanEdge = avg(greenEdgeDists);
+    var yellowMeanEdge = avg(yellowEdgeDists);
+    var redMeanEdge = avg(redEdgeDists);
+    return {
+      minY: minY, maxY: maxY, neonCount: neonCount, edgeMaxY: edgeMaxY,
+      paintMinY: paintMinY,
+      red: red, yellow: yellow, green: green, teal: teal,
+      matteCount: matteCount, fillCount: fillCount, edgeCount: edgeCount,
+      topOldColors: topOldColors, topLayerCount: topLayerCount,
+      greenMeanEdge: greenMeanEdge, yellowMeanEdge: yellowMeanEdge, redMeanEdge: redMeanEdge,
+      noVerticalPillars: edgeMaxY < 0.1,
+      flatPaint: edgeMaxY < 0.05 && Math.abs(edgeMaxY - (minY > 0 ? minY : edgeMaxY)) < 0.05,
+      // Single-plane paint (OBS-23): all neon stroke and fill vertices share
+      // the same small positive y. The old layered stroke-above-fill design
+      // is no longer asserted.
+      singlePlanePaint: edgeMaxY >= PAINT_Y_THRESHOLD && Math.abs(edgeMaxY - paintMinY) < 1e-4,
+      borderBandsPresent: red > 0 && yellow > 0 && green > 0,
+      noOldRoadCurbColors: topOldColors === 0,
+      topFacesMatteBlack: matteCount > 0 && topOldColors === 0,
+      honeycombContinuous: fillCount > 1000 && edgeCount > 1000 && edgeCount < 1.5 * fillCount,
+      noDoubleBorders: edgeCount > 0 && edgeCount < 1.5 * fillCount,
+      blackOutlineCount: blackOutlineCount,
+      noBlackOutline: blackOutlineCount === 0,
+      // Walking outward from the track edge: green innermost, yellow middle,
+      // red outermost (OBS-12). Distances are measured to the nearest road
+      // vertex so the assertion works even when the track is not centered on
+      // the world origin.
+      borderBandsAt6m: greenEdgeDists.length > 0 && yellowEdgeDists.length > 0 && redEdgeDists.length > 0 &&
+        greenMeanEdge < yellowMeanEdge - BAND_EDGE_WIDTH_M &&
+        yellowMeanEdge < redMeanEdge - BAND_EDGE_WIDTH_M
+    };
+  }
+
+  function observeFrames(count, cb) {
+    return new Promise(function (resolve) {
+      var startGrid = gridDraws, startTrack = trackDraws;
+      var i = 0;
+      function tick() {
+        cb(i);
+        i++;
+        if (i < count) {
+          requestAnimationFrame(tick);
+        } else {
+          resolve({ gridDelta: gridDraws - startGrid, trackDelta: trackDraws - startTrack, frames: i });
+        }
+      }
+      requestAnimationFrame(tick);
+    });
+  }
+
+  function readSpeed(label) {
+    var t = label ? label.textContent : '';
+    var m = t.match(/(\d+)/);
+    return m ? parseInt(m[1], 10) : 0;
+  }
+
+  function pickWheelBufferId() {
+    var bestId = null;
+    var bestCount = 0;
+    wheelBufferIdsSeen.forEach(function (count, id) {
+      if (count > bestCount) {
+        bestCount = count;
+        bestId = id;
+      }
+    });
+    return bestId;
+  }
+
+  function analyzeWheelShading() {
+    var id = wheelBufferId || pickWheelBufferId();
+    if (!id) return { ok: false, error: 'no wheel buffer id captured' };
+    var data = bufferDataMap.get(id);
+    if (!data) return { ok: false, error: 'wheel buffer data missing' };
+    if (data.length % 9 !== 0) return { ok: false, error: 'unexpected wheel buffer stride' };
+    var n = data.length / 9;
+    var upperSum = 0, upperCount = 0, lowerSum = 0, lowerCount = 0;
+    for (var i = 0; i < n; i++) {
+      var y = data[i * 9 + 1];
+      var r = data[i * 9 + 3];
+      var g = data[i * 9 + 4];
+      var b = data[i * 9 + 5];
+      var brightness = Math.max(r, g, b);
+      if (y > 0) { upperSum += brightness; upperCount++; }
+      else if (y < 0) { lowerSum += brightness; lowerCount++; }
+    }
+    if (upperCount === 0 || lowerCount === 0) return { ok: false, error: 'missing upper/lower vertices' };
+    var upperAvg = upperSum / upperCount;
+    var lowerAvg = lowerSum / lowerCount;
+
+    var litSrc = '';
+    programSources.forEach(function (src) {
+      if (src.indexOf('shadeLitSurface') !== -1) litSrc = src;
+    });
+    var fixedSpaceShader = litSrc.indexOf('uApplyTireGradient') !== -1 &&
+      litSrc.indexOf('uTireGradientRadius') !== -1 &&
+      litSrc.indexOf('uModel[3][1]') !== -1 &&
+      litSrc.indexOf('uSunDirection') !== -1;
+
+    // The shader uses the shared uSunDirection so the highlight follows a
+    // fixed top-front light direction while the wheel spins through it.
+    var seq = litApplyThisFrame;
+    var expected = [];
+    var cars = Math.floor(seq.length / 5);
+    for (var c = 0; c < cars; c++) {
+      expected.push(0, 1, 1, 1, 1);
+    }
+    var patternOk = cars > 0 && seq.slice(0, expected.length).every(function (v, i) { return v === expected[i]; });
+
+    return {
+      ok: true,
+      upperAvg: upperAvg,
+      lowerAvg: lowerAvg,
+      gradient: upperAvg - lowerAvg,
+      fixedSpaceShader: fixedSpaceShader,
+      tireGradientPatternOk: patternOk,
+      tireGradientApplySequence: seq.slice(0, 16)
+    };
+  }
+
+  function getShadowMaxAlpha() {
+    var shadowSrc = '';
+    programSources.forEach(function (src) {
+      if (src.indexOf('uShadowColor') !== -1) shadowSrc = src;
+    });
+    var m = shadowSrc.match(/kShadowMaxAlpha\s*=\s*([\d.]+);/);
+    return m ? parseFloat(m[1]) : 0;
+  }
+
+  async function runChecks() {
+    try {
+      await loadBundle();
+      result.neatRacingStartDefined = typeof window.neatRacingStart === 'function';
+      if (!result.neatRacingStartDefined) throw new Error('neatRacingStart not defined');
+      window.neatRacingStart('neatracing-output');
+      var canvas = document.getElementById('neatracing-canvas');
+      var hudContainer = document.getElementById('neatracing-hud-output');
+      result.canvasMounted = !!canvas;
+      result.hudMounted = !!(hudContainer && hudContainer.childElementCount > 0);
+      result.webglOk = !!(canvas && canvas.getContext('webgl2'));
+
+      await sleep(700);
+      result.modeSwitchedToManual = setManualMode();
+      if (!result.modeSwitchedToManual) {
+        result.consoleErrors.push('mode selector not found');
+      }
+      await sleep(600);
+      carLitModelsThisFrame.length = 0;
+
+      var speedLabel = hudContainer ? hudContainer.querySelector('div > div') : null;
+
+      var steerSamplesA = [], steerSamplesD = [];
+      dispatchKey('KeyA', true);
+      var obsA = await observeFrames(12, function (frameIndex) {
+        if (frameIndex >= 3 && frameIndex <= 9) {
+          var models = carLitModelsThisFrame.slice();
+          if (models.length >= 5) {
+            steerSamplesA.push(yawFromMatrix(models[1]) - yawFromMatrix(models[3]));
+          }
+        }
+        if (litDrawBufferIdsThisFrame.length >= 5) {
+          var candidate = litDrawBufferIdsThisFrame[1];
+          wheelBufferIdsSeen.set(candidate, (wheelBufferIdsSeen.get(candidate) || 0) + 1);
+        }
+        carLitModelsThisFrame.length = 0;
+        litDrawBufferIdsThisFrame.length = 0;
+        litApplyThisFrame.length = 0;
+      });
+      dispatchKey('KeyA', false);
+      await sleep(150);
+      dispatchKey('KeyD', true);
+      var obsD = await observeFrames(12, function (frameIndex) {
+        if (frameIndex >= 3 && frameIndex <= 9) {
+          var models = carLitModelsThisFrame.slice();
+          if (models.length >= 5) {
+            steerSamplesD.push(yawFromMatrix(models[1]) - yawFromMatrix(models[3]));
+          }
+        }
+        if (litDrawBufferIdsThisFrame.length >= 5) {
+          var candidate = litDrawBufferIdsThisFrame[1];
+          wheelBufferIdsSeen.set(candidate, (wheelBufferIdsSeen.get(candidate) || 0) + 1);
+        }
+        carLitModelsThisFrame.length = 0;
+        litDrawBufferIdsThisFrame.length = 0;
+        litApplyThisFrame.length = 0;
+      });
+      dispatchKey('KeyD', false);
+      await sleep(150);
+
+      var startBody = null, endBody = null;
+      dispatchKey('KeyW', true);
+      dispatchKey('KeyA', true);
+      var obsWA = await observeFrames(100, function (frameIndex) {
+        var models = carLitModelsThisFrame.slice();
+        if (models.length >= 1) {
+          var m = models[0];
+          var pos = { x: m[12], z: m[14], yaw: yawFromMatrix(m) };
+          if (frameIndex === 8) startBody = pos;
+          if (frameIndex === 92) endBody = pos;
+        }
+        if (litDrawBufferIdsThisFrame.length >= 5) {
+          var candidate = litDrawBufferIdsThisFrame[1];
+          wheelBufferIdsSeen.set(candidate, (wheelBufferIdsSeen.get(candidate) || 0) + 1);
+        }
+        carLitModelsThisFrame.length = 0;
+        litDrawBufferIdsThisFrame.length = 0;
+        litApplyThisFrame.length = 0;
+      });
+      dispatchKey('KeyW', false);
+      dispatchKey('KeyA', false);
+      await sleep(200);
+
+      var vboInfo = analyzeTrackVbo();
+      var wheelShading = analyzeWheelShading();
+      var avgA = average(steerSamplesA);
+      var avgD = average(steerSamplesD);
+      var yawChange = (startBody && endBody) ? wrapAngle(endBody.yaw - startBody.yaw) : 0;
+      var distMoved = (startBody && endBody) ? Math.hypot(endBody.x - startBody.x, endBody.z - startBody.z) : 0;
+      var finalSpeed = readSpeed(speedLabel);
+
+      var singleGridA = obsA.gridDelta >= 10 && obsA.gridDelta <= 13;
+      var singleGridD = obsD.gridDelta >= 10 && obsD.gridDelta <= 13;
+      var singleGridWA = obsWA.gridDelta >= 95 && obsWA.gridDelta <= 103;
+      var singleTrackA = obsA.trackDelta >= 10 && obsA.trackDelta <= 13;
+      var singleTrackD = obsD.trackDelta >= 10 && obsD.trackDelta <= 13;
+      var singleTrackWA = obsWA.trackDelta >= 95 && obsWA.trackDelta <= 103;
+
+      result.checks = {
+        bundleLoaded: result.bundleLoaded,
+        canvasMounted: result.canvasMounted,
+        hudMounted: result.hudMounted,
+        modeSwitchedToManual: result.modeSwitchedToManual,
+        webglOk: result.webglOk,
+        noConsoleErrors: result.consoleErrors.length === 0,
+        gridProgramFound: !!gridProgram,
+        gridSpacing5m: capturedGridSpacing !== null && Math.abs(capturedGridSpacing - 5.0) < 0.01,
+        singleGridPerFrame: singleGridA && singleGridD && singleGridWA,
+        trackProgramFound: !!trackProgram,
+        trackVboCaptured: !!capturedTrackVboData,
+        roadEdgeFlat: vboInfo.noVerticalPillars && vboInfo.flatPaint,
+        roadEdgeBorderBands: vboInfo.borderBandsPresent,
+        roadEdgeNoPillars: vboInfo.noVerticalPillars,
+        topFacesMatteBlack: vboInfo.topFacesMatteBlack,
+        noOldRoadCurbColors: vboInfo.noOldRoadCurbColors,
+        honeycombContinuous: vboInfo.honeycombContinuous,
+        noDoubleBorders: vboInfo.noDoubleBorders,
+        borderBandsAt6m: vboInfo.borderBandsAt6m,
+        roadEdgeNoBlackOutline: vboInfo.noBlackOutline,
+        roadEdgeSinglePlanePaint: vboInfo.singlePlanePaint,
+        // One car casts 1 body blob shadow + 4 wheel contact-patch shadows.
+        carShadowDrawn: shadowDraws >= 5,
+        shadowDark: getShadowMaxAlpha() >= 0.90,
+        shadowCoversWheels: shadowModelScales.some(function (s) { return s >= 4.0; }) &&
+          shadowModelScales.some(function (s) { return s > 0.1 && s <= 1.0; }),
+        wheelTireShading: wheelShading.ok && wheelShading.fixedSpaceShader && wheelShading.tireGradientPatternOk,
+        frontWheelSteerAD: (avgA * avgD) < -0.000001 && Math.abs(avgA) > 0.005 && Math.abs(avgD) > 0.005,
+        frontWheelSteerMagnitude: Math.abs(avgA) > 0.05 && Math.abs(avgD) > 0.05,
+        speedUnderW: finalSpeed > 0,
+        driftTurnWA: Math.abs(yawChange) > 0.05 && distMoved > 0.5
+      };
+      result.passed = Object.values(result.checks).every(Boolean);
+      result.notes = JSON.stringify({
+        gridSpacing: capturedGridSpacing,
+        gridDeltas: { A: obsA.gridDelta, D: obsD.gridDelta, WA: obsWA.gridDelta },
+        trackDeltas: { A: obsA.trackDelta, D: obsD.trackDelta, WA: obsWA.trackDelta },
+        vboSummary: { minY: vboInfo.minY, maxY: vboInfo.maxY, edgeMaxY: vboInfo.edgeMaxY, paintMinY: vboInfo.paintMinY, singlePlanePaint: vboInfo.singlePlanePaint, neonCount: vboInfo.neonCount, red: vboInfo.red, yellow: vboInfo.yellow, green: vboInfo.green, teal: vboInfo.teal, matteCount: vboInfo.matteCount, fillCount: vboInfo.fillCount, edgeCount: vboInfo.edgeCount, topOldColors: vboInfo.topOldColors, topLayerCount: vboInfo.topLayerCount, greenMeanEdge: vboInfo.greenMeanEdge, yellowMeanEdge: vboInfo.yellowMeanEdge, redMeanEdge: vboInfo.redMeanEdge, blackOutlineCount: vboInfo.blackOutlineCount },
+        shadowDraws: shadowDraws,
+        shadowColor: shadowColorFeeds.length > 0 ? shadowColorFeeds[0] : null,
+        shadowMaxAlpha: getShadowMaxAlpha(),
+        shadowModelScales: shadowModelScales,
+        wheelShading: wheelShading,
+        steer: { avgA: avgA, avgD: avgD },
+        drift: { yawChange: yawChange, distMoved: distMoved, finalSpeed: finalSpeed }
+      });
+    } catch (err) {
+      result.consoleErrors.push(String(err));
+      result.notes = 'Fatal: ' + String(err);
+    }
+    window.p1TurnDriftGreenSmokeResult = result;
+  }
+
+  runChecks();
+})();
+</script>
+</body>
+</html>

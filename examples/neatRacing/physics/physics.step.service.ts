@@ -36,6 +36,11 @@
  * off-track surface utils (P1-S7-C).
  */
 
+import {
+  computeNextLateralVelocity,
+  computeSlipAngle,
+} from './drift.model';
+
 /** Surface label for one tick, matching the track slab palette (`track.slabs`). */
 export type PhysicsSurfaceType = 'road' | 'curb' | 'grass';
 
@@ -179,15 +184,6 @@ export const NEATRACING_PHYSICS_CENTRIFUGAL_MULTIPLIER = 0.3;
 export const NEATRACING_PHYSICS_STEERING_RATE = 2;
 
 /**
- * Lateral grip drain rate in 1/s: how fast the lateral drift velocity
- * bleeds back to zero when the outward push stops. An internal arcade
- * shaping constant for the LD-15 slip channel (not part of the locked
- * js-racer table; `6` keeps the drift visible per tick yet settles in
- * ~250 ms so releasing the steer axis ends a slide quickly).
- */
-export const NEATRACING_PHYSICS_LATERAL_GRIP_RATE_PER_S = 6;
-
-/**
  * Lateral spawn spread in meters: the seeded spawn lane offset is drawn
  * deterministically from the spawn seed within `Â±spread / 2` so the same
  * seed always spawns on the same lane line.
@@ -300,8 +296,9 @@ export function createInitialPhysicsCarState(
  *    drag stacked on grass with the passive off-road floor (deliberate
  *    braking is never floored and can stop the car), clamped to
  *    `[0, maxSpeed]`;
- * 4. integrate the lateral drift velocity (TP-02 outward push, grip
- *    drain) and reduce it to the bounded LD-15 slip angle via `atan2`;
+ * 4. integrate the lateral drift velocity through the arcade drift model
+ *    (AC-047, spec §5.2 drift amendment): TP-02 outward push, countersteer
+ *    recovery, grip falloff curve, and bounded LD-15 slip angle via `atan2`;
  * 5. translate along the velocity direction (heading + slipAngle) so the
  *    drift arc bends the path;
  * 6. count the tick.
@@ -346,13 +343,20 @@ export function stepPhysics(
     surface,
   );
 
-  // Step 4: Integrate the lateral drift dynamics and the slip angle (LD-15).
-  const nextLateralVelocity = integrateLateralVelocity(
+  // Step 4: Integrate the lateral drift dynamics and the slip angle (LD-15)
+  // through the arcade drift model (AC-047, spec §5.2 drift amendment).
+  const nextLateralVelocity = computeNextLateralVelocity(
     state.lateralVelocity,
-    yawRatePerTick,
-    state.speed,
+    {
+      steer: clampedInput.steer,
+      yawRatePerTick,
+      speed: state.speed,
+      speedPercent,
+      dt: NEATRACING_PHYSICS_FIXED_TIMESTEP_SECONDS,
+      centrifugalMultiplier: NEATRACING_PHYSICS_CENTRIFUGAL_MULTIPLIER,
+    },
   );
-  const nextSlipAngle = resolveSlipAngle(nextLateralVelocity, nextSpeed);
+  const nextSlipAngle = computeSlipAngle(nextLateralVelocity, nextSpeed);
 
   // Step 5: Translate along the velocity direction (drift arc path).
   const velocityHeading = nextHeading + nextSlipAngle;
@@ -466,42 +470,6 @@ function resolvePassiveRate(throttle: number): number {
     return throttle * NEATRACING_PHYSICS_ACCEL_UNITS_PER_S2;
   }
   return NEATRACING_PHYSICS_NATURAL_DECEL_UNITS_PER_S2;
-}
-
-/**
- * Integrates the lateral drift velocity for one tick: the TP-02 outward
- * push (`âCENTRIFUGAL_MULTIPLIER Â· yawRate Â· speed`, zero at standstill)
- * charges the lateral velocity, then the grip rate drains it toward zero.
- */
-function integrateLateralVelocity(
-  lateralVelocity: number,
-  yawRatePerTick: number,
-  speed: number,
-): number {
-  const outwardPushPerTick =
-    speed > 0
-      ? -NEATRACING_PHYSICS_CENTRIFUGAL_MULTIPLIER * yawRatePerTick * speed
-      : 0;
-  const pushed = lateralVelocity + outwardPushPerTick;
-  return (
-    pushed *
-    (1 -
-      NEATRACING_PHYSICS_LATERAL_GRIP_RATE_PER_S *
-        NEATRACING_PHYSICS_FIXED_TIMESTEP_SECONDS)
-  );
-}
-
-/**
- * Resolves the LD-15 slip angle via `atan2(lateralVelocity, speed)`, which
- * keeps the angle bounded to `(-Ï€/2, Ï€/2)` by construction. A stopped
- * car reports zero slip (a bare `atan2` with zero speed would return
- * `Â±Ï€/2` and breach the AC-023 envelope for a phantom drift state).
- */
-function resolveSlipAngle(lateralVelocity: number, speed: number): number {
-  if (speed <= CONTROL_RATIO_MIN) {
-    return 0;
-  }
-  return Math.atan2(lateralVelocity, speed);
 }
 
 /** Wraps a heading into `[-Ï€, Ï€)` with one O(1) pass (no spin-up loops). */

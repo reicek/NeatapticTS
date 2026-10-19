@@ -265,7 +265,7 @@ status: '[DONE]'
       }
     });
 
-    it('covers self-check no-WIP-step error branch', async () => {
+    it('covers self-check no-WIP-step informational note branch', async () => {
       const planPath = await writeTempPlan(`
 # Test Plan
 
@@ -308,7 +308,12 @@ status: '[DONE]'
             }
             if (request.method === 'tools/call') {
               if (request.params?.name === 'get_active_workflow_snapshot') {
-                return { structuredContent: {} };
+                return {
+                  structuredContent: {
+                    activePhase: { number: 1 },
+                    activeStep: null,
+                  },
+                };
               }
               if (request.params?.name === 'get_customization_inventory') {
                 return {
@@ -325,7 +330,12 @@ status: '[DONE]'
           server: mockServer,
           planPath,
         });
-        expect(report.ok).toBe(false);
+        expect(report.ok).toBe(true);
+        expect(report.notes).toEqual(
+          expect.arrayContaining([
+            expect.stringContaining('no step is currently [WIP]'),
+          ]),
+        );
       } finally {
         await removeTempPlan(planPath);
       }

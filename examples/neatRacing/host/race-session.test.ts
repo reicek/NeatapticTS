@@ -372,7 +372,9 @@ describe('createRaceSession (P1-drive-loop-live red contract)', () => {
       });
       harness.runFrame(16);
       harness.runFrame(33);
-      expect(harness.autoSampleCalls.length).toBe(1);
+      // D5: input is sampled once per frame, including zero-step frames,
+      // so the composer sees the current steer pose immediately.
+      expect(harness.autoSampleCalls.length).toBe(2);
       expect(harness.physicsRecords.length).toBe(1);
       expect(
         harness.physicsRecords.every(
@@ -383,7 +385,8 @@ describe('createRaceSession (P1-drive-loop-live red contract)', () => {
     });
 
     it('never touches the autopilot seam in the manual mode', () => {
-      const sampleAutoInput = (car: PhysicsCarState): PhysicsStepInput => ({
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const sampleAutoInput = (_: PhysicsCarState): PhysicsStepInput => ({
         throttle: 1,
         brake: 0,
         steer: 0,
@@ -399,13 +402,15 @@ describe('createRaceSession (P1-drive-loop-live red contract)', () => {
       const harness = createHarness();
       // Act
       harness.runFrame(0);
-      // Assert — nothing stepped, sampled, or repainted before real time flows.
+      // Assert — nothing stepped, repainted, or HUD-updated before real time
+      // flows, but the driving surface is sampled once per frame so the
+      // composer sees the current input immediately.
       expect({
         sample: countTag(harness.log, 'sample'),
         physics: countTag(harness.log, 'physics'),
         rules: countTag(harness.log, 'rules'),
         hud: countTag(harness.log, 'hud'),
-      }).toEqual({ sample: 0, physics: 0, rules: 0, hud: 0 });
+      }).toEqual({ sample: 1, physics: 0, rules: 0, hud: 0 });
     });
 
     it('replays one keyboard sample into every catch-up tick of a saturated frame (D5)', () => {
@@ -423,7 +428,9 @@ describe('createRaceSession (P1-drive-loop-live red contract)', () => {
             record.input.steer === 1,
         ),
       ).toBe(true);
-      expect(countTag(harness.log, 'sample')).toBe(1);
+      // One sample per frame (D5); the second frame's sample is replayed
+      // into all four catch-up ticks.
+      expect(countTag(harness.log, 'sample')).toBe(2);
     });
 
     it('releases exactly the catch-up cap for a clamped oversized frame delta', () => {

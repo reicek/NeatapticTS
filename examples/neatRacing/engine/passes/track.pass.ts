@@ -7,6 +7,10 @@
 
 import type { ShaderWarmupProgram } from '../context.service';
 import { buildTrackSlabs, type TrackSlabMesh } from '../../track/track.slabs';
+import {
+  buildRoadEdgeHexVoxels,
+  type RoadEdgeHexMesh,
+} from '../../track/road-edge';
 
 /** Warmup/draw registry key for the track pass (AC-040). */
 export const NEATRACING_TRACK_PROGRAM_KEY = 'track';
@@ -59,6 +63,9 @@ const GL_DEPTH_TEST = 0x0b71;
 
 /** `gl.CULL_FACE` enum value (0x0B44) explicitly disabled for the two-sided track. */
 const GL_CULL_FACE = 0x0b44;
+
+/** `gl.BLEND` enum value (0x0BE2) disabled so the opaque track overwrites prior pixels. */
+const GL_BLEND = 0x0be2;
 
 /** `gl.TRIANGLES` enum value (0x0004) for the triangulated track quads. */
 const GL_TRIANGLES = 0x0004;
@@ -132,12 +139,25 @@ function normalizeColorBytes(
   return [color[0] / 255, color[1] / 255, color[2] / 255];
 }
 
+/** Near-black matte color applied to all slab top faces (0-255 RGB). */
+const NEATRACING_TRACK_SLAB_TOP_FACE_MATTE_COLOR: readonly [number, number, number] = [
+  12, 12, 12,
+];
+
 /**
  * Builds an interleaved Float32Array of position+color vertices from the
  * deterministic track slab mesh. Each greedy-meshed quad is triangulated as
  * two triangles (six vertices) with a consistent counter-clockwise winding.
+ *
+ * Top faces (normalAxis === 1, world y = 0) are painted with a flat
+ * near-black matte so the old road/curb/grass slab colors do not show through
+ * the hex floor paint (OBS-9). Side and bottom faces keep their palette
+ * colors for readable ribbon edges.
+ *
+ * Exported as a test seam so the VBO color contract can be asserted
+ * directly without a full WebGL mock.
  */
-function buildTrackVboData(mesh: TrackSlabMesh): Float32Array {
+export function buildTrackVboData(mesh: TrackSlabMesh): Float32Array {
   const vertexCount = mesh.quads.length * VERTICES_PER_QUAD;
   const data = new Float32Array(vertexCount * FLOATS_PER_VERTEX);
 
@@ -151,7 +171,12 @@ function buildTrackVboData(mesh: TrackSlabMesh): Float32Array {
     }
 
     const [corner0, corner1, corner2, corner3] = expandSlabQuadCorners(quad);
-    const color = normalizeColorBytes(paletteEntry.color);
+    const isTopFace = quad.normalAxis === 1 && quad.position[1] === 0;
+    const color = normalizeColorBytes(
+      isTopFace
+        ? NEATRACING_TRACK_SLAB_TOP_FACE_MATTE_COLOR
+        : paletteEntry.color,
+    );
     const vertices = [
       corner0,
       corner1,
@@ -168,6 +193,35 @@ function buildTrackVboData(mesh: TrackSlabMesh): Float32Array {
       data[base + 0] = vertex[0];
       data[base + 1] = vertex[1];
       data[base + 2] = vertex[2];
+      data[base + 3] = color[0];
+      data[base + 4] = color[1];
+      data[base + 5] = color[2];
+    }
+  }
+
+  return data;
+}
+
+/**
+ * Builds an interleaved Float32Array of position+color vertices from the
+ * deterministic road-edge hex mesh. Each triangle is already triangulated,
+ * so we emit three vertices per triangle with consistent winding.
+ */
+function buildRoadEdgeVboData(mesh: RoadEdgeHexMesh): Float32Array {
+  const vertexCount = mesh.triangles.length * 3;
+  const data = new Float32Array(vertexCount * FLOATS_PER_VERTEX);
+
+  for (let triangleIndex = 0; triangleIndex < mesh.triangles.length; triangleIndex++) {
+    const triangle = mesh.triangles[triangleIndex];
+
+    for (let vertexIndex = 0; vertexIndex < 3; vertexIndex++) {
+      const vertex = triangle.vertices[vertexIndex];
+      const color = normalizeColorBytes(vertex.color);
+      const base =
+        (triangleIndex * 3 + vertexIndex) * FLOATS_PER_VERTEX;
+      data[base + 0] = vertex.position[0];
+      data[base + 1] = vertex.position[1];
+      data[base + 2] = vertex.position[2];
       data[base + 3] = color[0];
       data[base + 4] = color[1];
       data[base + 5] = color[2];
@@ -242,7 +296,16 @@ function resolveTangentAxes(normalAxis: number): readonly [number, number] {
  */
 export function createTrackPass(gl: WebGL2RenderingContext): TrackPass {
   const mesh = buildTrackSlabs(DEFAULT_TRACK_BUILD_INPUT);
-  const vboData = buildTrackVboData(mesh);
+  const slabVboData = buildTrackVboData(mesh);
+  const roadEdgeMesh = buildRoadEdgeHexVoxels(DEFAULT_TRACK_BUILD_INPUT);
+  const roadEdgeVboData = buildRoadEdgeVboData(roadEdgeMesh);
+
+  const vboData = new Float32Array(
+    slabVboData.length + roadEdgeVboData.length,
+  );
+  vboData.set(slabVboData, 0);
+  vboData.set(roadEdgeVboData, slabVboData.length);
+
   const vertexCount = vboData.length / FLOATS_PER_VERTEX;
 
   const vertexShader = compileTrackShader(
@@ -336,6 +399,9 @@ export function createTrackPass(gl: WebGL2RenderingContext): TrackPass {
       // CULL_FACE=ON from a previously drawn pass (glass) fully culls every
       // track quad and the ribbon blinks out of existence (AC-017).
       gl.disable(GL_CULL_FACE);
+      // The opaque track ribbon must overwrite the scene, not additively blend
+      // with the glow passes drawn earlier in the frame.
+      gl.disable(GL_BLEND);
       gl.uniformMatrix4fv(viewProjectionLocation, false, state.viewProjection);
       gl.drawArrays(GL_TRIANGLES, 0, vertexCount);
     },

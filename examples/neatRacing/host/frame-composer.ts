@@ -46,6 +46,11 @@ import type {
   NeatRacingPulsePass,
 } from '../engine/passes/pulse.pass';
 import type { GridPass, GridPassDrawState } from '../engine/passes/grid.pass';
+import type { TrackGridPass } from '../track/grid.pass';
+import type {
+  RightWorldPass,
+  RightWorldPassDrawState,
+} from '../track/right-world.pass';
 import type {
   CarPass,
   CarPassCarState,
@@ -126,12 +131,6 @@ const PINNED_MATRIX_FLOAT_COUNT = 16;
 /** Neutral construction-time camera world placeholder `[x, y, z]` meters. */
 const INITIAL_CAMERA_WORLD: readonly [number, number, number] = [0, 0, 0];
 
-/** Neutral construction-time grid-bag camera X; refreshed before first draw. */
-const INITIAL_BAG_CAMERA_X = 0;
-
-/** Neutral construction-time grid-bag camera Z; refreshed before first draw. */
-const INITIAL_BAG_CAMERA_Z = 0;
-
 /** Neutral construction-time car payload reference; refreshed per tick. */
 const INITIAL_BAG_CARS: readonly CarPassCarState[] = [];
 
@@ -153,6 +152,8 @@ export interface NeatRacingFrameComposerFrame {
   readonly pulses: readonly AmbientPulse[];
   /** On-track cars in any order; car/glass passes sort far -> near internally. */
   readonly cars: readonly CarPassCarState[];
+  /** Optional right-world scenery draw state; omitted when the pass is absent. */
+  readonly rightWorld?: RightWorldPassDrawState;
   /** AC-035 bloom off-switch, forwarded verbatim to the bloom frame. */
   readonly enabled: boolean;
 }
@@ -176,16 +177,26 @@ export interface NeatRacingTrackPassSeam {
   draw(state: NeatRacingTrackPassDrawState): void;
 }
 
-/** The seven pass handles the composer draws once per tick, in pinned order. */
+/** The pass handles the composer draws once per tick, in pinned order. */
 export interface NeatRacingFrameComposerPasses {
   /** Starfield background pass (first world draw, pass-local GL state). */
   readonly starfield: StarfieldPass;
-  /** Ground grid pass. */
-  readonly grid: GridPass;
+  /**
+   * Optional fullscreen ground grid pass.
+   *
+   * Left optional so the composition can replace the legacy 1 m² engine
+   * grid with the larger 2 m² track-grid pass without leaving dual-path
+   * draw code. When omitted, the composer simply skips the grid draw.
+   */
+  readonly grid?: GridPass;
   /** Ambient pulse pass. */
   readonly pulse: NeatRacingPulsePass;
   /** Track slab renderer seam (draw-only). */
   readonly track: NeatRacingTrackPassSeam;
+  /** Optional track grid pass (larger 2 m² footprint, drawn after track). */
+  readonly trackGrid?: TrackGridPass;
+  /** Optional right-world scenery pass (drawn after track grid, before car). */
+  readonly rightWorld?: RightWorldPass;
   /** Car body/wheel pass. */
   readonly car: CarPass;
   /** Glass pass. */
@@ -226,7 +237,7 @@ export interface NeatRacingFrameComposerDevFlags {
 export interface NeatRacingFrameComposerDeps {
   /** WebGL2 context sharing every pass handle. */
   readonly gl: WebGL2RenderingContext;
-  /** The seven pass handles drawn in the pinned warmup-key order. */
+  /** The seven required pass handles drawn in the pinned warmup-key order. */
   readonly passes: NeatRacingFrameComposerPasses;
   /** Optional dev-only assertion surface; omitted flags default to off. */
   readonly devFlags?: NeatRacingFrameComposerDevFlags;
@@ -284,6 +295,8 @@ interface NeatRacingFrameComposerDrawStateBags {
   pulse: PulseDrawStateBag;
   /** Bag sent to {@link NeatRacingTrackPassSeam.draw}. */
   track: DrawStateBag<NeatRacingTrackPassDrawState>;
+  /** Bag sent to {@link RightWorldPass.draw}. */
+  rightWorld: DrawStateBag<RightWorldPassDrawState>;
   /** Bag sent to {@link CarPass.draw}. */
   car: DrawStateBag<CarPassDrawState>;
   /** Bag sent to {@link GlassPass.draw}. */
@@ -302,7 +315,7 @@ interface NeatRacingFrameComposerDrawStateBags {
 interface NeatRacingFrameComposerSceneTarget {
   /** Scene texture handed to the bloom composite stage per tick. */
   readonly texture: WebGLTexture;
-  /** FBO the six world passes render into. */
+  /** FBO the world passes render into. */
   readonly framebuffer: WebGLFramebuffer;
   /** Depth renderbuffer that track, car and shadow passes read/write. */
   readonly depthRenderbuffer: WebGLRenderbuffer;
@@ -318,7 +331,7 @@ interface NeatRacingFrameComposerSceneTarget {
  * pinned warmup-key order, then composites bloom onto the default
  * framebuffer with the owned scene texture.
  *
- * @param deps - One WebGL2 context plus the seven pass handles; the
+ * @param deps - One WebGL2 context plus the seven required pass handles; the
  *   composer never owns (and never disposes) the injected passes.
  * @returns The composer handle with `drawFrame` and `dispose`.
  *
@@ -531,6 +544,12 @@ function createDrawStateBags(
       viewProjection: new Float32Array(PINNED_MATRIX_FLOAT_COUNT),
       cameraWorld: INITIAL_CAMERA_WORLD,
     },
+    rightWorld: {
+      viewProjection: new Float32Array(PINNED_MATRIX_FLOAT_COUNT),
+      cameraWorld: [0, 0, 0],
+      cameraRight: [1, 0, 0],
+      cameraUp: [0, 1, 0],
+    },
     car: {
       viewProjection: new Float32Array(PINNED_MATRIX_FLOAT_COUNT),
       cameraWorld: INITIAL_CAMERA_WORLD,
@@ -585,6 +604,12 @@ function refreshDrawStateBags(
   bags.car.cars = frame.cars;
   bags.glass.cameraWorld = frame.cameraWorld;
   bags.glass.cars = frame.cars;
+  if (frame.rightWorld !== undefined) {
+    bags.rightWorld.viewProjection.set(frame.rightWorld.viewProjection);
+    bags.rightWorld.cameraWorld = frame.rightWorld.cameraWorld;
+    bags.rightWorld.cameraRight = frame.rightWorld.cameraRight;
+    bags.rightWorld.cameraUp = frame.rightWorld.cameraUp;
+  }
   // Step 4: bloom composite frame — dims and AC-035 flag, verbatim.
   bags.bloom.targetWidth = gl.canvas.width;
   bags.bloom.targetHeight = gl.canvas.height;
@@ -798,10 +823,12 @@ function renderWorldIntoSceneTarget(
     'starfield',
     perPassDiagnosticBuffer,
   );
-  bindSceneFrameBufferAndViewport(gl, scene);
-  passes.grid.draw(bags.grid);
-  logPerPassPixelCountIfEnabled(gl, scene, 'grid', perPassReadbackBuffer);
-  logPerPassDiagnosticsIfEnabled(gl, scene, 'grid', perPassDiagnosticBuffer);
+  if (passes.grid !== undefined) {
+    bindSceneFrameBufferAndViewport(gl, scene);
+    passes.grid.draw(bags.grid);
+    logPerPassPixelCountIfEnabled(gl, scene, 'grid', perPassReadbackBuffer);
+    logPerPassDiagnosticsIfEnabled(gl, scene, 'grid', perPassDiagnosticBuffer);
+  }
   bindSceneFrameBufferAndViewport(gl, scene);
   passes.pulse.draw(bags.pulse);
   logPerPassPixelCountIfEnabled(gl, scene, 'pulse', perPassReadbackBuffer);
@@ -810,6 +837,18 @@ function renderWorldIntoSceneTarget(
   passes.track.draw(bags.track);
   logPerPassPixelCountIfEnabled(gl, scene, 'track', perPassReadbackBuffer);
   logPerPassDiagnosticsIfEnabled(gl, scene, 'track', perPassDiagnosticBuffer);
+  if (passes.trackGrid !== undefined) {
+    bindSceneFrameBufferAndViewport(gl, scene);
+    passes.trackGrid.draw(bags.track);
+    logPerPassPixelCountIfEnabled(gl, scene, 'track-grid', perPassReadbackBuffer);
+    logPerPassDiagnosticsIfEnabled(gl, scene, 'track-grid', perPassDiagnosticBuffer);
+  }
+  if (passes.rightWorld !== undefined && frame.rightWorld !== undefined) {
+    bindSceneFrameBufferAndViewport(gl, scene);
+    passes.rightWorld.draw(bags.rightWorld);
+    logPerPassPixelCountIfEnabled(gl, scene, 'right-world', perPassReadbackBuffer);
+    logPerPassDiagnosticsIfEnabled(gl, scene, 'right-world', perPassDiagnosticBuffer);
+  }
   bindSceneFrameBufferAndViewport(gl, scene);
   passes.car.draw(bags.car);
   logPerPassPixelCountIfEnabled(gl, scene, 'car', perPassReadbackBuffer);

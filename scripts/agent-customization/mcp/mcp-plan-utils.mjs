@@ -39,11 +39,11 @@ import {
 const PHASE_PATTERN =
   /^### Phase (?<phase>[A-Z0-9]+) — (?<title>.+?) \[(?<status>PLANNED|WIP|DONE)\]\s*$/gmu;
 /**
- * Matches a step header line, e.g. `#### Step 03 — Title [PLANNED]` or
- * `#### Step E1 — Title [PLANNED]`.
+ * Matches a step header line, e.g. `#### Step 03 — Title [PLANNED]`,
+ * `#### Step E1 — Title [PLANNED]`, or `#### Step 14C — Title [PLANNED]`.
  */
 const STEP_PATTERN =
-  /^#### Step (?<step>[A-Z]?\d+)\s*[:\-—]\s*(?<title>.+?) \[(?<status>PLANNED|WIP|DONE)\]\s*$/gmu;
+  /^#### Step (?<step>[A-Z]?\d+[A-Z]?)\s*[:\-—]\s*(?<title>.+?) \[(?<status>PLANNED|WIP|DONE)\]\s*$/gmu;
 
 /**
  * Normalize a captured step identifier to a number when it is purely numeric,

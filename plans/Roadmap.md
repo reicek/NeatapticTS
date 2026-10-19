@@ -4,7 +4,7 @@ One active workstream (Neat Racing Voxel Racer); completed workstreams and their
 
 ## Active demo workstream
 
-- Neat Racing Voxel Racer (neatRacing): `plans/neatracing-voxel-racer.plans.md` — **[WIP]** Phase 1 [WIP] (graphics engine + manual keyboard driving, spec slices P1-S1..P1-S7, plus inserted user-requested Steps 14C turn+drift/14D right-world decorations/14E spec gap review) | Phase 2 [PLANNED] (AI migration with NGE growth engine, spec slices P2-S1..P2-S4) | Phase 3 [PLANNED] (polish + deprecation prep, spec slices P3-S1..P3-S2) — spec of record: `plans/neatracing-voxel-racer.spec.md`
+- Neat Racing Voxel Racer (neatRacing): `plans/neatracing-voxel-racer.plans.md` — **[WIP]** Phase 1 [WIP] (graphics engine + manual keyboard driving, spec slices P1-S1..P1-S7, plus inserted user-requested Steps 14C turn+drift/14D right-world decorations/14F right-world fidelity/14G arcade drift fix/14H starfield polish/14I track outer corner border markers/14E spec gap review) | Phase 2 [PLANNED] (AI migration with NGE growth engine, spec slices P2-S1..P2-S4) | Phase 3 [PLANNED] (polish + deprecation prep, spec slices P3-S1..P3-S2) — spec of record: `plans/neatracing-voxel-racer.spec.md`
 
 ## Completed demo workstreams
 

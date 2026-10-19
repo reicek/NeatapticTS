@@ -538,7 +538,7 @@ describe('Neat Racing browser entry boot composition (Step 14, P1-boot-compositi
     resetHostShell();
   });
 
-  describe('AC-040 (completion): nine-program warmup registry parity (batch 102 gap iii)', () => {
+  describe('AC-040 (completion): nine-program warmup registry parity (batch 148 OBS-1 / OBS-5)', () => {
     it('warms the registered programs in the pinned NEATRACING_WARMED_PROGRAM_KEYS order', () => {
       getBootStart()('neatracing-output');
 

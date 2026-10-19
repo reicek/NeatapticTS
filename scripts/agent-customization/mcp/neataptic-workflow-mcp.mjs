@@ -365,13 +365,20 @@ export async function runWorkflowSelfCheck({ server, planPath }) {
   );
   const expectedPhase = activePlanContext.activePhase;
   const expectedStep = activePlanContext.activeStep;
+  const notes = [];
 
-  if (!expectedPhase || !expectedStep) {
+  if (!expectedPhase) {
     issues.push(
       selfCheckError(
         planPath,
-        'No active WIP phase or step found in the active plan.',
+        'No active WIP phase found in the active plan.',
       ),
+    );
+  }
+
+  if (expectedPhase && expectedStep === null) {
+    notes.push(
+      'Active phase exists but no step is currently [WIP]; this is a valid transitional state for expansion:steps with auto_expand:false.',
     );
   }
 
@@ -444,6 +451,7 @@ export async function runWorkflowSelfCheck({ server, planPath }) {
       ).length,
     },
     inventorySummary: withDefault(inventory.summary, null),
+    notes,
   });
 }
 

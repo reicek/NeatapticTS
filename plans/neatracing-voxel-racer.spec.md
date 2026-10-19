@@ -28,18 +28,18 @@
 | 15  | Risks & Mitigations                          | R-01 … R-09                                                                                   |
 | 16  | Tuning Points                                | TP-01 … TP-21 (TP-16+ appended by the specialist-review patch; TP-20/21 by the round-2 patch) |
 | 17  | Phases → Steps → Slices Preview              | 3 phases; 13 steps; 50 slices; 2–5 slices/step                                                |
-| 18  | Traceability Table (AC ↔ files ↔ validation) | 43/43 rows                                                                                    |
+| 18  | Traceability Table (AC ↔ files ↔ validation) | 46/46 rows                                                                                    |
 | 19  | Spec Self-Check (spec-checklist report)      | pass; 100% coverage                                                                           |
 | 20  | Open Questions (all RESOLVED by owner)       | OQ-001 … OQ-003                                                                               |
 
 ### AC counts per phase
 
-| Phase                                               | AC range                         | Count  |
-| --------------------------------------------------- | -------------------------------- | ------ |
-| Phase 1 — Graphics engine + manual keyboard driving | AC-001 … AC-024, AC-040 … AC-042 | 27     |
-| Phase 2 — AI migration / NGE                        | AC-025 … AC-034, AC-043          | 11     |
-| Phase 3 — Polish + deprecation prep                 | AC-035 … AC-039                  | 5      |
-| **Total**                                           | AC-001 … AC-043                  | **43** |
+| Phase                                               | AC range                                  | Count  |
+| --------------------------------------------------- | ----------------------------------------- | ------ |
+| Phase 1 — Graphics engine + manual keyboard driving | AC-001 … AC-024, AC-040 … AC-042, AC-044 … AC-046 | 30     |
+| Phase 2 — AI migration / NGE                        | AC-025 … AC-034, AC-043                   | 11     |
+| Phase 3 — Polish + deprecation prep                 | AC-035 … AC-039                           | 5      |
+| **Total**                                           | AC-001 … AC-046                           | **46** |
 
 ---
 
@@ -289,8 +289,67 @@ NOT be transcribed (G10).
 **Draw distance (named constant, G11):**
 `NEATRACING_DRAW_DISTANCE_M` — default starting value **320 m** (tuning range
 ~250–400 m; TP-16), sized for a ~320 km/h arcade feel. It is the single input
+
 to: the 32³ LOD gate (§7.3.3), fog tuning (§6.6), grid fade (§6.4.2), track
 mesh extent (§6.7), LOD budget (§7.3.4), and the sky band height (§6.4.1).
+
+#### Arcade drift model (P1-arcade-drift / AC-047, spec §5.2 drift amendment)
+
+The lateral-drift channel (LD-15) is driven by an arcade drift model embedded
+inside the fixed 60 Hz physics step. The model is pure (no `Math.random`),
+operates on per-tick inputs, and produces deterministic `lateralVelocity`
+and `slipAngle` values for each step.
+
+Named constants:
+
+| Constant | Value | Meaning |
+| -------- | ----- | ------- |
+| `NEATRACING_DRIFT_MAX_SLIP_ANGLE_RAD` | `π / 2` | Envelope ceiling for slip angle (`1.570796…`). The `atan2` form keeps the observable slip bounded to this region by construction. |
+| `NEATRACING_DRIFT_GRIP_FALLOFF_THRESHOLD_RAD` | `0.25` | Slip magnitude below which grip factor stays at 1.0. |
+| `NEATRACING_DRIFT_GRIP_FALLOFF_RATE_PER_RAD` | `2.0` | How fast grip factor drops for every radian of slip beyond the threshold. |
+| `NEATRACING_DRIFT_MIN_GRIP_FACTOR` | `0.25` | Floor for grip falloff; never lets the car become completely frictionless. |
+| `NEATRACING_DRIFT_COUNTERSTEER_RECOVERY_RATE_PER_S` | `4.0` | Rate at which countersteering (steer axis opposed to the slip direction) pulls lateral velocity back toward zero. |
+| `NEATRACING_DRIFT_LATERAL_GRIP_RATE_PER_S` | `6.0` | Passive lateral-velocity decay toward zero when no outward push or countersteer is present. |
+
+Per-tick helpers (implemented in `examples/neatRacing/physics/drift.model.ts`):
+
+1. **Slip angle:** `slip = atan2(lateralVelocity, speed)`, with `slip = 0` when
+   `speed <= 0` (prevents a phantom drift at standstill).
+2. **Outward push:** `push = -centrifugalMultiplier · yawRatePerTick · speed`,
+   where `speed` is the tick-start speed. Zero at standstill.
+3. **Grip falloff:** `grip = clamp(1 - max(0, |slip| - threshold) * rate, MIN_GRIP_FACTOR, 1)`.
+4. **Countersteer recovery:** when `steer` and `slip` have opposite signs,
+   `recovery = -sign(slip) · COUNTERSTEER_RECOVERY_RATE_PER_S · dt · speedPercent`;
+   otherwise `recovery = 0`.
+5. **Next lateral velocity:** `nextLateralVelocity = (lateralVelocity + push + recovery) · (1 - LATERAL_GRIP_RATE_PER_S · grip · dt)`.
+
+Integration order inside `stepPhysics`:
+1. resolve surface at tick start;
+2. resolve yaw and heading;
+3. resolve longitudinal speed;
+4. **apply the drift model** using the tick-start `speed` for outward push,
+   the tick-start `lateralVelocity`, the tick-end `speed` for slip angle,
+   and the clamped `steer` axis for countersteer;
+5. translate using `heading + slipAngle`;
+6. count the tick.
+
+**Visual drift yaw (P1-turn-drift-green-iteration-11 / AC-047A..AC-047D):**
+While the car is drifting at high speed, the body yaw must rotate slightly
+proportional to the drift amount and forward speed so the slide is visible to
+the player. This is a purely visual, arcade-style cue: it is added after the
+physics step, does not alter the deterministic physics trajectory, and is
+reset to zero when the car is not drifting. The yaw offset is computed from
+`lateralVelocity` and `speed` using bounded scaling (e.g.,
+`driftYawOffsetRad = clamp(lateralVelocity / speed * NEATRACING_DRIFT_VISUAL_YAW_GAIN_RAD, -max, max)`),
+consumed by the car pass when building the body transform. The feel target is
+fun, fast, and controllable — not realistic — so the outward push and grip
+recovery constants are tuned to let high-speed cornering produce a noticeable
+but recoverable slide.
+
+The drift model preserves the determinism contract in §5.3: it uses only
+`Math.atan2`, `Math.sign`, `Math.max`, `Math.min`, and arithmetic; it never
+mutates the input state, and it always returns the same output for the same
+inputs and `dt`.
 
 ### 5.3 Determinism contract
 
@@ -490,6 +549,40 @@ placement from the seed.
 - Deterministic: same `(seed, layoutVersion, sizeBucket)` → byte-identical
   track mesh (AC-017).
 - Voxel scenery props are **optional per course** (off by default at launch).
+
+### 6.8 Car shadow & fixed-space wheel lighting (Step 14C visual polish)
+
+- **Drop shadow (LD-22, blob-only):** every car casts a soft axis-aligned
+  body blob shadow on the ground plus four smaller contact-patch shadows
+  directly under the tire contact points. All shadow quads are drawn in the
+  existing unlit transparent pass after the road-edge paint, with **depth test
+  ON**, a small positive y offset that keeps them above the opaque road-edge
+  pavement, and multiplicative alpha blending so they darken the surface below.
+  Constants are named: `NEATRACING_BLOB_SHADOW_Y_OFFSET_M`,
+  `NEATRACING_BLOB_SHADOW_MAX_ALPHA`, `NEATRACING_BLOB_SHADOW_BOUNDS_SCALE`,
+  and `NEATRACING_BLOB_SHADOW_WHEEL_PATCH_SCALE_M`. The body blob MUST be
+  visible on the painted road surface and MUST cover the combined body +
+  wheel/tire footprint (its XZ half-extent is the larger of the body mesh
+  bounds half-extent and the wheel reach half-extent, scaled by
+  `NEATRACING_BLOB_SHADOW_BOUNDS_SCALE`). The per-wheel patches ensure each
+  tire casts a visible dark patch on the ground and are sized by
+  `NEATRACING_BLOB_SHADOW_WHEEL_PATCH_SCALE_M`.
+- **Fixed-space tire shading:** wheel tire voxels are still lifted from pure
+  black to a uniform dark rubber base at mesh-expansion time, but the
+  lighting gradient is applied per fragment at draw time, not baked into
+  vertex colors. The gradient follows the shared scene sun direction (a
+  fixed top-front light), using the dot product of the fragment-to-wheel-center
+  vector against `uSunDirection` and the wheel radius, so the highlight stays
+  fixed in light space and does not rotate with the spinning wheel. The lit
+  program exposes the uniforms `uApplyTireGradient`, `uTireGradientRadius`,
+  `uTireGradientBrightFactor`, `uTireGradientDarkFactor`, and
+  `uTireGradientThreshold`. Body draws disable the gradient
+  (`uApplyTireGradient = 0`); each wheel draw enables it with the wheel radius.
+  Bright rim/hub colors are protected by the brightness threshold and are left
+  unchanged.
+- **Neon flat-paint style preservation:** all car-body and wheel lighting
+  changes stay within the existing pass infrastructure; no new render passes,
+  no shadow maps, no per-vertex lighting, no ambient occlusion.
 
 ---
 
@@ -1835,6 +1928,39 @@ membership is noted per row; existing AC numbers are unchanged.
   timer fixture asserts the sim worker's per-tick adaptation work stays
   within budget at promoted sizes.
   validation: jest (`eval-worker` protocol + `runtime.adaptation` budget tests with `jest.useFakeTimers`).
+- **id: AC-044** (Phase 1, front-wheel steer animation — Step 14C) — Both
+  front wheels visually yaw with steering input up to a named max lock angle
+  (`NEATRACING_MAX_WHEEL_STEER_RAD`); wheel spin speed and direction are
+  preserved; the visual car pass consumes the angle without unintended
+  physics side effects.
+  validation: jest (`car.pass`/steer-angle wiring) + manual browser check.
+- **id: AC-045** (Phase 1, single floor grid with 5 m cells — Step 14C) —
+  The track grid is the only floor grid drawn; its cell footprint area is
+  25 m² (`NEATRACING_TRACK_GRID_CELL_FOOTPRINT_AREA_MULTIPLIER = 25`), giving
+  a 5.0 m line spacing. The flat-horizon draw semantics, depth-disabled
+  blending, and the unrelated pulse pass remain unchanged; zero per-frame
+  allocations are preserved.
+  validation: jest (`track/grid.pass` footprint + pass contract) + manual browser check (single grid, no moiré overlap).
+- **id: AC-046** (Phase 1, hexagonal road-edge flat floor paint — Step 14C)
+  — The road edge is rendered as a continuous flat-topped honeycomb pavement
+  on the track-pass floor surface, derived from the same track slab/edge
+  geometry as the ribbon. Paved hexes cover the road core and curb band; each
+  shared hex edge is stroked exactly once, so adjacent tiles join into one
+  continuous hexagonal grid with no corner gaps and no double borders.
+  Single-hex-wide border lines step outward from the track edge in the order
+  **green innermost, yellow middle, red outermost** on the same honeycomb
+  lattice. Each tile has a darker same-hue fill and a brighter edge stroke
+  on a **single flat paint plane**: the darker fill ends at the inner radius
+  and the bright stroke covers the inner-to-outer radius band at the same
+  small positive y offset, so there is no visible dark seam, no black outline,
+  and no coplanar depth interleaving. The whole pavement sits at a small
+  positive y offset to avoid z-fighting with the underlying slab, has no
+  vertical pillars or side faces, and never uses a near-black outline color. The
+  underlying slab top face is rendered as a flat near-black matte base so no
+  old road/curb colors show through the pavement.
+  validation: jest (`track/road-edge` honeycomb + edge-dedup + border-band +
+  single-plane-paint + no-black-outline contract, `engine/passes/track.pass`
+  top-face matte contract) + manual browser check.
 
 ---
 
@@ -2158,6 +2284,9 @@ validation commands per row are unchanged.
 | AC-041 | `editor/editor.rebuild.pipeline.ts`                                                                                              | jest(editor)                                                                                                                                                                    |
 | AC-042 | `browser-entry/host/render-loop.utils.ts`, `workers/simulation-worker/frame.pack.service.ts`                                     | jest(browser-entry)+jest(workers)                                                                                                                                               |
 | AC-043 | `workers/eval-worker/eval.protocol.ts`, `ai/runtime.adaptation.ts`                                                               | jest(workers)+jest(ai)                                                                                                                                                          |
+| AC-044 | `engine/passes/car.pass.ts`                                                                                                      | jest(engine) + manual                                                                                                                                                           |
+| AC-045 | `track/grid.builder.ts`, `track/grid.pass.ts`                                                                                    | jest(track) + manual                                                                                                                                                            |
+| AC-046 | `track/road-edge.ts`, `track/track.slabs.ts`, `engine/passes/track.pass.ts`                                                      | jest(track) + manual                                                                                                                                                            |
 
 **Slice-bound coverage note:** each slice in §17 binds to 1–3 ACs, and each
 step carries ≤ 5 slices — so per-step AC subsets stay within the
@@ -2173,7 +2302,7 @@ planning-acceptance-criteria handoff size at dispatch time.
   "coverage_percent": 100,
   "gaps": { "missing": 0, "partial": 0, "contradicts": 0, "unrequested": 0 },
   "findings": [],
-  "notes": "43/43 ACs carry stable AC-### ids, observable text, and a validation command; 43/43 map to concrete files in §18. AC-040..AC-043 were APPENDED by the specialist-review patch (GPU/performance/evolution) without renumbering existing criteria. Round-2 patch (evolution re-check N1-N4, determinism D1-D8, security S1-S6) extended AC-018/AC-024/AC-026/AC-027/AC-031 IN PLACE — no renumbering, no new AC numbers (every finding strengthened an existing criterion). Locked decisions (LD-01..34) are user-confirmed and not reopened. Tuning points TP-01..21 and risks R-01..09 are referenced from the sections that own them; TP-20 (NEATRACING_VISUAL_SEED) and TP-21 (NEATRACING_REPLAY_ADAPTATION_TICKS = 32) were appended by the round-2 patch (NEATRACING_MAX_SAVE_BODY_BYTES is a fixed security constant, not a tuning point). Validation commands created by slices (voxel:build, dev:neatRacing, build:neatRacing, voxel:generate:car) are named with their introducing slice (dependency noted in §12.4/§12.5). Constitution principles cited in §12.1. Steps contain 2-5 slices; slices bind to <= 3 files. Observation vector is normative (82/89/110, E2) with the AC-027 wording fixed: opponent-perception (rival-gap) slots >= 4 at lvl 3, teammate tail stays 3x7=21 (N1). Adaptation state ownership across the two-worker split is pinned (E11 §9.2: per-tick control in sim worker, evaluation engine in eval worker, deterministic-boundary-only result application, round-boundary reset). RNG discipline is normative (§9.7.1-9.7.3: seeded child-seed derivation table, Math.random ban, setSeed per car, >= 32-adaptation-tick byte-parity in AC-026, visual-seed exemption, fixed car placement, GPU hint disabled in sim worker). Promotion carries explicit seedNetwork + carriedInnovationCounter tuple fields (D4) and the drivability baseline is pinned to the profile-augmented scripted controller probe episode (N3). The oscillation engage (>=) vs promotion (>) asymmetry is recorded as intentional (N4). Server hardening is normative in §8.2 and tested by AC-018 (Host/Origin 403, OPTIONS 405, no Access-Control-*, fixed-argv shell:false spawn, single-flight latest-wins, 8 MiB 413, content-type 415, strict :name shape 404/405, {status,code} errors, unknown-key schema rejection, last-3 backup rotation).",
+  "notes": "46/46 ACs carry stable AC-### ids, observable text, and a validation command; 46/46 map to concrete files in §18. AC-040..AC-043 were APPENDED by the specialist-review patch (GPU/performance/evolution) without renumbering existing criteria. AC-044..AC-046 were APPENDED by the Step 14C user-requested extension patch (front-wheel steer animation, 5 m track grid cells, hexagonal road-edge flat floor paint) without renumbering existing criteria. Round-2 patch (evolution re-check N1-N4, determinism D1-D8, security S1-S6) extended AC-018/AC-024/AC-026/AC-027/AC-031 IN PLACE — no renumbering, no new AC numbers (every finding strengthened an existing criterion). Locked decisions (LD-01..34) are user-confirmed and not reopened. Tuning points TP-01..21 and risks R-01..09 are referenced from the sections that own them; TP-20 (NEATRACING_VISUAL_SEED) and TP-21 (NEATRACING_REPLAY_ADAPTATION_TICKS = 32) were appended by the round-2 patch (NEATRACING_MAX_SAVE_BODY_BYTES is a fixed security constant, not a tuning point). Validation commands created by slices (voxel:build, dev:neatRacing, build:neatRacing, voxel:generate:car) are named with their introducing slice (dependency noted in §12.4/§12.5). Constitution principles cited in §12.1. Steps contain 2-5 slices; slices bind to <= 3 files. Observation vector is normative (82/89/110, E2) with the AC-027 wording fixed: opponent-perception (rival-gap) slots >= 4 at lvl 3, teammate tail stays 3x7=21 (N1). Adaptation state ownership across the two-worker split is pinned (E11 §9.2: per-tick control in sim worker, evaluation engine in eval worker, deterministic-boundary-only result application, round-boundary reset). RNG discipline is normative (§9.7.1-9.7.3: seeded child-seed derivation table, Math.random ban, setSeed per car, >= 32-adaptation-tick byte-parity in AC-026, visual-seed exemption, fixed car placement, GPU hint disabled in sim worker). Promotion carries explicit seedNetwork + carriedInnovationCounter tuple fields (D4) and the drivability baseline is pinned to the profile-augmented scripted controller probe episode (N3). The oscillation engage (>=) vs promotion (>) asymmetry is recorded as intentional (N4). Server hardening is normative in §8.2 and tested by AC-018 (Host/Origin 403, OPTIONS 405, no Access-Control-*, fixed-argv shell:false spawn, single-flight latest-wins, 8 MiB 413, content-type 415, strict :name shape 404/405, {status,code} errors, unknown-key schema rejection, last-3 backup rotation).",
   "owner": "spec-checklist"
 }
 ```
@@ -2184,7 +2313,7 @@ resolutions): their values are folded in as named constants (checkpoint
 budget, lap counts, start level, dev-server port), the human/AI advancement
 rules are updated in §4.1/§4.2/§9.4 and AC-024/AC-031/AC-033, and the owner's
 spec-wide no-magic-numbers/no-magic-strings mandate is added to §12.2.
-Traceability remains 43/43 (100%); no locked decisions were reopened.
+Traceability remains 46/46 (100%); no locked decisions were reopened.
 
 ---
 
