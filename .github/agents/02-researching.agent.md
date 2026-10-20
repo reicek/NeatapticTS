@@ -2,7 +2,7 @@
 description: 'Use when: researching codebase patterns, APIs, dependencies, or prior art.'
 name: '02-researching'
 tier: 1
-model: kimi-k2.7-code:cloud
+model: minimax-m3.1-flash:cloud
 tools:
   [
     read,
@@ -53,7 +53,7 @@ handoffs:
     agent: '03-red-testing'
     prompt: 'Design red tests for the active slice. Load context via Cortex MCP and any declared pre_execute_hook/get_slice_context.'
     send: false
-    model: 'kimi-k2.7-code:cloud'
+    model: 'minimax-m3.1-flash:cloud'
 ---
 
 ## CRITICAL RULE — NEVER RUN GIT

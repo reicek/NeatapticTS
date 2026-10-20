@@ -325,3 +325,145 @@ describe('buildRoadEdgeHexVoxels (P1-road-edge-hex flat paint)', () => {
     expect(serializeHexMesh(otherMesh)).not.toBe(serializeHexMesh(firstMesh));
   });
 });
+
+/**
+ * Fixture for the outer-corner border-marker contract (slice
+ * P1-track-outer-corner-markers). The current implementation is known to miss
+ * a red tile within the exterior bisector cone at vertex 2.
+ */
+const OUTER_CORNER_FIXTURE_INPUT = {
+  seed: 0,
+  layoutVersion: 1,
+  sizeBucket: 'small',
+} as const;
+
+/** 2-D cross product (z component) of vectors a and b. */
+const crossZ = (
+  ax: number,
+  az: number,
+  bx: number,
+  bz: number,
+): number => ax * bz - az * bx;
+
+/** Normalizes a 2-D vector, returning a zero vector if the input is zero. */
+const normalize2 = (
+  x: number,
+  z: number,
+): { readonly x: number; readonly z: number } => {
+  const len = Math.hypot(x, z);
+  if (len === 0) {
+    return { x: 0, z: 0 };
+  }
+  return { x: x / len, z: z / len };
+};
+
+/** Angle between two unit vectors, in radians. */
+const angleBetween = (
+  ax: number,
+  az: number,
+  bx: number,
+  bz: number,
+): number => {
+  const dot = ax * bx + az * bz;
+  return Math.acos(Math.min(1, Math.max(-1, dot)));
+};
+
+/** Returns true when the closed polygon is ordered clockwise. */
+const isClockwisePolygon = (
+  vertices: ReadonlyArray<{ readonly x: number; readonly z: number }>,
+): boolean => {
+  let signedArea = 0;
+  for (let i = 0; i < vertices.length; i++) {
+    const a = vertices[i]!;
+    const b = vertices[(i + 1) % vertices.length]!;
+    signedArea += a.x * b.z - b.x * a.z;
+  }
+  return signedArea < 0;
+};
+
+/**
+ * Computes the exterior-angle bisector direction at vertex `i`. For a convex
+ * (outer) corner the bisector points away from the track interior.
+ */
+const exteriorBisectorAt = (
+  vertices: ReadonlyArray<{ readonly x: number; readonly z: number }>,
+  i: number,
+  clockwise: boolean,
+): { readonly x: number; readonly z: number } => {
+  const prev = vertices[(i - 1 + vertices.length) % vertices.length]!;
+  const curr = vertices[i]!;
+  const next = vertices[(i + 1) % vertices.length]!;
+
+  const inDir = normalize2(curr.x - prev.x, curr.z - prev.z);
+  const outDir = normalize2(next.x - curr.x, next.z - curr.z);
+
+  // For a counter-clockwise polygon the interior is to the left of each edge,
+  // so the outward normal is the right normal. For a clockwise polygon the
+  // interior is to the right, so the outward normal is the left normal.
+  const outwardNormal = clockwise
+    ? { x: -inDir.z, z: inDir.x }
+    : { x: inDir.z, z: -inDir.x };
+  const outwardNormal2 = clockwise
+    ? { x: -outDir.z, z: outDir.x }
+    : { x: outDir.z, z: -outDir.x };
+
+  return normalize2(
+    outwardNormal.x + outwardNormal2.x,
+    outwardNormal.z + outwardNormal2.z,
+  );
+};
+
+describe('outer-corner border markers', () => {
+  const centers = collectRoadEdgeTileCenters(OUTER_CORNER_FIXTURE_INPUT);
+  const vertices = generateTrack(OUTER_CORNER_FIXTURE_INPUT).segments.map(
+    (segment) => ({
+      x: segment.startX,
+      z: -segment.startY,
+    }),
+  );
+  const clockwise = isClockwisePolygon(vertices);
+
+  for (let i = 0; i < vertices.length; i++) {
+    const prev = vertices[(i - 1 + vertices.length) % vertices.length]!;
+    const curr = vertices[i]!;
+    const next = vertices[(i + 1) % vertices.length]!;
+    const turn = crossZ(
+      curr.x - prev.x,
+      curr.z - prev.z,
+      next.x - curr.x,
+      next.z - curr.z,
+    );
+    const isOuter = clockwise ? turn < 0 : turn > 0;
+    if (!isOuter) {
+      continue;
+    }
+
+    it(
+      `has green, yellow, and red border tiles within 18 m and 60° of ` +
+        `the exterior bisector at outer corner ${i} (${curr.x.toFixed(2)}, ${curr.z.toFixed(2)})`,
+      () => {
+        const bisector = exteriorBisectorAt(vertices, i, clockwise);
+        const matched = centers.filter((tile) => {
+          const dx = tile.x - curr.x;
+          const dz = tile.z - curr.z;
+          const distance = Math.hypot(dx, dz);
+          if (distance > 18) {
+            return false;
+          }
+          const direction = normalize2(dx, dz);
+          const angle = angleBetween(
+            direction.x,
+            direction.z,
+            bisector.x,
+            bisector.z,
+          );
+          return angle <= Math.PI / 3;
+        });
+
+        expect(matched.some((tile) => tile.colorway === 'green')).toBe(true);
+        expect(matched.some((tile) => tile.colorway === 'yellow')).toBe(true);
+        expect(matched.some((tile) => tile.colorway === 'red')).toBe(true);
+      },
+    );
+  }
+});

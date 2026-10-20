@@ -6,7 +6,7 @@
 
 ## Mandates
 
-- `model: kimi-k2.7-code:cloud` for every dispatch under this plan. Every agent dispatch overrides its frontmatter `model` with `kimi-k2.7-code:cloud`.
+- `model: minimax-m3.1-flash:cloud` for every dispatch under this plan. Every agent dispatch overrides its frontmatter `model` with `minimax-m3.1-flash:cloud`.
 - Pragmatic mode: broad slices (one slice per feature), bypass legacy ceremony (skip plan-verification green-light cycle, skip per-AC gate calls, skip fix-packet YAML ceremony). Ship working software.
 - Targeted tests only: never run the full test suite in a single shell invocation; use `--testPathPatterns` focused on the touched module.
 - No deferred cleanup: when replacing code, remove the old code in the same slice that introduces the new code. No backward-compatibility wrappers, no dual-path code.

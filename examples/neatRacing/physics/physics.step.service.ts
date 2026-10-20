@@ -39,6 +39,7 @@
 import {
   computeNextLateralVelocity,
   computeSlipAngle,
+  NEATRACING_DRIFT_VISUAL_YAW_GAIN_RAD,
 } from './drift.model';
 
 /** Surface label for one tick, matching the track slab palette (`track.slabs`). */
@@ -97,6 +98,13 @@ export interface PhysicsCarState {
    * car sideways on its own while `speed` is zero.
    */
   lateralVelocity: number;
+  /**
+   * Visual-only arcade drift yaw offset in radians, computed by the drift
+   * model from `lateralVelocity` and `speed`. This does not alter the
+   * physics trajectory; it is consumed by the renderer to make high-speed
+   * slides visible to the player (AC-047).
+   */
+  driftYawOffset: number;
   /** Completed fixed-tick count since spawn (0 = the spawn state itself). */
   tick: number;
 }
@@ -166,13 +174,13 @@ export const NEATRACING_PHYSICS_OFF_ROAD_SPEED_FLOOR_UNITS_PER_S =
   NEATRACING_PHYSICS_MAX_SPEED_UNITS_PER_S / 4;
 
 /**
- * Centrifugal outward-push multiplier: `0.3` (spec Â§5.2 locked table,
- * TP-02). Top-down adaptation: the outward lateral push per tick is
- * `CENTRIFUGAL_MULTIPLIER Â· yawRate Â· speed` (algebraically the
- * `0.3 Â· curvature Â· speedPercentÂ²` form with the top-down curvature
- * `curvature = yawRate / speed`, guarded to zero at standstill).
+ * Centrifugal outward-push multiplier: `1.5` (AC-047, spec §5.2 drift
+ * amendment). Top-down adaptation: the outward lateral push per tick is
+ * `CENTRIFUGAL_MULTIPLIER Â· yawRate Â· (speed - minSpeedMps)` so high-speed
+ * cornering produces a visible arcade slide while low-speed handling stays
+ * unchanged (guarded to zero below `NEATRACING_DRIFT_MIN_SPEED_MPS`).
  */
-export const NEATRACING_PHYSICS_CENTRIFUGAL_MULTIPLIER = 0.3;
+export const NEATRACING_PHYSICS_CENTRIFUGAL_MULTIPLIER = 1.5;
 
 /**
  * Steering rate: `dx = dt Â· 2 Â· speedPercent` (spec Â§5.2 locked table,
@@ -262,6 +270,31 @@ export interface PhysicsCarSpawnPose {
   readonly heading: number;
 }
 
+/**
+ * Creates the deterministic spawn car state for a given seed (spec Â§5.3
+ * determinism tuple: the seed selects the spawn lane via a pure integer
+ * mix Ã¢ no `Math.random` anywhere, so the same seed always yields the
+ * byte-identical spawn state). The car starts standing (zero speed, zero
+ * yaw, zero slip, zero visual drift yaw) heading straight along +x at the
+ * world origin line.
+ *
+ * @param seed - Replay seed that fixes the spawn lane offset; defaults to
+ *   `NEATRACING_PHYSICS_DEFAULT_SPAWN_SEED` when omitted. Non-integer or
+ *   out-of-range values are truncated deterministically (`| 0` treats
+ *   `NaN` as `0`) Ã¢ never a silent nondeterminism source.
+ * @param pose - Optional explicit spawn pose; when supplied, the seed is
+ *   ignored because the explicit position already fixes the lane.
+ * @returns Fresh `PhysicsCarState` at `tick = 0`.
+ * @remarks The lateral spread keeps the spawn inside ~ÃÂ±1 m of the center
+ *   line; a future track-side spawn wrapper (P1-S7-D) may re-base this
+ *   pose on the generated track while still relying on the same seed rule.
+ *
+ * @example
+ * ```ts
+ * const car = createInitialPhysicsCarState(42);
+ * console.log(car.speed === 0); // standing start
+ * ```
+ */
 export function createInitialPhysicsCarState(
   seed?: number,
   pose?: PhysicsCarSpawnPose,
@@ -275,6 +308,7 @@ export function createInitialPhysicsCarState(
     yawRate: 0,
     slipAngle: 0,
     lateralVelocity: 0,
+    driftYawOffset: 0,
     tick: 0,
   };
 }
@@ -297,8 +331,9 @@ export function createInitialPhysicsCarState(
  *    braking is never floored and can stop the car), clamped to
  *    `[0, maxSpeed]`;
  * 4. integrate the lateral drift velocity through the arcade drift model
- *    (AC-047, spec §5.2 drift amendment): TP-02 outward push, countersteer
- *    recovery, grip falloff curve, and bounded LD-15 slip angle via `atan2`;
+ *    (AC-047, spec §5.2 drift amendment): TP-02 outward push with a minimum
+ *    speed threshold, countersteer recovery, grip falloff curve, bounded
+ *    LD-15 slip angle via `atan2`, and a visual-only arcade yaw offset;
  * 5. translate along the velocity direction (heading + slipAngle) so the
  *    drift arc bends the path;
  * 6. count the tick.
@@ -357,6 +392,8 @@ export function stepPhysics(
     },
   );
   const nextSlipAngle = computeSlipAngle(nextLateralVelocity, nextSpeed);
+  const nextDriftYawOffset =
+    nextSlipAngle * NEATRACING_DRIFT_VISUAL_YAW_GAIN_RAD;
 
   // Step 5: Translate along the velocity direction (drift arc path).
   const velocityHeading = nextHeading + nextSlipAngle;
@@ -379,6 +416,7 @@ export function stepPhysics(
     yawRate: yawRatePerTick,
     slipAngle: nextSlipAngle,
     lateralVelocity: nextLateralVelocity,
+    driftYawOffset: nextDriftYawOffset,
     tick: nextTick,
   };
 }

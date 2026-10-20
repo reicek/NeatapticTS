@@ -2,7 +2,7 @@
 description: 'Scout for README drift, JSDoc gaps, and generated docs freshness.'
 name: docs-scout
 tier: 3
-model: kimi-k2.7-code:cloud
+model: minimax-m3.1-flash:cloud
 tools:
   [
     read,

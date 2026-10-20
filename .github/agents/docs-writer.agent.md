@@ -2,7 +2,7 @@
 description: 'Writer for JSDoc, READMEs, examples, and guides from source in isolated context. Applies the educational-docs tone model.'
 name: docs-writer
 tier: 3
-model: kimi-k2.7-code:cloud
+model: minimax-m3.1-flash:cloud
 tools:
   [
     read,

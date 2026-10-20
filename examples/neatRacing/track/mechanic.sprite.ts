@@ -28,7 +28,12 @@ import {
   ROBOT_SPRITE_PALETTE,
   ROBOT_SPRITE_SCALE,
 } from '../../neatenstein/robot-sprite-data';
-import { buildRightWorldProps } from './right-world.builder';
+import {
+  buildRightWorldProps,
+  filterRobotsByPersonalSpace,
+  getBleacherAxisAlignedHalfSize,
+  getBleacherSeatTopY,
+} from './right-world.builder';
 import type { RightWorldProp } from './right-world.builder';
 import { resolvePropHalfSize } from './right-world.prop-sizes';
 import {
@@ -126,23 +131,36 @@ const BILLBOARD_WORLD_SCALE = 1.0;
 /** RGBA channel count used when decoding Neatenstein palette data. */
 const RGBA_CHANNELS = 4;
 
-/** Canonical 8-direction order used by the Neatenstein robot sprite data. */
-const DIRECTION_ORDER = [
-  'front',
-  'frontRight',
-  'right',
-  'backRight',
-  'back',
-  'backLeft',
-  'left',
-  'frontLeft',
-] as const;
-
 /** Team-color accent palette for mechanic-crew sprites (AC-062). */
 const MECHANIC_TEAM_COLORS: readonly (readonly [number, number, number, number])[] = [
   [221, 34, 0, 255],
   [0, 255, 255, 255],
+  [255, 255, 0, 255],
+  [255, 0, 255, 255],
+  [0, 255, 128, 255],
+  [128, 0, 255, 255],
 ];
+
+/** Number of palette colors available for mechanic robots. */
+const MECHANIC_COLOR_COUNT = MECHANIC_TEAM_COLORS.length;
+
+/**
+ * Stable per-robot accent color index derived from deterministic identity.
+ *
+ * The same hash is used for public sprites so that both sprite systems share
+ * a consistent robot-identity color seed, but each system indexes its own
+ * palette size.
+ */
+function computeMechanicRobotColorId(seed: number, index: number): number {
+  let hash = seed >>> 0;
+  hash ^= (index * 0x9e3779b9) >>> 0;
+  hash = Math.imul(hash ^ 0x85ebca6b, 0xc2b2ae35);
+  hash ^= hash >>> 16;
+  hash = Math.imul(hash, 0x27d4eb2f);
+  hash ^= hash >>> 15;
+
+  return (hash >>> 0) % MECHANIC_COLOR_COUNT;
+}
 
 /** Spline sample shape used by the generated track specification. */
 type TrackSplineSample = ReturnType<typeof generateTrack>['splineSamples'][number];
@@ -226,21 +244,6 @@ export function computeMechanicBillboardScale(distance: number): number {
 }
 
 /**
- * Resolves a world yaw angle in degrees to the nearest 8-direction sprite label.
- *
- * @param yawDegrees - World yaw in degrees. 0 faces +Z (front), positive
- *   values rotate toward +X (right).
- * @returns One of the eight Neatenstein direction labels.
- */
-function resolveMechanicDirection(yawDegrees: number): string {
-  const step = 360 / DIRECTION_ORDER.length;
-  const normalized = ((yawDegrees % 360) + 360 + step / 2) % 360;
-  const index = Math.floor(normalized / step) % DIRECTION_ORDER.length;
-
-  return DIRECTION_ORDER[index]!;
-}
-
-/**
  * Selects the stand frame that makes a mechanic-crew robot face the car.
  *
  * @param atlas - Mechanic-crew sprite atlas.
@@ -277,9 +280,25 @@ export function computeMechanicRuntimeFrameIndex(
 ): number {
   const directionIndex = resolveDirectionIndexFromTarget(billboard.position, carPosition);
   const tableIndex = directionIndex * PUBLIC_POSE_COUNT + PUBLIC_POSE_INDEX_STAND;
-  const atlasIndex = indexTable[tableIndex];
+  const defaultAtlasIndex = indexTable[tableIndex];
 
-  return atlasIndex !== undefined && atlasIndex >= 0 ? atlasIndex : -1;
+  if (defaultAtlasIndex === undefined || defaultAtlasIndex < 0) {
+    return -1;
+  }
+
+  // The atlas is laid out color-major and the simple id-split table points at
+  // the LAST color block. Offset back to this robot's stable identity color.
+  // Each mechanic color block contains one frame per direction, so the stride
+  // between color blocks is the direction count (not PUBLIC_POSE_COUNT).
+  const defaultColorId = MECHANIC_COLOR_COUNT - 1;
+  const colorId = computeMechanicRobotColorId(
+    billboard.seed ?? 0,
+    billboard.index ?? 0,
+  );
+  const frameBlockSize = DIRECTION_ORDER.length;
+  const atlasIndex = defaultAtlasIndex + (colorId - defaultColorId) * frameBlockSize;
+
+  return atlasIndex;
 }
 
 /**
@@ -394,47 +413,50 @@ export function buildMechanicBillboards(
     });
   }
 
-  return billboards;
+  // AC-065: keep only the mechanic crew robots that fit the 1 m XZ personal-space
+  // band. Filtering is deterministic and happens at build time, leaving the draw
+  // path allocation-free.
+  return filterRobotsByPersonalSpace(billboards);
 }
 
 /**
- * Builds a stable, sorted frame list from the Neatenstein robot sprite atlas.
+ * Builds a stable frame list from the Neatenstein robot sprite atlas.
  *
  * Only the standing pose is reused for the pit crew so the sprites read as
- * stationary mechanics rather than animated walkers. Sorting by id makes
- * the frame order independent of object-key iteration order, which keeps
- * {@link selectMechanicSpriteFrame} deterministic across runtimes.
+ * stationary mechanics rather than animated walkers. Frames are emitted in
+ * COLOR-major order: for each palette color, every direction frame is recolored
+ * and appended. The frame id stays in the base `mechanic-direction-stand` form
+ * so existing id-split lookup tables keep working. The last color block is
+ * therefore the one a simple direction table maps to; runtime helpers offset
+ * back to each robot's stable identity color (fix-packet-P1-bleacher-shape-
+ * iteration-3, OBS-2).
  *
  * @returns Decoded 2D RGBA frames recycled from `ROBOT_SPRITE_FRAMES`.
  */
 function buildMechanicSpriteAtlasFrames(): readonly MechanicSpriteFrame[] {
-  const entries: {
-    readonly id: string;
-    readonly frame: EncodedFrame;
-    readonly accent: readonly [number, number, number, number];
-  }[] = [];
+  const frames: MechanicSpriteFrame[] = [];
 
-  for (let directionIndex = 0; directionIndex < DIRECTION_ORDER.length; directionIndex += 1) {
-    const direction = DIRECTION_ORDER[directionIndex]!;
-    const poseMap = ROBOT_SPRITE_FRAMES[direction];
-    if (!poseMap) {
-      continue;
+  for (const accent of MECHANIC_TEAM_COLORS) {
+    for (const direction of DIRECTION_ORDER) {
+      const poseMap = ROBOT_SPRITE_FRAMES[direction];
+      if (!poseMap) {
+        continue;
+      }
+      const standFrame = poseMap.stand;
+      if (standFrame === undefined) {
+        continue;
+      }
+      const id = `mechanic-${direction}-stand`;
+      frames.push(
+        recolorFrameRgba(
+          decodeMechanicFrame(standFrame as EncodedFrame, id),
+          accent,
+        ),
+      );
     }
-    const standFrame = poseMap.stand;
-    if (standFrame === undefined) {
-      continue;
-    }
-    const accent = MECHANIC_TEAM_COLORS[directionIndex % MECHANIC_TEAM_COLORS.length]!;
-    entries.push({
-      id: `mechanic-${direction}-stand`,
-      frame: standFrame as EncodedFrame,
-      accent,
-    });
   }
 
-  return entries
-    .toSorted((a, b) => a.id.localeCompare(b.id))
-    .map((entry) => recolorFrameRgba(decodeMechanicFrame(entry.frame, entry.id), entry.accent));
+  return frames;
 }
 
 /**
@@ -605,8 +627,21 @@ function resolveBillboardBaseY(
 
   for (const prop of props) {
     const [px, py, pz] = prop.position;
-    const [pHx, pHy, pHz] = resolvePropHalfSize(prop.kind);
-    const propTop = py + 2 * pHy;
+
+    let pHx: number;
+    let pHz: number;
+    let propTop: number;
+    if (prop.kind === 'bleacher' && prop.bleacherGeometry) {
+      const [bleacherHalfWidth, bleacherHalfDepth] = getBleacherAxisAlignedHalfSize(prop);
+      pHx = bleacherHalfWidth;
+      pHz = bleacherHalfDepth;
+      propTop = getBleacherSeatTopY(prop, x, z);
+    } else {
+      const [phx, phy, phz] = resolvePropHalfSize(prop.kind);
+      pHx = phx;
+      pHz = phz;
+      propTop = py + 2 * phy;
+    }
 
     if (
       Math.abs(x - px) < halfWidth + pHx &&

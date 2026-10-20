@@ -2,7 +2,7 @@
 description: 'Mapper for module boundaries, orchestration files, and split planning.'
 name: boundary-mapper
 tier: 3
-model: kimi-k2.7-code:cloud
+model: minimax-m3.1-flash:cloud
 tools:
   [
     read,

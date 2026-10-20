@@ -522,6 +522,7 @@ function createRecordingPasses(
     },
     getLayerLayout: (): StarfieldLayerLayout =>
       ({}) as unknown as StarfieldLayerLayout,
+    setBackdropSize: (): void => undefined,
   };
   const grid: GridPass | undefined = includeGrid
     ? {

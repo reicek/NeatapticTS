@@ -2,7 +2,7 @@
 description: 'Chrome DevTools performance trace specialist for CPU, layout, paint, and frame-rate metrics.'
 name: 'performance-trace-specialist'
 tier: 3
-model: kimi-k2.7-code:cloud
+model: minimax-m3.1-flash:cloud
 tools:
   [
     read,

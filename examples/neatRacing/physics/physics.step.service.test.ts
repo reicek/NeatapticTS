@@ -103,7 +103,7 @@ describe('physics step service constants (spec §5.2, AC-023)', () => {
   });
 
   it('exposes the centrifugal multiplier and steering rate (TP-02, TP-04)', () => {
-    expect(NEATRACING_PHYSICS_CENTRIFUGAL_MULTIPLIER).toBe(0.3);
+    expect(NEATRACING_PHYSICS_CENTRIFUGAL_MULTIPLIER).toBe(1.5);
     expect(NEATRACING_PHYSICS_STEERING_RATE).toBe(2);
   });
 });
@@ -132,6 +132,16 @@ describe('physics step service slip and drift envelopes (LD-15)', () => {
     expect(Math.abs(state.yawRate)).toBeGreaterThan(0);
     expect(Math.abs(state.yawRate)).toBeLessThan(1);
     expect(Number.isFinite(state.yawRate)).toBe(true);
+  });
+
+  it('initializes driftYawOffset to zero at spawn and produces a bounded offset under sustained steering', () => {
+    const spawn = createInitialPhysicsCarState(42);
+    expect(spawn.driftYawOffset).toBe(0);
+
+    const state = runSteps(60, 42, FIXTURE_INPUT, 'road');
+    expect(Math.abs(state.driftYawOffset)).toBeGreaterThan(0);
+    expect(Math.abs(state.driftYawOffset)).toBeLessThan(Math.PI / 2);
+    expect(Number.isFinite(state.driftYawOffset)).toBe(true);
   });
 
   it('enforces the off-road speed floor on grass (§5.2)', () => {

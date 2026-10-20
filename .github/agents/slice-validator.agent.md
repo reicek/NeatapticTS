@@ -2,7 +2,7 @@
 description: 'Shared Tier-3 read-only validator that checks slice compliance against plan contracts: verifies slice boundaries (atomic intent, ≤3 files), step-packet field completeness, and plan-contract alignment, then reports PASS/FAIL with observations. Does NOT run tests, build, lint, or edit files.'
 name: 'slice-validator'
 tier: 3
-model: kimi-k2.7-code:cloud
+model: minimax-m3.1-flash:cloud
 tools:
   [
     read,

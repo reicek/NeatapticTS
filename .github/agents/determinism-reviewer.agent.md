@@ -2,7 +2,7 @@
 description: 'Reviewer with a replay-stability point of view on RNG/seed usage and ordering drift.'
 name: 'determinism-reviewer'
 tier: 3
-model: kimi-k2.7-code:cloud
+model: minimax-m3.1-flash:cloud
 tools:
   [
     read,

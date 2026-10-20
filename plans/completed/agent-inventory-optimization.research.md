@@ -2,7 +2,7 @@
 
 **Date:** 2026-08-15
 **Session:** f3803217-b924-4fce-9637-a0d727e718e1
-**Specialists:** 9 (6 inventory analysts + 3 Copilot standards researchers, all kimi-k2.7-code:cloud)
+**Specialists:** 9 (6 inventory analysts + 3 Copilot standards researchers, all minimax-m3.1-flash:cloud)
 **Scope:** 31 agents, 66 skills, 5-tier architecture
 
 ---
@@ -125,7 +125,7 @@ Recommendations:
 
 ## Specialist #6: Standards & Model Compliance
 
-CRITICAL: ALL 31 agents use `kimi-k2.7-code:cloud` — NONE use `kimi-k2.7-code:cloud` (0.92)
+CRITICAL: ALL 31 agents use `minimax-m3.1-flash:cloud` — NONE use `minimax-m3.1-flash:cloud` (0.92)
 
 - Frontmatter: PASS (0 errors, 0 warnings)
 - Quality contract sections: PASS
@@ -137,7 +137,7 @@ CRITICAL: ALL 31 agents use `kimi-k2.7-code:cloud` — NONE use `kimi-k2.7-code:
 
 Recommendations:
 
-- R1 (0.92): Update all model fields. Either kimi-k2.7-code:cloud universally, or phase-appropriate per model-routing-and-budget skill
+- R1 (0.92): Update all model fields. Either minimax-m3.1-flash:cloud universally, or phase-appropriate per model-routing-and-budget skill
 - R2 (0.80): Add model-value allowlist enforcement to validator
 - R3 (0.85): Confirm solid-split skill existence — non-issue, intentionally kept
 - R4 (0.70): Fix validator YAML parser charset handling
@@ -229,13 +229,13 @@ Research of model options and cost optimization for GitHub Copilot custom agents
 
 **Key findings:**
 
-1. **`kimi-k2.7-code:cloud` is a SELF-HOSTED local Ollama model** (free, runs at 127.0.0.1:11434), NOT a GitHub Copilot cloud model
-2. **`kimi-k2.7-code:cloud` IS an official GA Copilot model** — cheapest cloud model with coding focus ($0.95 input / $4.00 output per 1M tokens)
-3. **Validator strict allowed models**: `kimi-k2.7-code:cloud (ollama)`, `kimi-k2.7-code:cloud`. NOTE: `anthropic/claude-sonnet-4-20250514` is currently in the validator but is NOT approved — must be removed per user directive.
+1. **`minimax-m3.1-flash:cloud` is a SELF-HOSTED local Ollama model** (free, runs at 127.0.0.1:11434), NOT a GitHub Copilot cloud model
+2. **`minimax-m3.1-flash:cloud` IS an official GA Copilot model** — cheapest cloud model with coding focus ($0.95 input / $4.00 output per 1M tokens)
+3. **Validator strict allowed models**: `minimax-m3.1-flash:cloud (ollama)`, `minimax-m3.1-flash:cloud`. NOTE: `anthropic/claude-sonnet-4-20250514` is currently in the validator but is NOT approved — must be removed per user directive.
 
 **"Claude Haiku 4.6" does NOT exist** — only Haiku 4.5 is GA. The model-routing-and-budget skill references "Claude Haiku 4.6" which should be corrected.
 
-**NOTE: Neither Claude Sonnet nor Claude Haiku are approved models for NeatapticTS.** Only `kimi-k2.7-code:cloud` and `kimi-k2.7-code:cloud` are approved. The `anthropic/claude-sonnet-4-20250514` entry in the validator must be removed. The model-routing-and-budget skill must be updated to remove all Claude references and use only the two approved models.
+**NOTE: Neither Claude Sonnet nor Claude Haiku are approved models for NeatapticTS.** Only `minimax-m3.1-flash:cloud` and `minimax-m3.1-flash:cloud` are approved. The `anthropic/claude-sonnet-4-20250514` entry in the validator must be removed. The model-routing-and-budget skill must be updated to remove all Claude references and use only the two approved models.
 
 **Claude Sonnet 5** ($2.00/$10.00) is cheaper than Sonnet 4.6 ($3.00/$15.00) and is GA — may be worth considering **in the future** if explicitly approved by the user. Not currently approved.
 
@@ -243,20 +243,20 @@ Research of model options and cost optimization for GitHub Copilot custom agents
 
 | Agent Type                    | Recommended Model                    | Justification                                |
 | ----------------------------- | ------------------------------------ | -------------------------------------------- |
-| Heavy: Implementation/Editing | `kimi-k2.7-code:cloud` (local, free) | Deep reasoning, edge-case handling. Free.    |
-| Heavy: Planning/Architecture  | `kimi-k2.7-code:cloud` (local, free) | Broad reasoning needed. Free.                |
-| Heavy: Red Testing            | `kimi-k2.7-code:cloud` (local, free) | Test contracts need careful judgment. Free.  |
-| Mid: Green Testing            | `kimi-k2.7-code:cloud`               | Verification mostly mechanical. Cheap cloud. |
-| Mid: Research/Exploration     | `kimi-k2.7-code:cloud`               | Retrieval/summarization. Cheap, fast.        |
-| Mid: Code Review/Security     | `kimi-k2.7-code:cloud`               | Read-only review. Cheap, fast.               |
-| Mid: Documentation            | `kimi-k2.7-code:cloud`               | Writing tasks. Cheap.                        |
-| Light: Logging/Summarization  | `kimi-k2.7-code:cloud`               | Most lightweight tasks. Cheapest cloud.      |
-| Light: Scouts (all)           | `kimi-k2.7-code:cloud`               | Read-only recon. Cheap, parallel-friendly.   |
-| Light: Browser specialists    | `kimi-k2.7-code:cloud`               | Narrow scoped. Cheap.                        |
-| Light: Learning events        | `kimi-k2.7-code:cloud`               | One-shot auxiliary. Cheapest.                |
+| Heavy: Implementation/Editing | `minimax-m3.1-flash:cloud` (local, free) | Deep reasoning, edge-case handling. Free.    |
+| Heavy: Planning/Architecture  | `minimax-m3.1-flash:cloud` (local, free) | Broad reasoning needed. Free.                |
+| Heavy: Red Testing            | `minimax-m3.1-flash:cloud` (local, free) | Test contracts need careful judgment. Free.  |
+| Mid: Green Testing            | `minimax-m3.1-flash:cloud`               | Verification mostly mechanical. Cheap cloud. |
+| Mid: Research/Exploration     | `minimax-m3.1-flash:cloud`               | Retrieval/summarization. Cheap, fast.        |
+| Mid: Code Review/Security     | `minimax-m3.1-flash:cloud`               | Read-only review. Cheap, fast.               |
+| Mid: Documentation            | `minimax-m3.1-flash:cloud`               | Writing tasks. Cheap.                        |
+| Light: Logging/Summarization  | `minimax-m3.1-flash:cloud`               | Most lightweight tasks. Cheapest cloud.      |
+| Light: Scouts (all)           | `minimax-m3.1-flash:cloud`               | Read-only recon. Cheap, parallel-friendly.   |
+| Light: Browser specialists    | `minimax-m3.1-flash:cloud`               | Narrow scoped. Cheap.                        |
+| Light: Learning events        | `minimax-m3.1-flash:cloud`               | One-shot auxiliary. Cheapest.                |
 
 **Cost analysis:**
 
-- kimi-k2.7-code:cloud = $0 (local Ollama, limited by hardware)
-- kimi-k2.7-code:cloud = ~$0.0175 per typical agent interaction (10K input + 2K output tokens)
+- minimax-m3.1-flash:cloud = $0 (local Ollama, limited by hardware)
+- minimax-m3.1-flash:cloud = ~$0.0175 per typical agent interaction (10K input + 2K output tokens)
 - Using tiered strategy saves significant costs vs all-glm-5.2 (which would be free but hardware-limited) or all-cloud (which would be expensive)

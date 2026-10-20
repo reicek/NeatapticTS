@@ -2,7 +2,7 @@
 description: 'Reviewer with a license/attribution point of view for external-source compliance.'
 name: 'license-reviewer'
 tier: 3
-model: kimi-k2.7-code:cloud
+model: minimax-m3.1-flash:cloud
 tools:
   [
     read,

@@ -2,7 +2,7 @@
 description: 'Reviewer that runs benchmark gates and checks for performance regressions against thresholds.'
 name: 'benchmark-gate-reviewer'
 tier: 3
-model: kimi-k2.7-code:cloud
+model: minimax-m3.1-flash:cloud
 tools:
   [
     read,

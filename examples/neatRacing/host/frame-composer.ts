@@ -549,6 +549,8 @@ function createDrawStateBags(
       cameraWorld: [0, 0, 0],
       cameraRight: [1, 0, 0],
       cameraUp: [0, 1, 0],
+      timeSeconds: 0,
+      carPosition: [0, 0, 0],
     },
     car: {
       viewProjection: new Float32Array(PINNED_MATRIX_FLOAT_COUNT),
@@ -609,6 +611,8 @@ function refreshDrawStateBags(
     bags.rightWorld.cameraWorld = frame.rightWorld.cameraWorld;
     bags.rightWorld.cameraRight = frame.rightWorld.cameraRight;
     bags.rightWorld.cameraUp = frame.rightWorld.cameraUp;
+    bags.rightWorld.timeSeconds = frame.rightWorld.timeSeconds;
+    bags.rightWorld.carPosition = frame.rightWorld.carPosition;
   }
   // Step 4: bloom composite frame — dims and AC-035 flag, verbatim.
   bags.bloom.targetWidth = gl.canvas.width;

@@ -24,6 +24,11 @@
 
 import { describe, expect, it } from '@jest/globals';
 import { NEATRACING_WARMED_PROGRAM_KEYS } from '../context.service';
+import {
+  NEATRACING_LIGHTING_UNIFORM_NAMES,
+  NEATRACING_SUN_COLOR,
+  NEATRACING_SUN_DIRECTION,
+} from '../lighting';
 import type { TrackSlabMesh } from '../../track/track.slabs';
 import {
   NEATRACING_TRACK_PROGRAM_KEY,
@@ -65,6 +70,34 @@ interface TrackMockGlHarness {
   readonly enableCalls: readonly number[];
   readonly disableCalls: readonly number[];
   readonly uniformMatrixCalls: readonly Float32Array[];
+  readonly uniformLocationRequests: readonly string[];
+  readonly uniform3fFeeds: ReadonlyArray<{
+    readonly name: string;
+    readonly channels: readonly [number, number, number];
+  }>;
+  readonly uniform1fFeeds: ReadonlyArray<{
+    readonly name: string;
+    readonly value: number;
+  }>;
+}
+
+/** Filters recorded uniform3f feeds down to one uniform name. */
+function uniform3fFeedsNamed(
+  harness: TrackMockGlHarness,
+  name: string,
+): ReadonlyArray<{
+  readonly name: string;
+  readonly channels: readonly [number, number, number];
+}> {
+  return harness.uniform3fFeeds.filter((feed) => feed.name === name);
+}
+
+/** Filters recorded uniform1f feeds down to one uniform name. */
+function uniform1fFeedsNamed(
+  harness: TrackMockGlHarness,
+  name: string,
+): ReadonlyArray<{ readonly name: string; readonly value: number }> {
+  return harness.uniform1fFeeds.filter((feed) => feed.name === name);
 }
 
 /**
@@ -82,6 +115,12 @@ function createTrackMockGlHarness(): TrackMockGlHarness {
   const enableCalls: number[] = [];
   const disableCalls: number[] = [];
   const uniformMatrixCalls: Float32Array[] = [];
+  const uniformLocationRequests: string[] = [];
+  const uniform3fFeeds: Array<{
+    readonly name: string;
+    readonly channels: readonly [number, number, number];
+  }> = [];
+  const uniform1fFeeds: Array<{ readonly name: string; readonly value: number }> = [];
   const gl = {
     VERTEX_SHADER: 0x8b31,
     FRAGMENT_SHADER: 0x8b20,
@@ -105,7 +144,10 @@ function createTrackMockGlHarness(): TrackMockGlHarness {
     getProgramParameter: (): boolean => true,
     getProgramInfoLog: (): string => '',
     getAttribLocation: (): number => 0,
-    getUniformLocation: (_program: unknown, name: string): object => ({ name }),
+    getUniformLocation: (_program: unknown, name: string): object => {
+      uniformLocationRequests.push(name);
+      return { name };
+    },
     createBuffer: (): object => ({}),
     bindBuffer: (): void => undefined,
     bufferData: (): void => undefined,
@@ -127,8 +169,31 @@ function createTrackMockGlHarness(): TrackMockGlHarness {
     ): void => {
       uniformMatrixCalls.push(matrix);
     },
-    uniform3f: (): void => undefined,
-    uniform1f: (): void => undefined,
+    uniform3f: (
+      location: { name: string },
+      red: number,
+      green: number,
+      blue: number,
+    ): void => {
+      uniform3fFeeds.push({
+        name: location.name,
+        channels: [red, green, blue],
+      });
+    },
+    uniform3fv: (
+      location: { name: string },
+      channels: readonly [number, number, number],
+    ): void => {
+      uniform3fFeeds.push({ name: location.name, channels });
+    },
+    uniform1f: (location: { name: string }, value: number): void => {
+      uniform1fFeeds.push({ name: location.name, value });
+    },
+    uniform1fv: (location: { name: string }, values: readonly number[]): void => {
+      for (const value of values) {
+        uniform1fFeeds.push({ name: location.name, value });
+      }
+    },
     drawArrays: (mode: number, first: number, count: number): void => {
       drawCalls.push({ mode, first, count });
     },
@@ -147,6 +212,9 @@ function createTrackMockGlHarness(): TrackMockGlHarness {
     enableCalls,
     disableCalls,
     uniformMatrixCalls,
+    uniformLocationRequests,
+    uniform3fFeeds,
+    uniform1fFeeds,
   };
 }
 
@@ -290,5 +358,45 @@ describe('neatRacing track slab pass (AC-017)', () => {
     expect(vbo[base + 3]).toBeCloseTo(grassColor[0] / 255, 6);
     expect(vbo[base + 4]).toBeCloseTo(grassColor[1] / 255, 6);
     expect(vbo[base + 5]).toBeCloseTo(grassColor[2] / 255, 6);
+  });
+});
+
+describe('neatRacing track pass shared sun lighting (P1-world-lighting-coherence)', () => {
+  it('resolves the shared sun direction uniform when building the track program', () => {
+    const harness = createTrackMockGlHarness();
+    createTrackPass(harness.gl);
+    expect(harness.uniformLocationRequests).toContain('uSunDirection');
+  });
+
+  it('resolves all shared lighting uniforms when building the track program', () => {
+    const harness = createTrackMockGlHarness();
+    createTrackPass(harness.gl);
+    for (const name of NEATRACING_LIGHTING_UNIFORM_NAMES) {
+      expect(harness.uniformLocationRequests).toContain(name);
+    }
+  });
+
+  it('feeds the shared sun direction and color during track draw', () => {
+    const harness = createTrackMockGlHarness();
+    const pass = createTrackPass(harness.gl);
+    pass.draw(createDrawState());
+    const sunDirectionFeeds = uniform3fFeedsNamed(harness, 'uSunDirection');
+    const sunColorFeeds = uniform3fFeedsNamed(harness, 'uSunColor');
+    expect(sunDirectionFeeds.length).toBeGreaterThan(0);
+    expect(sunColorFeeds.length).toBeGreaterThan(0);
+    expect(sunDirectionFeeds[0].channels).toEqual(NEATRACING_SUN_DIRECTION);
+    expect(sunColorFeeds[0].channels).toEqual(NEATRACING_SUN_COLOR);
+  });
+
+  it('feeds the camera world position and fog density during track draw', () => {
+    const harness = createTrackMockGlHarness();
+    const pass = createTrackPass(harness.gl);
+    const state = createDrawState();
+    pass.draw(state);
+    const cameraFeeds = uniform3fFeedsNamed(harness, 'uCameraWorld');
+    const fogDensityFeeds = uniform1fFeedsNamed(harness, 'uFogDensity');
+    expect(cameraFeeds.length).toBeGreaterThan(0);
+    expect(cameraFeeds[0].channels).toEqual(state.cameraWorld);
+    expect(fogDensityFeeds.length).toBeGreaterThan(0);
   });
 });

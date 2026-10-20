@@ -12,15 +12,18 @@
  * - `slipAngle` (rad, bounded `(-π/2, π/2)` via `atan2`)
  *
  * One integration step applies, in order:
- * 1. outward push from the centrifugal term (`-multiplier · yawRate · speed`);
- * 2. countersteer recovery when the steer axis opposes the current slip;
+ * 1. outward push from the centrifugal term
+ *    (`-multiplier · yawRate · (speed - minSpeedMps)`), zero below the
+ *    arcade drift minimum speed (AC-047, spec §5.2 drift amendment);
+ * 2. countersteer recovery when the steer axis matches the current slip
+ *    sign ("countersteer into the skid");
  * 3. grip falloff as the slip angle grows past a threshold;
  * 4. a grip drain toward zero lateral velocity.
  *
- * The result is an arcade drift feel: controlled oversteer that builds
- * under sustained steering, persists at large slip angles because the
- * grip factor falls off, and settles quickly when the driver releases
- * the steer axis or countersteers.
+ * The result is an arcade drift feel: visible lateral slide that builds
+ * under sustained high-speed steering, persists at large slip angles
+ * because the grip factor falls off, and recovers quickly when the driver
+ * countersteers into the skid.
  *
  * Determinism (spec §5.3): the model contains no `Math.random` and no
  * side effects; the same `(state, input)` always yields the same
@@ -44,24 +47,40 @@ export const NEATRACING_DRIFT_GRIP_FALLOFF_THRESHOLD_RAD = 0.25;
 export const NEATRACING_DRIFT_GRIP_FALLOFF_RATE_PER_RAD = 2;
 
 /**
- * Floor for the grip falloff factor. A small residual grip remains even
- * at the maximum slip angle, keeping the drift controllable and bounded.
+ * Floor for the grip falloff factor. A residual grip remains even at the
+ * maximum slip angle, keeping the arcade drift controllable and bounded
+ * while still allowing a visible lateral slide (AC-047).
  */
-export const NEATRACING_DRIFT_MIN_GRIP_FACTOR = 0.25;
+export const NEATRACING_DRIFT_MIN_GRIP_FACTOR = 0.7;
 
 /**
- * How fast opposing steer reduces the lateral drift velocity. Scaled by
- * the steering axis magnitude and the speed percentile so countersteer
- * authority grows with speed.
+ * How fast matching-sign steer (countersteer into the skid) reduces the
+ * lateral drift velocity. Scaled by the steering axis magnitude and the
+ * speed percentile so recovery authority grows with speed.
  */
-export const NEATRACING_DRIFT_COUNTERSTEER_RECOVERY_RATE_PER_S = 4;
+export const NEATRACING_DRIFT_COUNTERSTEER_RECOVERY_RATE_PER_S = 12;
 
 /**
  * Base lateral grip drain rate in 1/s. At zero slip this drains the
  * lateral velocity toward zero; at larger slip the drain is softened by
  * the grip falloff factor.
  */
-export const NEATRACING_DRIFT_LATERAL_GRIP_RATE_PER_S = 6;
+export const NEATRACING_DRIFT_LATERAL_GRIP_RATE_PER_S = 4;
+
+/**
+ * Minimum longitudinal speed (m/s) at which the arcade drift model
+ * produces outward push. Below this the car is treated as grip-limited:
+ * low-speed handling stays unchanged and there is no phantom drift at
+ * standstill (AC-047, spec §5.2 drift amendment).
+ */
+export const NEATRACING_DRIFT_MIN_SPEED_MPS = 15;
+
+/**
+ * Visual-only gain that scales the slip-angle-derived arcade yaw offset
+ * applied to the car body. This does not affect physics trajectory; it
+ * makes the lateral slide visible to the player (AC-047).
+ */
+export const NEATRACING_DRIFT_VISUAL_YAW_GAIN_RAD = 0.5;
 
 /** Read-only drift state carried by the physics car state. */
 export interface DriftModelState {
@@ -96,8 +115,9 @@ export function createZeroDriftState(): DriftModelState {
  * Advances the arcade drift state by one fixed tick.
  *
  * The integration uses the previous slip angle to look up the grip
- * falloff and the current speed for the outward push. This keeps the
- * model side-effect free and easy to replay deterministically.
+ * falloff, the current speed for the outward push, and the tick-end
+ * speed for the slip angle. This keeps the model side-effect free and
+ * easy to replay deterministically.
  *
  * @param prev - Drift state at tick start (read-only).
  * @param input - Tick input sample.
@@ -170,8 +190,10 @@ export function computeNextLateralVelocity(
 /**
  * Computes the lateral outward push from a heading change and speed.
  *
- * Equation: `push = -centrifugalMultiplier · yawRatePerTick · speed`
- * (zero at standstill).
+ * Equation:
+ * `push = -centrifugalMultiplier · yawRatePerTick · (speed - minSpeedMps)`
+ * with `minSpeedMps = NEATRACING_DRIFT_MIN_SPEED_MPS`. Zero when the car
+ * is below the drift threshold so low-speed handling is unchanged.
  *
  * @param yawRatePerTick - Heading change for this tick in radians.
  * @param speed - Longitudinal speed in m/s.
@@ -183,10 +205,10 @@ export function computeOutwardPush(
   speed: number,
   centrifugalMultiplier: number,
 ): number {
-  if (speed <= 0) {
+  if (speed <= NEATRACING_DRIFT_MIN_SPEED_MPS) {
     return 0;
   }
-  return -centrifugalMultiplier * yawRatePerTick * speed;
+  return -centrifugalMultiplier * yawRatePerTick * (speed - NEATRACING_DRIFT_MIN_SPEED_MPS);
 }
 
 /**
@@ -213,9 +235,10 @@ export function computeGripFalloff(slipAngle: number): number {
 /**
  * Computes the countersteer-induced lateral-velocity delta.
  *
- * The delta is nonzero only when the steering axis opposes the current
- * slip sign. It reduces the lateral velocity magnitude, helping the
- * driver end a slide. Same-direction steer or zero slip returns zero.
+ * The delta is nonzero only when the driver steers INTO the skid
+ * (the steer axis and the slip angle share the same sign). It reduces
+ * the lateral velocity magnitude, helping the driver end a slide quickly.
+ * Opposing steer, zero steer, or zero slip returns zero.
  *
  * @param steer - Steering axis in `[-1, 1]`.
  * @param slipAngle - Current slip angle in rad.
@@ -229,11 +252,8 @@ export function computeCountersteerDelta(
   speedPercent: number,
   dt: number,
 ): number {
-  if (slipAngle === 0 || steer === 0) {
-    return 0;
-  }
   const slipSign = Math.sign(slipAngle);
-  if (steer * slipSign >= 0) {
+  if (slipAngle === 0 || steer === 0 || steer * slipSign <= 0) {
     return 0;
   }
   return (
@@ -263,4 +283,29 @@ export function computeSlipAngle(
     return 0;
   }
   return Math.atan2(lateralVelocity, speed);
+}
+
+/**
+ * Computes a visual-only arcade yaw offset from the current slip.
+ *
+ * The offset is derived from the slip angle (`atan2(lateralVelocity,
+ * speed)`) and scaled by a small gain so the car body visibly rotates
+ * into the slide without changing the deterministic physics trajectory.
+ * Zero when the car is stopped.
+ *
+ * @param lateralVelocity - Lateral velocity in m/s.
+ * @param speed - Longitudinal speed in m/s.
+ * @param gain - Visual yaw gain in radians; defaults to
+ *   `NEATRACING_DRIFT_VISUAL_YAW_GAIN_RAD`.
+ * @returns Arcade visual yaw offset in radians.
+ */
+export function computeDriftYawOffset(
+  lateralVelocity: number,
+  speed: number,
+  gain: number = NEATRACING_DRIFT_VISUAL_YAW_GAIN_RAD,
+): number {
+  if (speed <= 0) {
+    return 0;
+  }
+  return Math.atan2(lateralVelocity, speed) * gain;
 }

@@ -2,7 +2,7 @@
 description: 'Reviewer with a breaking-change point of view on the public API surface and exported contracts.'
 name: 'api-contract-reviewer'
 tier: 3
-model: kimi-k2.7-code:cloud
+model: minimax-m3.1-flash:cloud
 tools:
   [
     read,

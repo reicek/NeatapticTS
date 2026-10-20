@@ -2,7 +2,7 @@
 description: 'Chrome DevTools UI interaction specialist for DOM queries and console or network checks.'
 name: 'browser-ui-specialist'
 tier: 3
-model: kimi-k2.7-code:cloud
+model: minimax-m3.1-flash:cloud
 tools:
   [
     read,

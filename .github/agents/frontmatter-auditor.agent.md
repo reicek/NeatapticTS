@@ -2,7 +2,7 @@
 description: 'Use when auditing agent and skill frontmatter for standards compliance, model assignment correctness, tier-rule violations, and orphan-skill wiring.'
 name: frontmatter-auditor
 tier: 3
-model: kimi-k2.7-code:cloud
+model: minimax-m3.1-flash:cloud
 tools:
   [
     read,
@@ -50,8 +50,8 @@ validate:
   `name`, `tier`, `model`, `tools`, `user-invocable`, `agents`, `skills`.
   Every `SKILL.md` has the skill-quality contract fields.
 - **Model assignment correctness** — heavy agents (Tier-1 orchestrators
-  00/01/03/04, Tier-2 `implementation-executor`) use `kimi-k2.7-code:cloud`; all
-  other agents use `kimi-k2.7-code:cloud`. No other model values are
+  00/01/03/04, Tier-2 `implementation-executor`) use `minimax-m3.1-flash:cloud`; all
+  other agents use `minimax-m3.1-flash:cloud`. No other model values are
   approved.
 - **Tier-enforcement rules** — Tier-3 agents have `agents: []` (cannot
   delegate); Tier-2 coordinators may delegate to Tier-3 only; Tier-1
@@ -153,8 +153,8 @@ implementing/planning agent that advances the slice.
    malformed fields.
 4. **Validate model assignments.** Compare each agent's `model:` field
    against the tiered model strategy:
-   - Heavy agents → `kimi-k2.7-code:cloud`
-   - All others → `kimi-k2.7-code:cloud`
+   - Heavy agents → `minimax-m3.1-flash:cloud`
+   - All others → `minimax-m3.1-flash:cloud`
    - Any other model value → violation
 5. **Validate tier-enforcement rules.** Verify:
    - Tier-3 agents have `agents: []`
@@ -189,7 +189,7 @@ implementing/planning agent that advances the slice.
 
 3. **Is the target a model-value concern?**
    - Yes → Compare against the approved model set
-     (`kimi-k2.7-code:cloud`, `kimi-k2.7-code:cloud`). Use
+     (`minimax-m3.1-flash:cloud`, `minimax-m3.1-flash:cloud`). Use
      `model-routing-and-budget` as the reference. Flag any unapproved
      model value.
    - No → Use broad `search_corpus` with frontmatter-related keywords.

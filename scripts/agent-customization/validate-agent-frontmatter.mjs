@@ -105,9 +105,9 @@ const strictTier2StructuredFields = [
   'SUMMARY',
 ];
 const strictAllowedModels = new Set([
-  'kimi-k2.7-code:cloud',
-  'kimi-k2.7-code:cloud',
-  'kimi-k2.7-code:cloud',
+  'minimax-m3.1-flash:cloud',
+  'minimax-m3.1-flash:cloud',
+  'minimax-m3.1-flash:cloud',
 ]);
 const allowedTargetValues = new Set(['vscode', 'github-copilot']);
 
@@ -381,7 +381,7 @@ function validateAgent(agent, agents, skillNames, { strict }) {
       issue(
         'error',
         relativePath,
-        'Model must be a qualified model string like kimi-k2.7-code:cloud.',
+        'Model must be a qualified model string like minimax-m3.1-flash:cloud.',
       ),
     );
   }

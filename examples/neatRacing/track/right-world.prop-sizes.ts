@@ -22,7 +22,10 @@ export const RIGHT_WORLD_PROP_HALF_SIZES = {
   pillar: [0.4, 2, 0.4],
   gantry: [1.5, 0.3, 0.3],
   sign: [1, 1, 0.15],
-  bleacher: [2, 0.6, 1],
+  // Bleacher coarse bounding box matches the enlarged flat-tier 3-level
+  // stadium footprint: ~13 m front-to-back × ~9 m wide with the highest stand
+  // row at ~3.0 m (fix-packet-P1-bleacher-crowd-iteration-1, OBS-A).
+  bleacher: [6.5, 1.5, 4.5],
   // Low inner-ring pedestals for mechanics/crew; the sprite stands on top so
   // the billboard never shares volume with a full-height cube (OBS-2).
   mechanic: [0.5, 0.25, 0.5],

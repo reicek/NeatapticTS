@@ -26,8 +26,16 @@
  * by the host.
  */
 
-import { buildRightWorldProps } from './right-world.builder';
-import type { RightWorldProp } from './right-world.builder';
+import {
+  buildRightWorldProps,
+  filterRobotsByPersonalSpace,
+  getBleacherAxisAlignedHalfSize,
+  getBleacherHostingFootprintArea,
+  getBleacherSeatTopY,
+  BLEACHER_VOXEL_HALF_EXTENT_M,
+  BLEACHER_VOXEL_HALF_HEIGHT_M,
+} from './right-world.builder';
+import type { BleacherVoxel, RightWorldProp } from './right-world.builder';
 import { resolvePropHalfSize } from './right-world.prop-sizes';
 import {
   NEATRACING_DECORATION_CULL_DISTANCE_M,
@@ -62,6 +70,16 @@ import type {
   MechanicSpriteFrame,
 } from './mechanic.sprite';
 import type { TrackSlabBuildInput } from './track.slabs';
+import {
+  NEATRACING_FOG_COLOR,
+  NEATRACING_FOG_DENSITY_1_PER_M,
+  NEATRACING_HEMISPHERE_GROUND_COLOR,
+  NEATRACING_HEMISPHERE_SKY_COLOR,
+  NEATRACING_LIGHTING_GLSL_CHUNK,
+  NEATRACING_LIGHTING_UNIFORM_NAMES,
+  NEATRACING_SUN_COLOR,
+  NEATRACING_SUN_DIRECTION,
+} from '../engine/lighting';
 
 /** Determinism tuple shared with the track slab and right-world builders. */
 const NEATRACING_RIGHT_WORLD_BUILD_INPUT = {
@@ -92,21 +110,45 @@ const NEATRACING_RIGHT_WORLD_PROP_VERTEX_SHADER = `#version 300 es
 precision highp float;
 layout(location = 0) in vec3 a_position;
 layout(location = 1) in vec3 a_color;
+layout(location = 2) in float a_normalAxis;
 uniform mat4 u_viewProjection;
+uniform vec3 uCameraWorld;
+out vec3 v_world;
 out vec3 v_color;
+out float v_normalAxis;
+out float v_fogDistance;
 void main() {
-  gl_Position = u_viewProjection * vec4(a_position, 1.0);
+  vec4 world = vec4(a_position, 1.0);
+  v_world = world.xyz;
   v_color = a_color;
+  v_normalAxis = a_normalAxis;
+  v_fogDistance = length(world.xyz - uCameraWorld);
+  gl_Position = u_viewProjection * world;
 }
 `;
 
 /** Fragment shader shared by the solid prop program. */
 const NEATRACING_RIGHT_WORLD_PROP_FRAGMENT_SHADER = `#version 300 es
-precision mediump float;
+precision highp float;
+${NEATRACING_LIGHTING_GLSL_CHUNK}
+in vec3 v_world;
 in vec3 v_color;
+in float v_normalAxis;
+in float v_fogDistance;
 out vec4 fragColor;
 void main() {
-  fragColor = vec4(v_color, 1.0);
+  vec3 axisNormal = vec3(1.0, 0.0, 0.0);
+  if (v_normalAxis >= 0.5 && v_normalAxis < 1.5) {
+    axisNormal = vec3(0.0, 1.0, 0.0);
+  } else if (v_normalAxis >= 1.5) {
+    axisNormal = vec3(0.0, 0.0, 1.0);
+  }
+  vec3 viewDirection = normalize(v_world - uCameraWorld);
+  if (dot(axisNormal, viewDirection) > 0.0) {
+    axisNormal = -axisNormal;
+  }
+  vec3 lit = shadeLitSurface(v_color, normalize(axisNormal), 0.0);
+  fragColor = vec4(mix(uFogColor, lit, fogFactor(v_fogDistance)), 1.0);
 }
 `;
 
@@ -134,8 +176,8 @@ void main() {
 }
 `;
 
-/** Floats per prop vertex: position (3) + color (3). */
-const PROP_FLOATS_PER_VERTEX = 6;
+/** Floats per prop vertex: position (3) + color (3) + normalAxis (1). */
+const PROP_FLOATS_PER_VERTEX = 7;
 
 /** Floats per billboard vertex: position (3) + uv (2). */
 const BILLBOARD_FLOATS_PER_VERTEX = 5;
@@ -171,6 +213,112 @@ interface RightWorldSpriteAtlas {
 
 /** Billboard shape shared by public and mechanic emitters. */
 type RightWorldBillboard = PublicBillboard | MechanicBillboard;
+
+/** Kinds that can act as robot-hosting surfaces (AC-066). */
+const HOSTING_KINDS: readonly RightWorldProp['kind'][] = [
+  'bleacher',
+  'mechanic',
+  'crew',
+];
+
+/** Kinds that are too small to host robot billboards (AC-065b). */
+const TINY_PEDESTAL_KINDS: readonly RightWorldProp['kind'][] = ['mechanic', 'crew'];
+
+/** Tolerance for matching a billboard foot anchor to a prop top surface. */
+const NEATRACING_PROP_HOST_TOLERANCE_M = 0.2;
+
+/**
+ * Finds the prop whose top surface hosts a billboard foot anchor, mirroring
+ * the contract used by the AC-065b red tests. Only bleacher, mechanic, and
+ * crew props are considered hosts; the bleacher footprint and seat-top surface
+ * come from the real voxel geometry.
+ */
+function findHostProp(
+  billboard: RightWorldBillboard,
+  props: readonly RightWorldProp[],
+): RightWorldProp | undefined {
+  const [x, y, z] = billboard.position;
+  let best: RightWorldProp | undefined;
+  let bestDeltaY = Number.POSITIVE_INFINITY;
+
+  for (const prop of props) {
+    if (!HOSTING_KINDS.includes(prop.kind)) {
+      continue;
+    }
+
+    const [px, py, pz] = prop.position;
+    let hx: number;
+    let hz: number;
+    let topY: number;
+    if (prop.kind === 'bleacher' && prop.bleacherGeometry) {
+      [hx, hz] = getBleacherAxisAlignedHalfSize(prop);
+      topY = getBleacherSeatTopY(prop, x, z);
+    } else {
+      const [phx, phy, phz] = resolvePropHalfSize(prop.kind);
+      hx = phx;
+      hz = phz;
+      topY = py + 2 * phy;
+    }
+
+    if (Math.abs(x - px) > hx || Math.abs(z - pz) > hz) {
+      continue;
+    }
+
+    const deltaY = Math.abs(y - topY);
+    if (deltaY <= NEATRACING_PROP_HOST_TOLERANCE_M && deltaY < bestDeltaY) {
+      best = prop;
+      bestDeltaY = deltaY;
+    }
+  }
+
+  return best;
+}
+
+/** Horizontal top surface area of a prop in square meters. */
+function propTopArea(prop: RightWorldProp): number {
+  if (prop.kind === 'bleacher' && prop.bleacherGeometry) {
+    return getBleacherHostingFootprintArea(prop);
+  }
+
+  const [hx, , hz] = resolvePropHalfSize(prop.kind);
+  return (2 * hx) * (2 * hz);
+}
+
+/**
+ * Removes billboards anchored to tiny pedestals and thins any prop that would
+ * host more robots than its top area affords at 1 m spacing. Hosting is
+ * restricted to bleacher/mechanic/crew props.
+ */
+function filterBillboardsByAnchoringCapacity(
+  billboards: readonly RightWorldBillboard[],
+  props: readonly RightWorldProp[],
+): readonly RightWorldBillboard[] {
+  const counts = new Map<RightWorldProp, number>();
+  const kept: RightWorldBillboard[] = [];
+
+  for (const billboard of billboards) {
+    const host = findHostProp(billboard, props);
+
+    if (host && TINY_PEDESTAL_KINDS.includes(host.kind)) {
+      continue;
+    }
+
+    if (host && HOSTING_KINDS.includes(host.kind)) {
+      const count = counts.get(host) ?? 0;
+      const maxHosted = Math.floor(propTopArea(host));
+
+      if (count >= maxHosted) {
+        continue;
+      }
+
+      counts.set(host, count + 1);
+    }
+
+    kept.push(billboard);
+  }
+
+  return kept;
+}
 
 /** CPU-side scene data consumed by the right-world pass. */
 export interface RightWorldSceneData {
@@ -214,35 +362,142 @@ export interface RightWorldPass {
  *
  * @returns Scene data ready to upload to the GPU pass.
  */
-export function buildRightWorldSceneData(): RightWorldSceneData {
-  const props = buildRightWorldProps(NEATRACING_RIGHT_WORLD_BUILD_INPUT);
+export function buildRightWorldSceneData(
+  input: TrackSlabBuildInput = NEATRACING_RIGHT_WORLD_BUILD_INPUT,
+  camera: PublicCamera = DEFAULT_RIGHT_WORLD_CAMERA,
+): RightWorldSceneData {
+  const props = buildRightWorldProps(input);
   const publicAtlas = loadPublicSpriteAtlas();
   const mechanicAtlas = loadMechanicSpriteAtlas();
   const atlas: RightWorldSpriteAtlas = {
     source: 'neatenstein-public+mechanic',
     frames: [...publicAtlas.frames, ...mechanicAtlas.frames],
   };
-  const publicBillboards = buildPublicBillboards(
-    NEATRACING_RIGHT_WORLD_BUILD_INPUT,
-    DEFAULT_RIGHT_WORLD_CAMERA,
-    publicAtlas,
-  );
+  const publicBillboards = buildPublicBillboards(input, camera, publicAtlas);
   const mechanicBillboards = buildMechanicBillboards(
-    NEATRACING_RIGHT_WORLD_BUILD_INPUT,
-    DEFAULT_RIGHT_WORLD_CAMERA,
+    input,
+    camera,
     mechanicAtlas,
   );
+
+  // AC-065b: drop robots anchored to tiny mechanic/crew pedestals and clip any
+  // prop that would host more robots than its horizontal top area allows at 1 m
+  // spacing. Then AC-065: re-filter the combined public + mechanic list for the
+  // 1 m XZ personal-space radius after concatenation.
+  const anchored = filterBillboardsByAnchoringCapacity(
+    [...publicBillboards, ...mechanicBillboards],
+    props,
+  );
+  const billboards = filterRobotsByPersonalSpace<RightWorldBillboard>(anchored);
 
   return {
     props,
     atlas,
-    billboards: [...publicBillboards, ...mechanicBillboards],
+    billboards,
   };
 }
 
 /**
  * Writes one axis-aligned box into an interleaved position+color VBO target.
- * The box is centered at the prop position with its base on the y=0 plane.
+ * No JavaScript arrays are allocated on the hot path; all vertex coordinates
+ * are written directly into `target`.
+ *
+ * @param target - Preallocated Float32Array to write into.
+ * @param offset - Float offset into `target`.
+ * @param cx - Box center x.
+ * @param cy - Box center y.
+ * @param cz - Box center z.
+ * @param hx - Half width.
+ * @param hy - Half height.
+ * @param hz - Half depth.
+ * @param r - Red color component.
+ * @param g - Green color component.
+ * @param b - Blue color component.
+ * @returns The number of floats written.
+ */
+function emitBox(
+  target: Float32Array,
+  offset: number,
+  cx: number,
+  cy: number,
+  cz: number,
+  hx: number,
+  hy: number,
+  hz: number,
+  r: number,
+  g: number,
+  b: number,
+): number {
+  const x0 = cx - hx;
+  const x1 = cx + hx;
+  const y0 = cy - hy;
+  const y1 = cy + hy;
+  const z0 = cz - hz;
+  const z1 = cz + hz;
+
+  let i = offset;
+  const emitVertex = (
+    vx: number,
+    vy: number,
+    vz: number,
+    normalAxis: number,
+  ): void => {
+    target[i++] = vx;
+    target[i++] = vy;
+    target[i++] = vz;
+    target[i++] = r;
+    target[i++] = g;
+    target[i++] = b;
+    target[i++] = normalAxis;
+  };
+  // Front face (+z)
+  emitVertex(x0, y0, z1, 2);
+  emitVertex(x1, y0, z1, 2);
+  emitVertex(x1, y1, z1, 2);
+  emitVertex(x0, y0, z1, 2);
+  emitVertex(x1, y1, z1, 2);
+  emitVertex(x0, y1, z1, 2);
+  // Back face (-z)
+  emitVertex(x1, y0, z0, 2);
+  emitVertex(x0, y0, z0, 2);
+  emitVertex(x0, y1, z0, 2);
+  emitVertex(x1, y0, z0, 2);
+  emitVertex(x0, y1, z0, 2);
+  emitVertex(x1, y1, z0, 2);
+  // Right face (+x)
+  emitVertex(x1, y0, z1, 0);
+  emitVertex(x1, y0, z0, 0);
+  emitVertex(x1, y1, z0, 0);
+  emitVertex(x1, y0, z1, 0);
+  emitVertex(x1, y1, z0, 0);
+  emitVertex(x1, y1, z1, 0);
+  // Left face (-x)
+  emitVertex(x0, y0, z0, 0);
+  emitVertex(x0, y0, z1, 0);
+  emitVertex(x0, y1, z1, 0);
+  emitVertex(x0, y0, z0, 0);
+  emitVertex(x0, y1, z1, 0);
+  emitVertex(x0, y1, z0, 0);
+  // Top face (+y)
+  emitVertex(x0, y1, z1, 1);
+  emitVertex(x1, y1, z1, 1);
+  emitVertex(x1, y1, z0, 1);
+  emitVertex(x0, y1, z1, 1);
+  emitVertex(x1, y1, z0, 1);
+  emitVertex(x0, y1, z0, 1);
+  // Bottom face (-y)
+  emitVertex(x0, y0, z0, 1);
+  emitVertex(x1, y0, z0, 1);
+  emitVertex(x1, y0, z1, 1);
+  emitVertex(x0, y0, z0, 1);
+  emitVertex(x1, y0, z1, 1);
+  emitVertex(x0, y0, z1, 1);
+
+  return i - offset;
+}
+
+/**
+ * Writes a single non-bleacher prop as one axis-aligned box.
  *
  * @param target - Preallocated Float32Array to write into.
  * @param offset - Float offset into `target`.
@@ -256,85 +511,57 @@ function emitPropBox(
 ): number {
   const [px, py, pz] = prop.position;
   const [hx, hy, hz] = resolvePropHalfSize(prop.kind);
-  const centerY = py + hy;
-  const color = [
-    prop.color[0] / 255,
-    prop.color[1] / 255,
-    prop.color[2] / 255,
-  ] as const;
+  const r = prop.color[0] / 255;
+  const g = prop.color[1] / 255;
+  const b = prop.color[2] / 255;
 
-  const positions: readonly (readonly [number, number, number])[] = [
-    // Front face (+z)
-    [px - hx, centerY - hy, pz + hz],
-    [px + hx, centerY - hy, pz + hz],
-    [px + hx, centerY + hy, pz + hz],
-    [px - hx, centerY - hy, pz + hz],
-    [px + hx, centerY + hy, pz + hz],
-    [px - hx, centerY + hy, pz + hz],
-    // Back face (-z)
-    [px + hx, centerY - hy, pz - hz],
-    [px - hx, centerY - hy, pz - hz],
-    [px - hx, centerY + hy, pz - hz],
-    [px + hx, centerY - hy, pz - hz],
-    [px - hx, centerY + hy, pz - hz],
-    [px + hx, centerY + hy, pz - hz],
-    // Right face (+x)
-    [px + hx, centerY - hy, pz + hz],
-    [px + hx, centerY - hy, pz - hz],
-    [px + hx, centerY + hy, pz - hz],
-    [px + hx, centerY - hy, pz + hz],
-    [px + hx, centerY + hy, pz - hz],
-    [px + hx, centerY + hy, pz + hz],
-    // Left face (-x)
-    [px - hx, centerY - hy, pz - hz],
-    [px - hx, centerY - hy, pz + hz],
-    [px - hx, centerY + hy, pz + hz],
-    [px - hx, centerY - hy, pz - hz],
-    [px - hx, centerY + hy, pz + hz],
-    [px - hx, centerY + hy, pz - hz],
-    // Top face (+y)
-    [px - hx, centerY + hy, pz + hz],
-    [px + hx, centerY + hy, pz + hz],
-    [px + hx, centerY + hy, pz - hz],
-    [px - hx, centerY + hy, pz + hz],
-    [px + hx, centerY + hy, pz - hz],
-    [px - hx, centerY + hy, pz - hz],
-    // Bottom face (-y)
-    [px - hx, centerY - hy, pz - hz],
-    [px + hx, centerY - hy, pz - hz],
-    [px + hx, centerY - hy, pz + hz],
-    [px - hx, centerY - hy, pz - hz],
-    [px + hx, centerY - hy, pz + hz],
-    [px - hx, centerY - hy, pz + hz],
-  ];
-
-  let written = 0;
-  for (const [x, y, z] of positions) {
-    target[offset + written] = x;
-    written += 1;
-    target[offset + written] = y;
-    written += 1;
-    target[offset + written] = z;
-    written += 1;
-    target[offset + written] = color[0];
-    written += 1;
-    target[offset + written] = color[1];
-    written += 1;
-    target[offset + written] = color[2];
-    written += 1;
-  }
-
-  return written;
+  return emitBox(target, offset, px, py + hy, pz, hx, hy, hz, r, g, b);
 }
 
 /**
- * Packs the public sprite atlas frames into a single RGBA texture and computes
- * per-frame UV rectangles. The layout is a horizontal strip; frames may have
- * different heights, and the atlas height is the tallest frame.
+ * Writes one bleacher voxel as a small role-tagged box. The box top is aligned
+ * to the voxel's reported y so seat rows, walk surface, stairs, and guardrail
+ * render at their real heights.
+ *
+ * @param target - Preallocated Float32Array to write into.
+ * @param offset - Float offset into `target`.
+ * @param voxel - Bleacher voxel to emit.
+ * @returns The number of floats written.
+ */
+function emitBleacherVoxelBox(
+  target: Float32Array,
+  offset: number,
+  voxel: BleacherVoxel,
+): number {
+  const [cx, topY, cz] = voxel.position;
+  const r = voxel.color[0] / 255;
+  const g = voxel.color[1] / 255;
+  const b = voxel.color[2] / 255;
+
+  return emitBox(
+    target,
+    offset,
+    cx,
+    topY - BLEACHER_VOXEL_HALF_HEIGHT_M,
+    cz,
+    BLEACHER_VOXEL_HALF_EXTENT_M,
+    BLEACHER_VOXEL_HALF_HEIGHT_M,
+    BLEACHER_VOXEL_HALF_EXTENT_M,
+    r,
+    g,
+    b,
+  );
+}
+
+/**
+ * Packs the public + mechanic sprite atlas frames into a single RGBA texture
+ * and computes per-frame UV rectangles. The layout is a square-ish 2D grid
+ * so the combined atlas always fits inside `gl.MAX_TEXTURE_SIZE`, even after
+ * the color-diverse public and mechanic frame expansions.
  *
  * @param gl - WebGL2 context to allocate the texture on.
- * @param atlas - Public sprite atlas frames.
- * @returns GPU texture handle, per-frame UV table, and frame-id lookup map.
+ * @param atlas - Combined public + mechanic sprite atlas frames.
+ * @returns GPU texture handle and per-frame UV table.
  */
 function buildAtlasTextureAndUvs(
   gl: WebGL2RenderingContext,
@@ -342,7 +569,6 @@ function buildAtlasTextureAndUvs(
 ): {
   readonly texture: WebGLTexture;
   readonly uvs: readonly SpriteFrameUv[];
-  readonly frameIdToIndex: ReadonlyMap<string, number>;
 } {
   if (atlas.frames.length === 0) {
     throw new Error(
@@ -350,36 +576,64 @@ function buildAtlasTextureAndUvs(
     );
   }
 
-  let totalWidth = 0;
-  let maxHeight = 0;
-  for (const frame of atlas.frames) {
-    totalWidth += frame.width;
-    maxHeight = Math.max(maxHeight, frame.height);
+  const frameWidth = atlas.frames[0]!.width;
+  const frameHeight = atlas.frames[0]!.height;
+  if (
+    !atlas.frames.every(
+      (frame) => frame.width === frameWidth && frame.height === frameHeight,
+    )
+  ) {
+    throw new Error(
+      'neatRacing right-world pass: all sprite atlas frames must share a uniform size for GPU packing',
+    );
   }
 
-  const data = new Uint8Array(totalWidth * maxHeight * 4);
+  const frameCount = atlas.frames.length;
+  const maxTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE) as number;
+  const maxColumnsByGpu = Math.max(1, Math.floor(maxTextureSize / frameWidth));
+  const columns = Math.min(
+    maxColumnsByGpu,
+    Math.ceil(Math.sqrt(frameCount)),
+  );
+  const rows = Math.ceil(frameCount / columns);
+  const atlasWidth = columns * frameWidth;
+  const atlasHeight = rows * frameHeight;
+
+  if (
+    atlasWidth > maxTextureSize ||
+    atlasHeight > maxTextureSize
+  ) {
+    throw new Error(
+      `neatRacing right-world pass: cannot pack ${frameCount} sprite frames ` +
+        `(${frameWidth}x${frameHeight}) within GPU max texture size ${maxTextureSize}`,
+    );
+  }
+
+  const data = new Uint8Array(atlasWidth * atlasHeight * 4);
   const uvs: SpriteFrameUv[] = [];
-  const frameIdToIndex = new Map<string, number>();
-  let offsetX = 0;
-  for (let frameIndex = 0; frameIndex < atlas.frames.length; frameIndex += 1) {
+
+  for (let frameIndex = 0; frameIndex < frameCount; frameIndex += 1) {
     const frame = atlas.frames[frameIndex]!;
-    for (let row = 0; row < frame.height; row += 1) {
-      const srcStart = row * frame.width * 4;
-      const dstStart = (row * totalWidth + offsetX) * 4;
+    const column = frameIndex % columns;
+    const row = Math.floor(frameIndex / columns);
+    const offsetX = column * frameWidth;
+    const offsetY = row * frameHeight;
+
+    for (let y = 0; y < frameHeight; y += 1) {
+      const srcStart = y * frameWidth * 4;
+      const dstStart = ((offsetY + y) * atlasWidth + offsetX) * 4;
       data.set(
-        frame.rgba.subarray(srcStart, srcStart + frame.width * 4),
+        frame.rgba.subarray(srcStart, srcStart + frameWidth * 4),
         dstStart,
       );
     }
 
     uvs.push({
-      u0: offsetX / totalWidth,
-      v0: 0,
-      u1: (offsetX + frame.width) / totalWidth,
-      v1: frame.height / maxHeight,
+      u0: offsetX / atlasWidth,
+      v0: offsetY / atlasHeight,
+      u1: (offsetX + frameWidth) / atlasWidth,
+      v1: (offsetY + frameHeight) / atlasHeight,
     });
-    frameIdToIndex.set(frame.id, frameIndex);
-    offsetX += frame.width;
   }
 
   const texture = gl.createTexture();
@@ -387,31 +641,82 @@ function buildAtlasTextureAndUvs(
     throw new Error('neatRacing right-world pass: createTexture returned null');
   }
   gl.bindTexture(gl.TEXTURE_2D, texture);
-  // Atlas orientation contract: decoded frame.rgba stores row 0 at the sprite
-  // top, while WebGL's default image origin is the bottom-left. Flip the Y axis
-  // during upload so UV v1 maps to the logical top row and v0 maps to the bottom.
-  // The previous UNPACK_FLIP_Y_WEBGL value is saved and restored to avoid
-  // surprising other passes (OBS-5).
-  const previousUnpackFlipY = gl.getParameter(gl.UNPACK_FLIP_Y_WEBGL);
-  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+  // Atlas orientation contract (OBS-5 + OBS-6): decoded frame.rgba stores
+  // row 0 at the logical sprite TOP. The quad UVs map top vertices to v0 and
+  // bottom vertices to v1, matching the default WebGL bottom-left origin.
+  // No Y flip is applied; this keeps sprites upright and avoids changing
+  // global pixel-store state.
   gl.texImage2D(
     gl.TEXTURE_2D,
     0,
     gl.RGBA,
-    totalWidth,
-    maxHeight,
+    atlasWidth,
+    atlasHeight,
     0,
     gl.RGBA,
     gl.UNSIGNED_BYTE,
     data,
   );
-  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, Number(previousUnpackFlipY));
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 
-  return { texture, uvs, frameIdToIndex };
+  return { texture, uvs };
+}
+
+/**
+ * Builds the direction×pose atlas-index lookup tables used by the runtime
+ * frame-selection helpers. Public table entries are combined-atlas indices;
+ * mechanic table entries are indices relative to the mechanic atlas region
+ * and must be offset by the public frame count at draw time.
+ *
+ * @param atlas - Combined public + mechanic sprite atlas.
+ * @param publicFrameCount - Number of public frames at the start of the atlas.
+ * @returns Public and mechanic lookup tables.
+ */
+function buildAtlasIndexTables(
+  atlas: RightWorldSpriteAtlas,
+  publicFrameCount: number,
+): {
+  readonly publicTable: Int16Array;
+  readonly mechanicTable: Int16Array;
+} {
+  const tableLength = DIRECTION_ORDER.length * PUBLIC_POSE_COUNT;
+  const publicTable = new Int16Array(tableLength).fill(-1);
+  const mechanicTable = new Int16Array(tableLength).fill(-1);
+
+  for (let frameIndex = 0; frameIndex < atlas.frames.length; frameIndex += 1) {
+    const frame = atlas.frames[frameIndex]!;
+    const id = frame.id;
+
+    if (id.startsWith('mechanic-')) {
+      const direction = id.split('-')[1];
+      const directionIndex = (DIRECTION_ORDER as readonly string[]).indexOf(direction);
+      if (directionIndex >= 0) {
+        mechanicTable[directionIndex * PUBLIC_POSE_COUNT + PUBLIC_POSE_INDEX_STAND] =
+          frameIndex - publicFrameCount;
+      }
+      continue;
+    }
+
+    const [direction, pose] = id.split('-');
+    const directionIndex = (DIRECTION_ORDER as readonly string[]).indexOf(direction);
+    let poseIndex = -1;
+    if (pose === 'stand') {
+      poseIndex = PUBLIC_POSE_INDEX_STAND;
+    } else if (pose === 'walk1') {
+      poseIndex = PUBLIC_POSE_INDEX_WALK1;
+    } else if (pose === 'walk2') {
+      poseIndex = PUBLIC_POSE_INDEX_WALK2;
+    }
+
+    if (directionIndex >= 0 && poseIndex >= 0) {
+      publicTable[directionIndex * PUBLIC_POSE_COUNT + poseIndex] = frameIndex;
+    }
+  }
+
+  return { publicTable, mechanicTable };
 }
 
 /**
@@ -481,15 +786,16 @@ function linkRightWorldProgram(
 
 /**
  * Fills the preallocated billboard upload buffer with camera-facing quads and
- * returns the number of vertices to draw. Frame ids out of range are skipped.
+ * returns the number of vertices to draw. Missing runtime frame indices are
+ * skipped.
  *
  * @param target - Preallocated Float32Array for position+uv vertices.
  * @param billboards - Billboard instances.
  * @param atlasFrames - Original atlas frames for pixel dimensions.
  * @param uvs - Per-frame UV rectangles inside the packed atlas.
- * @param frameIdToIndex - Map from frame id string to atlas frame index.
  * @param billboardCount - Number of visible billboards already selected into `billboardScratch` (nearest-first).
  * @param billboardScratch - Preallocated selection scratch with indices/distances sorted nearest-first.
+ * @param billboardFrameScratch - Preallocated runtime atlas frame index per selected slot.
  * @param cameraRight - World-space camera right unit vector.
  * @param cameraUp - World-space camera up unit vector.
  * @returns Total number of vertices to draw.
@@ -499,9 +805,9 @@ function buildBillboardUpload(
   billboards: readonly RightWorldBillboard[],
   atlasFrames: readonly RightWorldSpriteFrame[],
   uvs: readonly SpriteFrameUv[],
-  frameIdToIndex: ReadonlyMap<string, number>,
   billboardCount: number,
   billboardScratch: DecorationSelectionScratch,
+  billboardFrameScratch: Int16Array,
   cameraRight: readonly [number, number, number],
   cameraUp: readonly [number, number, number],
 ): number {
@@ -516,8 +822,8 @@ function buildBillboardUpload(
       continue;
     }
     const distance = billboardScratch.distances[slot];
-    const frameIndex = frameIdToIndex.get(billboard.frameId);
-    if (frameIndex === undefined) {
+    const frameIndex = billboardFrameScratch[slot];
+    if (frameIndex < 0) {
       continue;
     }
     const frame = atlasFrames[frameIndex];
@@ -533,57 +839,58 @@ function buildBillboardUpload(
 
     // position is the base/foot anchor; expand upward along cameraUp so the
     // sprite bottom stays at the surface regardless of runtime camera distance.
-    const corners: readonly (readonly [number, number, number])[] = [
-      [
-        billboard.position[0] + rx * -halfW,
-        billboard.position[1] + ry * -halfW,
-        billboard.position[2] + rz * -halfW,
-      ],
-      [
-        billboard.position[0] + rx * halfW,
-        billboard.position[1] + ry * halfW,
-        billboard.position[2] + rz * halfW,
-      ],
-      [
-        billboard.position[0] + rx * halfW + ux * fullH,
-        billboard.position[1] + ry * halfW + uy * fullH,
-        billboard.position[2] + rz * halfW + uz * fullH,
-      ],
-      [
-        billboard.position[0] + rx * -halfW + ux * fullH,
-        billboard.position[1] + ry * -halfW + uy * fullH,
-        billboard.position[2] + rz * -halfW + uz * fullH,
-      ],
-    ];
+    const bx = billboard.position[0];
+    const by = billboard.position[1];
+    const bz = billboard.position[2];
 
-    const positions: readonly (readonly [number, number, number])[] = [
-      corners[0],
-      corners[1],
-      corners[2],
-      corners[0],
-      corners[2],
-      corners[3],
-    ];
-    const texCoords: readonly (readonly [number, number])[] = [
-      [uv.u0, uv.v1],
-      [uv.u1, uv.v1],
-      [uv.u1, uv.v0],
-      [uv.u0, uv.v1],
-      [uv.u1, uv.v0],
-      [uv.u0, uv.v0],
-    ];
+    const leftBottomX = bx - rx * halfW;
+    const leftBottomY = by - ry * halfW;
+    const leftBottomZ = bz - rz * halfW;
+    const rightBottomX = bx + rx * halfW;
+    const rightBottomY = by + ry * halfW;
+    const rightBottomZ = bz + rz * halfW;
+    const leftTopX = leftBottomX + ux * fullH;
+    const leftTopY = leftBottomY + uy * fullH;
+    const leftTopZ = leftBottomZ + uz * fullH;
+    const rightTopX = rightBottomX + ux * fullH;
+    const rightTopY = rightBottomY + uy * fullH;
+    const rightTopZ = rightBottomZ + uz * fullH;
 
-    for (let index = 0; index < positions.length; index += 1) {
-      const [x, y, z] = positions[index]!;
-      const [u, v] = texCoords[index]!;
-      target[offset] = x;
-      target[offset + 1] = y;
-      target[offset + 2] = z;
-      target[offset + 3] = u;
-      target[offset + 4] = v;
-      offset += BILLBOARD_FLOATS_PER_VERTEX;
-      vertexCount += 1;
-    }
+    // Triangle 1: left-bottom, right-bottom, right-top.
+    target[offset] = leftBottomX;
+    target[offset + 1] = leftBottomY;
+    target[offset + 2] = leftBottomZ;
+    target[offset + 3] = uv.u0;
+    target[offset + 4] = uv.v1;
+    target[offset + 5] = rightBottomX;
+    target[offset + 6] = rightBottomY;
+    target[offset + 7] = rightBottomZ;
+    target[offset + 8] = uv.u1;
+    target[offset + 9] = uv.v1;
+    target[offset + 10] = rightTopX;
+    target[offset + 11] = rightTopY;
+    target[offset + 12] = rightTopZ;
+    target[offset + 13] = uv.u1;
+    target[offset + 14] = uv.v0;
+    // Triangle 2: left-bottom, right-top, left-top.
+    target[offset + 15] = leftBottomX;
+    target[offset + 16] = leftBottomY;
+    target[offset + 17] = leftBottomZ;
+    target[offset + 18] = uv.u0;
+    target[offset + 19] = uv.v1;
+    target[offset + 20] = rightTopX;
+    target[offset + 21] = rightTopY;
+    target[offset + 22] = rightTopZ;
+    target[offset + 23] = uv.u1;
+    target[offset + 24] = uv.v0;
+    target[offset + 25] = leftTopX;
+    target[offset + 26] = leftTopY;
+    target[offset + 27] = leftTopZ;
+    target[offset + 28] = uv.u0;
+    target[offset + 29] = uv.v0;
+
+    offset += 6 * BILLBOARD_FLOATS_PER_VERTEX;
+    vertexCount += 6;
   }
 
   return vertexCount;
@@ -627,6 +934,17 @@ export function createRightWorldPass(
     propProgram,
     'u_viewProjection',
   );
+  const propLightingUniforms: Record<string, WebGLUniformLocation | null> = {};
+  for (const name of NEATRACING_LIGHTING_UNIFORM_NAMES) {
+    propLightingUniforms[name] = gl.getUniformLocation(propProgram, name);
+  }
+  for (const name of NEATRACING_LIGHTING_UNIFORM_NAMES) {
+    if (propLightingUniforms[name] === null) {
+      throw new Error(
+        `neatRacing right-world pass: ${name} uniform not found in program`,
+      );
+    }
+  }
 
   const billboardVertexShader = compileRightWorldShader(
     gl,
@@ -655,17 +973,25 @@ export function createRightWorldPass(
     'u_atlas',
   );
 
+  const maxPropBoxCount = Math.max(
+    1,
+    scene.props.reduce((sum, prop) => {
+      if (prop.kind === 'bleacher' && prop.bleacherGeometry) {
+        return sum + prop.bleacherGeometry.voxels.length;
+      }
+      return sum + 1;
+    }, 0),
+  );
+
   const propVbo = gl.createBuffer();
   if (!propVbo) {
     throw new Error('neatRacing right-world pass: createBuffer(prop) returned null');
   }
-  const propUpload = new Float32Array(
-    Math.max(1, scene.props.length * FLOATS_PER_BOX),
-  );
+  const propUpload = new Float32Array(maxPropBoxCount * FLOATS_PER_BOX);
   gl.bindBuffer(gl.ARRAY_BUFFER, propVbo);
   gl.bufferData(
     gl.ARRAY_BUFFER,
-    Math.max(1, scene.props.length * FLOATS_PER_BOX * 4),
+    maxPropBoxCount * FLOATS_PER_BOX * 4,
     gl.DYNAMIC_DRAW,
   );
 
@@ -680,11 +1006,18 @@ export function createRightWorldPass(
     gl.DYNAMIC_DRAW,
   );
 
-  const {
-    texture: atlasTexture,
-    uvs,
-    frameIdToIndex,
-  } = buildAtlasTextureAndUvs(gl, scene.atlas);
+  const { texture: atlasTexture, uvs } = buildAtlasTextureAndUvs(
+    gl,
+    scene.atlas,
+  );
+
+  const publicFrameCount = scene.atlas.frames.filter(
+    (frame) => !frame.id.startsWith('mechanic-'),
+  ).length;
+  const { publicTable, mechanicTable } = buildAtlasIndexTables(
+    scene.atlas,
+    publicFrameCount,
+  );
 
   const billboardUpload = new Float32Array(
     MAX_BILLBOARDS * 6 * BILLBOARD_FLOATS_PER_VERTEX,
@@ -693,12 +1026,42 @@ export function createRightWorldPass(
   const billboardScratch = createDecorationSelectionScratch(
     scene.billboards.length,
   );
+  const billboardFrameScratch = new Int16Array(MAX_BILLBOARDS).fill(-1);
 
   return {
     draw: (state): void => {
-      // Defensive: this pass mixes solid props with camera-facing billboard
+      // Save render state so this pass cannot leak settings into later passes
+      // (OBS-3). Captures DEPTH_TEST/BLEND/depthMask, blend-function parameters,
+      // active texture unit, vertex-attrib enable bits for attribs 0/1, plus the
+      // currently bound program, array buffer, and 2D texture.
+      const cullWasEnabled = gl.isEnabled(gl.CULL_FACE);
+      const depthTestWasEnabled = gl.isEnabled(gl.DEPTH_TEST);
+      const blendWasEnabled = gl.isEnabled(gl.BLEND);
+      const depthMaskWas = gl.getParameter(gl.DEPTH_WRITEMASK) as boolean;
+      const blendSrcRgb = gl.getParameter(gl.BLEND_SRC_RGB) as number;
+      const blendDstRgb = gl.getParameter(gl.BLEND_DST_RGB) as number;
+      const blendSrcAlpha = gl.getParameter(gl.BLEND_SRC_ALPHA) as number;
+      const blendDstAlpha = gl.getParameter(gl.BLEND_DST_ALPHA) as number;
+      const priorActiveTexture = gl.getParameter(gl.ACTIVE_TEXTURE) as number;
+      const priorProgram = gl.getParameter(gl.CURRENT_PROGRAM) as WebGLProgram | null;
+      const priorBuffer = gl.getParameter(gl.ARRAY_BUFFER_BINDING) as WebGLBuffer | null;
+      const priorTexture = gl.getParameter(gl.TEXTURE_BINDING_2D) as WebGLTexture | null;
+      const attrib0Enabled = gl.getVertexAttrib(
+        0,
+        gl.VERTEX_ATTRIB_ARRAY_ENABLED,
+      ) as boolean;
+      const attrib1Enabled = gl.getVertexAttrib(
+        1,
+        gl.VERTEX_ATTRIB_ARRAY_ENABLED,
+      ) as boolean;
+            const attrib2Enabled = gl.getVertexAttrib(
+              2,
+              gl.VERTEX_ATTRIB_ARRAY_ENABLED,
+            ) as boolean;
+
+            // Defensive: this pass mixes solid props with camera-facing billboard
       // quads that are double-sided by design. Disable face culling so a sprite
-      // viewed from behind is not dropped (OBS-4).
+      // viewed from behind is not dropped.
       gl.disable(gl.CULL_FACE);
 
       // Opaque scenery props: cull against runtime camera, nearest first.
@@ -715,7 +1078,17 @@ export function createRightWorldPass(
         if (!prop) {
           continue;
         }
-        propFloatOffset += emitPropBox(propUpload, propFloatOffset, prop);
+        if (prop.kind === 'bleacher' && prop.bleacherGeometry) {
+          for (const voxel of prop.bleacherGeometry.voxels) {
+            propFloatOffset += emitBleacherVoxelBox(
+              propUpload,
+              propFloatOffset,
+              voxel,
+            );
+          }
+        } else {
+          propFloatOffset += emitPropBox(propUpload, propFloatOffset, prop);
+        }
       }
       const propVertexCount = propFloatOffset / PROP_FLOATS_PER_VERTEX;
 
@@ -739,10 +1112,59 @@ export function createRightWorldPass(
         PROP_FLOATS_PER_VERTEX * 4,
         3 * 4,
       );
-      if (propViewProjectionLoc) {
-        gl.uniformMatrix4fv(propViewProjectionLoc, false, state.viewProjection);
-      }
-      gl.enable(gl.DEPTH_TEST);
+            gl.enableVertexAttribArray(2);
+            gl.vertexAttribPointer(
+              2,
+              1,
+              gl.FLOAT,
+              false,
+              PROP_FLOATS_PER_VERTEX * 4,
+              6 * 4,
+            );
+            if (propViewProjectionLoc) {
+              gl.uniformMatrix4fv(propViewProjectionLoc, false, state.viewProjection);
+            }
+            gl.uniform3f(
+              propLightingUniforms.uSunDirection,
+              NEATRACING_SUN_DIRECTION[0],
+              NEATRACING_SUN_DIRECTION[1],
+              NEATRACING_SUN_DIRECTION[2],
+            );
+            gl.uniform3f(
+              propLightingUniforms.uSunColor,
+              NEATRACING_SUN_COLOR[0],
+              NEATRACING_SUN_COLOR[1],
+              NEATRACING_SUN_COLOR[2],
+            );
+            gl.uniform3f(
+              propLightingUniforms.uHemisphereSky,
+              NEATRACING_HEMISPHERE_SKY_COLOR[0],
+              NEATRACING_HEMISPHERE_SKY_COLOR[1],
+              NEATRACING_HEMISPHERE_SKY_COLOR[2],
+            );
+            gl.uniform3f(
+              propLightingUniforms.uHemisphereGround,
+              NEATRACING_HEMISPHERE_GROUND_COLOR[0],
+              NEATRACING_HEMISPHERE_GROUND_COLOR[1],
+              NEATRACING_HEMISPHERE_GROUND_COLOR[2],
+            );
+            gl.uniform3f(
+              propLightingUniforms.uFogColor,
+              NEATRACING_FOG_COLOR[0],
+              NEATRACING_FOG_COLOR[1],
+              NEATRACING_FOG_COLOR[2],
+            );
+            gl.uniform1f(
+              propLightingUniforms.uFogDensity,
+              NEATRACING_FOG_DENSITY_1_PER_M,
+            );
+            gl.uniform3f(
+              propLightingUniforms.uCameraWorld,
+              state.cameraWorld[0],
+              state.cameraWorld[1],
+              state.cameraWorld[2],
+            );
+            gl.enable(gl.DEPTH_TEST);
       gl.depthMask(true);
       gl.disable(gl.BLEND);
       if (propVertexCount > 0) {
@@ -761,14 +1183,48 @@ export function createRightWorldPass(
             billboardScratch,
           )
         : 0;
+
+      // Recompute per-billboard atlas frame indices each frame using the live
+      // camera/car and clock (OBS-1, OBS-2, OBS-3). Mechanics always look at
+      // the car; public billboards look at the car when seated and walk in a
+      // preselected direction otherwise.
+      const liveTarget = state.carPosition ?? state.cameraWorld;
+      for (let slot = 0; slot < visibleBillboardCount; slot += 1) {
+        const billboard = scene.billboards[billboardScratch.indices[slot]];
+        if (!billboard) {
+          billboardFrameScratch[slot] = -1;
+          continue;
+        }
+        if (billboard.runtimeRole === 'mechanic') {
+          const mechanicIndex = computeMechanicRuntimeFrameIndex(
+            billboard as MechanicBillboard,
+            liveTarget,
+            mechanicTable,
+          );
+          billboardFrameScratch[slot] =
+            mechanicIndex >= 0 ? mechanicIndex + publicFrameCount : -1;
+        } else {
+          billboardFrameScratch[slot] = computePublicRuntimeFrameIndex(
+            billboard as PublicBillboard,
+            state.cameraWorld,
+            liveTarget,
+            state.timeSeconds,
+            publicTable,
+          );
+        }
+      }
+      for (let slot = visibleBillboardCount; slot < MAX_BILLBOARDS; slot += 1) {
+        billboardFrameScratch[slot] = -1;
+      }
+
       const billboardVertexCount = buildBillboardUpload(
         billboardUpload,
         scene.billboards,
         scene.atlas.frames,
         uvs,
-        frameIdToIndex,
         visibleBillboardCount,
         billboardScratch,
+        billboardFrameScratch,
         state.cameraRight,
         state.cameraUp,
       );
@@ -818,6 +1274,45 @@ export function createRightWorldPass(
         gl.drawArrays(gl.TRIANGLES, 0, billboardVertexCount);
         gl.depthMask(true);
         gl.disable(gl.BLEND);
+      }
+
+      // Restore render state after the billboard scope so later passes start
+      // from the exact configuration that was active before this pass (OBS-3).
+      if (depthTestWasEnabled) {
+        gl.enable(gl.DEPTH_TEST);
+      } else {
+        gl.disable(gl.DEPTH_TEST);
+      }
+      if (blendWasEnabled) {
+        gl.enable(gl.BLEND);
+      } else {
+        gl.disable(gl.BLEND);
+      }
+      gl.blendFuncSeparate(blendSrcRgb, blendDstRgb, blendSrcAlpha, blendDstAlpha);
+      gl.depthMask(depthMaskWas);
+      gl.useProgram(priorProgram);
+      gl.bindBuffer(gl.ARRAY_BUFFER, priorBuffer);
+      gl.activeTexture(priorActiveTexture);
+      gl.bindTexture(gl.TEXTURE_2D, priorTexture);
+      if (attrib0Enabled) {
+        gl.enableVertexAttribArray(0);
+      } else {
+        gl.disableVertexAttribArray(0);
+      }
+      if (attrib1Enabled) {
+        gl.enableVertexAttribArray(1);
+      } else {
+        gl.disableVertexAttribArray(1);
+      }
+      if (attrib2Enabled) {
+        gl.enableVertexAttribArray(2);
+      } else {
+        gl.disableVertexAttribArray(2);
+      }
+      if (cullWasEnabled) {
+        gl.enable(gl.CULL_FACE);
+      } else {
+        gl.disable(gl.CULL_FACE);
       }
     },
     dispose: (): void => {

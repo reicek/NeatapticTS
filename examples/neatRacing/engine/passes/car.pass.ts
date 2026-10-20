@@ -425,6 +425,12 @@ export interface CarPassCarState {
    * value. Centered/neutral steering uses 0; omitted means 0.
    */
   readonly steerAngleRad?: number;
+  /**
+   * Optional visual arcade drift yaw offset in radians (AC-047C). Added only
+   * to the car body transform so the body visibly rotates into the slide;
+   * wheels and shadow keep the base yaw. Zero or omitted means no offset.
+   */
+  readonly driftYawOffsetRad?: number;
 }
 
 /** Per-frame draw state accepted by CarPass.draw. */
@@ -941,8 +947,18 @@ const NEATRACING_CAR_TRANSLATION_MATRIX = new Float32Array(16);
 /** Car yaw scratch fed by state.yawRad. */
 const NEATRACING_CAR_YAW_MATRIX = new Float32Array(16);
 
-/** Composed car model matrix fed to uModel for body and wheel chains. */
+/** Composed car model matrix fed to uModel for the wheel chain. */
 const NEATRACING_CAR_MODEL_MATRIX = new Float32Array(16);
+
+/**
+ * Composed car body model matrix fed to uModel for the body draw. It equals
+ * the wheel-chain matrix multiplied by a drift-yaw rotation so the body can
+ * yaw into the slide independently of the wheels (AC-047C).
+ */
+const NEATRACING_CAR_BODY_MODEL_MATRIX = new Float32Array(16);
+
+/** Visual drift-yaw offset rotation scratch (AC-047C). */
+const NEATRACING_CAR_DRIFT_YAW_MATRIX = new Float32Array(16);
 
 /** First matrix-multiply scratch (inputs never alias outputs). */
 const NEATRACING_CAR_MATRIX_SCRATCH_A = new Float32Array(16);
@@ -1532,13 +1548,26 @@ export function createCarPass(
         NEATRACING_CAR_TRANSLATION_MATRIX,
         NEATRACING_CAR_YAW_MATRIX,
       );
+      // AC-047C: body yaw = base yaw + visual drift offset. The offset is
+      // applied as a post-translation rotation so the body rotates around
+      // the car's world-up axis at its current position; wheels and shadow
+      // keep the base yaw.
+      rotationYMat4(
+        NEATRACING_CAR_DRIFT_YAW_MATRIX,
+        car.driftYawOffsetRad ?? 0,
+      );
+      multiplyMat4(
+        NEATRACING_CAR_BODY_MODEL_MATRIX,
+        NEATRACING_CAR_MODEL_MATRIX,
+        NEATRACING_CAR_DRIFT_YAW_MATRIX,
+      );
       // Rebind per car: the wheel phase left the wheel VBO bound, so the
       // body draw must rebind the body VBO and its attribute pointers
       // (buffer-coupled client state, no VAO).
       gl.bindBuffer(GL_ARRAY_BUFFER, bodyBuffer);
       pointLitMeshAttributes();
       feedTireGradientUniforms(false);
-      drawLitMesh(NEATRACING_CAR_MODEL_MATRIX, bodyMesh.vertexCount, car);
+      drawLitMesh(NEATRACING_CAR_BODY_MODEL_MATRIX, bodyMesh.vertexCount, car);
       gl.bindBuffer(GL_ARRAY_BUFFER, wheelBuffer);
       pointLitMeshAttributes();
       feedTireGradientUniforms(true);

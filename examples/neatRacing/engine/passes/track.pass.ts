@@ -6,6 +6,16 @@
  */
 
 import type { ShaderWarmupProgram } from '../context.service';
+import {
+  NEATRACING_FOG_COLOR,
+  NEATRACING_FOG_DENSITY_1_PER_M,
+  NEATRACING_HEMISPHERE_GROUND_COLOR,
+  NEATRACING_HEMISPHERE_SKY_COLOR,
+  NEATRACING_LIGHTING_GLSL_CHUNK,
+  NEATRACING_LIGHTING_UNIFORM_NAMES,
+  NEATRACING_SUN_COLOR,
+  NEATRACING_SUN_DIRECTION,
+} from '../lighting';
 import { buildTrackSlabs, type TrackSlabMesh } from '../../track/track.slabs';
 import {
   buildRoadEdgeHexVoxels,
@@ -27,26 +37,53 @@ const DEFAULT_TRACK_BUILD_INPUT = {
 } as const;
 
 /**
- * Vertex shader (GLSL ES 3.00) for the track pass: position + color in,
- * view-projected position plus interpolated color out.
+ * Vertex shader (GLSL ES 3.00) for the track pass: position + color +
+ * axis normal in, world-space outputs out.
  */
 const NEATRACING_TRACK_VERTEX_SHADER = `#version 300 es
 in vec3 aPosition;
 in vec3 aColor;
+in float aNormalAxis;
 uniform mat4 uViewProjection;
-out vec3 vColor;
+uniform vec3 uCameraWorld;
+out vec3 vWorld;
+out vec3 vAlbedo;
+out float vNormalAxis;
+out float vFogDistance;
 void main() {
-  gl_Position = uViewProjection * vec4(aPosition, 1.0);
-  vColor = aColor;
+  vec4 world = vec4(aPosition, 1.0);
+  vWorld = world.xyz;
+  vAlbedo = aColor;
+  vNormalAxis = aNormalAxis;
+  vFogDistance = length(world.xyz - uCameraWorld);
+  gl_Position = uViewProjection * world;
 }`;
 
-/** Fragment shader (GLSL ES 3.00) for the track pass: flat vertex color. */
+/**
+ * Fragment shader (GLSL ES 3.00) for the track pass: shared sun +
+ * hemisphere + fog lighting using the same chunk as the car pass.
+ */
 const NEATRACING_TRACK_FRAGMENT_SHADER = `#version 300 es
 precision highp float;
-in vec3 vColor;
+${NEATRACING_LIGHTING_GLSL_CHUNK}
+in vec3 vWorld;
+in vec3 vAlbedo;
+in float vNormalAxis;
+in float vFogDistance;
 out vec4 fragColor;
 void main() {
-  fragColor = vec4(vColor, 1.0);
+  vec3 axisNormal = vec3(1.0, 0.0, 0.0);
+  if (vNormalAxis >= 0.5 && vNormalAxis < 1.5) {
+    axisNormal = vec3(0.0, 1.0, 0.0);
+  } else if (vNormalAxis >= 1.5) {
+    axisNormal = vec3(0.0, 0.0, 1.0);
+  }
+  vec3 viewDirection = normalize(vWorld - uCameraWorld);
+  if (dot(axisNormal, viewDirection) > 0.0) {
+    axisNormal = -axisNormal;
+  }
+  vec3 lit = shadeLitSurface(vAlbedo, normalize(axisNormal), 0.0);
+  fragColor = vec4(mix(uFogColor, lit, fogFactor(vFogDistance)), 1.0);
 }`;
 
 /** `gl.ARRAY_BUFFER` enum value (0x8892) for the track VBO. */
@@ -79,14 +116,22 @@ const VERTICES_PER_QUAD = 6;
 /** Bytes per float for VBO size calculations. */
 const BYTES_PER_FLOAT = 4;
 
-/** Byte stride of one interleaved vertex. */
-const VERTEX_STRIDE_BYTES = FLOATS_PER_VERTEX * BYTES_PER_FLOAT;
+/** Number of floats per lit vertex: position (xyz) + color (rgb) + normalAxis. */
+const NEATRACING_TRACK_LIT_FLOATS_PER_VERTEX = 7;
 
-/** Byte offset of the position attribute within one vertex. */
-const POSITION_OFFSET_BYTES = 0;
+/** Byte stride of one lit interleaved vertex. */
+const NEATRACING_TRACK_LIT_VERTEX_STRIDE_BYTES =
+  NEATRACING_TRACK_LIT_FLOATS_PER_VERTEX * BYTES_PER_FLOAT;
 
-/** Byte offset of the color attribute within one vertex. */
-const COLOR_OFFSET_BYTES = 3 * BYTES_PER_FLOAT;
+/** Byte offset of the position attribute within one lit vertex. */
+const NEATRACING_TRACK_LIT_POSITION_OFFSET_BYTES = 0;
+
+/** Byte offset of the color attribute within one lit vertex. */
+const NEATRACING_TRACK_LIT_COLOR_OFFSET_BYTES = 3 * BYTES_PER_FLOAT;
+
+/** Byte offset of the normal axis attribute within one lit vertex. */
+const NEATRACING_TRACK_LIT_NORMAL_AXIS_OFFSET_BYTES =
+  6 * BYTES_PER_FLOAT;
 
 /** Per-draw inputs for the track pass. */
 export interface TrackPassDrawState {
@@ -203,13 +248,74 @@ export function buildTrackVboData(mesh: TrackSlabMesh): Float32Array {
 }
 
 /**
- * Builds an interleaved Float32Array of position+color vertices from the
- * deterministic road-edge hex mesh. Each triangle is already triangulated,
- * so we emit three vertices per triangle with consistent winding.
+ * Builds an interleaved lit Float32Array of position+color+normalAxis
+ * vertices from the deterministic track slab mesh. Same layout as
+ * {@link buildTrackVboData} plus an encoded normal axis per vertex so the
+ * track shares the same sun/hemisphere/fog lighting as the car.
+ */
+function buildTrackLitVboData(mesh: TrackSlabMesh): Float32Array {
+  const vertexCount = mesh.quads.length * VERTICES_PER_QUAD;
+  const data = new Float32Array(
+    vertexCount * NEATRACING_TRACK_LIT_FLOATS_PER_VERTEX,
+  );
+
+  for (let quadIndex = 0; quadIndex < mesh.quads.length; quadIndex++) {
+    const quad = mesh.quads[quadIndex];
+    const paletteEntry = mesh.palette[quad.paletteIndex];
+    if (!paletteEntry) {
+      throw new Error(
+        `neatRacing track pass: quad paletteIndex ${quad.paletteIndex} out of bounds`,
+      );
+    }
+
+    const [corner0, corner1, corner2, corner3] = expandSlabQuadCorners(quad);
+    const isTopFace = quad.normalAxis === 1 && quad.position[1] === 0;
+    const color = normalizeColorBytes(
+      isTopFace
+        ? NEATRACING_TRACK_SLAB_TOP_FACE_MATTE_COLOR
+        : paletteEntry.color,
+    );
+    const vertices = [
+      corner0,
+      corner1,
+      corner2,
+      corner0,
+      corner2,
+      corner3,
+    ] as const;
+    const normalAxis = quad.normalAxis;
+
+    for (let vertexIndex = 0; vertexIndex < VERTICES_PER_QUAD; vertexIndex++) {
+      const vertex = vertices[vertexIndex];
+      const base =
+        (quadIndex * VERTICES_PER_QUAD + vertexIndex) *
+        NEATRACING_TRACK_LIT_FLOATS_PER_VERTEX;
+      data[base + 0] = vertex[0];
+      data[base + 1] = vertex[1];
+      data[base + 2] = vertex[2];
+      data[base + 3] = color[0];
+      data[base + 4] = color[1];
+      data[base + 5] = color[2];
+      data[base + 6] = normalAxis;
+    }
+  }
+
+  return data;
+}
+
+/**
+ * Builds an interleaved lit Float32Array of position+color+normalAxis
+ * vertices from the deterministic road-edge hex mesh. Each triangle is already
+ * triangulated, so we emit three vertices per triangle with consistent winding.
+ * The road-edge paint is a flat horizontal plane, so every vertex uses the
+ * world-up normal axis (1).
  */
 function buildRoadEdgeVboData(mesh: RoadEdgeHexMesh): Float32Array {
   const vertexCount = mesh.triangles.length * 3;
-  const data = new Float32Array(vertexCount * FLOATS_PER_VERTEX);
+  const data = new Float32Array(
+    vertexCount * NEATRACING_TRACK_LIT_FLOATS_PER_VERTEX,
+  );
+  const normalAxis = 1;
 
   for (let triangleIndex = 0; triangleIndex < mesh.triangles.length; triangleIndex++) {
     const triangle = mesh.triangles[triangleIndex];
@@ -218,13 +324,15 @@ function buildRoadEdgeVboData(mesh: RoadEdgeHexMesh): Float32Array {
       const vertex = triangle.vertices[vertexIndex];
       const color = normalizeColorBytes(vertex.color);
       const base =
-        (triangleIndex * 3 + vertexIndex) * FLOATS_PER_VERTEX;
+        (triangleIndex * 3 + vertexIndex) *
+        NEATRACING_TRACK_LIT_FLOATS_PER_VERTEX;
       data[base + 0] = vertex.position[0];
       data[base + 1] = vertex.position[1];
       data[base + 2] = vertex.position[2];
       data[base + 3] = color[0];
       data[base + 4] = color[1];
       data[base + 5] = color[2];
+      data[base + 6] = normalAxis;
     }
   }
 
@@ -296,7 +404,7 @@ function resolveTangentAxes(normalAxis: number): readonly [number, number] {
  */
 export function createTrackPass(gl: WebGL2RenderingContext): TrackPass {
   const mesh = buildTrackSlabs(DEFAULT_TRACK_BUILD_INPUT);
-  const slabVboData = buildTrackVboData(mesh);
+  const slabVboData = buildTrackLitVboData(mesh);
   const roadEdgeMesh = buildRoadEdgeHexVoxels(DEFAULT_TRACK_BUILD_INPUT);
   const roadEdgeVboData = buildRoadEdgeVboData(roadEdgeMesh);
 
@@ -306,7 +414,7 @@ export function createTrackPass(gl: WebGL2RenderingContext): TrackPass {
   vboData.set(slabVboData, 0);
   vboData.set(roadEdgeVboData, slabVboData.length);
 
-  const vertexCount = vboData.length / FLOATS_PER_VERTEX;
+  const vertexCount = vboData.length / NEATRACING_TRACK_LIT_FLOATS_PER_VERTEX;
 
   const vertexShader = compileTrackShader(
     gl,
@@ -342,6 +450,7 @@ export function createTrackPass(gl: WebGL2RenderingContext): TrackPass {
 
   const positionAttrib = gl.getAttribLocation(program, 'aPosition');
   const colorAttrib = gl.getAttribLocation(program, 'aColor');
+  const normalAxisAttrib = gl.getAttribLocation(program, 'aNormalAxis');
   if (positionAttrib < 0) {
     throw new Error(
       'neatRacing track pass: aPosition attribute not found in program',
@@ -350,6 +459,11 @@ export function createTrackPass(gl: WebGL2RenderingContext): TrackPass {
   if (colorAttrib < 0) {
     throw new Error(
       'neatRacing track pass: aColor attribute not found in program',
+    );
+  }
+  if (normalAxisAttrib < 0) {
+    throw new Error(
+      'neatRacing track pass: aNormalAxis attribute not found in program',
     );
   }
 
@@ -361,6 +475,18 @@ export function createTrackPass(gl: WebGL2RenderingContext): TrackPass {
     throw new Error(
       'neatRacing track pass: uViewProjection uniform not found in program',
     );
+  }
+
+  const lightingUniforms: Record<string, WebGLUniformLocation | null> = {};
+  for (const name of NEATRACING_LIGHTING_UNIFORM_NAMES) {
+    lightingUniforms[name] = gl.getUniformLocation(program, name);
+  }
+  for (const name of NEATRACING_LIGHTING_UNIFORM_NAMES) {
+    if (!lightingUniforms[name]) {
+      throw new Error(
+        `neatRacing track pass: ${name} uniform not found in program`,
+      );
+    }
   }
 
   return {
@@ -379,8 +505,8 @@ export function createTrackPass(gl: WebGL2RenderingContext): TrackPass {
         3,
         GL_FLOAT,
         false,
-        VERTEX_STRIDE_BYTES,
-        POSITION_OFFSET_BYTES,
+        NEATRACING_TRACK_LIT_VERTEX_STRIDE_BYTES,
+        NEATRACING_TRACK_LIT_POSITION_OFFSET_BYTES,
       );
       gl.enableVertexAttribArray(colorAttrib);
       gl.vertexAttribPointer(
@@ -388,8 +514,17 @@ export function createTrackPass(gl: WebGL2RenderingContext): TrackPass {
         3,
         GL_FLOAT,
         false,
-        VERTEX_STRIDE_BYTES,
-        COLOR_OFFSET_BYTES,
+        NEATRACING_TRACK_LIT_VERTEX_STRIDE_BYTES,
+        NEATRACING_TRACK_LIT_COLOR_OFFSET_BYTES,
+      );
+      gl.enableVertexAttribArray(normalAxisAttrib);
+      gl.vertexAttribPointer(
+        normalAxisAttrib,
+        1,
+        GL_FLOAT,
+        false,
+        NEATRACING_TRACK_LIT_VERTEX_STRIDE_BYTES,
+        NEATRACING_TRACK_LIT_NORMAL_AXIS_OFFSET_BYTES,
       );
 
       gl.enable(GL_DEPTH_TEST);
@@ -403,6 +538,46 @@ export function createTrackPass(gl: WebGL2RenderingContext): TrackPass {
       // with the glow passes drawn earlier in the frame.
       gl.disable(GL_BLEND);
       gl.uniformMatrix4fv(viewProjectionLocation, false, state.viewProjection);
+      gl.uniform3f(
+        lightingUniforms.uSunDirection,
+        NEATRACING_SUN_DIRECTION[0],
+        NEATRACING_SUN_DIRECTION[1],
+        NEATRACING_SUN_DIRECTION[2],
+      );
+      gl.uniform3f(
+        lightingUniforms.uSunColor,
+        NEATRACING_SUN_COLOR[0],
+        NEATRACING_SUN_COLOR[1],
+        NEATRACING_SUN_COLOR[2],
+      );
+      gl.uniform3f(
+        lightingUniforms.uHemisphereSky,
+        NEATRACING_HEMISPHERE_SKY_COLOR[0],
+        NEATRACING_HEMISPHERE_SKY_COLOR[1],
+        NEATRACING_HEMISPHERE_SKY_COLOR[2],
+      );
+      gl.uniform3f(
+        lightingUniforms.uHemisphereGround,
+        NEATRACING_HEMISPHERE_GROUND_COLOR[0],
+        NEATRACING_HEMISPHERE_GROUND_COLOR[1],
+        NEATRACING_HEMISPHERE_GROUND_COLOR[2],
+      );
+      gl.uniform3f(
+        lightingUniforms.uFogColor,
+        NEATRACING_FOG_COLOR[0],
+        NEATRACING_FOG_COLOR[1],
+        NEATRACING_FOG_COLOR[2],
+      );
+      gl.uniform1f(
+        lightingUniforms.uFogDensity,
+        NEATRACING_FOG_DENSITY_1_PER_M,
+      );
+      gl.uniform3f(
+        lightingUniforms.uCameraWorld,
+        state.cameraWorld[0],
+        state.cameraWorld[1],
+        state.cameraWorld[2],
+      );
       gl.drawArrays(GL_TRIANGLES, 0, vertexCount);
     },
   };

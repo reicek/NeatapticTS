@@ -2,7 +2,7 @@
 description: 'Reviewer with an ONNX export/import parity point of view on round-trip correctness, binary emission determinism, and runtime parity.'
 name: onnx-parity-reviewer
 tier: 3
-model: kimi-k2.7-code:cloud
+model: minimax-m3.1-flash:cloud
 tools:
   [
     read,

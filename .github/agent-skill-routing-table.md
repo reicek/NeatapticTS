@@ -1,5 +1,5 @@
 <!-- generated-by: scripts/agent-customization/generate-agent-skill-routing-table.mjs -->
-<!-- source-hash: f4cc8372c391d9616ec6129359e370eb85d8f907e5d04678e761a5d10fa2bbf0 -->
+<!-- source-hash: 5cfa3ca535dc1d5e44bed234cbbe35c8ce9a7a4c399eff61f69d037cf2c72008 -->
 <!-- source-file-count: 106 -->
 # Canonical Agent and Skill Routing Table
 
@@ -11,45 +11,45 @@
 
 | Name | Tier | Complexity | Model | Agents | Skills |
 | --- | --- | --- | --- | --- | --- |
-| 00-helping | 1 | moderate | kimi-k2.7-code:cloud | agent-maintenance-coordinator<br>coverage-analyst<br>learning-event-capturer<br>frontmatter-auditor<br>repo-cortex-scout | agent-frontmatter-standards<br>model-routing-and-budget<br>agent-inventory-audit<br>customize-cloud-agent<br>subagent-delegation-patterns<br>capturing-learning-event<br>routing-optimization-policy<br>phase-handoff-workflow<br>tracker-handoff<br>execute<br>skill-frontmatter-standards<br>mcp-local-server-workflow<br>skill-description-evals<br>skill-output-evals |
-| 01-planning | 1 | moderate | kimi-k2.7-code:cloud | plan-scout<br>agent-maintenance-coordinator | plan-alignment<br>tracker-handoff<br>phase-handoff-workflow<br>agent-frontmatter-standards<br>model-routing-and-budget<br>license-attribution-audit<br>planning-acceptance-criteria<br>plan-sync-validation<br>spec-checklist<br>research-methodology<br>execute<br>red-test-contracts<br>solid-split |
-| 02-researching | 1 | moderate | kimi-k2.7-code:cloud | plan-scout<br>docs-scout<br>boundary-mapper<br>agent-maintenance-coordinator<br>license-reviewer<br>dependency-audit-reviewer<br>benchmark-gate-reviewer<br>repo-cortex-scout<br>implementation-pattern-scout | subagent-delegation-patterns<br>research-methodology<br>repo-cortex-workflow<br>execute<br>repo-cortex-embeddings<br>solid-split<br>neatchat-systems<br>architecture-builder<br>trace-analyzer-extension<br>nge-benchmark-workflow |
-| 03-red-testing | 1 | moderate | kimi-k2.7-code:cloud | unit-test-writer<br>plan-scout<br>performance-trace-specialist<br>browser-ui-specialist<br>browser-memory-specialist<br>browser-harness-specialist<br>coverage-analyst<br>agent-maintenance-coordinator<br>slice-validator<br>property-based-test-writer<br>boundary-mapper | red-test-contracts<br>nge-core-algorithm<br>reproducibility-contracts<br>creating-unit-tests<br>test-fix-workflow<br>coverage-tranche<br>research-methodology<br>execute<br>chrome-devtools-mcp<br>browser-testing-harness<br>devtools<br>planning-acceptance-criteria<br>property-based-testing |
-| 04-implementing | 1 | moderate | kimi-k2.7-code:cloud | implementation-pattern-scout<br>implementation-executor<br>boundary-mapper<br>docs-scout<br>browser-harness-specialist<br>agent-maintenance-coordinator<br>plan-scout<br>performance-trace-specialist<br>review-coordinator | implementation-standards<br>solid-split<br>reproducibility-contracts<br>tracker-handoff<br>performance-optimization<br>research-methodology<br>execute<br>browser-testing-harness<br>mcp-local-server-workflow<br>checkpointing-persistence<br>hybrid-training-interop<br>flappy-architecture-polish<br>security-review<br>dependency-audit |
-| 05-green-testing | 1 | moderate | kimi-k2.7-code:cloud | performance-trace-specialist<br>browser-ui-specialist<br>browser-memory-specialist<br>browser-harness-specialist<br>coverage-analyst<br>agent-maintenance-coordinator<br>plan-scout<br>boundary-mapper<br>slice-validator<br>benchmark-gate-reviewer<br>review-coordinator | green-validation-gates<br>coverage-guard<br>test-fix-workflow<br>plan-sync-validation<br>spec-checklist<br>trace-audit-reporting<br>research-methodology<br>execute<br>chrome-devtools-mcp<br>browser-testing-harness<br>devtools<br>nge-benchmark-workflow<br>reproducibility-contracts<br>running-unit-tests<br>triaging-test-failures<br>mcp-local-server-workflow<br>security-review<br>benchmark-gate<br>worker-inference-transport<br>multithread-evaluation<br>browser-build |
-| 06-documenting | 1 | moderate | kimi-k2.7-code:cloud | docs-scout<br>docs-writer<br>plan-scout<br>browser-harness-specialist<br>agent-maintenance-coordinator<br>api-contract-reviewer<br>license-reviewer<br>browser-ui-specialist<br>browser-memory-specialist | educational-docs<br>nge-core-algorithm<br>docs-academic-citation-audit<br>license-attribution-audit<br>auditing-js-docs<br>updating-js-docs<br>research-methodology<br>execute<br>browser-testing-harness<br>dependency-audit<br>neatchat-systems<br>visualizer-workflow |
-| 07-logging | 1 | moderate | kimi-k2.7-code:cloud | plan-scout<br>learning-event-capturer<br>agent-maintenance-coordinator<br>session-summarizer | tracker-handoff<br>summarizing-session-log<br>plan-sync-validation<br>capturing-learning-event<br>research-methodology<br>execute<br>phase-handoff-workflow |
-| agent-maintenance-coordinator | 2 | moderate | kimi-k2.7-code:cloud | learning-event-capturer<br>frontmatter-auditor | agent-frontmatter-standards<br>model-routing-and-budget<br>agent-inventory-audit<br>creating-specialist-agent<br>subagent-delegation-patterns<br>execute<br>agent-json-body-to-md<br>agent-script-tooling<br>splitting-monolithic-agent |
-| api-contract-reviewer | 3 | moderate | kimi-k2.7-code:cloud | - | implementation-standards |
-| benchmark-gate-reviewer | 3 | moderate | kimi-k2.7-code:cloud | - | benchmark-gate<br>performance-optimization |
-| boundary-mapper | 3 | moderate | kimi-k2.7-code:cloud | - | solid-split<br>implementation-standards |
-| browser-harness-specialist | 3 | moderate | kimi-k2.7-code:cloud | - | chrome-devtools-mcp<br>research-methodology |
-| browser-memory-specialist | 3 | moderate | kimi-k2.7-code:cloud | - | chrome-devtools-mcp |
-| browser-ui-specialist | 3 | moderate | kimi-k2.7-code:cloud | - | chrome-devtools-mcp |
-| coverage-analyst | 3 | moderate | kimi-k2.7-code:cloud | - | coverage-guard<br>coverage-tranche |
-| dependency-audit-reviewer | 3 | moderate | kimi-k2.7-code:cloud | - | dependency-audit |
-| determinism-reviewer | 3 | moderate | kimi-k2.7-code:cloud | - | reproducibility-contracts |
-| docs-scout | 3 | moderate | kimi-k2.7-code:cloud | - | educational-docs<br>auditing-js-docs |
-| docs-writer | 3 | moderate | kimi-k2.7-code:cloud | - | educational-docs<br>updating-js-docs<br>auditing-js-docs |
-| evolution-correctness-reviewer | 3 | moderate | kimi-k2.7-code:cloud | - | nge-core-algorithm<br>reproducibility-contracts<br>implementation-standards |
-| frontmatter-auditor | 3 | moderate | kimi-k2.7-code:cloud | - | agent-frontmatter-standards<br>skill-frontmatter-standards<br>updating-agent-frontmatter<br>updating-skill-frontmatter<br>model-routing-and-budget |
-| implementation-executor | 2 | moderate | kimi-k2.7-code:cloud | boundary-mapper<br>docs-scout | implementation-standards<br>coverage-guard<br>execute |
-| implementation-pattern-scout | 3 | moderate | kimi-k2.7-code:cloud | - | implementation-standards |
-| learning-event-capturer | 4 | moderate | kimi-k2.7-code:cloud | - | capturing-learning-event |
-| license-reviewer | 3 | moderate | kimi-k2.7-code:cloud | - | license-attribution-audit |
-| onnx-parity-reviewer | 3 | moderate | kimi-k2.7-code:cloud | - | onnx-work<br>implementation-standards<br>reproducibility-contracts |
-| performance-reviewer | 3 | moderate | kimi-k2.7-code:cloud | - | performance-optimization<br>implementation-standards |
-| performance-trace-specialist | 3 | moderate | kimi-k2.7-code:cloud | - | chrome-devtools-mcp<br>trace-audit-reporting<br>trace-analyzer-extension |
-| plan-scout | 3 | moderate | kimi-k2.7-code:cloud | - | plan-alignment |
-| property-based-test-writer | 3 | moderate | kimi-k2.7-code:cloud | - | property-based-testing<br>red-test-contracts<br>creating-unit-tests |
-| repo-cortex-scout | 3 | moderate | kimi-k2.7-code:cloud | - | repo-cortex-workflow<br>repo-cortex-embeddings<br>research-methodology |
-| review-coordinator | 2 | moderate | kimi-k2.7-code:cloud | api-contract-reviewer<br>benchmark-gate-reviewer<br>dependency-audit-reviewer<br>determinism-reviewer<br>evolution-correctness-reviewer<br>onnx-parity-reviewer<br>performance-reviewer<br>security-reviewer<br>webgl2-glsl-render-reviewer<br>webgpu-parity-reviewer | execute<br>implementation-standards<br>red-test-contracts<br>security-review<br>dependency-audit |
-| security-reviewer | 3 | moderate | kimi-k2.7-code:cloud | - | security-review<br>implementation-standards |
-| session-summarizer | 3 | moderate | kimi-k2.7-code:cloud | - | summarizing-session-log<br>tracker-handoff<br>research-methodology |
-| slice-validator | 3 | moderate | kimi-k2.7-code:cloud | - | phase-handoff-workflow<br>plan-sync-validation |
-| unit-test-writer | 3 | moderate | kimi-k2.7-code:cloud | - | creating-unit-tests<br>red-test-contracts |
-| webgl2-glsl-render-reviewer | 3 | moderate | kimi-k2.7-code:cloud | - | visualizer-workflow<br>implementation-standards<br>performance-optimization |
-| webgpu-parity-reviewer | 3 | moderate | kimi-k2.7-code:cloud | - | webgpu<br>implementation-standards<br>performance-optimization |
+| 00-helping | 1 | moderate | minimax-m3.1-flash:cloud | agent-maintenance-coordinator<br>coverage-analyst<br>learning-event-capturer<br>frontmatter-auditor<br>repo-cortex-scout | agent-frontmatter-standards<br>model-routing-and-budget<br>agent-inventory-audit<br>customize-cloud-agent<br>subagent-delegation-patterns<br>capturing-learning-event<br>routing-optimization-policy<br>phase-handoff-workflow<br>tracker-handoff<br>execute<br>skill-frontmatter-standards<br>mcp-local-server-workflow<br>skill-description-evals<br>skill-output-evals |
+| 01-planning | 1 | moderate | minimax-m3.1-flash:cloud | plan-scout<br>agent-maintenance-coordinator | plan-alignment<br>tracker-handoff<br>phase-handoff-workflow<br>agent-frontmatter-standards<br>model-routing-and-budget<br>license-attribution-audit<br>planning-acceptance-criteria<br>plan-sync-validation<br>spec-checklist<br>research-methodology<br>execute<br>red-test-contracts<br>solid-split |
+| 02-researching | 1 | moderate | minimax-m3.1-flash:cloud | plan-scout<br>docs-scout<br>boundary-mapper<br>agent-maintenance-coordinator<br>license-reviewer<br>dependency-audit-reviewer<br>benchmark-gate-reviewer<br>repo-cortex-scout<br>implementation-pattern-scout | subagent-delegation-patterns<br>research-methodology<br>repo-cortex-workflow<br>execute<br>repo-cortex-embeddings<br>solid-split<br>neatchat-systems<br>architecture-builder<br>trace-analyzer-extension<br>nge-benchmark-workflow |
+| 03-red-testing | 1 | moderate | minimax-m3.1-flash:cloud | unit-test-writer<br>plan-scout<br>performance-trace-specialist<br>browser-ui-specialist<br>browser-memory-specialist<br>browser-harness-specialist<br>coverage-analyst<br>agent-maintenance-coordinator<br>slice-validator<br>property-based-test-writer<br>boundary-mapper | red-test-contracts<br>nge-core-algorithm<br>reproducibility-contracts<br>creating-unit-tests<br>test-fix-workflow<br>coverage-tranche<br>research-methodology<br>execute<br>chrome-devtools-mcp<br>browser-testing-harness<br>devtools<br>planning-acceptance-criteria<br>property-based-testing |
+| 04-implementing | 1 | moderate | minimax-m3.1-flash:cloud | implementation-pattern-scout<br>implementation-executor<br>boundary-mapper<br>docs-scout<br>browser-harness-specialist<br>agent-maintenance-coordinator<br>plan-scout<br>performance-trace-specialist<br>review-coordinator | implementation-standards<br>solid-split<br>reproducibility-contracts<br>tracker-handoff<br>performance-optimization<br>research-methodology<br>execute<br>browser-testing-harness<br>mcp-local-server-workflow<br>checkpointing-persistence<br>hybrid-training-interop<br>flappy-architecture-polish<br>security-review<br>dependency-audit |
+| 05-green-testing | 1 | moderate | minimax-m3.1-flash:cloud | performance-trace-specialist<br>browser-ui-specialist<br>browser-memory-specialist<br>browser-harness-specialist<br>coverage-analyst<br>agent-maintenance-coordinator<br>plan-scout<br>boundary-mapper<br>slice-validator<br>benchmark-gate-reviewer<br>review-coordinator | green-validation-gates<br>coverage-guard<br>test-fix-workflow<br>plan-sync-validation<br>spec-checklist<br>trace-audit-reporting<br>research-methodology<br>execute<br>chrome-devtools-mcp<br>browser-testing-harness<br>devtools<br>nge-benchmark-workflow<br>reproducibility-contracts<br>running-unit-tests<br>triaging-test-failures<br>mcp-local-server-workflow<br>security-review<br>benchmark-gate<br>worker-inference-transport<br>multithread-evaluation<br>browser-build |
+| 06-documenting | 1 | moderate | minimax-m3.1-flash:cloud | docs-scout<br>docs-writer<br>plan-scout<br>browser-harness-specialist<br>agent-maintenance-coordinator<br>api-contract-reviewer<br>license-reviewer<br>browser-ui-specialist<br>browser-memory-specialist | educational-docs<br>nge-core-algorithm<br>docs-academic-citation-audit<br>license-attribution-audit<br>auditing-js-docs<br>updating-js-docs<br>research-methodology<br>execute<br>browser-testing-harness<br>dependency-audit<br>neatchat-systems<br>visualizer-workflow |
+| 07-logging | 1 | moderate | minimax-m3.1-flash:cloud | plan-scout<br>learning-event-capturer<br>agent-maintenance-coordinator<br>session-summarizer | tracker-handoff<br>summarizing-session-log<br>plan-sync-validation<br>capturing-learning-event<br>research-methodology<br>execute<br>phase-handoff-workflow |
+| agent-maintenance-coordinator | 2 | moderate | minimax-m3.1-flash:cloud | learning-event-capturer<br>frontmatter-auditor | agent-frontmatter-standards<br>model-routing-and-budget<br>agent-inventory-audit<br>creating-specialist-agent<br>subagent-delegation-patterns<br>execute<br>agent-json-body-to-md<br>agent-script-tooling<br>splitting-monolithic-agent |
+| api-contract-reviewer | 3 | moderate | minimax-m3.1-flash:cloud | - | implementation-standards |
+| benchmark-gate-reviewer | 3 | moderate | minimax-m3.1-flash:cloud | - | benchmark-gate<br>performance-optimization |
+| boundary-mapper | 3 | moderate | minimax-m3.1-flash:cloud | - | solid-split<br>implementation-standards |
+| browser-harness-specialist | 3 | moderate | minimax-m3.1-flash:cloud | - | chrome-devtools-mcp<br>research-methodology |
+| browser-memory-specialist | 3 | moderate | minimax-m3.1-flash:cloud | - | chrome-devtools-mcp |
+| browser-ui-specialist | 3 | moderate | minimax-m3.1-flash:cloud | - | chrome-devtools-mcp |
+| coverage-analyst | 3 | moderate | minimax-m3.1-flash:cloud | - | coverage-guard<br>coverage-tranche |
+| dependency-audit-reviewer | 3 | moderate | minimax-m3.1-flash:cloud | - | dependency-audit |
+| determinism-reviewer | 3 | moderate | minimax-m3.1-flash:cloud | - | reproducibility-contracts |
+| docs-scout | 3 | moderate | minimax-m3.1-flash:cloud | - | educational-docs<br>auditing-js-docs |
+| docs-writer | 3 | moderate | minimax-m3.1-flash:cloud | - | educational-docs<br>updating-js-docs<br>auditing-js-docs |
+| evolution-correctness-reviewer | 3 | moderate | minimax-m3.1-flash:cloud | - | nge-core-algorithm<br>reproducibility-contracts<br>implementation-standards |
+| frontmatter-auditor | 3 | moderate | minimax-m3.1-flash:cloud | - | agent-frontmatter-standards<br>skill-frontmatter-standards<br>updating-agent-frontmatter<br>updating-skill-frontmatter<br>model-routing-and-budget |
+| implementation-executor | 2 | moderate | minimax-m3.1-flash:cloud | boundary-mapper<br>docs-scout | implementation-standards<br>coverage-guard<br>execute |
+| implementation-pattern-scout | 3 | moderate | minimax-m3.1-flash:cloud | - | implementation-standards |
+| learning-event-capturer | 4 | moderate | minimax-m3.1-flash:cloud | - | capturing-learning-event |
+| license-reviewer | 3 | moderate | minimax-m3.1-flash:cloud | - | license-attribution-audit |
+| onnx-parity-reviewer | 3 | moderate | minimax-m3.1-flash:cloud | - | onnx-work<br>implementation-standards<br>reproducibility-contracts |
+| performance-reviewer | 3 | moderate | minimax-m3.1-flash:cloud | - | performance-optimization<br>implementation-standards |
+| performance-trace-specialist | 3 | moderate | minimax-m3.1-flash:cloud | - | chrome-devtools-mcp<br>trace-audit-reporting<br>trace-analyzer-extension |
+| plan-scout | 3 | moderate | minimax-m3.1-flash:cloud | - | plan-alignment |
+| property-based-test-writer | 3 | moderate | minimax-m3.1-flash:cloud | - | property-based-testing<br>red-test-contracts<br>creating-unit-tests |
+| repo-cortex-scout | 3 | moderate | minimax-m3.1-flash:cloud | - | repo-cortex-workflow<br>repo-cortex-embeddings<br>research-methodology |
+| review-coordinator | 2 | moderate | minimax-m3.1-flash:cloud | api-contract-reviewer<br>benchmark-gate-reviewer<br>dependency-audit-reviewer<br>determinism-reviewer<br>evolution-correctness-reviewer<br>onnx-parity-reviewer<br>performance-reviewer<br>security-reviewer<br>webgl2-glsl-render-reviewer<br>webgpu-parity-reviewer | execute<br>implementation-standards<br>red-test-contracts<br>security-review<br>dependency-audit |
+| security-reviewer | 3 | moderate | minimax-m3.1-flash:cloud | - | security-review<br>implementation-standards |
+| session-summarizer | 3 | moderate | minimax-m3.1-flash:cloud | - | summarizing-session-log<br>tracker-handoff<br>research-methodology |
+| slice-validator | 3 | moderate | minimax-m3.1-flash:cloud | - | phase-handoff-workflow<br>plan-sync-validation |
+| unit-test-writer | 3 | moderate | minimax-m3.1-flash:cloud | - | creating-unit-tests<br>red-test-contracts |
+| webgl2-glsl-render-reviewer | 3 | moderate | minimax-m3.1-flash:cloud | - | visualizer-workflow<br>implementation-standards<br>performance-optimization |
+| webgpu-parity-reviewer | 3 | moderate | minimax-m3.1-flash:cloud | - | webgpu<br>implementation-standards<br>performance-optimization |
 
 ## Skills
 

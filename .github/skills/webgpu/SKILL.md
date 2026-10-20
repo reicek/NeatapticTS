@@ -17,7 +17,7 @@ tools:
   - neataptic-cortex-mcp-load_document
   - neataptic-devtools-mcp
   - neataptic-validation-mcp-run_allowlisted_validation
-model: kimi-k2.7-code:cloud
+model: minimax-m3.1-flash:cloud
 compatibility: 'All agents working on GPU inference, compute kernels, or WebGPU integration in NeatapticTS.'
 ---
 

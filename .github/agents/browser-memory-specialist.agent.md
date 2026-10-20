@@ -2,7 +2,7 @@
 description: 'Chrome DevTools memory profiling specialist for heap snapshots and leak detection.'
 name: 'browser-memory-specialist'
 tier: 3
-model: kimi-k2.7-code:cloud
+model: minimax-m3.1-flash:cloud
 tools:
   [
     read,

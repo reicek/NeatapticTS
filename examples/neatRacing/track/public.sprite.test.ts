@@ -18,14 +18,25 @@ import { describe, expect, it } from '@jest/globals';
 import { generateTrack } from '../../racing_curriculum/track/track.generator';
 import type { SplineSample } from '../../racing_curriculum/track/track.generator.types';
 import { resolveSplineSampleFrame } from '../../racing_curriculum/track/track.spline.utils';
-import { buildRightWorldProps } from './right-world.builder';
+import {
+  buildRightWorldProps,
+  getBleacherAxisAlignedHalfSize,
+  getBleacherSeatTopY,
+} from './right-world.builder';
 import { resolvePropHalfSize } from './right-world.prop-sizes';
 import type { TrackSlabBuildInput } from './track.slabs';
 import {
   buildPublicBillboards,
   computeBillboardScale,
+  computePublicRuntimeFrameIndex,
+  DIRECTION_ORDER,
   loadPublicSpriteAtlas,
+  PUBLIC_POSE_COUNT,
+  PUBLIC_POSE_INDEX_STAND,
+  PUBLIC_POSE_INDEX_WALK1,
+  PUBLIC_POSE_INDEX_WALK2,
   selectPublicSpriteFrame,
+  selectPublicWalkFrame,
 } from './public.sprite';
 import * as publicSprite from './public.sprite';
 
@@ -135,6 +146,34 @@ function expectedLookDirection(
   return ROBOT_DIRECTION_ORDER[index]!;
 }
 
+/** Builds the public runtime direction×pose atlas-index lookup table. */
+function buildPublicRuntimeIndexTable(
+  atlas: ReturnType<typeof loadPublicSpriteAtlas>,
+): Int16Array {
+  const table = new Int16Array(
+    DIRECTION_ORDER.length * PUBLIC_POSE_COUNT,
+  ).fill(-1);
+
+  for (let frameIndex = 0; frameIndex < atlas.frames.length; frameIndex += 1) {
+    const frame = atlas.frames[frameIndex]!;
+    const [direction, pose] = frame.id.split('-');
+    const directionIndex = (DIRECTION_ORDER as readonly string[]).indexOf(direction);
+    let poseIndex = -1;
+    if (pose === 'stand') {
+      poseIndex = PUBLIC_POSE_INDEX_STAND;
+    } else if (pose === 'walk1') {
+      poseIndex = PUBLIC_POSE_INDEX_WALK1;
+    } else if (pose === 'walk2') {
+      poseIndex = PUBLIC_POSE_INDEX_WALK2;
+    }
+    if (directionIndex >= 0 && poseIndex >= 0) {
+      table[directionIndex * PUBLIC_POSE_COUNT + poseIndex] = frameIndex;
+    }
+  }
+
+  return table;
+}
+
 /** Computes a 0..360 hue angle, returning NaN for grayscale pixels. */
 function rgbToHue(red: number, green: number, blue: number): number {
   const max = Math.max(red, green, blue);
@@ -196,6 +235,56 @@ function distinctNeonHues(rgba: Uint8ClampedArray): Set<number> {
   return hues;
 }
 
+/**
+ * Returns the single most common saturated accent hue bucket in a frame,
+ * or `null` when no accent pixels are found. Used to verify that a robot
+ * keeps the same accent color even when its selected direction frame
+ * changes at runtime.
+ */
+function dominantAccentHue(rgba: Uint8ClampedArray): number | null {
+  const counts = new Map<number, number>();
+
+  for (let index = 0; index < rgba.length; index += 4) {
+    const red = rgba[index]!;
+    const green = rgba[index + 1]!;
+    const blue = rgba[index + 2]!;
+    const alpha = rgba[index + 3]!;
+
+    if (alpha < 32) {
+      continue;
+    }
+
+    if (red === green && green === blue) {
+      continue;
+    }
+
+    const max = Math.max(red, green, blue);
+    const min = Math.min(red, green, blue);
+    if (max > 0 && (max - min) / max < 0.5) {
+      continue;
+    }
+
+    const hue = rgbToHue(red, green, blue);
+    if (Number.isNaN(hue)) {
+      continue;
+    }
+
+    const bucket = Math.round(hue / 30) * 30;
+    counts.set(bucket, (counts.get(bucket) ?? 0) + 1);
+  }
+
+  let bestHue: number | null = null;
+  let bestCount = 0;
+  for (const [hue, count] of counts) {
+    if (count > bestCount) {
+      bestCount = count;
+      bestHue = hue;
+    }
+  }
+
+  return bestHue;
+}
+
 describe('public.sprite (P1-neatenstein-public, AC-049)', () => {
   describe('sprite atlas load and selection', () => {
     it('loads a non-empty atlas recycled from Neatenstein public sprites', () => {
@@ -214,9 +303,30 @@ describe('public.sprite (P1-neatenstein-public, AC-049)', () => {
       expect(frameA.width).toBeGreaterThan(0);
       expect(frameA.height).toBeGreaterThan(0);
     });
-  });
 
-  describe('billboard placement and scale', () => {
+        it('stores decoded rows top-to-bottom so UV v=0 maps to the sprite top (OBS-6)', () => {
+          const atlas = loadPublicSpriteAtlas();
+          const frame = atlas.frames[0]!;
+          const rowHasOpaquePixel = (row: Uint8ClampedArray): boolean => {
+            for (let index = 3; index < row.length; index += 4) {
+              if (row[index]! >= 32) {
+                return true;
+              }
+            }
+            return false;
+          };
+          const topRow = frame.rgba.subarray(0, frame.width * 4);
+          const bottomRow = frame.rgba.subarray(
+            (frame.height - 1) * frame.width * 4,
+            frame.height * frame.width * 4,
+          );
+
+          expect(rowHasOpaquePixel(topRow)).toBe(true);
+          expect(rowHasOpaquePixel(bottomRow)).toBe(true);
+        });
+      });
+
+      describe('billboard placement and scale', () => {
     it('places billboards on the right side with positive screen-space quads', () => {
       const atlas = loadPublicSpriteAtlas();
       const billboards = buildPublicBillboards(FIXTURE, FIXTURE_CAMERA, atlas);
@@ -349,9 +459,19 @@ describe('public.sprite elevation anchor (P1-sprite-elevation, AC-052)', () => {
 
       let expectedBase = 0;
       for (const prop of props) {
-        const [pHx, pHy, pHz] = resolvePropHalfSize(prop.kind);
         const [px, py, pz] = prop.position;
-        const propTop = py + 2 * pHy;
+        let pHx: number;
+        let pHz: number;
+        let propTop: number;
+        if (prop.kind === 'bleacher' && prop.bleacherGeometry) {
+          [pHx, pHz] = getBleacherAxisAlignedHalfSize(prop);
+          propTop = getBleacherSeatTopY(prop, bx, bz);
+        } else {
+          const [phx, phy, phz] = resolvePropHalfSize(prop.kind);
+          pHx = phx;
+          pHz = phz;
+          propTop = py + 2 * phy;
+        }
         if (
           aabbsOverlapXY(bx, bz, halfWidth, halfDepth, px, pz, pHx, pHz) &&
           propTop > expectedBase
@@ -382,6 +502,14 @@ describe('public.sprite elevation anchor (P1-sprite-elevation, AC-052)', () => {
       const billboardYMax = by + 2 * halfDepth;
 
       return props.some((prop) => {
+        // Billboards are intentionally anchored to bleacher stand cells, so the
+        // coarse bleacher box is not the right collision proxy; the
+        // "feet on seat plane" test already verifies they sit on the real seat
+        // surface at that XZ location (OBS-B).
+        if (prop.kind === 'bleacher' && prop.bleacherGeometry) {
+          return false;
+        }
+
         const [pHx, pHy, pHz] = resolvePropHalfSize(prop.kind);
         const [px, py, pz] = prop.position;
         const propYMin = py;
@@ -398,7 +526,7 @@ describe('public.sprite elevation anchor (P1-sprite-elevation, AC-052)', () => {
     expect(intersects).toBe(false);
   });
 
-  it('seats public billboards on outer-ring bleacher row tops (OBS-1)', () => {
+  it('seats public billboards on real bleacher stand-cell tops (OBS-B)', () => {
     const atlas = loadPublicSpriteAtlas();
     const billboards = buildPublicBillboards(FIXTURE, FIXTURE_CAMERA, atlas);
     const props = buildRightWorldProps(FIXTURE);
@@ -415,9 +543,9 @@ describe('public.sprite elevation anchor (P1-sprite-elevation, AC-052)', () => {
       const [bx, by, bz] = billboard.position;
 
       return bleachers.some((bleacher) => {
-        const [pHx, pHy, pHz] = resolvePropHalfSize(bleacher.kind);
-        const [px, py, pz] = bleacher.position;
-        const bleacherTop = py + 2 * pHy;
+        const [pHx, pHz] = getBleacherAxisAlignedHalfSize(bleacher);
+        const [px, , pz] = bleacher.position;
+        const bleacherTop = getBleacherSeatTopY(bleacher, bx, bz);
 
         return (
           aabbsOverlapXY(bx, bz, halfWidth, halfDepth, px, pz, pHx, pHz) &&
@@ -479,7 +607,54 @@ describe('public.sprite 8-direction frames and look-at-car gaze (P1-sprite-direc
     }
   });
 
-  it('makes bleacher spectators face the camera/car', () => {
+      it('recomputes seated gaze frame index when the live car moves (OBS-3)', () => {
+      const atlas = loadPublicSpriteAtlas();
+      const table = buildPublicRuntimeIndexTable(atlas);
+      const billboard = {
+        position: [0, 0, 0] as const,
+        runtimeRole: 'seated' as const,
+        seed: 1,
+        index: 0,
+        walkDirectionIndex: 0,
+        frameId: 'front-stand',
+        scale: 1,
+        distance: 10,
+        quad: [0, 0, 1, 1] as const,
+      };
+
+      const indexA = computePublicRuntimeFrameIndex(
+        billboard,
+        [0, 2, -10],
+        [0, 0, 10],
+        0,
+        table,
+      );
+      const indexB = computePublicRuntimeFrameIndex(
+        billboard,
+        [0, 2, -10],
+        [10, 0, 0],
+        0,
+        table,
+      );
+
+      expect(indexA).toBeGreaterThanOrEqual(0);
+      expect(indexB).toBeGreaterThanOrEqual(0);
+      expect(indexA).not.toBe(indexB);
+      });
+
+      it('walk frame changes with time and stays deterministic for a fixed clock (OBS-2)', () => {
+      const atlas = loadPublicSpriteAtlas();
+      const frame0 = selectPublicWalkFrame(atlas, FIXTURE.seed, 0, 0);
+      const frameLater = selectPublicWalkFrame(atlas, FIXTURE.seed, 0, 2.5);
+      const frame0Again = selectPublicWalkFrame(atlas, FIXTURE.seed, 0, 0);
+
+      expect(frame0).toMatch(/walk/);
+      expect(frameLater).toMatch(/walk/);
+      expect(frame0).not.toBe(frameLater);
+      expect(frame0Again).toBe(frame0);
+      });
+
+      it('makes bleacher spectators face the camera/car', () => {
     const atlas = loadPublicSpriteAtlas();
     const billboards = buildPublicBillboards(FIXTURE, FIXTURE_CAMERA, atlas);
     const props = buildRightWorldProps(FIXTURE);
@@ -555,3 +730,178 @@ describe('public.sprite neon palette color diversity (P1-sprite-directional-walk
     expect(hues.size).toBeGreaterThanOrEqual(3);
   });
 });
+
+describe(
+  'public.sprite per-robot color identity (fix-packet-P1-bleacher-shape-iteration-3, OBS-2)',
+  () => {
+    it('keeps the same accent color for a seated robot when the car moves to a different direction', () => {
+      const atlas = loadPublicSpriteAtlas();
+      const table = buildPublicRuntimeIndexTable(atlas);
+      const billboard = {
+        position: [0, 0, 0] as const,
+        runtimeRole: 'seated' as const,
+        seed: 1,
+        index: 0,
+        walkDirectionIndex: 0,
+        frameId: 'front-stand',
+        scale: 1,
+        distance: 10,
+        quad: [0, 0, 1, 1] as const,
+      };
+
+      const indexA = computePublicRuntimeFrameIndex(
+        billboard,
+        [0, 2, -10],
+        [0, 0, 10],
+        0,
+        table,
+      );
+      const indexB = computePublicRuntimeFrameIndex(
+        billboard,
+        [0, 2, -10],
+        [10, 0, 0],
+        0,
+        table,
+      );
+
+      const frameA = atlas.frames[indexA];
+      const frameB = atlas.frames[indexB];
+      if (!frameA || !frameB) {
+        throw new Error('runtime frame index out of bounds');
+      }
+
+      const hueA = dominantAccentHue(frameA.rgba);
+      const hueB = dominantAccentHue(frameB.rgba);
+
+      expect(hueA).not.toBeNull();
+      expect(hueB).toBe(hueA);
+    });
+
+    it('keeps the same accent color for a walker across walk cycle time', () => {
+      const atlas = loadPublicSpriteAtlas();
+      const table = buildPublicRuntimeIndexTable(atlas);
+      const billboard = {
+        position: [0, 0, 0] as const,
+        runtimeRole: 'walker' as const,
+        seed: 1,
+        index: 0,
+        walkDirectionIndex: 0,
+        frameId: 'front-walk1',
+        scale: 1,
+        distance: 10,
+        quad: [0, 0, 1, 1] as const,
+      };
+
+      const indexA = computePublicRuntimeFrameIndex(
+        billboard,
+        [0, 2, -10],
+        [0, 0, 10],
+        0,
+        table,
+      );
+      const indexB = computePublicRuntimeFrameIndex(
+        billboard,
+        [0, 2, -10],
+        [0, 0, 10],
+        2.5,
+        table,
+      );
+
+      const frameA = atlas.frames[indexA];
+      const frameB = atlas.frames[indexB];
+      if (!frameA || !frameB) {
+        throw new Error('runtime frame index out of bounds');
+      }
+
+      const hueA = dominantAccentHue(frameA.rgba);
+      const hueB = dominantAccentHue(frameB.rgba);
+
+      expect(hueA).not.toBeNull();
+      expect(hueB).toBe(hueA);
+    });
+
+    it('keeps the same accent color across all 8 atlas directions for one robot', () => {
+      const atlas = loadPublicSpriteAtlas();
+      const table = buildPublicRuntimeIndexTable(atlas);
+      const billboard = {
+        position: [0, 0, 0] as const,
+        runtimeRole: 'seated' as const,
+        seed: 1,
+        index: 0,
+        walkDirectionIndex: 0,
+        frameId: 'front-stand',
+        scale: 1,
+        distance: 10,
+        quad: [0, 0, 1, 1] as const,
+      };
+
+      const carPositions: readonly (readonly [number, number, number])[] = [
+        [0, 0, 10],
+        [10, 0, 10],
+        [10, 0, 0],
+        [10, 0, -10],
+        [0, 0, -10],
+        [-10, 0, -10],
+        [-10, 0, 0],
+        [-10, 0, 10],
+      ];
+
+      const hues: (number | null)[] = [];
+      for (const carPosition of carPositions) {
+        const frameIndex = computePublicRuntimeFrameIndex(
+          billboard,
+          [0, 2, -10] as const,
+          carPosition,
+          0,
+          table,
+        );
+        const frame = atlas.frames[frameIndex];
+        if (!frame) {
+          throw new Error('runtime frame index out of bounds');
+        }
+        hues.push(dominantAccentHue(frame.rgba));
+      }
+
+      const nonNullHues = hues.filter((hue): hue is number => hue !== null);
+      expect(nonNullHues.length).toBe(8);
+      expect(new Set(nonNullHues).size).toBe(1);
+    });
+
+    it('gives different robots different accent colors', () => {
+      const atlas = loadPublicSpriteAtlas();
+      const table = buildPublicRuntimeIndexTable(atlas);
+      const hues: (number | null)[] = [];
+
+      for (let index = 0; index < 8; index += 1) {
+        const billboard = {
+          position: [0, 0, 0] as const,
+          runtimeRole: 'seated' as const,
+          seed: 1,
+          index,
+          walkDirectionIndex: 0,
+          frameId: 'front-stand',
+          scale: 1,
+          distance: 10,
+          quad: [0, 0, 1, 1] as const,
+        };
+
+        const frameIndex = computePublicRuntimeFrameIndex(
+          billboard,
+          [0, 2, -10] as const,
+          [0, 0, 10],
+          0,
+          table,
+        );
+        const frame = atlas.frames[frameIndex];
+        if (!frame) {
+          throw new Error('runtime frame index out of bounds');
+        }
+        hues.push(dominantAccentHue(frame.rgba));
+      }
+
+      const nonNullHues = hues.filter((hue): hue is number => hue !== null);
+      expect(nonNullHues.length).toBeGreaterThan(0);
+      expect(new Set(nonNullHues).size).toBeGreaterThanOrEqual(2);
+    });
+  },
+);

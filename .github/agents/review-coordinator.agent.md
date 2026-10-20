@@ -2,7 +2,7 @@
 description: 'Use when: coordinating pre-green specialist reviews for implementation slices. Dispatches the appropriate Tier-3 reviewer based on slice domain and severity.'
 name: review-coordinator
 tier: 2
-model: kimi-k2.7-code:cloud
+model: minimax-m3.1-flash:cloud
 tools:
   [
     read,

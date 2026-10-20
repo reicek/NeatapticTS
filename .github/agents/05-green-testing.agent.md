@@ -2,7 +2,7 @@
 description: 'Use when: validating a slice, triaging failures, or fixing regressions.'
 name: '05-green-testing'
 tier: 1
-model: kimi-k2.7-code:cloud
+model: minimax-m3.1-flash:cloud
 tools:
   [
     read,
@@ -66,7 +66,7 @@ handoffs:
     agent: '06-documenting'
     prompt: 'Run docs-quality checks for the active phase. Load context via Cortex MCP and any declared pre_execute_hook/get_slice_context.'
     send: false
-    model: 'kimi-k2.7-code:cloud'
+    model: 'minimax-m3.1-flash:cloud'
 ---
 
 ## CRITICAL RULE — NEVER RUN GIT

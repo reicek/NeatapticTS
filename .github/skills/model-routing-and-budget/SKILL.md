@@ -54,7 +54,7 @@ to validate.
 Use model-routing-and-budget for the 03-red-testing agent frontmatter.
 Agent: .github/agents/03-red-testing.agent.md.
 Phase: 03 Red Testing.
-Desired tier: Full (kimi-k2.7-code:cloud).
+Desired tier: Full (minimax-m3.1-flash:cloud).
 Validation: advisory — confirm qualified name before committing.
 ```
 
@@ -65,13 +65,13 @@ Validation: advisory — confirm qualified name before committing.
 2. Treat session-local availability constraints as controlling for frontmatter
    edits. Under the current cost-tier restriction, `GPT-5.5 (copilot)` must
    not be written to frontmatter.
-3. Use `kimi-k2.7-code:cloud` for coding-heavy implementation and red-test
+3. Use `minimax-m3.1-flash:cloud` for coding-heavy implementation and red-test
    synthesis when available.
-4. Use `kimi-k2.7-code:cloud` for planning, documentation synthesis,
+4. Use `minimax-m3.1-flash:cloud` for planning, documentation synthesis,
    nuanced maintenance, and ambiguity-heavy coordination when available.
-5. Use `kimi-k2.7-code:cloud` for bounded research, validation, and subagent
+5. Use `minimax-m3.1-flash:cloud` for bounded research, validation, and subagent
    work where coding or tool strength still matters.
-6. Use `kimi-k2.7-code:cloud` for narrow checklist, summarization, and
+6. Use `minimax-m3.1-flash:cloud` for narrow checklist, summarization, and
    mechanical assistant work.
 7. Write a single qualified model string in `model:`. When repairing a legacy
    array-valued `model`, preserve the first listed entry unless the user
@@ -86,19 +86,19 @@ Validation: advisory — confirm qualified name before committing.
 
 | Phase             | Tier                 | Reason                                                                    |
 | ----------------- | -------------------- | ------------------------------------------------------------------------- |
-| 00 Helping        | kimi-k2.7-code:cloud | Maintenance and gap resolution need nuanced synthesis plus safe fallback. |
-| 01 Planning       | kimi-k2.7-code:cloud | Architecture decisions and cross-plan tradeoffs need broad reasoning.     |
-| 02 Research       | kimi-k2.7-code:cloud | Retrieval and summarization should be cheap and bounded.                  |
-| 03 Red Testing    | kimi-k2.7-code:cloud | Test contracts need careful judgment.                                     |
-| 04 Implementation | kimi-k2.7-code:cloud | Implementation needs deeper reasoning and edge-case handling.             |
-| 05 Green Testing  | kimi-k2.7-code:cloud | Verification is mostly mechanical.                                        |
-| 06 Documentation  | kimi-k2.7-code:cloud | Educational docs benefit from stronger writing after facts exist.         |
-| 07 Logging        | kimi-k2.7-code:cloud | Summarization and tracker updates should be lightweight.                  |
+| 00 Helping        | minimax-m3.1-flash:cloud | Maintenance and gap resolution need nuanced synthesis plus safe fallback. |
+| 01 Planning       | minimax-m3.1-flash:cloud | Architecture decisions and cross-plan tradeoffs need broad reasoning.     |
+| 02 Research       | minimax-m3.1-flash:cloud | Retrieval and summarization should be cheap and bounded.                  |
+| 03 Red Testing    | minimax-m3.1-flash:cloud | Test contracts need careful judgment.                                     |
+| 04 Implementation | minimax-m3.1-flash:cloud | Implementation needs deeper reasoning and edge-case handling.             |
+| 05 Green Testing  | minimax-m3.1-flash:cloud | Verification is mostly mechanical.                                        |
+| 06 Documentation  | minimax-m3.1-flash:cloud | Educational docs benefit from stronger writing after facts exist.         |
+| 07 Logging        | minimax-m3.1-flash:cloud | Summarization and tracker updates should be lightweight.                  |
 
 ## Decision Tree: Model Selection by Tier
 
 ```text
-Flowchart summary: "Need model for agent" → "What tier?"; "What tier?" → "kimi-k2.7-code:cloud" (Tier 0 (Agent Zero)), "kimi-k2.7-code:cloud" (Tier 1 (SDLC)), "kimi-k2.7-code:cloud" (Tier 2 (Coordinators)), "kimi-k2.7-code:cloud" (Tier 3 (Scouts)), "kimi-k2.7-code:cloud" (Tier 4 (Auxiliaries)); "kimi-k2.7-code:cloud"; "kimi-k2.7-code:cloud".
+Flowchart summary: "Need model for agent" → "What tier?"; "What tier?" → "minimax-m3.1-flash:cloud" (Tier 0 (Agent Zero)), "minimax-m3.1-flash:cloud" (Tier 1 (SDLC)), "minimax-m3.1-flash:cloud" (Tier 2 (Coordinators)), "minimax-m3.1-flash:cloud" (Tier 3 (Scouts)), "minimax-m3.1-flash:cloud" (Tier 4 (Auxiliaries)); "minimax-m3.1-flash:cloud"; "minimax-m3.1-flash:cloud".
 ```
 
 ## Before / After Examples
@@ -116,7 +116,7 @@ model: claude-sonnet
 ```yaml
 ---
 # Qualified name confirmed in the active Copilot client; tier budget matches phase default.
-model: kimi-k2.7-code:cloud
+model: minimax-m3.1-flash:cloud
 ---
 ```
 
@@ -128,8 +128,8 @@ model: kimi-k2.7-code:cloud
 - When a model is rejected by the active session, keep that session-local
   restriction out of frontmatter. Under the current cost-tier restriction,
   `GPT-5.5 (copilot)` must not be written to frontmatter.
-- Do not assign a Full-tier model (`kimi-k2.7-code:cloud`) to phases where a
-  light-tier model (`kimi-k2.7-code:cloud`) is sufficient; unnecessary cost
+- Do not assign a Full-tier model (`minimax-m3.1-flash:cloud`) to phases where a
+  light-tier model (`minimax-m3.1-flash:cloud`) is sufficient; unnecessary cost
   undermines the budget design.
 - Do not write arrays into `model:` frontmatter in this repo; NeatapticTS
   targets Copilot CLI-compatible scalar model strings.

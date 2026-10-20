@@ -210,7 +210,7 @@ Full itemized records live in the tracker's `## Latest validation evidence` (ite
 - **Batch 10 — P1-S1-B (canvas strategy + registrations):** RED -> GREEN 16/16; `round(720 x refW/refH)` clamped to 1920 backing cap, 3-rung ladder (client -> viewport -> 1280x720), letterbox min-scale fit; `tsconfig.neatRacing.json` + `package.json build:neatRacing` registered, tsc exit 0, bundle emitted to `docs/assets/neatracing.bundle.js`. Slice-advancement FULL 7/7 (`slice-id=P1-S1-B`); B flipped [DONE].
 - **Batch 11 — P1-S1-C (WebGL2 context service + warmup):** RED -> GREEN 9/9; single WebGL2 init with WeakMap memoization, graceful fallback notice (no throw), G5 context-loss handling (preventDefault + lost-flag predicate + restore hook), 9-program warmup registry (`NEATRACING_WARMED_PROGRAM_COUNT` derived from registry keys; starfield, grid, pulse, track, car, glass, bloom-threshold, bloom-blur, bloom-additive). Slice-advancement FULL 7/7 (`slice-id=P1-S1-C`); C flipped [DONE]. Session note: dense Cortex embeddings degraded (expected 25293, found 0); BM25-only retrieval sufficed; housekeeping suggestions recorded (item 43).
 - **Batch 12 — P1-S1-D (render loop) + orchestrator reconciliation:** RED -> GREEN 16/16; counting-allocator zero-alloc contracts, ulp-robust exact-60 Hz accumulator (1e-9 step-unit boundary epsilon), catchup cap 4, no spiral-of-death. D's own slice-advancement FULL 7/7 (`slice-id=P1-S1-D`); D deferred the tracker flip — orchestrator flipped P1-S1-D [DONE]. Union step-level shared-validation gate: `slice-advancement` with `slice-id=P1-S1-green` + the 12-file union `--plan` forwarded -> FULL 7/7 PASS.
-- **Batch 13 — pre-green specialist review (implementation-pattern-scout, kimi-k2.7-code:cloud):** verdict **APPROVE** — all four slices match spec AC-001/002/003/037/040/042 intent; 49 contract tests pin the right behaviors; implementation-standards compliance verified (full JSDoc, named constants, orchestration-first helpers, ES2023, zero `any` in production, extensionless imports, single-expect tests). Four non-blocking observations: (1) boot-glue wiring owner unassigned (initRenderingContext / runShaderWarmup / advanceFrameSteps / letterbox apply / fallback append) — assign before the Phase 1 exit check; (2) green-test scoping: manual check proves bundle load + canvas mount + console clean; full frame-1 render is a later-wiring checkpoint; (3) `image-rendering: auto` unpinned — add with letterbox CSS wiring; (4) spec-internal host/ path inconsistency (documentation-only, plan is source of truth).
+- **Batch 13 — pre-green specialist review (implementation-pattern-scout, minimax-m3.1-flash:cloud):** verdict **APPROVE** — all four slices match spec AC-001/002/003/037/040/042 intent; 49 contract tests pin the right behaviors; implementation-standards compliance verified (full JSDoc, named constants, orchestration-first helpers, ES2023, zero `any` in production, extensionless imports, single-expect tests). Four non-blocking observations: (1) boot-glue wiring owner unassigned (initRenderingContext / runShaderWarmup / advanceFrameSteps / letterbox apply / fallback append) — assign before the Phase 1 exit check; (2) green-test scoping: manual check proves bundle load + canvas mount + console clean; full frame-1 render is a later-wiring checkpoint; (3) `image-rendering: auto` unpinned — add with letterbox CSS wiring; (4) spec-internal host/ path inconsistency (documentation-only, plan is source of truth).
 - **Batch 14 — P1-S1-green (step green validation, 05-green-testing):** GREEN OK. Pre-specialist-smoke gate PASS (4 suites/49 tests); focused Jest 49/49; `tsc -p tsconfig.neatRacing.json --noEmit` exit 0; `npm run build:neatRacing` exit 0 (bundle 339 B); DEMO/UI real visible-window browser smoke PASS via delegated browser-harness-specialist (bundle HTTP 200, `neatRacingStart` defined, `#neatracing-canvas` mounted, zero console errors, visible-foreground Chrome) + direct real-shell check of `index.html` (status "Neat Racing booted.", canvas in output, zero console messages). `slice-advancement` FULL 7/7 (`slice-id=P1-S1-green`); `workflow-update-sync` hook advanced Step 02 -> [DONE] and Step 03 -> [WIP]; smoke fixture created at `docs/browser-tests/scenarios/neatracing-shell-smoke.html`; environment torn down. Open item: boot-glue wiring owner unassigned (observation 1).
 
 ## Step 03 — Neon background passes (spec P1-S2) [DONE]
@@ -428,7 +428,7 @@ deterministic header.
 - **Batch 28 — orchestrator:** Step 04 flipped [PLANNED] -> [WIP] (heading +
   YAML + slices A/B/C -> [WIP]; G1 stayed [PLANNED]); hygiene chain green
   (107 chunks, plan-session-redirect pass). P1-S3-A dispatched
-  (04-implementing, background, kimi-k2.7-code:cloud, 36429b64,
+  (04-implementing, background, minimax-m3.1-flash:cloud, 36429b64,
   complexity=complex). Items 105-106.
 - **Items 107-108 — P1-S3-A (36429b64) via implementation-executor:**
   `model.schema.ts` + `model.decode.utils.ts` + 33-test file. Fix packet:
@@ -542,7 +542,7 @@ voxel:build` exit 0 with designed zero-model short-circuit (resolution
 
 Full itemized records live in the tracker's `## Latest validation evidence` (items 69-98); this is the compressed archive.
 
-- **Batch 15 — orchestrator:** Step 02 compressed to tracker Done record + archived here; Step 03 flipped [WIP] with slices A/B/C [WIP]; three parallel implementers dispatched (kimi-k2.7-code:cloud): A starfield `2ee3bf3a`, B grid `bf828813`, C pulse `57b75668`.
+- **Batch 15 — orchestrator:** Step 02 compressed to tracker Done record + archived here; Step 03 flipped [WIP] with slices A/B/C [WIP]; three parallel implementers dispatched (minimax-m3.1-flash:cloud): A starfield `2ee3bf3a`, B grid `bf828813`, C pulse `57b75668`.
 - **Batch 16 — 01-planning patch (boot-glue owner, spec Step-02 observation 1):** new Step 13 "Boot-glue wiring" [PLANNED] inserted after Step 12 (slices P1-boot-glue implementing 2h + P1-boot-glue-green green-testing 1h); Step 12's manual keyboard-lap exit check re-sequenced behind Step 13; Phase 1 packet next_phase 02-13; coverage backlog AC-002 row updated; plans/README.md boot-glue trigger phrases registered; consolidated gate 4/4 PASS (TRIVIAL).
 - **Batch 17 — P1-S2-B grid (bf828813):** `grid.pass.ts` + test, RED -> GREEN 22/22; fwidth-derived constant widths (2px core / 4px halo at 0.8x), depth fade 0.58 -> 0.29 -> 0.05 over 320 m, y=-0.01 depth-neutral plane (no z-fighting), zero `gl.lineWidth`; slice-advancement FULL 7/7; B flipped [DONE]. Recorded the AC-005 "pulse sync" paraphrase discrepancy (spec has no such requirement; dropped).
 - **Batch 18 — P1-S2-C pulse (57b75668):** `pulse.pass.ts` + test, RED -> GREEN 29/29; #B7FF00 ring alpha 0.42, deterministic expansion/decay envelope, GL_LESS depth predicate, premultiplied-additive draw, dispose; gate 7/7 pre+post flip; project-wide tsc fully clean; C flipped [DONE].
@@ -906,7 +906,7 @@ slices:
   the final on-disk state (item 178); no plan edits by the implementer
   (contract held).
 - **Batch 48 (items 179-180) — 3/3 Tier-3 specialist reviews APPROVE:** via
-  review-coordinator (kimi-k2.7-code:cloud): (i) P1-S4-A fresh re-review
+  review-coordinator (minimax-m3.1-flash:cloud): (i) P1-S4-A fresh re-review
   (api-contract-reviewer) — honors 173(i); LD-23 confirmed; additive surface;
   latent duplicate-EMPTY schema gap RECORDED for schema-side backlog (inert
   under AC-013 as implemented); (ii) P1-S4-B (determinism-reviewer) — AC-014
@@ -1094,7 +1094,7 @@ slices:
   context (starfield pattern); correct-valued buffer constants kept;
   zero behavior change in mock-GL tests (5 suites / 130 tests
   pre == post by an independent 00-helping re-run). Created
-  `webgl2-glsl-render-reviewer` (Tier 3, model kimi-k2.7-code:cloud)
+  `webgl2-glsl-render-reviewer` (Tier 3, model minimax-m3.1-flash:cloud)
   and wired it into the review-coordinator allow-list (9 -> 10);
   repaired the coordinator's long-standing delegate-skill-coverage
   gap (missing execute skill); validators PASS (agent-frontmatter
@@ -1410,7 +1410,7 @@ slices:
 - Next resume point: orchestrator dispatches Step 09 (spec P1-S6 A-C);
   no logging debt pending for Steps 02-08.
 - Capture sub-agent: learning-event-capturer (Tier 4, model
-  kimi-k2.7-code:cloud per user mandate; dispatch MCP caller-tier
+  minimax-m3.1-flash:cloud per user mandate; dispatch MCP caller-tier
   validated).
 
 ## Step 09 — Editor features part 1 (spec P1-S6 A-C) [DONE]
@@ -2122,7 +2122,7 @@ iteration 1 status=passed.` (zero fix loops across the step); step
   instead of importing the exported type; standing 1e-6-branch slipAngle
   literal nit.
 - Model mandate (batch 84 item 5): the batch-83 red subdispatch used
-  kimi-k2.7-code:cloud instead of the user-mandated kimi-k2.7-code:cloud;
+  minimax-m3.1-flash:cloud instead of the user-mandated minimax-m3.1-flash:cloud;
   results were fully validated and all subsequent dispatches complied;
   going forward every subdispatch carries the flash override.
 - Packet wording drift on record (batches 80-81): the Step 11 packet's
@@ -3377,7 +3377,7 @@ slice P1-S1-green (FULL)."` — the specialist-review sub-gate's
     for the step union, per section 10) runs next and its verdict is
     recorded in batch 13 before `05-green-testing` is dispatched.
 
-**Evidence batch 13 (Step 02 pre-green specialist review, implementation-pattern-scout, kimi-k2.7-code:cloud, orchestrator recording):**
+**Evidence batch 13 (Step 02 pre-green specialist review, implementation-pattern-scout, minimax-m3.1-flash:cloud, orchestrator recording):**
 
 60. Specialist verdict: **APPROVE** (no REQUEST_CHANGES; no fix packet
     required). Scope: all four P1-S1 slices' source + sibling tests
@@ -3504,7 +3504,7 @@ slice P1-S1-green (FULL)."` — the specialist-review sub-gate's
     25,301+ chunk index valid); cortex-index gate green pre-dispatch.
 70. Step 03 (spec P1-S2) dispatched: P1-S2-A/B/C flipped `[PLANNED]` ->
     `[WIP]` and three fresh `04-implementing` instances dispatched in
-    parallel (kimi-k2.7-code:cloud, validated dispatch packets, RAG-based
+    parallel (minimax-m3.1-flash:cloud, validated dispatch packets, RAG-based
     prompts): A starfield = 2ee3bf3a, B grid = bf828813,
     C pulse = 57b75668. Next: on completion reconcile statuses, run the
     union shared-validation gate (`slice-id=P1-S2-green`, 9-file impl
@@ -3776,7 +3776,7 @@ slice P1-S2-green (FULL)."` — the specialist-review sub-gate evidence
 **Evidence batch 22 (union specialist review, orchestrator Agent Zero):**
 
 84. Tier-3 union specialist review (`implementation-pattern-scout`, agent
-    2873bfe5, kimi-k2.7-code:cloud): **REQUEST_CHANGES** — 2 blocking
+    2873bfe5, minimax-m3.1-flash:cloud): **REQUEST_CHANGES** — 2 blocking
     findings + 7 non-blocking observations. BLOCKING 1 (AC-006):
     `pulse.pass.ts drawPulseFrame` feeds the raw 0-255 tuple [185, 255, 0]
     into `uniform3f` and the fragment shader consumes it directly without
@@ -4063,7 +4063,7 @@ Suites: 4 passed, 4 total`, `Tests: 80 passed, 80 total`, exit 0 (full
 **Evidence batch 25 (Step 03 close-out + compression, orchestrator Agent Zero):**
 
 99. P1-S2-green verdict: **GREEN: OK** (05-green-testing `551ff173`,
-    kimi-k2.7-code:cloud) — union jest `examples/neatRacing/engine/passes`
+    minimax-m3.1-flash:cloud) — union jest `examples/neatRacing/engine/passes`
     with coverage: 3 suites / 77 tests, exit 0 (fix-packet pins re-verified:
     normalized uColor [185/255, 255/255, 0]; grid warmup key parity [1];
     enable(BLEND) before blendFunc); `tsc -p tsconfig.neatRacing.json
@@ -4206,7 +4206,7 @@ evidence append + status companions):**
        validate 1893 docs/25343 chunks, plan-session-redirect pass:true).
        Post-flip, workflow MCP self-check ok:false condition (item 102/104)
        resolves — Step 04 is now the active WIP step.
-- 106. Dispatch P1-S3-A (04-implementing, background, kimi-k2.7-code:cloud,
+- 106. Dispatch P1-S3-A (04-implementing, background, minimax-m3.1-flash:cloud,
        agent 36429b64-ed5f-4f87-8914-1b60c3d416bd, complexity=complex,
        dispatch_allowed=true via build_dispatch_packet): model.schema.ts +
        model.decode.utils.ts + test (AC-007/008). B and C (both declare
@@ -4284,12 +4284,12 @@ evidence append + status companions):**
        --testPathPatterns) recorded in item 107 for 05-green-testing.
        Dispatching P1-S3-B and P1-S3-C in parallel (both declare
        dependency on A, now satisfied).
-- 110. Dispatch P1-S3-B (04-implementing, background, kimi-k2.7-code:cloud,
+- 110. Dispatch P1-S3-B (04-implementing, background, minimax-m3.1-flash:cloud,
        agent 97059988-4361-43fb-a58a-a6e8050d61f4, complexity=complex,
        dispatch_allowed=true): greedy-mesher.ts + test (AC-009, interior-
        face culling, per-voxel color/emissive). Dependency on A satisfied
        (model.schema/decode landed green).
-- 111. Dispatch P1-S3-C (04-implementing, background, kimi-k2.7-code:cloud,
+- 111. Dispatch P1-S3-C (04-implementing, background, minimax-m3.1-flash:cloud,
        agent c5a8abb4-0f4b-4b6b-b3db-e4d10c11f96c, complexity=complex,
        dispatch_allowed=true): bin.codec.ts + scripts/build-voxel-bins.mjs
        - test + package.json voxel:build script (AC-010). Dependency on A
@@ -4613,7 +4613,7 @@ evidence append + status companions):**
        shared-validation, code-coverage, specialist-review; severity FULL,
        specialistCount 1, failedGates [], erroredGates []).
 - 122. Dispatch union Tier-3 specialist (implementation-pattern-scout,
-       background, kimi-k2.7-code:cloud, agent
+       background, minimax-m3.1-flash:cloud, agent
        c882cbf4-4354-4751-83d7-427afc29a426, complexity=complex,
        dispatch_allowed=true) for the pre-green union review of
        P1-S3-green; 05-green-testing dispatches only on APPROVE.
@@ -4737,11 +4737,11 @@ evidence append + status companions):**
        dependencies). AC lod wording reconciliation instruction per
        item 109/135: spec §7.3.3 wins over tracker AC shorthand (Batch 28
        precedent).
-- 138. Dispatch P1-S3-D (04-implementing, background, kimi-k2.7-code:cloud,
+- 138. Dispatch P1-S3-D (04-implementing, background, minimax-m3.1-flash:cloud,
        agent c3c3ef45-1765-4624-8b65-88bf39013c9c, complexity=complex,
        dispatch_allowed=true): lod.builder.ts + test (AC-011; dependency
        P1-S3-G1 satisfied).
-- 139. Dispatch P1-S3-E (04-implementing, background, kimi-k2.7-code:cloud,
+- 139. Dispatch P1-S3-E (04-implementing, background, minimax-m3.1-flash:cloud,
        agent 58ce447b-00fb-43ed-be8e-f3cbdace8f75, complexity=complex,
        dispatch_allowed=true): lod.distance.utils.ts + test (AC-012;
        hysteresis swap, NEATRACING_VOXEL_WORLD_SIZE scale). No
@@ -5430,7 +5430,7 @@ examples/neatRacing/voxel/wheel.mount.utils.test.ts` → exit 0,
        04 stopped at this record.
 - 177. Orchestrator consolidation — slice P1-S4-B (Team color remap)
        [PLANNED] → [DONE] (Batch 47): 04-impl-P1-S4-B (green-only,
-       background, model kimi-k2.7-code:cloud per the session model
+       background, model minimax-m3.1-flash:cloud per the session model
        mandate) created examples/neatRacing/voxel/team-remap.ts +
        team-remap.test.ts (10 contract tests; NEATRACING_TEAM_REMAP_SLOT
        =1; 4-entry NEATRACING_TEAM_COLORS cyan/red/green/blue ids 0-3;
@@ -5460,7 +5460,7 @@ examples/neatRacing/voxel/wheel.mount.utils.test.ts` → exit 0,
 
 - 179. Per-slice Tier-3 specialist reviews COMPLETE — 3/3 APPROVE
        (batch 48, all dispatched via review-coordinator T2 → Tier-3
-       with fresh validated packets, model kimi-k2.7-code:cloud):
+       with fresh validated packets, model minimax-m3.1-flash:cloud):
        (i) P1-S4-A re-review per item 173(i) — api-contract-reviewer,
        VERDICT APPROVE; LD-23 black-never-emits-shine confirmed in
        every lookup path; surface purely additive (no in-repo
@@ -5794,7 +5794,7 @@ status=passed`). Step 06 heading [WIP] → [DONE]; Current state
 - 198. TIER-3 ROSTER GAP RESOLVED (known_gaps routed fix, dispatched by
        00-helping to agent-maintenance-coordinator): created
        webgl2-glsl-render-reviewer — tier 3, user-invocable false,
-       agents [], model kimi-k2.7-code:cloud, skills
+       agents [], model minimax-m3.1-flash:cloud, skills
        visualizer-workflow + implementation-standards +
        performance-optimization, 'Use when:' trigger covering WebGL2/GLSL
        render-pass review (shader correctness, GL state-machine ordering,
@@ -6950,7 +6950,7 @@ convergence marker) — 05-green-testing (Tier 1, fresh instance, ts
   P1-S5-green; no git). Union lanes + declared-command manual check + real
   visible-window browser smoke + convergence marker for
   fix-packet-P1-S5-B-iteration-2. All sub-agents ran model
-  kimi-k2.7-code:cloud (user mandate).
+  minimax-m3.1-flash:cloud (user mandate).
 
 220. Allow-listed union Jest lanes (validation-MCP direct-MCP relay,
      exitCode 0 both, allowlistAuthority: active-step.validation):
@@ -6971,7 +6971,7 @@ convergence marker) — 05-green-testing (Tier 1, fresh instance, ts
      stub). Teardown: process stopped via session stop, port 8787 re-verified
      closed, no lingering dev-server child (Win32_Process scan).
 222. Real visible-window browser smoke — delegated to browser-ui-specialist
-     (Tier 3, model kimi-k2.7-code:cloud per user mandate; dispatch packet
+     (Tier 3, model minimax-m3.1-flash:cloud per user mandate; dispatch packet
      validated by dispatch MCP, Tier 1 → Tier 3, RAG-based prompt:
      "Load context via Cortex MCP search_context query 'P1-S5-green browser
      smoke'"). Results: - Second independent boot of the declared command by the specialist
@@ -7026,7 +7026,7 @@ plans/neatracing-voxel-racer.logs.md) -->
 - Evidence batch 62 — Step 08 close-out (observed-batch: P1-S5-green; no
   git). Docs-quality checks (user-mandated), Step 08 heading + packet status
   [DONE] flip with packet compression to the logs file, step-close evidence,
-  and a coherence-fix sweep. All sub-agents ran model kimi-k2.7-code:cloud
+  and a coherence-fix sweep. All sub-agents ran model minimax-m3.1-flash:cloud
   (user mandate).
 
 227. Step 08 [DONE] close record (spec P1-S5): Step 08 packet (sanctioned
@@ -7064,7 +7064,7 @@ plans/neatracing-voxel-racer.logs.md) -->
      workflow self-check) runs immediately after this append with results
      recorded in the close-out response, not a further numbered batch, and the
      cortex-index result predates the final write. Coherence fixes from the
-     fresh docs-scout read (model kimi-k2.7-code:cloud; verdict: core Step 08
+     fresh docs-scout read (model minimax-m3.1-flash:cloud; verdict: core Step 08
      facts consistent across tracker/logs surfaces, 5 drift findings — all
      addressed by this close): (i) dangling "batch 62, items 227+" citation
      resolved by this append (items 227-228); (ii) Handoff mischaracterized
@@ -7090,7 +7090,7 @@ plans/neatracing-voxel-racer.logs.md) -->
   git; files_to_change = plans/neatracing-voxel-racer.plans.md +
   plans/neatracing-voxel-racer.logs.md). The pending Step 08 (spec P1-S5)
   learning event recorded in the plan evidence is captured and session
-  logging is closed. All sub-agents ran model kimi-k2.7-code:cloud (user
+  logging is closed. All sub-agents ran model minimax-m3.1-flash:cloud (user
   mandate).
 
 229. Learning-event capture (dispatch MCP caller-tier-validated Tier 1 →
@@ -7249,7 +7249,7 @@ plans/neatracing-voxel-racer.logs.md) -->
   `createEditorState().volume` for the budget-fit arithmetic; stack
   instances are function-scoped, no teardown items.
 - Delegation: `unit-test-writer` (Tier 3, dispatch packet validated
-  via dispatch MCP, model kimi-k2.7-code:cloud) authored the 12-test
+  via dispatch MCP, model minimax-m3.1-flash:cloud) authored the 12-test
   contract; orchestrator reshaped the push/undo fixture ordering and
   documented the checkpoint-before-edit convention (one-shot sync
   delegation; delta by T1 contract owner).
@@ -7588,7 +7588,7 @@ plans/neatracing-voxel-racer.logs.md) -->
   append (tracker-consistency edits net +17); logs 1400 → 1633 lines
   with the Step 09 archive; final post-append counts measured in the
   close-out response. All sub-agents in this close ran model
-  kimi-k2.7-code:cloud (user mandate). Tracker consistency: Phase-1
+  minimax-m3.1-flash:cloud (user mandate). Tracker consistency: Phase-1
   placeholder_steps Step 09 entry → [DONE]; header Current state bullet
   refreshed (Steps 02-09 [DONE] compressed — Step 08 at batch 62, Step 09
   at batch 72; next frontier = Step 10 heading [PLANNED] + packet
@@ -7649,7 +7649,7 @@ scripts/agent-customization/gates/docs-quality-metrics.gate.mjs --json`
   the compressed tracker, Step 09 placeholder [DONE], Steps 10-13
   [PLANNED], frontier Step 10).
 - Coherence sweep by docs-scout (dispatch MCP validated Tier 1 →
-  Tier 3; model kimi-k2.7-code:cloud; read-only, no scout edits; ran
+  Tier 3; model minimax-m3.1-flash:cloud; read-only, no scout edits; ran
   before this append by design): verdict — Step 09 close-out is marker-
   and number-coherent in end state (all Step 09 statuses, per-slice
   provenance chain A batches 64/65 + B 66/68 + C 67/69 + G1 70, suite
@@ -7715,7 +7715,7 @@ status=passed.` — zero fix loops).
   empty `#neatRacing-editor-tools` aside is expected until the Step 10
   tool-binding slice. The "black" was a never-drawn transparent WebGL2 canvas
   over body background `#05070d`.
-- **Fix (04-implementing, model kimi-k2.7-code:cloud per the operator model
+- **Fix (04-implementing, model minimax-m3.1-flash:cloud per the operator model
   mandate):** one-time guarded clear in
   `examples/neatRacing/editor/editor-entry.ts` after `initRenderingContext`
   success (`gl.viewport(0,0,w,h)` + `gl.clearColor(0.08,0.09,0.14,1)` +
@@ -8257,7 +8257,7 @@ lint` exit 0 (only the 5 pre-existing network-view
      severity for the status-flip batch.
 - 4. **Dispatch:** 03-red-testing dispatched (background, RAG packet
      ≤ 500 chars naming slice P1-S7-A + get_slice_context hook; model
-     kimi-k2.7-code:cloud per the orchestrator's per-step model mandate —
+     minimax-m3.1-flash:cloud per the orchestrator's per-step model mandate —
      every Step 11 dispatch uses it). Red-phase scope: track.slabs.test.ts
      red contract only; no implementation edits (RED-before-IMPLEMENT rule).
 
@@ -8313,7 +8313,7 @@ type declarations` (test.ts lines 41/42, both './track.slabs' imports);
      for green: the same track jest command (allowlisted) + `npx tsc -p
 tsconfig.neatRacing.json --noEmit`; the step-level union with P1-S7-B/C
      stays with the P1-S7-G1 orchestrator.
-- 6. **Delegation:** unit-test-writer (Tier 3, model kimi-k2.7-code:cloud)
+- 6. **Delegation:** unit-test-writer (Tier 3, model minimax-m3.1-flash:cloud)
      wrote the file verbatim from the orchestrator red contract; dispatch
      leg pre-validated by the dispatch MCP (Tier 1 → Tier 3, packet
      ok:true); writer verified absence of track.slabs.ts and single-file
@@ -8475,7 +8475,7 @@ carHeading, forwardSpeedWorld, speedWorld, yawRate, slipAngle }` +
      (allowlisted) + `npx tsc -p tsconfig.neatRacing.json --noEmit`; the
      step-level union with P1-S7-C/G1 stays with the P1-S7-G1 orchestrator
      (batch 81 item 5).
-- 6. **Delegation:** unit-test-writer (Tier 3, model kimi-k2.7-code:cloud)
+- 6. **Delegation:** unit-test-writer (Tier 3, model minimax-m3.1-flash:cloud)
      wrote the file from the orchestrator red contract; dispatch leg
      pre-validated by the dispatch MCP (Tier 1 → Tier 3, packet ok:true,
      moderate). Consolidated slice-advancement gate for slice P1-S7-B
@@ -8509,7 +8509,7 @@ carHeading, forwardSpeedWorld, speedWorld, yawRate, slipAngle }` +
 - 3. **Pre-green specialist review (exactly 1 Tier-3 specialist per §10):
      implementation-pattern-scout** dispatched via dispatch MCP packet
      (Tier 0 → Tier 3, ok:true, moderate) with model override
-     kimi-k2.7-code:cloud per the user mandate. Verdict: **APPROVE**, zero
+     minimax-m3.1-flash:cloud per the user mandate. Verdict: **APPROVE**, zero
      blockers. Review axes: (a) constant fidelity — all §5.2 entries match
      verbatim, every rate derived from the 89 u/s anchor (G10 respected, no
      raw js-racer segment-unit 5 transcribed); (b) state shape — yawRate
@@ -8531,14 +8531,14 @@ carHeading, forwardSpeedWorld, speedWorld, yawRate, slipAngle }` +
      status=passed.
 - 5. **Model-mandate deviation recorded:** the 03-red-testing agent's
      T3 subdispatch (unit-test-writer) in batch 83 used model
-     kimi-k2.7-code:cloud instead of the user-mandated kimi-k2.7-code:cloud.
+     minimax-m3.1-flash:cloud instead of the user-mandated minimax-m3.1-flash:cloud.
      Results were still fully validated (shared-validation + specialist
      round); going forward every subdispatch must carry the flash override.
 - 6. **Status flip (orchestrator-owned):** slice P1-S7-B
      [PLANNED] → [DONE] in the Step 11 slice list. Step 11 heading stays
      [WIP] pending P1-S7-C + P1-S7-G1.
 - 7. **Next dispatch:** P1-S7-C red phase → 03-red-testing (fresh
-     instance, kimi-k2.7-code:cloud) for
+     instance, minimax-m3.1-flash:cloud) for
      examples/neatRacing/physics/collision.utils.test.ts; host/input.ts
      (D5, untestable DOM capture) stays implement-side per the batch-83
      stop rule.
@@ -8574,7 +8574,7 @@ carHeading, forwardSpeedWorld, speedWorld, yawRate, slipAngle }` +
      relocates the bound and only that one assertion changes.
 - 4. **T3 subdispatch:** unit-test-writer via dispatch MCP packet
      (Tier 1 → Tier 3, ok:true, complex) with model override
-     kimi-k2.7-code:cloud per the user mandate (batch-84 item 5 rule
+     minimax-m3.1-flash:cloud per the user mandate (batch-84 item 5 rule
      respected). Deliverable CREATED:
      examples/neatRacing/physics/collision.utils.test.ts — 19 it() blocks /
      6 describes covering all ten red-contract blocks: constants; head-on
@@ -8639,7 +8639,7 @@ carHeading, forwardSpeedWorld, speedWorld, yawRate, slipAngle }` +
      physics pattern 2 suites / 28 tests PASS; track pattern 1 suite /
      10 tests PASS; `npx tsc -p tsconfig.neatRacing.json --noEmit` exit 0.
      Subdispatches (implementation-executor, Tier 2) both used
-     kimi-k2.7-code:cloud — model mandate respected.
+     minimax-m3.1-flash:cloud — model mandate respected.
 - 2. **Shared-validation gate PASS (orchestrator-run, firsthand):**
      `...gates/shared-validation.gate.mjs --json --changed-files=
 examples/neatRacing/host/input.ts,examples/neatRacing/physics/collision.utils.ts,examples/neatRacing/physics/collision.utils.test.ts
@@ -8654,7 +8654,7 @@ examples/neatRacing/host/input.ts,examples/neatRacing/physics/collision.utils.ts
      collision.utils.test.ts).
 - 4. **Pre-green specialist review (exactly 1 Tier-3 specialist per
      §10): implementation-pattern-scout** (dispatch MCP Tier 0→Tier 3
-     ok:true, moderate; model kimi-k2.7-code:cloud). Verdict: **APPROVE**,
+     ok:true, moderate; model minimax-m3.1-flash:cloud). Verdict: **APPROVE**,
      zero blockers. Verified claim-by-claim: D5 purity + brake-precedence
      accuracy against stepPhysics; band mirror matches track.slabs.ts
      rasterizer values and rule (line-level); car-car exchange conserves
@@ -8674,7 +8674,7 @@ examples/neatRacing/host/input.ts,examples/neatRacing/physics/collision.utils.ts
 - 5. **Status flips (orchestrator-owned):** slice P1-S7-C
      [PLANNED] → [DONE]. A/B/C all [DONE]; remaining: P1-S7-G1.
 - 6. **Next dispatch:** P1-S7-G1 step green → 05-green-testing
-     (fresh instance, kimi-k2.7-code:cloud): run the full step packet
+     (fresh instance, minimax-m3.1-flash:cloud): run the full step packet
      validation lanes live (track jest, physics jest,
      `npx tsc -p tsconfig.neatRacing.json --noEmit`) + AC subset
      confirmation (AC-017, AC-023, AC-024 partial), capturing the
@@ -8771,8 +8771,8 @@ examples/neatRacing/host/input.ts,examples/neatRacing/physics/collision.utils.ts
     PASS firsthand). Specialist APPROVEs: batches 82 (A),
     84 (B), 86 (C).
 - 4. **Deviations/notes for the record:** batch-83 red subdispatch used
-     kimi-k2.7-code:cloud (mandate violation, logged batch 84 item 5 —
-     all subsequent dispatches complied with kimi-k2.7-code:cloud);
+     minimax-m3.1-flash:cloud (mandate violation, logged batch 84 item 5 —
+     all subsequent dispatches complied with minimax-m3.1-flash:cloud);
      severity-gate CLI form is `--input=` not `--changed-files=`
      (batch 84 item 2 standing note); batch-85 subdispatch cortex-index
      staleness flag CLOSED at batch 87 item 8 (fixHint rebuild → PASS,
@@ -9763,7 +9763,7 @@ plans/neatracing-voxel-racer.plans.md --json`, plan-family reindex,
    `npm run jest:base -- --testPathPatterns="examples/neatRacing/browser-entry"`
    exited 0 with 2 suites / 24 tests green (AC-001 + AC-037 browser entries +
    canvas-dimensions utils) — no pre-existing red.
-3. **Delegated authoring:** `unit-test-writer` (T3, kimi-k2.7-code:cloud) via
+3. **Delegated authoring:** `unit-test-writer` (T3, minimax-m3.1-flash:cloud) via
    `neataptic-dispatch-mcp-build_dispatch_packet`; the first packet attempt was
    rejected (prompt 639 > 500 MCP budget) and retried with a ≤500-char
    RAG-style prompt (slice ID + load-document instruction; batch-5 item 3

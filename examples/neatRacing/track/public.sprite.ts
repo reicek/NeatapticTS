@@ -27,7 +27,13 @@ import {
   ROBOT_SPRITE_PALETTE,
   ROBOT_SPRITE_SCALE,
 } from '../../neatenstein/robot-sprite-data';
-import { buildRightWorldProps } from './right-world.builder';
+import {
+  buildRightWorldProps,
+  filterRobotsByPersonalSpace,
+  getBleacherAxisAlignedHalfSize,
+  getBleacherSeatAnchors,
+  getBleacherSeatTopY,
+} from './right-world.builder';
 import type { RightWorldProp } from './right-world.builder';
 import { resolvePropHalfSize } from './right-world.prop-sizes';
 import type { TrackSlabBuildInput } from './track.slabs';
@@ -142,6 +148,21 @@ const PUBLIC_NEON_ACCENT_PALETTE: readonly (readonly [number, number, number, nu
   [255, 0, 128, 255],
   [128, 0, 255, 255],
 ];
+
+/** Number of palette colors available for public robots. */
+const PUBLIC_COLOR_COUNT = PUBLIC_NEON_ACCENT_PALETTE.length;
+
+/** Stable per-robot accent color index derived from deterministic identity. */
+function computePublicRobotColorId(seed: number, index: number): number {
+  let hash = seed >>> 0;
+  hash ^= (index * 0x9e3779b9) >>> 0;
+  hash = Math.imul(hash ^ 0x85ebca6b, 0xc2b2ae35);
+  hash ^= hash >>> 16;
+  hash = Math.imul(hash, 0x27d4eb2f);
+  hash ^= hash >>> 15;
+
+  return (hash >>> 0) % PUBLIC_COLOR_COUNT;
+}
 
 /** Encoded robot sprite frame shape reused from Neatenstein. */
 type EncodedFrame = readonly (readonly number[])[];
@@ -355,9 +376,20 @@ export function computePublicRuntimeFrameIndex(
   }
 
   const tableIndex = directionIndex * PUBLIC_POSE_COUNT + poseIndex;
-  const atlasIndex = indexTable[tableIndex];
+  const defaultAtlasIndex = indexTable[tableIndex];
 
-  return atlasIndex !== undefined && atlasIndex >= 0 ? atlasIndex : -1;
+  if (defaultAtlasIndex === undefined || defaultAtlasIndex < 0) {
+    return -1;
+  }
+
+  // The atlas is laid out color-major and the simple id-split table points at
+  // the LAST color block. Offset back to this robot's stable identity color.
+  const defaultColorId = PUBLIC_COLOR_COUNT - 1;
+  const colorId = computePublicRobotColorId(seed, index);
+  const blockSize = DIRECTION_ORDER.length * PUBLIC_POSE_COUNT;
+  const atlasIndex = defaultAtlasIndex + (colorId - defaultColorId) * blockSize;
+
+  return atlasIndex;
 }
 
 /**
@@ -381,28 +413,25 @@ export function selectPublicWalkFrame(
 
 /**
  * Builds deterministic seat positions on top of every outer-ring bleacher row.
- * Seats are spaced across the bleacher top so spectator billboards sit in the
- * stands instead of floating on the inner ground band (OBS-1).
+ * Seats are read from the real voxel geometry so spectator billboards sit on
+ * actual top-row seat surfaces instead of an arbitrary bounding-box top
+ * (OBS-2, AC-066).
  *
  * @param bleachers - Bleacher props emitted by the right-world builder.
- * @returns Seat anchors in world-space [x, topY, z] order, one per seat.
+ * @returns Seat anchors in world-space [x, topY, z] order, one per top-row seat.
  */
 function buildBleacherSeatPositions(
   bleachers: readonly RightWorldProp[],
 ): readonly [number, number, number][] {
   const seats: [number, number, number][] = [];
-  const seatXOffsets = [-1.5, -0.5, 0.5, 1.5];
-  const seatZOffsets = [-0.5, 0.5];
 
   for (const bleacher of bleachers) {
-    const [px, py, pz] = bleacher.position;
-    const [, pHy] = resolvePropHalfSize(bleacher.kind);
-    const topY = py + 2 * pHy;
-
-    for (const zOffset of seatZOffsets) {
-      for (const xOffset of seatXOffsets) {
-        seats.push([px + xOffset, topY + NEATRACING_BILLBOARD_SURFACE_EPSILON_M, pz + zOffset]);
-      }
+    for (const [x, topY, z] of getBleacherSeatAnchors(bleacher)) {
+      seats.push([
+        x,
+        topY + NEATRACING_BILLBOARD_SURFACE_EPSILON_M,
+        z,
+      ]);
     }
   }
 
@@ -500,38 +529,51 @@ export function buildPublicBillboards(
     }
   }
 
-  return billboards;
+  // AC-065: thin the public crowd to the subset that fits the 1 m XZ personal-space
+  // band. This is a deterministic build-time filter; the per-frame draw path still
+  // allocates no objects.
+  return filterRobotsByPersonalSpace(billboards);
 }
 
 /**
- * Builds a stable, sorted frame list from the Neatenstein robot sprite atlas.
+ * Builds a stable frame list from the Neatenstein robot sprite atlas.
  *
- * Sorting by id makes the frame order independent of object-key iteration
- * order, which keeps {@link selectPublicSpriteFrame} deterministic across
- * runtimes.
+ * Frames are emitted in COLOR-major order: for each palette color, every
+ * direction×pose frame is recolored and appended. The frame id stays in the
+ * base `direction-pose` form so existing id-split lookup tables keep working.
+ * The last color block is therefore the one a simple direction×pose table maps
+ * to; runtime helpers offset back to each robot's stable color identity
+ * (fix-packet-P1-bleacher-shape-iteration-3, OBS-2).
  *
  * @returns Decoded 2D RGBA frames recycled from `ROBOT_SPRITE_FRAMES`.
  */
 function buildPublicSpriteAtlasFrames(): readonly PublicSpriteFrame[] {
-  const entries: {
-    readonly id: string;
-    readonly frame: EncodedFrame;
-    readonly accent: readonly [number, number, number, number];
-  }[] = [];
-  let entryIndex = 0;
+  const frames: PublicSpriteFrame[] = [];
+  const poseOrder = ['stand', 'walk1', 'walk2'] as const;
 
-  for (const [direction, poseMap] of Object.entries(ROBOT_SPRITE_FRAMES)) {
-    for (const [pose, frame] of Object.entries(poseMap)) {
-      const accent =
-        PUBLIC_NEON_ACCENT_PALETTE[entryIndex % PUBLIC_NEON_ACCENT_PALETTE.length]!;
-      entries.push({ id: `${direction}-${pose}`, frame: frame as EncodedFrame, accent });
-      entryIndex += 1;
+  for (const accent of PUBLIC_NEON_ACCENT_PALETTE) {
+    for (const direction of DIRECTION_ORDER) {
+      const poseMap =
+        (ROBOT_SPRITE_FRAMES as Record<string, Record<string, EncodedFrame>>)[
+          direction
+        ];
+      if (!poseMap) {
+        continue;
+      }
+      for (const pose of poseOrder) {
+        const frame = poseMap[pose];
+        if (!frame) {
+          continue;
+        }
+        const id = `${direction}-${pose}`;
+        frames.push(
+          recolorFrameRgba(decodePublicFrame(frame as EncodedFrame, id), accent),
+        );
+      }
     }
   }
 
-  return entries
-    .toSorted((a, b) => a.id.localeCompare(b.id))
-    .map((entry) => recolorFrameRgba(decodePublicFrame(entry.frame, entry.id), entry.accent));
+  return frames;
 }
 
 /**
@@ -717,8 +759,21 @@ function resolveBillboardBaseY(
 
   for (const prop of props) {
     const [px, py, pz] = prop.position;
-    const [pHx, pHy, pHz] = resolvePropHalfSize(prop.kind);
-    const propTop = py + 2 * pHy;
+
+    let pHx: number;
+    let pHz: number;
+    let propTop: number;
+    if (prop.kind === 'bleacher' && prop.bleacherGeometry) {
+      const [bleacherHalfWidth, bleacherHalfDepth] = getBleacherAxisAlignedHalfSize(prop);
+      pHx = bleacherHalfWidth;
+      pHz = bleacherHalfDepth;
+      propTop = getBleacherSeatTopY(prop, x, z);
+    } else {
+      const [phx, phy, phz] = resolvePropHalfSize(prop.kind);
+      pHx = phx;
+      pHz = phz;
+      propTop = py + 2 * phy;
+    }
 
     if (
       Math.abs(x - px) < halfWidth + pHx &&

@@ -23,12 +23,15 @@ import {
   NEATRACING_DRIFT_MIN_GRIP_FACTOR,
   NEATRACING_DRIFT_COUNTERSTEER_RECOVERY_RATE_PER_S,
   NEATRACING_DRIFT_LATERAL_GRIP_RATE_PER_S,
+  NEATRACING_DRIFT_MIN_SPEED_MPS,
+  NEATRACING_DRIFT_VISUAL_YAW_GAIN_RAD,
   createZeroDriftState,
   stepDriftModel,
   computeOutwardPush,
   computeGripFalloff,
   computeCountersteerDelta,
   computeSlipAngle,
+  computeDriftYawOffset,
 } from './drift.model';
 import type { DriftModelState, DriftStepInput } from './drift.model';
 
@@ -68,6 +71,8 @@ describe('drift model constants (spec §5.2 drift amendment)', () => {
       0,
     );
     expect(NEATRACING_DRIFT_LATERAL_GRIP_RATE_PER_S).toBeGreaterThan(0);
+    expect(NEATRACING_DRIFT_MIN_SPEED_MPS).toBeGreaterThan(0);
+    expect(NEATRACING_DRIFT_VISUAL_YAW_GAIN_RAD).toBeGreaterThan(0);
   });
 });
 
@@ -82,9 +87,15 @@ describe('drift model helpers (AC-047)', () => {
   it('computes outward push proportional to yaw rate and speed, zero at standstill', () => {
     const moving = computeOutwardPush(YAW_RATE_PER_TICK, MID_SPEED_M_PER_S, 0.3);
     const standing = computeOutwardPush(YAW_RATE_PER_TICK, 0, 0.3);
+    const belowThreshold = computeOutwardPush(
+      YAW_RATE_PER_TICK,
+      NEATRACING_DRIFT_MIN_SPEED_MPS,
+      0.3,
+    );
 
     expect(Math.abs(moving)).toBeGreaterThan(0);
     expect(standing).toBe(0);
+    expect(belowThreshold).toBe(0);
   });
 
   it('computes grip falloff: full grip near zero slip, reduced grip at large slip', () => {
@@ -104,19 +115,24 @@ describe('drift model helpers (AC-047)', () => {
     );
   });
 
-  it('computes countersteer delta only when steer opposes slip', () => {
+  it('computes countersteer delta only when steer matches the slip sign (countersteer into the skid)', () => {
     const positiveSlip = 0.5;
-    const opposing = computeCountersteerDelta(-1, positiveSlip, 1, DT_SECONDS);
-    const sameDirection = computeCountersteerDelta(
+    const sameSignSteer = computeCountersteerDelta(
       1,
       positiveSlip,
       1,
       DT_SECONDS,
     );
-    const noSlip = computeCountersteerDelta(-1, 0, 1, DT_SECONDS);
+    const oppositeSignSteer = computeCountersteerDelta(
+      -1,
+      positiveSlip,
+      1,
+      DT_SECONDS,
+    );
+    const noSlip = computeCountersteerDelta(1, 0, 1, DT_SECONDS);
 
-    expect(opposing).toBeLessThan(0);
-    expect(sameDirection).toBe(0);
+    expect(sameSignSteer).toBeLessThan(0);
+    expect(oppositeSignSteer).toBe(0);
     expect(noSlip).toBe(0);
   });
 
@@ -185,5 +201,89 @@ describe('drift model step behavior (AC-047)', () => {
     }
 
     expect(serializeDriftState(runA)).toBe(serializeDriftState(runB));
+  });
+
+  it('AC-047A: high-speed sustained steering produces visible lateral slide', () => {
+    const highSpeedMps = 56;
+    const speedPercent = highSpeedMps / 89;
+    const yawRatePerTick = 2 * speedPercent * DT_SECONDS;
+    let state = createZeroDriftState();
+    const input = makeStepInput({
+      speed: highSpeedMps,
+      speedPercent,
+      steer: 1,
+      yawRatePerTick,
+      centrifugalMultiplier: 1.5,
+    });
+
+    for (let step = 0; step < 120; step += 1) {
+      state = stepDriftModel(state, input);
+    }
+
+    expect(Math.abs(state.lateralVelocity)).toBeGreaterThan(10);
+    expect(Math.abs(state.slipAngle)).toBeGreaterThan(0.2);
+    expect(Math.abs(state.slipAngle)).toBeLessThan(
+      NEATRACING_DRIFT_MAX_SLIP_ANGLE_RAD,
+    );
+  });
+
+  it('AC-047B: countersteer recovery arrests the slide within a bounded time', () => {
+    const highSpeedMps = 56;
+    const speedPercent = highSpeedMps / 89;
+    const yawRatePerTick = 2 * speedPercent * DT_SECONDS;
+    let state = createZeroDriftState();
+    const buildInput = makeStepInput({
+      speed: highSpeedMps,
+      speedPercent,
+      steer: 1,
+      yawRatePerTick,
+      centrifugalMultiplier: 1.5,
+    });
+
+    for (let step = 0; step < 120; step += 1) {
+      state = stepDriftModel(state, buildInput);
+    }
+
+    const recoverInput = makeStepInput({
+      speed: highSpeedMps,
+      speedPercent,
+      steer: -1,
+      yawRatePerTick: -yawRatePerTick,
+      centrifugalMultiplier: 1.5,
+    });
+    for (let step = 0; step < 15; step += 1) {
+      state = stepDriftModel(state, recoverInput);
+    }
+
+    expect(Math.abs(state.lateralVelocity)).toBeLessThan(5);
+  });
+
+  it('AC-047D: low-speed straight-line handling is unchanged', () => {
+    const lowSpeedMps = 10;
+    const speedPercent = lowSpeedMps / 89;
+    let state = createZeroDriftState();
+    const input = makeStepInput({
+      speed: lowSpeedMps,
+      speedPercent,
+      steer: 0,
+      yawRatePerTick: 0,
+      centrifugalMultiplier: 1.5,
+    });
+
+    for (let step = 0; step < 120; step += 1) {
+      state = stepDriftModel(state, input);
+    }
+
+    expect(serializeDriftState(state)).toBe(
+      serializeDriftState(createZeroDriftState()),
+    );
+  });
+
+  it('computes a visual yaw offset proportional to slip angle', () => {
+    expect(computeDriftYawOffset(10, 10)).toBeCloseTo(
+      (Math.PI / 4) * NEATRACING_DRIFT_VISUAL_YAW_GAIN_RAD,
+      10,
+    );
+    expect(computeDriftYawOffset(10, 0)).toBe(0);
   });
 });

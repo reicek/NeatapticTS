@@ -2,7 +2,7 @@
 description: 'Analyst (read-mostly, execute for focused coverage runs) that discovers coverage gaps, classifies dead code vs reachable-untested paths, maps gaps to test targets, and recommends the next tranche. Merged from the former coverage-scout / test-coverage-analyst / coverage-guard trio. Does NOT write tests or edit src.'
 name: coverage-analyst
 tier: 3
-model: kimi-k2.7-code:cloud
+model: minimax-m3.1-flash:cloud
 tools:
   [
     read,

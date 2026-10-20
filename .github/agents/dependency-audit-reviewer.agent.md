@@ -2,7 +2,7 @@
 description: 'Reviewer with a supply-chain / dependency-vulnerability point of view on manifest and lockfile changes — known CVEs, typosquatting, unmaintained packages, and license-compatibility drift in direct and transitive dependencies.'
 name: 'dependency-audit-reviewer'
 tier: 3
-model: kimi-k2.7-code:cloud
+model: minimax-m3.1-flash:cloud
 tools:
   [
     read,

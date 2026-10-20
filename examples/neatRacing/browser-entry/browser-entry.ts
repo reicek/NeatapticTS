@@ -66,6 +66,7 @@ import type { AmbientPulse } from '../engine/passes/pulse.pass';
 import {
   toStarfieldWarmupProgram,
   createStarfieldPass,
+  type StarfieldPass,
 } from '../engine/passes/starfield.pass';
 import { createFrameComposer } from '../host/frame-composer';
 import { computeVisualWheelSpinDeltaRad } from '../voxel/wheel.mount.utils';
@@ -100,6 +101,7 @@ import wheelModelDocument from '../assets/models/wheel.model.json';
 import {
   applyFullWindowStretchStyle,
   logRendererSizeAnnotation,
+  resolveCanvasBackingDimensions,
   updateFullWindowRendererSize,
 } from './canvas-dimensions.utils';
 
@@ -151,6 +153,8 @@ interface BootSession {
   keyupListener: ((event: KeyboardEvent) => void) | null;
   /** Composer + pass teardown installed by the drive loop, or null. */
   driveTeardown: (() => void) | null;
+  /** Starfield pass updated on resize by the boot listener, or null. */
+  starfieldPass: StarfieldPass | null;
 }
 
 /**
@@ -226,11 +230,13 @@ function neatRacingStart(outputId: string): NeatRacingStop {
   // RAF loop. The session owns the fixed-timestep accumulator: each frame
   // advances it (physics → rules → HUD → composer). One request at boot,
   // one re-request per frame (AC-003 cadence).
-  startRenderLoop(session, startLiveDriveLoop(gl, session, overlays, canvas));
+  const driveSession = startLiveDriveLoop(gl, session, overlays, canvas);
+  startRenderLoop(session, driveSession);
 
   // Step 7: Re-apply the letterbox strategy directly (non-debounced) on every
-  // viewport resize (spec §6.2).
-  attachResizeListener(canvas, session);
+  // viewport resize (spec §6.2), and keep the starfield NDC mapping in sync
+  // with the computed backing width (OBS-F resize awareness).
+  attachResizeListener(canvas, session, session.starfieldPass);
 
   return createStopHandle(canvas, session);
 }
@@ -346,6 +352,7 @@ function createBootSession(): BootSession {
     keydownListener: null,
     keyupListener: null,
     driveTeardown: null,
+    starfieldPass: null,
   };
 }
 
@@ -413,6 +420,28 @@ function createBootProgramRegistry(
 }
 
 /**
+ * Resolves the computed backing dimensions for the starfield pass.
+ *
+ * Uses the letterbox-strategy resolver from canvas-dimensions.utils so the
+ * pass maps stars across the intended fixed-render-width backing store rather
+ * than whatever the raw canvas.width happens to be at construction time
+ * (OBS-F). This is also the source of truth for the resize listener.
+ *
+ * @param canvas - Mounted game canvas (or structural stub).
+ * @returns Computed backing-store dimensions in pixels.
+ */
+function resolveStarfieldBackingDimensions(
+  canvas: HTMLCanvasElement,
+): { width: number; height: number } {
+  return resolveCanvasBackingDimensions({
+    clientWidth: canvas.clientWidth,
+    clientHeight: canvas.clientHeight,
+    viewportWidth: window.innerWidth,
+    viewportHeight: window.innerHeight,
+  });
+}
+
+/**
  * Applies the fixed-canvas letterbox strategy from the live viewport once.
  *
  * Resizes the canvas backing store, positions the CSS display box with the
@@ -466,6 +495,16 @@ const NEATRACING_CHASE_CAMERA_LOOKAHEAD = 8;
 const NEATRACING_CHASE_CAMERA_PITCH_RADIANS = 0.12;
 /** Chase-camera vertical field of view (radians). */
 const NEATRACING_CHASE_CAMERA_FOV_RADIANS = Math.PI / 3;
+/**
+ * NDC y coordinate of the visible horizon for the starfield pass.
+ *
+ * Derived from the fixed chase-camera pitch and vertical FOV so the starfield
+ * tile ends exactly at the geometric horizon and stars never render below the
+ * ground/grid region (OBS-E).
+ */
+const NEATRACING_STARFIELD_HORIZON_NDC_Y =
+  Math.tan(NEATRACING_CHASE_CAMERA_PITCH_RADIANS) /
+  Math.tan(NEATRACING_CHASE_CAMERA_FOV_RADIANS / 2);
 /** Chase-camera near clip plane (world units). */
 const NEATRACING_CHASE_CAMERA_NEAR = 1;
 /** Chase-camera far clip plane (world units). */
@@ -820,6 +859,7 @@ function startLiveDriveLoop(
     teamColorId: NEATRACING_TEAM_ID_RED,
     wheelSpinRad: 0,
     steerAngleRad: 0,
+    driftYawOffsetRad: 0,
   };
   const carsBag = [carPoseBag];
   // In-place ambient pulse bag (the frame property is a stable readonly
@@ -833,11 +873,14 @@ function startLiveDriveLoop(
   let wheelSpinAccumulatorRad = 0;
   let wheelSpinLastTick = 0;
   let wheelSpinBoundSession: object | null = null;
+  const rightWorldCarPosition: [number, number, number] = [0, 0, 0];
   const rightWorldDrawState: RightWorldPassDrawState = {
     viewProjection,
     cameraWorld,
     cameraRight: [1, 0, 0],
     cameraUp: [0, 1, 0],
+    timeSeconds: 0,
+    carPosition: rightWorldCarPosition,
   };
   const composerFrame: NeatRacingFrameComposerFrame = {
     viewProjection,
@@ -892,6 +935,10 @@ function startLiveDriveLoop(
         NEATRACING_TEAM_ID_RED,
         boundSession.state.input?.steer,
       );
+      // AC-047C: feed the pre-computed visual drift yaw offset from the
+      // physics state directly into the car pass. This avoids a per-frame
+      // Math.atan2; the offset is recomputed once per 60 Hz physics tick.
+      carPoseBag.driftYawOffsetRad = car.driftYawOffset;
       // Ambient pulse window (TP-20): the pure time-window collector turns
       // the deterministic physics tick count into the alive-set, newest
       // first, so the expanding ground rings replay identically per seed.
@@ -956,6 +1003,14 @@ function startLiveDriveLoop(
       rightWorldDrawState.cameraUp[2] =
         rightWorldDrawState.cameraRight[0] * fY -
         rightWorldDrawState.cameraRight[1] * fX;
+      // Feed the live clock and car position into the right-world sprite pass
+      // so billboards animate and look at the car (OBS-2 + OBS-3). The bag is
+      // updated in-place to keep the frame object reference-stable.
+      rightWorldDrawState.timeSeconds =
+        car.tick * NEATRACING_FIXED_TIMESTEP_SECONDS;
+      rightWorldCarPosition[0] = car.x;
+      rightWorldCarPosition[1] = 0;
+      rightWorldCarPosition[2] = carSceneZ;
     }
     return composerFrame;
   };
@@ -981,7 +1036,13 @@ function startLiveDriveLoop(
         palette: wheelModel.palette,
         quads: meshVoxelModel(wheelModel).quads,
       };
-      const starfieldPass = createStarfieldPass(gl);
+      const starfieldBackdrop = resolveStarfieldBackingDimensions(canvas);
+      const starfieldPass = createStarfieldPass(gl, {
+        backdropWidthPx: starfieldBackdrop.width,
+        backdropHeightPx: starfieldBackdrop.height,
+        horizonNdcY: NEATRACING_STARFIELD_HORIZON_NDC_Y,
+      });
+      session.starfieldPass = starfieldPass;
       const pulsePass = createPulsePass(gl);
       const trackPass = createTrackPass(gl);
       const trackGridPass = createTrackGridPass(gl);
@@ -1095,15 +1156,24 @@ function startRenderLoop(
  * Installs the non-debounced viewport-resize listener that re-applies the
  * letterbox strategy from the live viewport (spec §6.2).
  *
+ * Also re-uploads the starfield pass backdrop size so the star map stays
+ * aligned with the computed backing width after a resize (OBS-F).
+ *
  * @param canvas - Canvas whose backing store tracks the viewport.
  * @param session - Boot session storing the listener for teardown.
+ * @param starfieldPass - Starfield pass whose NDC mapping is updated.
  */
 function attachResizeListener(
   canvas: HTMLCanvasElement,
   session: BootSession,
+  starfieldPass: StarfieldPass | null,
 ): void {
   session.resizeListener = (): void => {
     applyRendererSize(canvas);
+    if (starfieldPass !== null) {
+      const backdrop = resolveStarfieldBackingDimensions(canvas);
+      starfieldPass.setBackdropSize(backdrop.width, backdrop.height);
+    }
   };
   window.addEventListener('resize', session.resizeListener);
 }
@@ -1142,6 +1212,7 @@ function createStopHandle(
     }
     session.driveTeardown?.();
     session.driveTeardown = null;
+    session.starfieldPass = null;
     session.fallbackNotice?.remove();
     session.fallbackNotice = null;
     canvas.remove();

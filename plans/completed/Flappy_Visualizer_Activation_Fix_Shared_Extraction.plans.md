@@ -164,13 +164,13 @@ SharedArrayBuffers. Capture is winner-only, post-simulation (read
 ```yaml
 mandate: session-model-override
 scope: 'this plan execution (budget-constrained session only)'
-model: 'kimi-k2.7-code:cloud'
+model: 'minimax-m3.1-flash:cloud'
 applies_to:
   - 'all Tier-1 dispatches (00-helping through 07-logging)'
   - 'all Tier-2 coordinator dispatches'
   - 'all Tier-3 specialist dispatches'
   - 'all Tier-4 helper dispatches'
-enforcement: 'orchestrator passes model kimi-k2.7-code:cloud on every task dispatch; any agent sub-dispatching specialists MUST override its agents[] frontmatter defaults and dispatch them with kimi-k2.7-code:cloud'
+enforcement: 'orchestrator passes model minimax-m3.1-flash:cloud on every task dispatch; any agent sub-dispatching specialists MUST override its agents[] frontmatter defaults and dispatch them with minimax-m3.1-flash:cloud'
 overrides: 'per-agent frontmatter model defaults, for this plan only'
 expires: 'when this plan completes and is archived'
 ```

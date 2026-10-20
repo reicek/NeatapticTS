@@ -48,8 +48,8 @@ Delegation is strictly downward. No T1→T1. Agent Zero manages the main loop; T
 Copilot agent frontmatter spec, but NeatapticTS keeps it on all agents for
 per-agent model routing. The CLI honors it for local dispatch; per-dispatch
 override is available via the `task` tool's `model` parameter. Agent `model:`
-frontmatter fields use `kimi-k2.7-code:cloud` (local Ollama, free) and
-`kimi-k2.7-code:cloud` (Copilot cloud). The CLI may append `(ollama)` suffix
+frontmatter fields use `minimax-m3.1-flash:cloud` (local Ollama, free) and
+`minimax-m3.1-flash:cloud` (Copilot cloud). The CLI may append `(ollama)` suffix
 for local models. If dispatch returns 400 errors, verify the model name is
 valid. See `agent-model-reference.md`.
 

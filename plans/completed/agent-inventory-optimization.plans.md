@@ -12,12 +12,12 @@
 
 The permanent `model:` field for each agent must be set based on task complexity, NOT universally:
 
-- **`kimi-k2.7-code:cloud` (local Ollama, free)** for HEAVY tasks requiring deep reasoning:
+- **`minimax-m3.1-flash:cloud` (local Ollama, free)** for HEAVY tasks requiring deep reasoning:
   - Tier-1 orchestrators: 00-helping, 01-planning, 03-red-testing, 04-implementing
   - Tier-2 coordinator: implementation-executor
   - These agents need careful judgment, edge-case handling, architecture decisions
 
-- **`kimi-k2.7-code:cloud` (Copilot cloud, $0.95/$4.00 per 1M tokens)** for LIGHT tasks:
+- **`minimax-m3.1-flash:cloud` (Copilot cloud, $0.95/$4.00 per 1M tokens)** for LIGHT tasks:
   - Tier-1: 02-researching, 05-green-testing, 06-documenting, 07-logging
   - Tier-2: agent-maintenance-coordinator
   - ALL Tier-3 scouts and specialists (19 agents)
@@ -27,9 +27,9 @@ The permanent `model:` field for each agent must be set based on task complexity
 - **05-green-testing** stays on kimi-k2.7 because verification is mostly mechanical
 - **00-helping** uses glm-5.2 because gap resolution needs nuanced synthesis
 - **Users may explicitly override** the default model per request based on budget
-- **Plan mandates** for implementing agents continue to use kimi-k2.7-code:cloud (the mandate applies to plans and the agents that implement them, not permanent agent fields)
+- **Plan mandates** for implementing agents continue to use minimax-m3.1-flash:cloud (the mandate applies to plans and the agents that implement them, not permanent agent fields)
 - **Cost rationale**: kimi-k2.7 is the cheapest Copilot cloud model with coding focus. Using it for scouts and parallel execution avoids cost overruns. glm-5.2 is free but hardware-limited, so reserve it for tasks that need its reasoning depth.
-- **NO OTHER MODELS APPROVED**: Only `kimi-k2.7-code:cloud` and `kimi-k2.7-code:cloud` are approved. Claude Sonnet, Claude Haiku, and any other models are NOT approved. Additional models may be added later only with explicit user approval.
+- **NO OTHER MODELS APPROVED**: Only `minimax-m3.1-flash:cloud` and `minimax-m3.1-flash:cloud` are approved. Claude Sonnet, Claude Haiku, and any other models are NOT approved. Additional models may be added later only with explicit user approval.
 
 ### Other Mandates
 
@@ -46,7 +46,7 @@ The permanent `model:` field for each agent must be set based on task complexity
 - Bypass step-packet and plan-slice-quality gates — plan uses prose steps, not YAML step packets
 - Steps are dispatched by step ID (e.g., "Step 0.1") via RAG load
 - Validation is per-phase (run validation commands listed at end of each phase)
-- Tiered model mandate: kimi-k2.7-code:cloud for heavy agents (00-helping, 01-planning, 03-red-testing, 04-implementing, implementation-executor), kimi-k2.7-code:cloud for all others. Per-dispatch model override via task tool model parameter.
+- Tiered model mandate: minimax-m3.1-flash:cloud for heavy agents (00-helping, 01-planning, 03-red-testing, 04-implementing, implementation-executor), minimax-m3.1-flash:cloud for all others. Per-dispatch model override via task tool model parameter.
 - Phase 6 multi-dispatch exception: 2 specialists per agent (Content Quality + Standards), batched by tier. The pragmatic mode's single-dispatch model does not apply to Phase 6.
 - Phase 6 ownership: dispatched by 05-green-testing (T1) which dispatches Tier-3 specialists sequentially (Ollama concurrency limit 2)
 - When pragmatic mode and "nothing deferred" conflict, lean toward thoroughness: keep validation gates, skip only plan-verification green-light cycle and fix-packet YAML ceremony
@@ -60,7 +60,7 @@ Phases are strictly sequential: Phase N+1 begins only after Phase N is [DONE] an
 - 31 agents: 8 Tier-1, 3 Tier-2, 19 Tier-3, 1 Tier-4
 - 66 skills, 1 routing table (PASS/fresh)
 - All validation gates PASS (frontmatter, quality, graph, routing)
-- ALL 31 agents use `kimi-k2.7-code:cloud` — needs tiered model assignment
+- ALL 31 agents use `minimax-m3.1-flash:cloud` — needs tiered model assignment
 - 14 phantom agent references across 11 files
 - 2 orphan skills with zero carriers
 - 04-implementing overloaded with 24 skills
@@ -74,13 +74,13 @@ Phases are strictly sequential: Phase N+1 begins only after Phase N is [DONE] an
 
 <!-- step: aio-phase-0-step-0-1 -->
 
-**Step 0.1:** Set HEAVY agents to `kimi-k2.7-code:cloud` (5 agents):
+**Step 0.1:** Set HEAVY agents to `minimax-m3.1-flash:cloud` (5 agents):
 
 - 00-helping, 01-planning, 03-red-testing, 04-implementing, implementation-executor ✅ DONE
 
 <!-- step: aio-phase-0-step-0-2 -->
 
-**Step 0.2:** Set LIGHT agents to `kimi-k2.7-code:cloud` (26 agents, keep current):
+**Step 0.2:** Set LIGHT agents to `minimax-m3.1-flash:cloud` (26 agents, keep current):
 
 - 02-researching, 05-green-testing, 06-documenting, 07-logging
 - agent-maintenance-coordinator
@@ -89,11 +89,11 @@ Phases are strictly sequential: Phase N+1 begins only after Phase N is [DONE] an
 
 <!-- step: aio-phase-0-step-0-3 -->
 
-**Step 0.3:** Add model-value allowlist to `validate-agent-frontmatter.mjs` — allow ONLY `kimi-k2.7-code:cloud` and `kimi-k2.7-code:cloud`. No other models are approved. Reject all other values. Also remove stale entries for `planning-test-strategy-coordinator` and `research-codebase-coordinator` from `strictTier2CoordinatorPathsByName` in `validate-agent-frontmatter.mjs`. Remove `anthropic/claude-sonnet-4-20250514` from the existing allowed models set — it is NOT approved. ✅ DONE
+**Step 0.3:** Add model-value allowlist to `validate-agent-frontmatter.mjs` — allow ONLY `minimax-m3.1-flash:cloud` and `minimax-m3.1-flash:cloud`. No other models are approved. Reject all other values. Also remove stale entries for `planning-test-strategy-coordinator` and `research-codebase-coordinator` from `strictTier2CoordinatorPathsByName` in `validate-agent-frontmatter.mjs`. Remove `anthropic/claude-sonnet-4-20250514` from the existing allowed models set — it is NOT approved. ✅ DONE
 
 <!-- step: aio-phase-0-step-0-4 -->
 
-**Step 0.4:** Update `model-routing-and-budget` skill — remove ALL references to Claude Sonnet and Claude Haiku models. Neither Sonnet nor Haiku are approved models. Only `kimi-k2.7-code:cloud` and `kimi-k2.7-code:cloud` are approved. The skill's phase-based tier system must use only these two models: kimi-k2.7-code:cloud for heavy/full tasks, kimi-k2.7-code:cloud for light tasks. Remove the "Claude Haiku 4.6" reference (does not exist) and all Sonnet references. Document that additional models may be added later only with explicit user approval. ✅ DONE
+**Step 0.4:** Update `model-routing-and-budget` skill — remove ALL references to Claude Sonnet and Claude Haiku models. Neither Sonnet nor Haiku are approved models. Only `minimax-m3.1-flash:cloud` and `minimax-m3.1-flash:cloud` are approved. The skill's phase-based tier system must use only these two models: minimax-m3.1-flash:cloud for heavy/full tasks, minimax-m3.1-flash:cloud for light tasks. Remove the "Claude Haiku 4.6" reference (does not exist) and all Sonnet references. Document that additional models may be added later only with explicit user approval. ✅ DONE
 
 **Validation:** `validate-agent-frontmatter.mjs --json --strict`, `validate-agent-quality.mjs`, `validate-agent-graph.mjs --json`
 
@@ -118,7 +118,7 @@ Phases are strictly sequential: Phase N+1 begins only after Phase N is [DONE] an
 
 - Consolidates: `agent-frontmatter-auditor`, `skill-frontmatter-auditor`, `model-name-auditor`
 - Skills: `agent-frontmatter-standards`, `skill-frontmatter-standards`, `updating-agent-frontmatter`, `updating-skill-frontmatter`, `model-routing-and-budget`
-- Model: `kimi-k2.7-code:cloud` (read-only audit, light task)
+- Model: `minimax-m3.1-flash:cloud` (read-only audit, light task)
 - Add to `agents:` allow-list of `00-helping` and `agent-maintenance-coordinator`
 - **Slice files:** 1 new agent, 2 modified
 
@@ -127,7 +127,7 @@ Phases are strictly sequential: Phase N+1 begins only after Phase N is [DONE] an
 **Step 1.3:** Create `repo-cortex-scout` (Tier 3)
 
 - Skills: `repo-cortex-workflow`, `repo-cortex-embeddings`, `research-methodology`
-- Model: `kimi-k2.7-code:cloud` (read-only scout)
+- Model: `minimax-m3.1-flash:cloud` (read-only scout)
 - Add to `agents:` allow-list of `00-helping` and `02-researching`
 - **Slice files:** 1 new agent, 2 modified
 
@@ -198,7 +198,7 @@ Phases are strictly sequential: Phase N+1 begins only after Phase N is [DONE] an
 
 - Specialists: security-reviewer, performance-reviewer, determinism-reviewer, api-contract-reviewer, dependency-audit-reviewer, benchmark-gate-reviewer
 - Cuts 04 fan-out from 13 to 9 (removes 5 reviewers, adds 1 coordinator). Cuts 05 fan-out from 13 to 10 (removes 4 reviewers, adds 1 coordinator). Only 3 reviewers are truly shared by both.
-- Create `review-coordinator` (Tier 2), model: `kimi-k2.7-code:cloud` (delegates to reviewers, light coordination)
+- Create `review-coordinator` (Tier 2), model: `minimax-m3.1-flash:cloud` (delegates to reviewers, light coordination)
 - Add to `agents:` of 04-implementing and 05-green-testing
 - Remove 6 reviewers from `agents:` of 04 and 05, add to `review-coordinator` instead
 - Note: `benchmark-gate-reviewer` and `dependency-audit-reviewer` remain direct delegates of 02-researching (for research-phase surface review) AND become delegates of review-coordinator (for implementation/green POV review). This dual path is intentional — different phases need the same reviewer for different purposes.
@@ -395,7 +395,7 @@ PlanUpdate:
 
 - Mission: Collect changed files, validation evidence, delegation graph in isolated context. Produce structured session summary.
 - Skills: `summarizing-session-log`, `tracker-handoff`
-- Model: `kimi-k2.7-code:cloud` (light summarization task)
+- Model: `minimax-m3.1-flash:cloud` (light summarization task)
 - Add to `agents:` of `07-logging`
 - **Slice files:** 1 new agent, 1 modified
 
@@ -405,14 +405,14 @@ PlanUpdate:
 
 - Mission: Write JSDoc, READMEs, examples, and guides from source in isolated context. Apply educational-docs tone model.
 - Skills: `educational-docs`, `updating-js-docs`, `auditing-js-docs`
-- Model: `kimi-k2.7-code:cloud` (writing task, light)
+- Model: `minimax-m3.1-flash:cloud` (writing task, light)
 - Add to `agents:` of `06-documenting`
 - **Slice files:** 1 new agent, 1 modified
 - **Status:** DONE
 
 **Changes made:**
 
-- Created `.github/agents/docs-writer.agent.md` — Tier-3 writing specialist with tools `read, search, execute, edit, cortex/cortex, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*`. Skills: `educational-docs`, `updating-js-docs`, `auditing-js-docs`. Model: `kimi-k2.7-code:cloud`. `user-invocable: false`, `agents: []`. Full agent body with CRITICAL RULE, Purpose, Mission, Scope boundaries, Constraints, Gate Enforcement, Approach, Decision Tree, If Blocked, Output format.
+- Created `.github/agents/docs-writer.agent.md` — Tier-3 writing specialist with tools `read, search, execute, edit, cortex/cortex, neataptic-gate-mcp/*, neataptic-validation-mcp/*, neataptic-workflow-mcp/*`. Skills: `educational-docs`, `updating-js-docs`, `auditing-js-docs`. Model: `minimax-m3.1-flash:cloud`. `user-invocable: false`, `agents: []`. Full agent body with CRITICAL RULE, Purpose, Mission, Scope boundaries, Constraints, Gate Enforcement, Approach, Decision Tree, If Blocked, Output format.
 - Modified `.github/agents/06-documenting.agent.md` — added `docs-writer` to the `agents:` array (after `docs-scout`, alphabetically grouped).
 - Regenerated `.github/agent-skill-routing-table.md` to reflect the new agent (35 agents, 67 skills).
 
@@ -456,7 +456,7 @@ PlanUpdate:
 
 - Mission: POV reviewer for NEAT evolution algorithm correctness — validate mutation/selection/crossover logic, topology mutation validity, fitness evaluation correctness, speciation boundary integrity
 - Skills: `nge-core-algorithm`, `reproducibility-contracts`, `implementation-standards`
-- Model: `kimi-k2.7-code:cloud` (read-only review)
+- Model: `minimax-m3.1-flash:cloud` (read-only review)
 - Add to `agents:` of `review-coordinator` (review-coordinator holds 9 reviewers total: 6 existing + 3 new domain)
 - **Slice files:** 1 new agent, 1 modified (review-coordinator)
 - **Done:** Created `.github/agents/evolution-correctness-reviewer.agent.md` following Tier-3 reviewer structure (security-reviewer/performance-reviewer/determinism-reviewer pattern). Added `evolution-correctness-reviewer` to review-coordinator `agents:` array. Validation: frontmatter PASS (0 errors, 0 warnings), agent-quality PASS, agent-graph PASS, routing-table regenerated and freshness gate PASS.
@@ -467,7 +467,7 @@ PlanUpdate:
 
 - Mission: POV reviewer for ONNX export/import parity — validate round-trip correctness, binary emission determinism, runtime parity
 - Skills: `onnx-work`, `implementation-standards`, `reproducibility-contracts`
-- Model: `kimi-k2.7-code:cloud`
+- Model: `minimax-m3.1-flash:cloud`
 - Add to `agents:` of `review-coordinator`
 - **Slice files:** 1 new agent, 1 modified (review-coordinator)
 - **Done:** Created `.github/agents/onnx-parity-reviewer.agent.md` following Tier-3 reviewer structure. Added to review-coordinator `agents:` array. Validation: frontmatter PASS (0 errors, 0 warnings, 38 agents), agent-quality PASS, agent-graph PASS, routing-table regenerated and freshness gate PASS.
@@ -478,7 +478,7 @@ PlanUpdate:
 
 - Mission: POV reviewer for WebGPU compute correctness — validate GPU-vs-CPU numerical parity, shader correctness, fallback behavior
 - Skills: `webgpu`, `implementation-standards`, `performance-optimization`
-- Model: `kimi-k2.7-code:cloud`
+- Model: `minimax-m3.1-flash:cloud`
 - Add to `agents:` of `review-coordinator`
 - **Slice files:** 1 new agent, 1 modified (review-coordinator)
 - **Done:** Created `.github/agents/webgpu-parity-reviewer.agent.md` following Tier-3 reviewer structure. Added to review-coordinator `agents:` array. Validation: frontmatter PASS (0 errors, 0 warnings, 38 agents), agent-quality PASS, agent-graph PASS, routing-table regenerated and freshness gate PASS.
@@ -590,7 +590,7 @@ phase-7-evidence:
 - agent-graph gate: PASS (38 agents, 0 issues)
 - tier-enforcement gate: PASS (8 user-invocable Tier-1 agents)
 - slice-advancement gate (aio-phase-7): PASS — 7/7 sub-gates pass (plan-sync, step-packet, plan-slice-quality, plan-command-lint, shared-validation, code-coverage, specialist-review)
-- Model assignment verification: PASS — 5 heavy agents on `kimi-k2.7-code:cloud` (00-helping, 01-planning, 03-red-testing, 04-implementing, implementation-executor); 33 light agents on `kimi-k2.7-code:cloud`; 0 other models
+- Model assignment verification: PASS — 5 heavy agents on `minimax-m3.1-flash:cloud` (00-helping, 01-planning, 03-red-testing, 04-implementing, implementation-executor); 33 light agents on `minimax-m3.1-flash:cloud`; 0 other models
 - New agent existence verification: PASS — 8 new agents exist and pass validation (frontmatter-auditor, repo-cortex-scout, review-coordinator, session-summarizer, docs-writer, evolution-correctness-reviewer, onnx-parity-reviewer, webgpu-parity-reviewer)
 - Deleted agent file verification: PASS — `research-codebase-coordinator.agent.md` is deleted
 - `argument-hint` feature adoption: PASS — present on all 8 user-invocable Tier-1 agents
@@ -647,7 +647,7 @@ phase-7-evidence:
 **Step 7.2:** Verification scans:
 
 - Grep scan: zero phantom agent references remaining
-- Confirm model assignments: 5 heavy agents on kimi-k2.7-code:cloud, all others on kimi-k2.7-code:cloud
+- Confirm model assignments: 5 heavy agents on minimax-m3.1-flash:cloud, all others on minimax-m3.1-flash:cloud
 - Confirm all new agents exist and pass validation
 - Confirm deleted agents are gone and no references remain
 - Confirm routing table is fresh
@@ -682,8 +682,8 @@ phase-7-evidence:
 
 ### Files to MODIFY (~20+ agents):
 
-- 5 heavy agents: model → kimi-k2.7-code:cloud (Phase 0)
-- 26 light agents: model stays kimi-k2.7-code:cloud (Phase 0)
+- 5 heavy agents: model → minimax-m3.1-flash:cloud (Phase 0)
+- 26 light agents: model stays minimax-m3.1-flash:cloud (Phase 0)
 - 00-helping: phantom cleanup, add frontmatter-auditor + repo-cortex-scout
 - 01-planning through 07-logging: phantom reference cleanup
 - 02-researching: phantom cleanup, remove research-codebase-coordinator, add domain skills
@@ -729,7 +729,7 @@ phase-7-evidence:
 
 1. **`argument-hint`** on user-invocable agents — improves UX in chat picker
 2. **Hooks (Preview)** — consider PostToolUse hooks on implementation agents to run `npx tsc --noEmit` after edits
-3. **Array-valued `model`** — consider `model: ['kimi-k2.7-code:cloud', 'kimi-k2.7-code:cloud']` for heavy agents as fallback
+3. **Array-valued `model`** — consider `model: ['minimax-m3.1-flash:cloud', 'minimax-m3.1-flash:cloud']` for heavy agents as fallback
 4. **Customization Evaluations** — run on all agents after Phase 6 to catch contradictions
 5. **Copilot Memory** — store repository-level architecture decisions for cross-session persistence
 6. **Session Chronicle** — track agent work across sessions for cost analysis and standup reports
@@ -841,7 +841,7 @@ Session log: plans/session-log-2026-08-15.md
 
 Next: PLAN COMPLETE — all 8 phases (0-7) DONE. No further work required.
 
-Model mandate: kimi-k2.7-code:cloud for heavy tasks (00-helping, 01-planning, 03-red-testing, 04-implementing, implementation-executor). kimi-k2.7-code:cloud for light tasks (all others). NO OTHER MODELS APPROVED — only kimi-k2.7-code:cloud and kimi-k2.7-code:cloud. Users may override per request between these two models only. Plan mandates continue to use kimi-k2.7-code:cloud for implementing agents.
+Model mandate: minimax-m3.1-flash:cloud for heavy tasks (00-helping, 01-planning, 03-red-testing, 04-implementing, implementation-executor). minimax-m3.1-flash:cloud for light tasks (all others). NO OTHER MODELS APPROVED — only minimax-m3.1-flash:cloud and minimax-m3.1-flash:cloud. Users may override per request between these two models only. Plan mandates continue to use minimax-m3.1-flash:cloud for implementing agents.
 
 Validation commands:
 - node scripts/agent-customization/validate-agent-frontmatter.mjs --json --strict
@@ -863,13 +863,13 @@ Claim: 04-implementing @ 2026-08-15T20:30:00Z
 
 - Removed `planning-test-strategy-coordinator` and `research-codebase-coordinator` from `strictTier2CoordinatorPathsByName`
 - Removed `anthropic/claude-sonnet-4-20250514` from `strictAllowedModels`
-- Changed `kimi-k2.7-code:cloud (ollama)` → `kimi-k2.7-code:cloud` in `strictAllowedModels` to match actual agent frontmatter values
-- Updated error message to reference `kimi-k2.7-code:cloud` instead of `kimi-k2.7-code:cloud (ollama)`
+- Changed `minimax-m3.1-flash:cloud (ollama)` → `minimax-m3.1-flash:cloud` in `strictAllowedModels` to match actual agent frontmatter values
+- Updated error message to reference `minimax-m3.1-flash:cloud` instead of `minimax-m3.1-flash:cloud (ollama)`
 
 ### Step 0.4 — model-routing-and-budget SKILL.md
 
 - Removed all Claude Sonnet and Claude Haiku references from task packet, required workflow, phase defaults table, decision tree, before/after examples, and guardrails
-- Phase-based tier system now uses only `kimi-k2.7-code:cloud` (heavy/full) and `kimi-k2.7-code:cloud` (light)
+- Phase-based tier system now uses only `minimax-m3.1-flash:cloud` (heavy/full) and `minimax-m3.1-flash:cloud` (light)
 - Added step 9 to Required Workflow: additional models require explicit user approval
 
 ### Preflight Results
@@ -896,7 +896,7 @@ PlanUpdate:
     - 'node scripts/agent-customization/validate-agent-quality.mjs'
     - 'node scripts/agent-customization/validate-agent-graph.mjs --json'
   rollback:
-    - 'Revert scripts/agent-customization/validate-agent-frontmatter.mjs: restore removed coordinator entries, restore anthropic/claude-sonnet-4-20250514 in strictAllowedModels, restore kimi-k2.7-code:cloud (ollama) string'
+    - 'Revert scripts/agent-customization/validate-agent-frontmatter.mjs: restore removed coordinator entries, restore anthropic/claude-sonnet-4-20250514 in strictAllowedModels, restore minimax-m3.1-flash:cloud (ollama) string'
     - 'Revert .github/skills/model-routing-and-budget/SKILL.md: restore Claude Sonnet/Haiku references and old tier labels'
   next: 'Run 05-green-testing to validate all agent frontmatter passes strict validation and no Claude references remain in skill docs'
 ```
@@ -920,7 +920,7 @@ Claim: 04-implementing @ 2026-08-15T21:00:00Z
 
 - Created `.github/agents/frontmatter-auditor.agent.md` — consolidates 3 phantom agents (agent-frontmatter-auditor, skill-frontmatter-auditor, model-name-auditor)
 - Skills: agent-frontmatter-standards, skill-frontmatter-standards, updating-agent-frontmatter, updating-skill-frontmatter, model-routing-and-budget
-- Model: kimi-k2.7-code:cloud (read-only audit, light task)
+- Model: minimax-m3.1-flash:cloud (read-only audit, light task)
 - user-invocable: false, tier: 3, agents: []
 - Description starts with "Use when:" per Copilot convention
 - Body follows Tier-3 scout structure: CRITICAL RULE, Purpose, Mission, Scope boundaries, Constraints, Gate Enforcement, Approach, Audit Decision Tree, Finding Templates, If Blocked, Output format
@@ -929,7 +929,7 @@ Claim: 04-implementing @ 2026-08-15T21:00:00Z
 
 - Created `.github/agents/repo-cortex-scout.agent.md` — Cortex index health scout
 - Skills: repo-cortex-workflow, repo-cortex-embeddings, research-methodology
-- Model: kimi-k2.7-code:cloud (read-only scout)
+- Model: minimax-m3.1-flash:cloud (read-only scout)
 - user-invocable: false, tier: 3, agents: []
 - Description starts with "Use when:" per Copilot convention
 - Body follows Tier-3 scout structure with Cortex Health Decision Tree and Finding Templates
@@ -954,7 +954,7 @@ Claim: 04-implementing @ 2026-08-15T20:21:49Z
 
 - Created `.github/agents/onnx-parity-reviewer.agent.md` — POV reviewer for ONNX export/import parity
 - Skills: onnx-work, implementation-standards, reproducibility-contracts
-- Model: kimi-k2.7-code:cloud (read-only review, light task)
+- Model: minimax-m3.1-flash:cloud (read-only review, light task)
 - user-invocable: false, tier: 3, agents: [], target: vscode, disable-model-invocation: false
 - Body follows Tier-3 reviewer structure: CRITICAL RULE, Purpose, Mission, Scope boundaries, Justification, Constraints, Cortex-First Search Policy, Approach, ONNX-Parity Checklist, ONNX-Parity Classification Table, Gate Enforcement, If Blocked, Output format
 - ONNX-Parity Checklist covers: round-trip mismatch, operator mapping gap, non-deterministic binary emission, runtime divergence, recurrent import gap, supported-subset dishonesty, shape/constant corruption

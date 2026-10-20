@@ -2,7 +2,7 @@
 description: 'Reviewer with a NEAT evolution-correctness point of view on mutation, selection, crossover, speciation, and fitness evaluation logic.'
 name: evolution-correctness-reviewer
 tier: 3
-model: kimi-k2.7-code:cloud
+model: minimax-m3.1-flash:cloud
 tools:
   [
     read,

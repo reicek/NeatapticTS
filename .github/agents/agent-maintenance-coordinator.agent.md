@@ -2,7 +2,7 @@
 description: 'Coordinator for resolving missing specialists, skills, and routing gaps, and maintaining .agent.md frontmatter.'
 name: agent-maintenance-coordinator
 tier: 2
-model: kimi-k2.7-code:cloud
+model: minimax-m3.1-flash:cloud
 tools:
   [
     read,

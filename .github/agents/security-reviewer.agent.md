@@ -2,7 +2,7 @@
 description: 'Reviewer that hunts exploitable security vulnerabilities with a dedicated adversarial lens.'
 name: 'security-reviewer'
 tier: 3
-model: kimi-k2.7-code:cloud
+model: minimax-m3.1-flash:cloud
 tools:
   [
     read,

@@ -2,7 +2,7 @@
 description: 'Writer of property-based (randomized) tests for invariants that example-based tests cannot cover.'
 name: 'property-based-test-writer'
 tier: 3
-model: kimi-k2.7-code:cloud
+model: minimax-m3.1-flash:cloud
 tools:
   [
     read,

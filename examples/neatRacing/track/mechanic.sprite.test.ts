@@ -24,10 +24,16 @@ import type { TrackSlabBuildInput } from './track.slabs';
 import {
   buildMechanicBillboards,
   computeMechanicBillboardScale,
+  computeMechanicRuntimeFrameIndex,
   loadMechanicSpriteAtlas,
   selectMechanicSpriteFrame,
 } from './mechanic.sprite';
 import * as mechanicSprite from './mechanic.sprite';
+import {
+  DIRECTION_ORDER,
+  PUBLIC_POSE_COUNT,
+  PUBLIC_POSE_INDEX_STAND,
+} from './public.sprite';
 
 /** Canonical determinism tuple reused from the track slab builder. */
 const FIXTURE: TrackSlabBuildInput = {
@@ -131,8 +137,28 @@ function expectedLookDirection(
   const angle = Math.atan2(dx, dz);
   const step = Math.PI / 4;
   const index = (Math.round(angle / step) % 8 + 8) % 8;
-
   return ROBOT_DIRECTION_ORDER[index]!;
+}
+
+/** Builds the mechanic runtime direction×pose atlas-index lookup table. */
+function buildMechanicRuntimeIndexTable(
+  atlas: ReturnType<typeof loadMechanicSpriteAtlas>,
+): Int16Array {
+  const table = new Int16Array(
+    DIRECTION_ORDER.length * PUBLIC_POSE_COUNT,
+  ).fill(-1);
+
+  for (let frameIndex = 0; frameIndex < atlas.frames.length; frameIndex += 1) {
+    const frame = atlas.frames[frameIndex]!;
+    const direction = directionFromMechanicFrameId(frame.id);
+    const directionIndex = (DIRECTION_ORDER as readonly string[]).indexOf(direction);
+    if (directionIndex >= 0) {
+      table[directionIndex * PUBLIC_POSE_COUNT + PUBLIC_POSE_INDEX_STAND] =
+        frameIndex;
+    }
+  }
+
+  return table;
 }
 
 /** Computes a 0..360 hue angle, returning NaN for grayscale pixels. */
@@ -194,6 +220,54 @@ function distinctNeonHues(rgba: Uint8ClampedArray): Set<number> {
   }
 
   return hues;
+}
+
+/**
+ * Returns the single most common saturated accent hue bucket in a frame,
+ * or `null` when no accent pixels are found.
+ */
+function dominantAccentHue(rgba: Uint8ClampedArray): number | null {
+  const counts = new Map<number, number>();
+
+  for (let index = 0; index < rgba.length; index += 4) {
+    const red = rgba[index]!;
+    const green = rgba[index + 1]!;
+    const blue = rgba[index + 2]!;
+    const alpha = rgba[index + 3]!;
+
+    if (alpha < 32) {
+      continue;
+    }
+
+    if (red === green && green === blue) {
+      continue;
+    }
+
+    const max = Math.max(red, green, blue);
+    const min = Math.min(red, green, blue);
+    if (max > 0 && (max - min) / max < 0.5) {
+      continue;
+    }
+
+    const hue = rgbToHue(red, green, blue);
+    if (Number.isNaN(hue)) {
+      continue;
+    }
+
+    const bucket = Math.round(hue / 30) * 30;
+    counts.set(bucket, (counts.get(bucket) ?? 0) + 1);
+  }
+
+  let bestHue: number | null = null;
+  let bestCount = 0;
+  for (const [hue, count] of counts) {
+    if (count > bestCount) {
+      bestCount = count;
+      bestHue = hue;
+    }
+  }
+
+  return bestHue;
 }
 
 describe('mechanic.sprite (P1-mechanic-crew, AC-050)', () => {
@@ -440,7 +514,37 @@ describe('mechanic.sprite look-at-car gaze (P1-sprite-directional-walk-look, AC-
     }
   });
 
-  it('makes every mechanic-crew billboard face the camera/car', () => {
+      it('recomputes the runtime frame index when the live car moves (OBS-3)', () => {
+      const atlas = loadMechanicSpriteAtlas();
+      const table = buildMechanicRuntimeIndexTable(atlas);
+      const billboard = {
+        position: [0, 0, 0] as const,
+        runtimeRole: 'mechanic' as const,
+        seed: 1,
+        index: 0,
+        frameId: 'mechanic-front-stand',
+        scale: 1,
+        distance: 10,
+        quad: [0, 0, 1, 1] as const,
+      };
+
+      const indexA = computeMechanicRuntimeFrameIndex(
+        billboard,
+        [0, 0, 10],
+        table,
+      );
+      const indexB = computeMechanicRuntimeFrameIndex(
+        billboard,
+        [10, 0, 0],
+        table,
+      );
+
+      expect(indexA).toBeGreaterThanOrEqual(0);
+      expect(indexB).toBeGreaterThanOrEqual(0);
+      expect(indexA).not.toBe(indexB);
+      });
+
+      it('makes every mechanic-crew billboard face the camera/car', () => {
     const atlas = loadMechanicSpriteAtlas();
     const billboards = buildMechanicBillboards(FIXTURE, FIXTURE_CAMERA, atlas);
 
@@ -474,3 +578,126 @@ describe('mechanic.sprite team-color accents (P1-sprite-directional-walk-look, A
     expect(hues.size).toBeGreaterThanOrEqual(2);
   });
 });
+
+describe(
+  'mechanic.sprite per-robot color identity (fix-packet-P1-bleacher-shape-iteration-3, OBS-2)',
+  () => {
+    it('keeps the same accent color when the car moves to a different direction', () => {
+      const atlas = loadMechanicSpriteAtlas();
+      const table = buildMechanicRuntimeIndexTable(atlas);
+      const billboard = {
+        position: [0, 0, 0] as const,
+        runtimeRole: 'mechanic' as const,
+        seed: 1,
+        index: 0,
+        frameId: 'mechanic-front-stand',
+        scale: 1,
+        distance: 10,
+        quad: [0, 0, 1, 1] as const,
+      };
+
+      const indexA = computeMechanicRuntimeFrameIndex(
+        billboard,
+        [0, 0, 10],
+        table,
+      );
+      // Move the car to +X +Z so the robot faces frontRight (direction index 1),
+      // which currently carries a different team-color parity than front (index 0).
+      const indexB = computeMechanicRuntimeFrameIndex(
+        billboard,
+        [10, 0, 10],
+        table,
+      );
+
+      const frameA = atlas.frames[indexA];
+      const frameB = atlas.frames[indexB];
+      if (!frameA || !frameB) {
+        throw new Error('runtime frame index out of bounds');
+      }
+
+      const hueA = dominantAccentHue(frameA.rgba);
+      const hueB = dominantAccentHue(frameB.rgba);
+
+      expect(hueA).not.toBeNull();
+      expect(hueB).toBe(hueA);
+    });
+
+    it('keeps the same accent color across all 8 atlas directions for one mechanic', () => {
+      const atlas = loadMechanicSpriteAtlas();
+      const table = buildMechanicRuntimeIndexTable(atlas);
+      const billboard = {
+        position: [0, 0, 0] as const,
+        runtimeRole: 'mechanic' as const,
+        seed: 1,
+        index: 0,
+        frameId: 'mechanic-front-stand',
+        scale: 1,
+        distance: 10,
+        quad: [0, 0, 1, 1] as const,
+      };
+
+      const carPositions: readonly (readonly [number, number, number])[] = [
+        [0, 0, 10],
+        [10, 0, 10],
+        [10, 0, 0],
+        [10, 0, -10],
+        [0, 0, -10],
+        [-10, 0, -10],
+        [-10, 0, 0],
+        [-10, 0, 10],
+      ];
+
+      const hues: (number | null)[] = [];
+      for (const carPosition of carPositions) {
+        const frameIndex = computeMechanicRuntimeFrameIndex(
+          billboard,
+          carPosition,
+          table,
+        );
+        const frame = atlas.frames[frameIndex];
+        if (!frame) {
+          throw new Error('runtime frame index out of bounds');
+        }
+        hues.push(dominantAccentHue(frame.rgba));
+      }
+
+      const nonNullHues = hues.filter((hue): hue is number => hue !== null);
+      expect(nonNullHues.length).toBe(8);
+      expect(new Set(nonNullHues).size).toBe(1);
+    });
+
+    it('gives different mechanics different accent colors', () => {
+      const atlas = loadMechanicSpriteAtlas();
+      const table = buildMechanicRuntimeIndexTable(atlas);
+      const hues: (number | null)[] = [];
+
+      for (let index = 0; index < 8; index += 1) {
+        const billboard = {
+          position: [0, 0, 0] as const,
+          runtimeRole: 'mechanic' as const,
+          seed: 1,
+          index,
+          frameId: 'mechanic-front-stand',
+          scale: 1,
+          distance: 10,
+          quad: [0, 0, 1, 1] as const,
+        };
+
+        const frameIndex = computeMechanicRuntimeFrameIndex(
+          billboard,
+          [0, 0, 10],
+          table,
+        );
+        const frame = atlas.frames[frameIndex];
+        if (!frame) {
+          throw new Error('runtime frame index out of bounds');
+        }
+        hues.push(dominantAccentHue(frame.rgba));
+      }
+
+      const nonNullHues = hues.filter((hue): hue is number => hue !== null);
+      expect(nonNullHues.length).toBeGreaterThan(0);
+      expect(new Set(nonNullHues).size).toBeGreaterThanOrEqual(2);
+    });
+  },
+);

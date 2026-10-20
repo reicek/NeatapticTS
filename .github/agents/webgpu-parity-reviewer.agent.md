@@ -2,7 +2,7 @@
 description: 'Reviewer with a WebGPU compute-correctness point of view on GPU-vs-CPU numerical parity, shader correctness, and fallback behavior.'
 name: 'webgpu-parity-reviewer'
 tier: 3
-model: kimi-k2.7-code:cloud
+model: minimax-m3.1-flash:cloud
 tools:
   [
     read,

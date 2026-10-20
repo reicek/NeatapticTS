@@ -2,7 +2,7 @@
 description: 'Use when: a WebGL2/GLSL render-pass change needs review for shader correctness, framebuffer/texture state, vertex/attribute layout, blending/depth state, and visible-window render parity.'
 name: webgl2-glsl-render-reviewer
 tier: 3
-model: kimi-k2.7-code:cloud
+model: minimax-m3.1-flash:cloud
 tools:
   [
     read,
