@@ -9,9 +9,21 @@
  *   dimensions for a given (seed, index).
  * - {@link buildPublicBillboards} returns billboards on the right side of the
  *   track with positive screen-space quads.
- * - {@link computeBillboardScale} returns a constant 1.0 world scale so
- *   perspective projection handles distance shrink (AC-054).
+ * - {@link computeBillboardScale} returns the named
+ *   NEATRACING_PUBLIC_BILLBOARD_WORLD_SCALE half world scale so perspective
+ *   projection handles distance shrink (AC-054 ratio + AC-077).
  * - Billboards are 2D sprite quads, not voxel snapshots.
+ *
+ * RED-A (slice P1-sprite-scale-red-contracts, Step 14L, AC-077) adds the
+ * named world-scale lever contract: the module exports the NAMED constant
+ * NEATRACING_PUBLIC_BILLBOARD_WORLD_SCALE = 0.5, and computeBillboardScale
+ * returns EXACTLY that value for every camera distance.
+ *
+ * RED-B (slice P1-sprite-scale-red-contracts, Step 14L, AC-077) adds the
+ * placement-footprint contract: the shared meters-per-pixel constant
+ * NEATRACING_BILLBOARD_WORLD_PIXEL_SCALE_M is exported, and a 192 x 192 px
+ * crowd frame reports a 4.8 m world footprint (a 2.4 m half-extent) instead
+ * of the pre-14L 9.6 m.
  */
 
 import { describe, expect, it } from '@jest/globals';
@@ -31,10 +43,13 @@ import {
   computePublicRuntimeFrameIndex,
   DIRECTION_ORDER,
   loadPublicSpriteAtlas,
+  NEATRACING_BILLBOARD_WORLD_PIXEL_SCALE_M,
+  NEATRACING_PUBLIC_BILLBOARD_WORLD_SCALE,
   PUBLIC_POSE_COUNT,
   PUBLIC_POSE_INDEX_STAND,
   PUBLIC_POSE_INDEX_WALK1,
   PUBLIC_POSE_INDEX_WALK2,
+  resolvePublicRuntimeRole,
   selectPublicSpriteFrame,
   selectPublicWalkFrame,
 } from './public.sprite';
@@ -56,6 +71,15 @@ const FIXTURE_CAMERA = {
   far: 1000,
   fovDegrees: 60,
 } as const;
+
+/**
+ * Live car position used by the camera-relative gaze assertions.
+ *
+ * The car sits 10 m ahead of {@link FIXTURE_CAMERA} along the camera's +Z
+ * forward axis, so the chase camera looks over the car's shoulder at the
+ * crowd: a seated spectator that faces the car therefore faces the camera.
+ */
+const FIXTURE_CAR_POSITION = [0, 0, 0] as const;
 
 /** Scene-world z mirrors generator y, so generator-space queries use -z. */
 const sceneZToGeneratorY = (sceneZ: number): number => -sceneZ;
@@ -85,15 +109,70 @@ function nearestSample(
   return best;
 }
 
-/** World-space meters per sprite pixel used by the right-world render pass. */
-const BILLBOARD_WORLD_PIXEL_SCALE_M = 0.05;
-
-/** Computes the world-space half-width and half-height of a billboard. */
+/**
+ * Computes the world-space half-width and half-height of a billboard.
+ *
+ * The meter scale is read from the SHARED module export instead of a local
+ * copy, so the reported footprint follows the module and a future meter-scale
+ * change cannot silently invalidate the contract.
+ */
 function billboardHalfSize(
   frame: ReturnType<typeof loadPublicSpriteAtlas>['frames'][number],
   distance: number,
 ): readonly [number, number] {
-  const scale = computeBillboardScale(distance) * BILLBOARD_WORLD_PIXEL_SCALE_M;
+  const scale =
+    computeBillboardScale(distance) * NEATRACING_BILLBOARD_WORLD_PIXEL_SCALE_M;
+
+  return [(frame.width * scale) / 2, (frame.height * scale) / 2];
+}
+
+/**
+ * Reads a numeric module export by NAME.
+ *
+ * The RED-A and RED-B contracts of slice P1-sprite-scale-red-contracts
+ * target the named world-scale lever
+ * NEATRACING_PUBLIC_BILLBOARD_WORLD_SCALE and the shared meters-per-pixel
+ * constant NEATRACING_BILLBOARD_WORLD_PIXEL_SCALE_M. A named IMPORT of a
+ * missing export would break the WHOLE suite, so the module namespace is
+ * read through an index signature instead, and a missing export is reported
+ * as a NAMED contract failure instead of an opaque undefined.
+ *
+ * @param name - Name of the exported constant.
+ * @returns The exported numeric constant.
+ */
+function readNumericModuleExport(name: string): number {
+  const value = (publicSprite as unknown as Record<string, unknown>)[name];
+
+  if (typeof value !== 'number') {
+    throw new Error(
+      `public.sprite does not export the numeric constant ${name}`,
+    );
+  }
+
+  return value;
+}
+
+/**
+ * Computes the world-space half-width and half-height of a crowd billboard.
+ *
+ * The mirror of the module-private `billboardWorldHalfSize`, but the
+ * meters-per-pixel constant is read from the SHARED module export instead of
+ * a local copy, so the reported footprint follows the meter scale of the
+ * module and a future meter-scale change cannot silently invalidate the
+ * contract.
+ *
+ * @param frame - Crowd sprite frame whose pixel dimensions are known.
+ * @param distance - Distance from the camera in meters.
+ * @returns Half-width and half-height in meters.
+ */
+function crowdBillboardWorldHalfSize(
+  frame: ReturnType<typeof loadPublicSpriteAtlas>['frames'][number],
+  distance: number,
+): readonly [number, number] {
+  const metersPerPixel = readNumericModuleExport(
+    'NEATRACING_BILLBOARD_WORLD_PIXEL_SCALE_M',
+  );
+  const scale = computeBillboardScale(distance) * metersPerPixel;
 
   return [(frame.width * scale) / 2, (frame.height * scale) / 2];
 }
@@ -130,20 +209,162 @@ function directionFromPublicFrameId(frameId: string): string {
 }
 
 /**
- * Returns the 8-direction frame a robot should use so that it faces a target
- * point in the XZ plane.
+ * Returns the direction label rendered by a runtime atlas frame index.
+ *
+ * The runtime frame index addresses the COLOR-major atlas, so the rendered
+ * direction is recovered from the frame id instead of from the index itself.
  */
-function expectedLookDirection(
-  target: readonly [number, number, number],
-  robotPosition: readonly [number, number, number],
+function directionOfRuntimeFrameIndex(
+  atlas: ReturnType<typeof loadPublicSpriteAtlas>,
+  frameIndex: number,
 ): string {
-  const dx = target[0] - robotPosition[0];
-  const dz = target[2] - robotPosition[2];
-  const angle = Math.atan2(dx, dz);
-  const step = Math.PI / 4;
-  const index = (Math.round(angle / step) % 8 + 8) % 8;
+  const frame = atlas.frames[frameIndex];
 
-  return ROBOT_DIRECTION_ORDER[index]!;
+  return frame ? directionFromPublicFrameId(frame.id) : 'out-of-range';
+}
+
+/**
+ * Returns the minimal number of 45-degree atlas steps between two direction
+ * labels (0 = identical, 4 = opposite).
+ */
+function directionStepDistance(a: string, b: string): number {
+  const aIndex = (DIRECTION_ORDER as readonly string[]).indexOf(a);
+  const bIndex = (DIRECTION_ORDER as readonly string[]).indexOf(b);
+  if (aIndex < 0 || bIndex < 0) {
+    return DIRECTION_ORDER.length;
+  }
+  const raw = Math.abs(aIndex - bIndex);
+
+  return Math.min(raw, DIRECTION_ORDER.length - raw);
+}
+
+/**
+ * Returns the CAMERA-RELATIVE direction label a spectator must use.
+ *
+ * AC-068 (slice P1-crowd-facing-relative) replaces the world-absolute
+ * robot-to-car bearing with a camera-relative conversion. The expectation is
+ * derived GEOMETRICALLY from the camera basis instead of re-implementing the
+ * implementation algebra, so the test can never pass by mirroring the same
+ * formula twice:
+ *
+ *   f        = normalize(cameraForward.xz)  // camera forward, horizontal part
+ *   r        = (-fZ, 0, fX)                 // camera screen-right axis
+ *   d        = normalize(gazeTarget.xz - robotPosition.xz)
+ *   along    = d . f
+ *   lateral  = d . r
+ *   phi      = atan2(lateral, along)        // 0 = facing away, PI = facing the camera
+ *   relative = ((PI - phi) mod 2PI)
+ *   index    = round(relative / (PI/4)) mod 8
+ *
+ * The neatRacing camera right axis is `(-fZ, 0, fX)` (the `lookAtInto` xAxis
+ * in examples/neatRacing/browser-entry/browser-entry.ts), so a camera looking
+ * toward +Z sees world +X on its LEFT, and the atlas image-right maps to the
+ * camera screen-right because the public atlas is uploaded without a U flip.
+ * Direction index 0 ('front') therefore means "the sprite faces the camera",
+ * index 2 ('right') means "the sprite nose points to the camera's
+ * screen-right", index 4 ('back') means "the sprite faces away from the
+ * camera" and index 6 ('left') means "the sprite nose points to the camera's
+ * screen-left".
+ */
+function expectedCameraRelativeDirection(
+  cameraForward: readonly [number, number, number],
+  robotPosition: readonly [number, number, number],
+  gazeTarget: readonly [number, number, number],
+): string {
+  const forwardLength = Math.hypot(cameraForward[0], cameraForward[2]) || 1;
+  const forwardX = cameraForward[0] / forwardLength;
+  const forwardZ = cameraForward[2] / forwardLength;
+  const rightX = -forwardZ;
+  const rightZ = forwardX;
+  const gazeX = gazeTarget[0] - robotPosition[0];
+  const gazeZ = gazeTarget[2] - robotPosition[2];
+  const gazeLength = Math.hypot(gazeX, gazeZ) || 1;
+  const directionX = gazeX / gazeLength;
+  const directionZ = gazeZ / gazeLength;
+  const along = directionX * forwardX + directionZ * forwardZ;
+  const lateral = directionX * rightX + directionZ * rightZ;
+  const phi = Math.atan2(lateral, along);
+  const step = Math.PI / 4;
+  const fullTurn = 2 * Math.PI;
+  const relative = ((Math.PI - phi) % fullTurn + fullTurn) % fullTurn;
+
+  return ROBOT_DIRECTION_ORDER[Math.round(relative / step) % 8]!;
+}
+
+/**
+ * EXPECTED NEW API (AC-068, slice P1-crowd-facing-relative):
+ * `computePublicRuntimeFrameIndex` must stop discarding the camera
+ * (`void cameraWorld;` in public.sprite.ts) and derive the atlas frame index
+ * from the camera HEADING. The minimal shape used by the RED tests below is
+ * an OPTIONAL 6th parameter that carries the camera forward vector:
+ *
+ *   computePublicRuntimeFrameIndex(
+ *     billboard, cameraWorld, carPosition, timeSeconds, indexTable,
+ *     cameraForward,
+ *   )
+ *
+ * The camera-relative conversion then uses the neatRacing world compass form
+ * (yaw = atan2(dx, dz), 0 rad = +Z = 'front'):
+ *
+ *   cameraYaw      = atan2(forwardX, forwardZ)   // neatRacing world compass
+ *   facingYaw      = atan2(carX - robotX, carZ - robotZ)
+ *   relativeYaw    = facingYaw - cameraYaw + PI
+ *   directionIndex = round(relativeYaw / 45deg) mod 8
+ *
+ * so direction index 0 ('front') is the frame that faces the camera, index 2
+ * ('right') is the frame whose nose points to the camera's screen-right, and
+ * index 6 ('left') is its screen-left mirror. The canonical Neatenstein rule
+ * (examples/neatenstein/browser-entry/renderer/sprites.ts:154-156) is written
+ * as `cameraYaw + PI - facingYaw` because Neatenstein measures yaw in the
+ * OPPOSITE (counter-clockwise) compass; expressed in the neatRacing compass
+ * the equivalent contract is the mirrored form used here. The cast below
+ * keeps this test file COMPILING before that parameter exists, so the RED
+ * failure is an assertion failure and not a type error.
+ */
+type CameraAwarePublicRuntimeFrameIndex = (
+  billboard: Parameters<typeof computePublicRuntimeFrameIndex>[0],
+  cameraWorld: readonly [number, number, number],
+  carPosition: readonly [number, number, number],
+  timeSeconds: number,
+  indexTable: Int16Array,
+  cameraForward?: readonly [number, number, number],
+) => number;
+
+const computeCameraAwareRuntimeFrameIndex =
+  computePublicRuntimeFrameIndex as unknown as CameraAwarePublicRuntimeFrameIndex;
+
+/**
+ * Returns the direction×pose lookup slot encoded by a color-major atlas
+ * frame index.
+ *
+ * The public atlas is color-major (6 accents x 8 directions x 3 poses = 144
+ * frames), so `frameIndex % (8 * 3)` is exactly the slot the runtime lookup
+ * table addresses: `directionIndex * PUBLIC_POSE_COUNT + poseIndex`.
+ */
+function directionPoseSlotOfRuntimeFrameIndex(frameIndex: number): number {
+  return frameIndex % (DIRECTION_ORDER.length * PUBLIC_POSE_COUNT);
+}
+
+/**
+ * Builds a controlled seated-spectator billboard at a fixed world position.
+ *
+ * A hand-built billboard keeps the robot-to-car bearing exact, so the
+ * camera-relative contract can be asserted without scene geometry.
+ */
+function seatedSpectatorBillboard(
+  position: readonly [number, number, number],
+): Parameters<typeof computePublicRuntimeFrameIndex>[0] {
+  return {
+    position,
+    runtimeRole: 'seated',
+    seed: 1,
+    index: 0,
+    walkDirectionIndex: 0,
+    frameId: 'front-stand',
+    scale: 1,
+    distance: 10,
+    quad: [0, 0, 1, 1],
+  };
 }
 
 /** Builds the public runtime direction×pose atlas-index lookup table. */
@@ -172,6 +393,70 @@ function buildPublicRuntimeIndexTable(
   }
 
   return table;
+}
+
+/**
+ * The public runtime role set of the re-populated crowd (AC-074 role set).
+ *
+ * The set carries the four crowd roles: the bleacher SEATED spectators, the
+ * off-bleacher WALKERS, the off-bleacher STANDING spectators, and the
+ * inner-ring MECHANICS.
+ */
+const PUBLIC_RUNTIME_ROLE_SET = ['seated', 'walker', 'standing', 'mechanic'] as const;
+
+/** One role of the public runtime role set. */
+type PublicRuntimeRole = (typeof PUBLIC_RUNTIME_ROLE_SET)[number];
+
+/**
+ * Builds a role carrier for one role of the public runtime role set.
+ *
+ * The carrier is cast through `unknown` because the resolver's role union
+ * still declares only the two bleacher roles ('seated' | 'walker'). The cast
+ * keeps THIS FILE COMPILING, so the RED failure is an assertion failure and
+ * not a type error - the same convention the camera-aware frame-index cast
+ * above uses.
+ */
+function publicRuntimeRoleCarrier(
+  role: PublicRuntimeRole,
+): Parameters<typeof resolvePublicRuntimeRole>[0] {
+  return {
+    runtimeRole: role,
+  } as unknown as Parameters<typeof resolvePublicRuntimeRole>[0];
+}
+
+/**
+ * Builds a controlled billboard that carries one public runtime role.
+ *
+ * The billboard stands 5 m north of the car, so the robot-to-car bearing is
+ * exactly -Z and the camera-relative direction is fully determined. The
+ * seed/index pair never triggers the deterministic look-around pause, so the
+ * RESOLVED ROLE alone decides the rendered pose.
+ */
+function publicRuntimeRoleBillboard(
+  role: PublicRuntimeRole,
+): Parameters<typeof computePublicRuntimeFrameIndex>[0] {
+  return {
+    position: [0, 0, 5],
+    runtimeRole: role,
+    seed: 1,
+    index: 0,
+    walkDirectionIndex: 0,
+    frameId: 'front-stand',
+    scale: 1,
+    distance: 10,
+    quad: [0, 0, 1, 1],
+  } as unknown as Parameters<typeof computePublicRuntimeFrameIndex>[0];
+}
+
+/**
+ * Returns the pose index a runtime atlas frame index renders.
+ *
+ * The public atlas is color-major (6 accents x 8 directions x 3 poses), so
+ * the pose survives the per-robot color offset in the low bits of the
+ * direction x pose slot.
+ */
+function poseIndexOfRuntimeFrameIndex(frameIndex: number): number {
+  return directionPoseSlotOfRuntimeFrameIndex(frameIndex) % PUBLIC_POSE_COUNT;
 }
 
 /** Computes a 0..360 hue angle, returning NaN for grayscale pixels. */
@@ -373,12 +658,16 @@ describe('public.sprite (P1-neatenstein-public, AC-049)', () => {
       expect(allScaled).toBe(true);
     });
 
-    it('keeps billboard world scale at 1:1 so perspective projection handles distance shrink', () => {
+    it('keeps billboard world scale at 1:2 of the voxel world scale', () => {
+      // AC-077: the world scale is the NAMED half-scale lever, and it stays
+      // DISTANCE-INDEPENDENT: the perspective shrink is handled by the shared
+      // focal/distance projection, not by a per-distance scale factor.
       const near = computeBillboardScale(10);
       const far = computeBillboardScale(200);
 
-      expect(near).toBeCloseTo(1, 6);
-      expect(far).toBeCloseTo(1, 6);
+      expect(near).toBe(NEATRACING_PUBLIC_BILLBOARD_WORLD_SCALE);
+      expect(far).toBe(NEATRACING_PUBLIC_BILLBOARD_WORLD_SCALE);
+      expect(NEATRACING_PUBLIC_BILLBOARD_WORLD_SCALE * 2).toBe(1);
     });
   });
 
@@ -423,22 +712,29 @@ describe('public.sprite perspective scale (P1-sprite-perspective-scale, AC-054)'
     expect(billboardScreenRatio).toBeCloseTo(voxelScreenRatio, 6);
   });
 
-  it('matches the absolute projected size of a same-world-size voxel', () => {
+  it('renders at exactly half the pre-14L projected size of a same-world-size voxel', () => {
+    // AC-054 keeps the RATIO contract (the test above), while AC-077
+    // SUPERSEDES the old ABSOLUTE 1:1 clause: the crowd sprite is HALF the
+    // world size of the same pixel count, so the projected size is exactly
+    // HALF the pre-14L size. The factor is the NAMED lever, never a literal.
     const atlas = loadPublicSpriteAtlas();
     const frame = atlas.frames[0]!;
-    const worldPixelScale = 0.05;
+    const worldPixelScale = NEATRACING_BILLBOARD_WORLD_PIXEL_SCALE_M;
     const fovDegrees = 60;
     const focal = 1 / Math.tan((fovDegrees * Math.PI) / 360);
     const distance = 25;
 
-    const voxelWorldWidth = frame.width * worldPixelScale;
-    const voxelScreenWidth = voxelWorldWidth * focal / distance;
+    const preHalvedWorldWidth = frame.width * worldPixelScale;
+    const preHalvedScreenWidth = preHalvedWorldWidth * focal / distance;
 
     const billboardWorldWidth =
       frame.width * worldPixelScale * computeBillboardScale(distance);
     const billboardScreenWidth = billboardWorldWidth * focal / distance;
 
-    expect(billboardScreenWidth).toBeCloseTo(voxelScreenWidth, 6);
+    expect(billboardScreenWidth).toBeCloseTo(
+      preHalvedScreenWidth * NEATRACING_PUBLIC_BILLBOARD_WORLD_SCALE,
+      6,
+    );
   });
 });
 
@@ -654,45 +950,106 @@ describe('public.sprite 8-direction frames and look-at-car gaze (P1-sprite-direc
       expect(frame0Again).toBe(frame0);
       });
 
-      it('makes bleacher spectators face the camera/car', () => {
+      it('recomputes the seated spectator frame when the camera heading changes', () => {
     const atlas = loadPublicSpriteAtlas();
+    const table = buildPublicRuntimeIndexTable(atlas);
     const billboards = buildPublicBillboards(FIXTURE, FIXTURE_CAMERA, atlas);
     const props = buildRightWorldProps(FIXTURE);
     const bleachers = props.filter((prop) => prop.kind === 'bleacher');
 
     expect(bleachers.length).toBeGreaterThan(0);
 
-    const seatedBillboards = billboards.filter((billboard) => {
-      const frame = atlas.frames.find(
-        (candidate) => candidate.id === billboard.frameId,
-      );
-      if (!frame) {
-        return false;
-      }
-      const [halfWidth, halfDepth] = billboardHalfSize(frame, billboard.distance);
-      const [bx, , bz] = billboard.position;
-
-      return bleachers.some((bleacher) => {
-        const [pHx, , pHz] = resolvePropHalfSize(bleacher.kind);
-        const [px, , pz] = bleacher.position;
-
-        return aabbsOverlapXY(bx, bz, halfWidth, halfDepth, px, pz, pHx, pHz);
-      });
-    });
+    const seatedBillboards = billboards.filter(
+      (billboard) => billboard.runtimeRole === 'seated',
+    );
 
     expect(seatedBillboards.length).toBeGreaterThan(0);
 
-    const allFacingCamera = seatedBillboards.every((billboard) => {
-      const actual = directionFromPublicFrameId(billboard.frameId);
-      const expected = expectedLookDirection(
-        FIXTURE_CAMERA.position,
-        billboard.position,
-      );
+    // Same camera position and same car bearing, two different camera
+    // headings: a camera-relative frame index MUST react to the heading.
+    const spectator = seatedBillboards[0]!;
+    const frameFacingNorth = computeCameraAwareRuntimeFrameIndex(
+      spectator,
+      FIXTURE_CAMERA.position,
+      FIXTURE_CAR_POSITION,
+      0,
+      table,
+      [0, 0, 1],
+    );
+    const frameFacingEast = computeCameraAwareRuntimeFrameIndex(
+      spectator,
+      FIXTURE_CAMERA.position,
+      FIXTURE_CAR_POSITION,
+      0,
+      table,
+      [1, 0, 0],
+    );
 
-      return actual === expected;
-    });
+    expect(frameFacingNorth).not.toBe(frameFacingEast);
+  });
 
-    expect(allFacingCamera).toBe(true);
+  it('renders a seated spectator facing the camera when the camera heading is north (AC-068, RED-A)', () => {
+    const atlas = loadPublicSpriteAtlas();
+    const table = buildPublicRuntimeIndexTable(atlas);
+    // Hand-built fixture: the spectator sits 5 m north of the car, so the
+    // robot-to-car bearing is exactly -Z (yaw = PI) and the expected
+    // camera-relative direction is fully determined instead of incidental.
+    const spectator = seatedSpectatorBillboard([0, 0, 5]);
+    const cameraForwardNorth: readonly [number, number, number] = [0, 0, 1];
+    const cameraForwardEast: readonly [number, number, number] = [1, 0, 0];
+
+    const frameFacingNorth = computeCameraAwareRuntimeFrameIndex(
+      spectator,
+      FIXTURE_CAMERA.position,
+      FIXTURE_CAR_POSITION,
+      0,
+      table,
+      cameraForwardNorth,
+    );
+    const frameFacingEast = computeCameraAwareRuntimeFrameIndex(
+      spectator,
+      FIXTURE_CAMERA.position,
+      FIXTURE_CAR_POSITION,
+      0,
+      table,
+      cameraForwardEast,
+    );
+
+    // AC-068: the frame index is CAMERA-RELATIVE. Direction index 0
+    // ('front') renders the sprite FACING the camera, so the conversion is
+    // the neatRacing-compass form of the canonical Neatenstein rule
+    // `relativeYaw = facingYaw - cameraYaw + PI`
+    // (examples/neatenstein/browser-entry/renderer/sprites.ts:154-156 states
+    // the mirrored `cameraYaw + PI - facingYaw` because Neatenstein measures
+    // yaw in the opposite compass).
+    // Here the spectator looks back at the camera along the camera axis, so
+    // a north-looking camera MUST see direction index 0.
+    expect(
+      directionOfRuntimeFrameIndex(atlas, frameFacingNorth),
+    ).toBe(
+      expectedCameraRelativeDirection(
+        cameraForwardNorth,
+        spectator.position,
+        FIXTURE_CAR_POSITION,
+      ),
+    );
+    expect(directionOfRuntimeFrameIndex(atlas, frameFacingNorth)).toBe(
+      'front',
+    );
+    // The atlas is color-major (6 accents x 8 directions x 3 poses), so the
+    // direction x pose slot survives the per-robot color offset in the low
+    // bits: slot 0 is direction 0 with the stand pose.
+    expect(directionPoseSlotOfRuntimeFrameIndex(frameFacingNorth)).toBe(0);
+    // Two camera headings over the SAME car bearing: the rendered direction
+    // must differ, by exactly 2 atlas steps (90 deg) for a 90 deg camera
+    // rotation, and the frame indices must differ too.
+    expect(
+      directionStepDistance(
+        directionOfRuntimeFrameIndex(atlas, frameFacingNorth),
+        directionOfRuntimeFrameIndex(atlas, frameFacingEast),
+      ),
+    ).toBe(2);
+    expect(frameFacingNorth).not.toBe(frameFacingEast);
   });
 
   it('exports a helper to animate a slow two-step walk cycle', () => {
@@ -715,6 +1072,226 @@ describe('public.sprite 8-direction frames and look-at-car gaze (P1-sprite-direc
     }
   });
 });
+
+describe(
+  'public.sprite camera-relative spectator facing (P1-crowd-facing-relative, AC-068)',
+  () => {
+    it('resolves the build-time seated frame to the front frame for a spectator directly in front of a north-looking camera', () => {
+      const atlas = loadPublicSpriteAtlas();
+      const billboards = buildPublicBillboards(FIXTURE, FIXTURE_CAMERA, atlas);
+      const spectator = billboards.find(
+        (billboard) => billboard.runtimeRole === 'seated',
+      );
+
+      if (!spectator) {
+        throw new Error('no seated spectator billboard was built');
+      }
+
+      const [spectatorX, , spectatorZ] = spectator.position;
+      // The camera is placed due south of that spectator and looks north
+      // (+Z), so the spectator looks straight back at the camera and must
+      // resolve to the 'front' frame (direction index 0).
+      const cameraBehindSpectator = {
+        position: [spectatorX, 2, spectatorZ - 10] as const,
+        forward: [0, 0, 1] as const,
+        right: [1, 0, 0] as const,
+        near: 0.1,
+        far: 1000,
+        fovDegrees: 60,
+      } as const;
+      const rebuilt = buildPublicBillboards(
+        FIXTURE,
+        cameraBehindSpectator,
+        atlas,
+      );
+      const rebuiltSpectator = rebuilt.find(
+        (billboard) =>
+          billboard.runtimeRole === 'seated' &&
+          billboard.position[0] === spectatorX &&
+          billboard.position[2] === spectatorZ,
+      );
+
+      if (!rebuiltSpectator) {
+        throw new Error('the rebuilt scene lost the seated spectator');
+      }
+
+      expect(rebuiltSpectator.frameId).toBe('front-stand');
+    });
+
+    it('rotates the build-time seated frame by 90 degrees when the camera heading rotates', () => {
+      const atlas = loadPublicSpriteAtlas();
+      const northBillboards = buildPublicBillboards(FIXTURE, FIXTURE_CAMERA, atlas);
+      const eastBillboards = buildPublicBillboards(
+        FIXTURE,
+        { ...FIXTURE_CAMERA, forward: [1, 0, 0] as const },
+        atlas,
+      );
+      const northSpectator = northBillboards.find(
+        (billboard) => billboard.runtimeRole === 'seated',
+      );
+      const eastSpectator = eastBillboards.find(
+        (billboard) => billboard.runtimeRole === 'seated',
+      );
+
+      if (!northSpectator || !eastSpectator) {
+        throw new Error('no seated spectator billboard was built');
+      }
+
+      // Same camera position and same car bearing, two camera headings: the
+      // build-time frame must rotate with the heading, by exactly 2 atlas
+      // steps (90 degrees) for a 90 degrees camera rotation.
+      expect(
+        directionStepDistance(
+          directionFromPublicFrameId(northSpectator.frameId),
+          directionFromPublicFrameId(eastSpectator.frameId),
+        ),
+      ).toBe(2);
+    });
+
+    it('agrees with the build-time frame id when the car sits at the camera position', () => {
+      const atlas = loadPublicSpriteAtlas();
+      const table = buildPublicRuntimeIndexTable(atlas);
+      const billboards = buildPublicBillboards(FIXTURE, FIXTURE_CAMERA, atlas);
+      const spectator = billboards.find(
+        (billboard) => billboard.runtimeRole === 'seated',
+      );
+
+      if (!spectator) {
+        throw new Error('no seated spectator billboard was built');
+      }
+
+      // With the car at the camera position, the runtime camera-relative
+      // conversion must reproduce the static build-time frame, so the
+      // sprite never flips between the built frame and the drawn frame.
+      const runtimeIndex = computeCameraAwareRuntimeFrameIndex(
+        spectator,
+        FIXTURE_CAMERA.position,
+        FIXTURE_CAMERA.position,
+        0,
+        table,
+        FIXTURE_CAMERA.forward,
+      );
+
+      expect(directionOfRuntimeFrameIndex(atlas, runtimeIndex)).toBe(
+        directionFromPublicFrameId(spectator.frameId),
+      );
+    });
+
+    it('falls back to the camera-to-car bearing when no camera heading is supplied', () => {
+      const atlas = loadPublicSpriteAtlas();
+      const table = buildPublicRuntimeIndexTable(atlas);
+      // Legacy five-argument call: the camera heading falls back to the
+      // camera->car bearing (+Z here), so the spectator 5 m north of the car
+      // looks back at the camera and resolves to the 'front' frame.
+      const frameIndex = computePublicRuntimeFrameIndex(
+        seatedSpectatorBillboard([0, 0, 5]),
+        FIXTURE_CAMERA.position,
+        FIXTURE_CAR_POSITION,
+        0,
+        table,
+      );
+
+      expect(directionOfRuntimeFrameIndex(atlas, frameIndex)).toBe('front');
+    });
+
+    it('renders a spectator facing the camera screen-left as the left frame (AC-068, lateral handedness)', () => {
+      const atlas = loadPublicSpriteAtlas();
+      const table = buildPublicRuntimeIndexTable(atlas);
+      // The spectator sits 5 m north of the car, so it looks back due south
+      // (-Z). The neatRacing camera right axis is (-forwardZ, 0, forwardX),
+      // so a camera looking toward +X has its screen-right on +Z and sees
+      // the south-facing spectator on its screen-LEFT, while a camera
+      // looking toward -X has its screen-right on -Z and sees the same
+      // spectator on its screen-RIGHT.
+      const spectator = seatedSpectatorBillboard([0, 0, 5]);
+      const frameLookingEast = computeCameraAwareRuntimeFrameIndex(
+        spectator,
+        FIXTURE_CAMERA.position,
+        FIXTURE_CAR_POSITION,
+        0,
+        table,
+        [1, 0, 0],
+      );
+      const frameLookingWest = computeCameraAwareRuntimeFrameIndex(
+        spectator,
+        FIXTURE_CAMERA.position,
+        FIXTURE_CAR_POSITION,
+        0,
+        table,
+        [-1, 0, 0],
+      );
+
+      expect(directionOfRuntimeFrameIndex(atlas, frameLookingEast)).toBe(
+        'left',
+      );
+      expect(directionOfRuntimeFrameIndex(atlas, frameLookingWest)).toBe(
+        'right',
+      );
+    });
+
+    it('resolves the build-time seated frame to the lateral stand frames (AC-068, lateral handedness)', () => {
+      const atlas = loadPublicSpriteAtlas();
+      const billboards = buildPublicBillboards(FIXTURE, FIXTURE_CAMERA, atlas);
+      const spectator = billboards.find(
+        (billboard) => billboard.runtimeRole === 'seated',
+      );
+
+      if (!spectator) {
+        throw new Error('no seated spectator billboard was built');
+      }
+
+      const [spectatorX, , spectatorZ] = spectator.position;
+      // The camera is placed due south of that spectator, so the spectator
+      // looks straight back at the camera (due south, -Z). The camera right
+      // axis is (-forwardZ, 0, forwardX): a camera looking toward +X sees
+      // the spectator on its screen-LEFT and a camera looking toward -X sees
+      // the same spectator on its screen-RIGHT.
+      const cameraLookingEast = {
+        position: [spectatorX, 2, spectatorZ - 10] as const,
+        forward: [1, 0, 0] as const,
+        right: [0, 0, 1] as const,
+        near: 0.1,
+        far: 1000,
+        fovDegrees: 60,
+      } as const;
+      const cameraLookingWest = {
+        position: [spectatorX, 2, spectatorZ - 10] as const,
+        forward: [-1, 0, 0] as const,
+        right: [0, 0, -1] as const,
+        near: 0.1,
+        far: 1000,
+        fovDegrees: 60,
+      } as const;
+      const eastSpectator = buildPublicBillboards(
+        FIXTURE,
+        cameraLookingEast,
+        atlas,
+      ).find(
+        (billboard) =>
+          billboard.runtimeRole === 'seated' &&
+          billboard.position[0] === spectatorX &&
+          billboard.position[2] === spectatorZ,
+      );
+      const westSpectator = buildPublicBillboards(
+        FIXTURE,
+        cameraLookingWest,
+        atlas,
+      ).find(
+        (billboard) =>
+          billboard.runtimeRole === 'seated' &&
+          billboard.position[0] === spectatorX &&
+          billboard.position[2] === spectatorZ,
+      );
+
+      if (!eastSpectator || !westSpectator) {
+        throw new Error('the rebuilt scene lost the seated spectator');
+      }
+
+      expect(eastSpectator.frameId).toBe('left-stand');
+      expect(westSpectator.frameId).toBe('right-stand');
+    });
+  },
+);
 
 describe('public.sprite neon palette color diversity (P1-sprite-directional-walk-look, AC-062)', () => {
   it('includes at least three distinct neon accent hues across the public atlas', () => {
@@ -902,6 +1479,168 @@ describe(
       const nonNullHues = hues.filter((hue): hue is number => hue !== null);
       expect(nonNullHues.length).toBeGreaterThan(0);
       expect(new Set(nonNullHues).size).toBeGreaterThanOrEqual(2);
+    });
+  },
+);
+
+describe(
+  'public.sprite public runtime role set (P1-crowd2-red-contracts, AC-074 role set)',
+  () => {
+    it('resolves the seated, walker, standing and mechanic roles through the single role resolver', () => {
+      const resolvedRoles = PUBLIC_RUNTIME_ROLE_SET.map((role) =>
+        resolvePublicRuntimeRole(publicRuntimeRoleCarrier(role)),
+      );
+
+      expect(resolvedRoles).toEqual([...PUBLIC_RUNTIME_ROLE_SET]);
+    });
+
+    it('renders the seated, standing and mechanic roles on the stand pose', () => {
+      const atlas = loadPublicSpriteAtlas();
+      const table = buildPublicRuntimeIndexTable(atlas);
+      const cameraForward: readonly [number, number, number] = [0, 0, 1];
+
+      const seatedPose = poseIndexOfRuntimeFrameIndex(
+        computePublicRuntimeFrameIndex(
+          publicRuntimeRoleBillboard('seated'),
+          FIXTURE_CAMERA.position,
+          FIXTURE_CAR_POSITION,
+          0,
+          table,
+          cameraForward,
+        ),
+      );
+      const standingPose = poseIndexOfRuntimeFrameIndex(
+        computePublicRuntimeFrameIndex(
+          publicRuntimeRoleBillboard('standing'),
+          FIXTURE_CAMERA.position,
+          FIXTURE_CAR_POSITION,
+          0,
+          table,
+          cameraForward,
+        ),
+      );
+      const mechanicPose = poseIndexOfRuntimeFrameIndex(
+        computePublicRuntimeFrameIndex(
+          publicRuntimeRoleBillboard('mechanic'),
+          FIXTURE_CAMERA.position,
+          FIXTURE_CAR_POSITION,
+          0,
+          table,
+          cameraForward,
+        ),
+      );
+
+      // AC-074 (role set): the standing spectators and the inner-ring
+      // mechanics are STANDING agents, so the frame-index helper must render
+      // them on the public stand frames instead of the walk cycle. The
+      // helper resolves the role through resolvePublicRuntimeRole, so the
+      // resolver and the helper must agree on EVERY role of the set.
+      expect(seatedPose).toBe(PUBLIC_POSE_INDEX_STAND);
+      expect(standingPose).toBe(PUBLIC_POSE_INDEX_STAND);
+      expect(mechanicPose).toBe(PUBLIC_POSE_INDEX_STAND);
+    });
+
+    it('renders the walker role on the slow walk-cycle pose', () => {
+      const atlas = loadPublicSpriteAtlas();
+      const table = buildPublicRuntimeIndexTable(atlas);
+      const cameraForward: readonly [number, number, number] = [0, 0, 1];
+
+      const walkerPose = poseIndexOfRuntimeFrameIndex(
+        computePublicRuntimeFrameIndex(
+          publicRuntimeRoleBillboard('walker'),
+          FIXTURE_CAMERA.position,
+          FIXTURE_CAR_POSITION,
+          0,
+          table,
+          cameraForward,
+        ),
+      );
+
+      // AC-074 (role set): the walkers keep their slow walk cycle, so the
+      // walker role is the ONLY role of the set that renders a walk frame.
+      expect(walkerPose).toBe(PUBLIC_POSE_INDEX_WALK1);
+    });
+  },
+);
+
+describe(
+  'public.sprite crowd sprite world scale (P1-sprite-scale-red-contracts, AC-077, RED-A)',
+  () => {
+    it('exports the named NEATRACING_PUBLIC_BILLBOARD_WORLD_SCALE lever as 0.5 (RED-A)', () => {
+      // AC-077: the halving has EXACTLY ONE source of truth - a NAMED
+      // exported constant. The assertion reads the module namespace, so a
+      // missing export fails THIS contract instead of breaking the import of
+      // the whole test file.
+      expect(publicSprite).toHaveProperty(
+        'NEATRACING_PUBLIC_BILLBOARD_WORLD_SCALE',
+        0.5,
+      );
+    });
+
+    it('returns exactly the named world scale for every camera distance (RED-A)', () => {
+      // The scale stays DISTANCE-INDEPENDENT: the perspective shrink is the
+      // shared focal/distance projection, so the returned value IS the named
+      // constant. The equality is EXACT (toBe, not toBeCloseTo): a
+      // near-match on the pre-14L 1.0 must not pass.
+      expect(computeBillboardScale(5)).toBe(0.5);
+      expect(computeBillboardScale(50)).toBe(0.5);
+      expect(computeBillboardScale(0.1)).toBe(0.5);
+    });
+  },
+);
+
+describe(
+  'public.sprite crowd billboard placement footprint (P1-sprite-scale-red-contracts, AC-077, RED-B)',
+  () => {
+    it('exports the shared meters-per-pixel constant NEATRACING_BILLBOARD_WORLD_PIXEL_SCALE_M (RED-B)', () => {
+      // AC-077: the meters-per-pixel constant is the SHARED meter scale of
+      // the crowd sprites. It is exported so the right-world pass can import
+      // it instead of keeping its own copy, and so a footprint contract can
+      // READ it instead of hard-coding 0.05.
+      expect(publicSprite).toHaveProperty(
+        'NEATRACING_BILLBOARD_WORLD_PIXEL_SCALE_M',
+        0.05,
+      );
+    });
+
+    it('reports a 4.8 m world footprint (a 2.4 m half-extent) for a 192x192 crowd frame (RED-B)', () => {
+      // The crowd frames are 192 x 192 px, so the PRE-14L footprint was
+      // 192 * 0.05 = 9.6 m wide and tall. The halved footprint is
+      // 192 * 0.5 * 0.05 = 4.8 m, which is a 2.4 m half-extent on each axis.
+      // The square frame keeps its aspect ratio, so the world WIDTH follows
+      // the SAME factor as the world HEIGHT.
+      const atlas = loadPublicSpriteAtlas();
+      const frame = atlas.frames[0]!;
+      const [halfWidth, halfHeight] = billboardHalfSize(frame, 20);
+
+      expect(frame.width).toBe(192);
+      expect(halfWidth).toBeCloseTo(2.4, 6);
+      expect(halfHeight).toBeCloseTo(2.4, 6);
+    });
+
+    it('derives the crowd footprint from the named lever and the shared meters-per-pixel constant (RED-B)', () => {
+      // The footprint is read from the NAMED world-scale lever and the
+      // SHARED meters-per-pixel constant, so the placement footprint and the
+      // rendered quad can never disagree and a future meter-scale change
+      // moves the reported footprint with it.
+      const atlas = loadPublicSpriteAtlas();
+      const frame = atlas.frames[0]!;
+      const worldScale = readNumericModuleExport(
+        'NEATRACING_PUBLIC_BILLBOARD_WORLD_SCALE',
+      );
+      const metersPerPixel = readNumericModuleExport(
+        'NEATRACING_BILLBOARD_WORLD_PIXEL_SCALE_M',
+      );
+      const [halfWidth, halfHeight] = crowdBillboardWorldHalfSize(frame, 20);
+
+      expect(halfWidth).toBeCloseTo(
+        (frame.width * worldScale * metersPerPixel) / 2,
+        6,
+      );
+      expect(halfHeight).toBeCloseTo(
+        (frame.height * worldScale * metersPerPixel) / 2,
+        6,
+      );
     });
   },
 );

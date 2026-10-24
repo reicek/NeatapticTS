@@ -1,8 +1,8 @@
 # Copilot Instructions — NeatapticTS
 
-## CRITICAL RULE — NEVER RUN GIT
+## CRITICAL RULE — GIT: READ-ONLY INSPECTION ALLOWED, MUTATION BANNED
 
-**NEVER run ANY git command.** No `git checkout`, `git reset`, `git revert`, `git stash`, `git clean`, `git add`, `git commit`, `git push`, or any other git operation. Git is UNINSTALLED. Running git commands has destroyed hours of work by reverting files. All file changes must use the `edit` or `create` tools ONLY. If you need to see file contents, use the `view` tool. This rule applies to ALL agents and ALL operations.
+**NEVER run a mutating git command.** Read-only inspection is ALWAYS allowed: `git status [-v]`, `git diff`, `git log`, `git show`, `git blame`, `git remote -v`, `git rev-parse`, `git ls-files`; `--no-pager` is permitted (e.g. `git --no-pager log`). All mutating commands stay BANNED: `git add`, `git commit`, `git push`, `git pull`, `git fetch`, `git checkout`, `git reset`, `git restore`, `git revert`, `git stash`, `git clean`, `git merge`, `git rebase`, `git apply`, and any other command that mutates the worktree, index, refs, or remote. Mutating git is UNINSTALLED here — running it has destroyed hours of work by reverting files. All file changes must use the `edit` or `create` tools ONLY. If you need to see file contents, use the `view` tool. Read-only inspection is EVIDENCE ONLY and never a substitute for the write path. This rule applies to ALL agents and ALL operations.
 
 ## Identity
 
@@ -109,6 +109,23 @@ validation commands), removals, and the next boundary to resume from. A stale
 plan poisons every subsequent RAG dispatch. Full policy in the `execute` skill
 Section 5.9. Under pragmatic mode the update is simplified but not skipped.
 
+## Orchestration Doctrine
+
+Five binding rules for every dispatch. Violating one is a workflow defect,
+not a style choice. Full text: `execute` skill §9.0; audited by the
+`routing-optimization-policy` skill.
+
+1. **Thin scope** — one objective, minimum file set; no two live dispatches
+   own the same file.
+2. **Parallel scouts** — independent read-only scouts run in parallel, not
+   sequentially.
+3. **Central merge** — findings merge at one point: the orchestrator. No
+   agent-to-agent chaining.
+4. **Parallel executors** — parallel writes only over non-overlapping file
+   sets; overlapping sets are serialized.
+5. **Time-budget exit** — an agent over budget stops and returns a gap
+   report for a fresh takeover.
+
 ## Background Agent Polling Interval
 
 When waiting for background agents, use `read_agent` with `timeout: 1800` (30
@@ -125,6 +142,10 @@ This interval compensates for slow server speeds and gives agents time to clear
 complex work without wasting orchestrator turns on frequent polling. Full
 policy in the `execute` skill Section 5.5.
 
+When an agent is static across multiple polls, it has exceeded its time
+budget: stop it, capture its gap report, and dispatch a **fresh** instance
+seeded with that report (Doctrine Rule 5).
+
 ---
 
 ## Policy References — Canonical Skill Homes
@@ -136,6 +157,7 @@ This file is the always-loaded routing facade. Detailed playbooks live in canoni
 - **Code standards (ES2023, module architecture, JSDoc, validation checklist)** → `implementation-standards` skill.
 - **Documentation standards (tone model, generated READMEs, CI docs)** → `educational-docs` skill.
 - **Agent/skill frontmatter, routing-table freshness, tier-graph rules** → `agent-frontmatter-standards` and `routing-optimization-policy` skills.
+- **Orchestration doctrine (thin scope, parallel scouts, central merge, parallel executors, time-budget exit)** → `execute` skill §9.0.
 - **TDD/red-test contracts and test-fix workflows** → `red-test-contracts` and `test-fix-workflow` skills.
 - **Reproducibility, checkpointing, workers, hybrid training** → domain skills (`reproducibility-contracts`, `checkpointing-persistence`, `worker-inference-transport`, `hybrid-training-interop`).
 

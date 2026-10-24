@@ -37,6 +37,7 @@
  */
 
 import {
+  computeLongitudinalTractionLoss,
   computeNextLateralVelocity,
   computeSlipAngle,
   NEATRACING_DRIFT_VISUAL_YAW_GAIN_RAD,
@@ -332,8 +333,12 @@ export function createInitialPhysicsCarState(
  *    `[0, maxSpeed]`;
  * 4. integrate the lateral drift velocity through the arcade drift model
  *    (AC-047, spec §5.2 drift amendment): TP-02 outward push with a minimum
- *    speed threshold, countersteer recovery, grip falloff curve, bounded
- *    LD-15 slip angle via `atan2`, and a visual-only arcade yaw offset;
+ *    speed threshold, countersteer recovery, the proportional tire traction
+ *    factor, bounded LD-15 slip angle via `atan2`, and a visual-only arcade
+ *    yaw offset;
+ * 4b. subtract the longitudinal traction loss (AC-079): a sliding tire
+ *    cannot hold the forward speed, so a full-speed turn is scrubbed down
+ *    instead of being taken at the whole top speed;
  * 5. translate along the velocity direction (heading + slipAngle) so the
  *    drift arc bends the path;
  * 6. count the tick.
@@ -391,7 +396,23 @@ export function stepPhysics(
       centrifugalMultiplier: NEATRACING_PHYSICS_CENTRIFUGAL_MULTIPLIER,
     },
   );
-  const nextSlipAngle = computeSlipAngle(nextLateralVelocity, nextSpeed);
+  // Step 4b: the sliding tires lose the forward traction they would need
+  // to hold their speed, so the longitudinal traction loss (AC-079) is
+  // subtracted from the tick-end speed. The loss reads the tick-start
+  // slip, like every other tick-start read in this integrator.
+  const nextSpeedAfterTraction = Math.max(
+    0,
+    nextSpeed -
+      computeLongitudinalTractionLoss(
+        state.slipAngle,
+        nextSpeed,
+        speedPercent,
+      ) * NEATRACING_PHYSICS_FIXED_TIMESTEP_SECONDS,
+  );
+  const nextSlipAngle = computeSlipAngle(
+    nextLateralVelocity,
+    nextSpeedAfterTraction,
+  );
   const nextDriftYawOffset =
     nextSlipAngle * NEATRACING_DRIFT_VISUAL_YAW_GAIN_RAD;
 
@@ -404,15 +425,15 @@ export function stepPhysics(
     x:
       state.x +
       Math.cos(velocityHeading) *
-        nextSpeed *
+        nextSpeedAfterTraction *
         NEATRACING_PHYSICS_FIXED_TIMESTEP_SECONDS,
     y:
       state.y +
       Math.sin(velocityHeading) *
-        nextSpeed *
+        nextSpeedAfterTraction *
         NEATRACING_PHYSICS_FIXED_TIMESTEP_SECONDS,
     heading: nextHeading,
-    speed: nextSpeed,
+    speed: nextSpeedAfterTraction,
     yawRate: yawRatePerTick,
     slipAngle: nextSlipAngle,
     lateralVelocity: nextLateralVelocity,

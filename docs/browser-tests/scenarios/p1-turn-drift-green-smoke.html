@@ -56,7 +56,6 @@ html, body { margin: 0; padding: 0; height: 100%; background: #05070d; overflow:
   var carLitModelsThisFrame = [];
   var litDrawBufferIdsThisFrame = [];
   var wheelBufferIdsSeen = new Map();
-  var wheelBufferId = null;
   var gridProgram = null;
   var trackProgram = null;
   var bufferDataMap = new Map();
@@ -65,6 +64,86 @@ html, body { margin: 0; padding: 0; height: 100%; background: #05070d; overflow:
   var tireGradientApplySequence = [];
   var currentTireGradientApply = 0;
   var litApplyThisFrame = [];
+  // Parallel to litDrawBufferIdsThisFrame: true when the lit draw came from
+  // the CAR lit program. The car lit program is the only program that
+  // declares uApplyTireGradient (the track lit program and the right-world
+  // prop program do not), so this flag isolates the car draws inside the
+  // shared lit-draw stream.
+  var litDrawIsCarLitThisFrame = [];
+  // The uApplyTireGradient values of the CAR lit draws only, in draw order.
+  // The lit stream is shared by the track, the right-world props and the
+  // car, so the tire-gradient contract must be read from the car draws
+  // alone: per car and frame the pattern is [0, 1, 1, 1, 1] (body mesh
+  // without the gradient, four wheel meshes with it).
+  var carLitApplySequence = [];
+  // AC-078 measurement state: the tire-to-body relative yaw and the
+  // tire-to-body offset heading, sampled at rest (the baseline) and during
+  // the high-speed drift phase. The tires are ATTACHED, so both must stay
+  // constant while the body yaws into the slide.
+  var relativeYawA = [];
+  var relativeYawWA = [];
+  var relativeOffsetA = [];
+  var relativeOffsetWA = [];
+  var maxSpeedKmhDrift = 0;
+  var maxSpeedKmhAccel = 0;
+  // AC-078: the peak drift-angle proxy (the body's rendered yaw versus the
+  // direction of travel) plus the rolling body samples used to derive the
+  // travel direction from a multi-sample chord.
+  var maxDriftProxyRad = 0;
+  var driftProxyFrameCount = 0;
+  var driftProxyRunFrames = 0;
+  var driftProxyRunMaxFrames = 0;
+  var driftProxySamples = [];
+  // AC-078 tolerance: the attached tire must keep the same relative pose to
+  // the body while the body yaws into the slide. The float32 matrix noise is
+  // ~1e-5 rad, so 0.002 rad is a tight but safe band (the drift yaw reaches
+  // several hundredths of a radian).
+  var TIRE_YAW_FOLLOW_TOLERANCE_RAD = 0.002;
+  // AC-079: the tires must actually LOSE TRACTION proportionally during a
+  // full-speed drift. The arcade top speed is 89 m/s (~320 km/h); the old
+  // model held that whole top speed through any turn because the tires
+  // never gave up any forward grip. A sustained hard turn that stays below
+  // this ceiling proves the forward grip was spent on the slide.
+  var TRACTION_LOSS_MAX_SPEED_KMH = 290;
+  // The arcade drift only engages above 15 m/s (54 km/h), so the scenario
+  // must reach that speed for the tire-yaw contract to be exercised at all.
+  var DRIFT_MIN_SPEED_KMH = 54;
+  // AC-078 scenario gate: the phase before the drift turn accelerates on the
+  // road (throttle only) until the HUD speed passes this target, so the W+A
+  // phase starts ABOVE the drift threshold instead of from a standstill.
+  var ACCEL_TARGET_SPEED_KMH = 90;
+  // Frame budget for the speed-gated acceleration phase. The gate is
+  // speed-driven, so the budget only bounds a stalled or off-road run.
+  var ACCEL_MAX_FRAMES = 600;
+  // The track lit VBO is interleaved position(3) + color(3) + normalAxis(1)
+  // = 7 floats per vertex (NEATRACING_TRACK_LIT_FLOATS_PER_VERTEX in
+  // engine/passes/track.pass.ts). The fixture must read the same stride.
+  var TRACK_LIT_FLOATS_PER_VERTEX = 7;
+  // AC-078 drift proxy gate: the body's rendered yaw is compared with the
+  // direction of travel. A sliding car travels at a different angle than it
+  // points, so a proxy above this threshold proves the drift is engaged (the
+  // speed gate alone does not prove a slide). The gate also requires a
+  // CONSECUTIVE run of at least DRIFT_PROXY_MIN_FRAMES frames above the
+  // threshold, so a single-frame transient cannot decide the phase.
+  var DRIFT_PROXY_MIN_RAD = 0.01;
+  // Minimum number of CONSECUTIVE drift-phase frames that must reach
+  // DRIFT_PROXY_MIN_RAD for the drift engagement to count (a sustained
+  // slide, not a spike).
+  var DRIFT_PROXY_MIN_FRAMES = 3;
+  // AC-078 drift proxy window: the travel direction is derived from a chord
+  // across this many body samples and is compared against the MEAN OF THE
+  // TWO ENDPOINT yaws of the same window. The chord of a circular arc is
+  // parallel to the tangent at the arc's mid-angle, and the heading is
+  // linear in time for a constant turn rate, so the endpoint mean IS the
+  // heading at the chord's temporal mid-point: the mid-window sampling lag
+  // cancels EXACTLY for any per-frame tick distribution (the host releases
+  // 0-4 simulation ticks per rendered frame). The residual is bounded by the
+  // yaw-acceleration term (alpha * T^2 / 8 over the window) plus the
+  // speed-variation term, which is <= 0.002 rad at the observed drift speed
+  // - 5x below the 0.01 rad DRIFT_PROXY_MIN_RAD gate. The scenario itself
+  // (the fixed-frame drift phase) stays render-rate dependent - that is
+  // pre-existing and out of this contract's scope.
+  var DRIFT_PROXY_WINDOW = 6;
 
   function sourceOf(program) {
     return programSources.get(program) || '';
@@ -155,7 +234,15 @@ html, body { margin: 0; padding: 0; height: 100%; background: #05070d; overflow:
         gridDraws++;
         gridProgram = currentProgram;
       }
-      if (src.indexOf('vColor = aColor;') !== -1) {
+      // The track lit program is identified by its vertex-shader marker
+      // `vAlbedo = aColor;` TOGETHER with the absence of the car-only
+      // uniforms: the car lit program emits the same `vAlbedo = aColor;`
+      // marker, so the marker alone would also match the car.
+      var isTrackLitProgram =
+        src.indexOf('vAlbedo = aColor;') !== -1 &&
+        src.indexOf('uApplyTireGradient') === -1 &&
+        src.indexOf('uModel') === -1;
+      if (isTrackLitProgram) {
         trackDraws++;
         trackProgram = currentProgram;
         if (!capturedTrackVboData) {
@@ -170,6 +257,9 @@ html, body { margin: 0; padding: 0; height: 100%; background: #05070d; overflow:
       if (src.indexOf('shadeLitSurface') !== -1) {
         litDrawBufferIdsThisFrame.push(currentArrayBuffer);
         litApplyThisFrame.push(currentTireGradientApply);
+        var isCarLit = src.indexOf('uApplyTireGradient') !== -1;
+        litDrawIsCarLitThisFrame.push(isCarLit);
+        if (isCarLit) carLitApplySequence.push(currentTireGradientApply);
       }
       return orig.apply(this, args);
     });
@@ -204,6 +294,18 @@ html, body { margin: 0; padding: 0; height: 100%; background: #05070d; overflow:
   function yawFromMatrix(m) {
     return Math.atan2(-m[2], m[0]);
   }
+  // Yaw around world up read from a model matrix's third column (the
+  // model's local +Z axis). The wheel chain ends with a spin rotation about
+  // the model depth axis, which leaves that column untouched, so this reads
+  // the tire's mount yaw without the wheel spin polluting it.
+  function yawFromMatrixColumn3(m) {
+    return Math.atan2(m[8], m[10]);
+  }
+  // Heading of a world-space XZ offset vector, in the same convention as
+  // yawFromMatrixColumn3 (atan2(x, z)).
+  function offsetAngle(dx, dz) {
+    return Math.atan2(dx, dz);
+  }
   function wrapAngle(a) {
     while (a > Math.PI) a -= 2 * Math.PI;
     while (a < -Math.PI) a += 2 * Math.PI;
@@ -225,7 +327,10 @@ html, body { margin: 0; padding: 0; height: 100%; background: #05070d; overflow:
   function analyzeTrackVbo() {
     var data = capturedTrackVboData;
     if (!data) return { ok: false, error: 'no track VBO captured' };
-    var n = data.length / 6;
+    if (data.length % TRACK_LIT_FLOATS_PER_VERTEX !== 0) {
+      return { ok: false, error: 'unexpected track VBO stride' };
+    }
+    var n = data.length / TRACK_LIT_FLOATS_PER_VERTEX;
     var minY = Infinity, maxY = -Infinity, edgeMaxY = -Infinity;
     var paintMinY = Infinity;
     var red = 0, yellow = 0, green = 0, teal = 0, neonCount = 0;
@@ -254,7 +359,33 @@ html, body { margin: 0; padding: 0; height: 100%; background: #05070d; overflow:
       for (var k = 0; k < arr.length; k++) s += arr[k];
       return s / arr.length;
     }
-    function nearestRoadDistance(x, z) {
+    // The road vertex set holds hundreds of thousands of vertices, so the
+    // exhaustive nearest-vertex scan this measurement used to run cost
+    // minutes of main-thread time per border color and blocked the renderer
+    // before the scenario could finish. A uniform grid over the same
+    // vertices answers the exact same question in linear time: the search
+    // expands ring by ring and stops as soon as the closest hit is provably
+    // closer than every cell that has not been visited yet, so the reported
+    // distance is still the true nearest road vertex distance.
+    var ROAD_GRID_CELL_M = 4;
+    var ROAD_GRID_MAX_RING = 64;
+    var roadGrid = new Map();
+    function roadGridKey(x, z) {
+      return Math.floor(x / ROAD_GRID_CELL_M) + ',' + Math.floor(z / ROAD_GRID_CELL_M);
+    }
+    function buildRoadGrid() {
+      roadGrid = new Map();
+      for (var k = 0; k < roadPoints.length; k++) {
+        var key = roadGridKey(roadPoints[k][0], roadPoints[k][1]);
+        var bucket = roadGrid.get(key);
+        if (!bucket) {
+          bucket = [];
+          roadGrid.set(key, bucket);
+        }
+        bucket.push(roadPoints[k][0], roadPoints[k][1]);
+      }
+    }
+    function exhaustiveNearestRoadDistance(x, z) {
       var best = Infinity;
       for (var k = 0; k < roadPoints.length; k++) {
         var dx = x - roadPoints[k][0];
@@ -264,13 +395,43 @@ html, body { margin: 0; padding: 0; height: 100%; background: #05070d; overflow:
       }
       return Math.sqrt(best);
     }
+    function nearestRoadDistance(x, z) {
+      if (!roadPoints.length) return Infinity;
+      var cx = Math.floor(x / ROAD_GRID_CELL_M);
+      var cz = Math.floor(z / ROAD_GRID_CELL_M);
+      var best = Infinity;
+      for (var ring = 0; ring <= ROAD_GRID_MAX_RING; ring++) {
+        for (var dx = -ring; dx <= ring; dx++) {
+          for (var dz = -ring; dz <= ring; dz++) {
+            if (ring > 0 && Math.abs(dx) !== ring && Math.abs(dz) !== ring) continue;
+            var bucket = roadGrid.get((cx + dx) + ',' + (cz + dz));
+            if (!bucket) continue;
+            for (var q = 0; q < bucket.length; q += 2) {
+              var ddx = x - bucket[q];
+              var ddz = z - bucket[q + 1];
+              var d2 = ddx * ddx + ddz * ddz;
+              if (d2 < best) best = d2;
+            }
+          }
+        }
+        // Every cell that has not been visited yet is at least `ring` cells
+        // away, so a hit closer than that cannot be beaten any more.
+        if (ring > 0 && best <= (ring - 1) * ROAD_GRID_CELL_M) return Math.sqrt(best);
+      }
+      // Fall back to the exhaustive scan so the measurement stays exact even
+      // for border vertices that sit far outside the gridded road.
+      return exhaustiveNearestRoadDistance(x, z);
+    }
     for (var i = 0; i < n; i++) {
-      var x = data[i * 6], y = data[i * 6 + 1], z = data[i * 6 + 2];
-      var r = data[i * 6 + 3], g = data[i * 6 + 4], b = data[i * 6 + 5];
+      var base = i * TRACK_LIT_FLOATS_PER_VERTEX;
+      var x = data[base], y = data[base + 1], z = data[base + 2];
+      var r = data[base + 3], g = data[base + 4], b = data[base + 5];
       minY = Math.min(minY, y); maxY = Math.max(maxY, y);
       var mx = Math.max(r, g, b);
       // Paint-colored vertices (non-matte) reveal the single-plane paint y.
-      if (mx > 0.15) {
+      // The ground slab sits at y = -0.5 and is not part of the paint layer,
+      // so only vertices at or above the paint plane are counted.
+      if (mx > 0.15 && y >= PAINT_Y_THRESHOLD) {
         paintMinY = Math.min(paintMinY, y);
       }
       if (y >= PAINT_Y_THRESHOLD && mx <= NEAR_BLACK_THRESHOLD) {
@@ -305,6 +466,7 @@ html, body { margin: 0; padding: 0; height: 100%; background: #05070d; overflow:
         edgeMaxY = Math.max(edgeMaxY, y);
       }
     }
+    buildRoadGrid();
     var greenEdgeDists = [];
     for (var gi = 0; gi < greenPoints.length; gi++) {
       greenEdgeDists.push(nearestRoadDistance(greenPoints[gi].x, greenPoints[gi].z));
@@ -367,6 +529,37 @@ html, body { margin: 0; padding: 0; height: 100%; background: #05070d; overflow:
     });
   }
 
+  // Observes frames until the predicate is satisfied or the frame budget runs
+  // out. The speed-gated acceleration phase uses it because a fixed frame
+  // budget would depend on the render rate (the fixed timestep advances the
+  // simulation in wall-clock time, not per frame), while the measured speed
+  // is render-rate independent.
+  function observeUntil(predicate, maxFrames, cb) {
+    return new Promise(function (resolve) {
+      var startGrid = gridDraws, startTrack = trackDraws;
+      var i = 0;
+      function tick() {
+        cb(i);
+        i++;
+        // The predicate is evaluated on EVERY observed frame, including the
+        // last one inside the budget, so the reported `satisfied` flag is
+        // exact (a target first reached on the final budget frame counts).
+        var satisfied = i <= maxFrames ? predicate() : false;
+        if (!satisfied && i < maxFrames) {
+          requestAnimationFrame(tick);
+        } else {
+          resolve({
+            gridDelta: gridDraws - startGrid,
+            trackDelta: trackDraws - startTrack,
+            frames: i,
+            satisfied: satisfied
+          });
+        }
+      }
+      requestAnimationFrame(tick);
+    });
+  }
+
   function readSpeed(label) {
     var t = label ? label.textContent : '';
     var m = t.match(/(\d+)/);
@@ -385,8 +578,32 @@ html, body { margin: 0; padding: 0; height: 100%; background: #05070d; overflow:
     return bestId;
   }
 
+  // The lit-draw stream is shared by the track lit program, the right-world
+  // prop program and the car lit program, so a positional index no longer
+  // identifies the car wheel draw. The car lit program is the only lit
+  // program that declares uApplyTireGradient, and that uniform is 0 for the
+  // body mesh and 1 for the wheel meshes, so the first car lit draw with
+  // the gradient enabled IS the wheel draw.
+  function pickWheelBufferIdThisFrame() {
+    for (var i = 0; i < litDrawBufferIdsThisFrame.length; i++) {
+      if (litDrawIsCarLitThisFrame[i] && litApplyThisFrame[i] > 0.5) {
+        return litDrawBufferIdsThisFrame[i];
+      }
+    }
+    return null;
+  }
+
+  // The per-frame capture arrays are parallel (buffer id, tire-gradient
+  // value, car-lit flag), so they are cleared together.
+  function resetFrameCapture() {
+    carLitModelsThisFrame.length = 0;
+    litDrawBufferIdsThisFrame.length = 0;
+    litApplyThisFrame.length = 0;
+    litDrawIsCarLitThisFrame.length = 0;
+  }
+
   function analyzeWheelShading() {
-    var id = wheelBufferId || pickWheelBufferId();
+    var id = pickWheelBufferId();
     if (!id) return { ok: false, error: 'no wheel buffer id captured' };
     var data = bufferDataMap.get(id);
     if (!data) return { ok: false, error: 'wheel buffer data missing' };
@@ -406,9 +623,14 @@ html, body { margin: 0; padding: 0; height: 100%; background: #05070d; overflow:
     var upperAvg = upperSum / upperCount;
     var lowerAvg = lowerSum / lowerCount;
 
+    // The car lit program is the ONLY lit program that declares
+    // uApplyTireGradient (the track lit program and the right-world prop
+    // program do not), so it identifies the car shader source unambiguously.
     var litSrc = '';
     programSources.forEach(function (src) {
-      if (src.indexOf('shadeLitSurface') !== -1) litSrc = src;
+      if (src.indexOf('shadeLitSurface') !== -1 && src.indexOf('uApplyTireGradient') !== -1) {
+        litSrc = src;
+      }
     });
     var fixedSpaceShader = litSrc.indexOf('uApplyTireGradient') !== -1 &&
       litSrc.indexOf('uTireGradientRadius') !== -1 &&
@@ -417,13 +639,29 @@ html, body { margin: 0; padding: 0; height: 100%; background: #05070d; overflow:
 
     // The shader uses the shared uSunDirection so the highlight follows a
     // fixed top-front light direction while the wheel spins through it.
-    var seq = litApplyThisFrame;
-    var expected = [];
-    var cars = Math.floor(seq.length / 5);
-    for (var c = 0; c < cars; c++) {
-      expected.push(0, 1, 1, 1, 1);
+    // Only the CAR lit draws carry the tire-gradient contract: the track lit
+    // program and the right-world prop program never feed
+    // uApplyTireGradient, so their draws are excluded from the sequence.
+    // Each car contributes one group of five draws - the body mesh without
+    // the gradient (0) followed by the four wheel meshes with it (1).
+    var seq = carLitApplySequence;
+    var groups = [];
+    var currentGroup = null;
+    for (var gi = 0; gi < seq.length; gi++) {
+      if (seq[gi] <= 0.5 || currentGroup === null) {
+        currentGroup = [seq[gi]];
+        groups.push(currentGroup);
+      } else {
+        currentGroup.push(seq[gi]);
+      }
     }
-    var patternOk = cars > 0 && seq.slice(0, expected.length).every(function (v, i) { return v === expected[i]; });
+    // A trailing group may be truncated when the sampling stopped between
+    // the body draw and the last wheel draw, so it is ignored.
+    if (groups.length > 0 && groups[groups.length - 1].length < 5) groups.pop();
+    var patternOk = groups.length > 0 && groups.every(function (group) {
+      return group.length === 5 &&
+        group[0] === 0 && group[1] === 1 && group[2] === 1 && group[3] === 1 && group[4] === 1;
+    });
 
     return {
       ok: true,
@@ -474,15 +712,25 @@ html, body { margin: 0; padding: 0; height: 100%; background: #05070d; overflow:
           var models = carLitModelsThisFrame.slice();
           if (models.length >= 5) {
             steerSamplesA.push(yawFromMatrix(models[1]) - yawFromMatrix(models[3]));
+            // AC-078 baseline: the rear-left tire is rigidly attached to the
+            // body, so at rest (no drift) its relative yaw and its offset
+            // heading are the constants the drift phase must preserve.
+            relativeYawA.push(
+              wrapAngle(yawFromMatrixColumn3(models[3]) - yawFromMatrixColumn3(models[0]))
+            );
+            relativeOffsetA.push(
+              wrapAngle(
+                offsetAngle(models[3][12] - models[0][12], models[3][14] - models[0][14]) -
+                yawFromMatrixColumn3(models[0])
+              )
+            );
           }
         }
-        if (litDrawBufferIdsThisFrame.length >= 5) {
-          var candidate = litDrawBufferIdsThisFrame[1];
+        var candidate = pickWheelBufferIdThisFrame();
+        if (candidate) {
           wheelBufferIdsSeen.set(candidate, (wheelBufferIdsSeen.get(candidate) || 0) + 1);
         }
-        carLitModelsThisFrame.length = 0;
-        litDrawBufferIdsThisFrame.length = 0;
-        litApplyThisFrame.length = 0;
+        resetFrameCapture();
       });
       dispatchKey('KeyA', false);
       await sleep(150);
@@ -494,19 +742,33 @@ html, body { margin: 0; padding: 0; height: 100%; background: #05070d; overflow:
             steerSamplesD.push(yawFromMatrix(models[1]) - yawFromMatrix(models[3]));
           }
         }
-        if (litDrawBufferIdsThisFrame.length >= 5) {
-          var candidate = litDrawBufferIdsThisFrame[1];
+        var candidate = pickWheelBufferIdThisFrame();
+        if (candidate) {
           wheelBufferIdsSeen.set(candidate, (wheelBufferIdsSeen.get(candidate) || 0) + 1);
         }
-        carLitModelsThisFrame.length = 0;
-        litDrawBufferIdsThisFrame.length = 0;
-        litApplyThisFrame.length = 0;
+        resetFrameCapture();
       });
       dispatchKey('KeyD', false);
       await sleep(150);
 
       var startBody = null, endBody = null;
+      // AC-078: the arcade drift only engages above 15 m/s (54 km/h), so the
+      // scenario accelerates on the road (throttle only) until the HUD speed
+      // passes the drift gate before the W+A phase starts. Without this phase
+      // the W+A phase never reaches the drift speed and the tire-yaw contract
+      // would be measured at rest (a vacuous pass).
       dispatchKey('KeyW', true);
+      var obsAccel = await observeUntil(function () {
+        return readSpeed(speedLabel) >= ACCEL_TARGET_SPEED_KMH;
+      }, ACCEL_MAX_FRAMES, function (frameIndex) {
+        var accelSpeed = readSpeed(speedLabel);
+        if (accelSpeed > maxSpeedKmhAccel) maxSpeedKmhAccel = accelSpeed;
+        var candidate = pickWheelBufferIdThisFrame();
+        if (candidate) {
+          wheelBufferIdsSeen.set(candidate, (wheelBufferIdsSeen.get(candidate) || 0) + 1);
+        }
+        resetFrameCapture();
+      });
       dispatchKey('KeyA', true);
       var obsWA = await observeFrames(100, function (frameIndex) {
         var models = carLitModelsThisFrame.slice();
@@ -515,14 +777,75 @@ html, body { margin: 0; padding: 0; height: 100%; background: #05070d; overflow:
           var pos = { x: m[12], z: m[14], yaw: yawFromMatrix(m) };
           if (frameIndex === 8) startBody = pos;
           if (frameIndex === 92) endBody = pos;
+          // AC-078: the drift proxy compares the body's rendered yaw with the
+          // direction of travel. A sliding car travels at a different angle
+          // than it points, so the proxy proves the drift engaged (reaching
+          // the drift speed alone does not prove a slide).
+          //
+          // The travel direction comes from a chord across a rolling window
+          // of body samples, and the yaw anchor is the mean of the two
+          // ENDPOINT yaws, so the mid-window sampling lag of the yaw rate
+          // cancels exactly instead of being mistaken for a slide.
+          var bodyYawRad = yawFromMatrixColumn3(m);
+          var lastSample = driftProxySamples.length > 0
+            ? driftProxySamples[driftProxySamples.length - 1]
+            : null;
+          var unwrappedYaw = lastSample
+            ? lastSample.unwrapped + wrapAngle(bodyYawRad - lastSample.yaw)
+            : bodyYawRad;
+          driftProxySamples.push({
+            x: pos.x,
+            z: pos.z,
+            yaw: bodyYawRad,
+            unwrapped: unwrappedYaw
+          });
+          if (driftProxySamples.length > DRIFT_PROXY_WINDOW) driftProxySamples.shift();
+          if (driftProxySamples.length >= 3) {
+            var oldestSample = driftProxySamples[0];
+            var newestSample = driftProxySamples[driftProxySamples.length - 1];
+            var chordDx = newestSample.x - oldestSample.x;
+            var chordDz = newestSample.z - oldestSample.z;
+            if (chordDx !== 0 || chordDz !== 0) {
+              var endpointMidYawRad =
+                (oldestSample.unwrapped + newestSample.unwrapped) / 2;
+              var proxyRad = Math.abs(
+                wrapAngle(endpointMidYawRad - offsetAngle(chordDx, chordDz))
+              );
+              if (proxyRad > maxDriftProxyRad) maxDriftProxyRad = proxyRad;
+              if (proxyRad >= DRIFT_PROXY_MIN_RAD) {
+                driftProxyFrameCount += 1;
+                driftProxyRunFrames += 1;
+                if (driftProxyRunFrames > driftProxyRunMaxFrames) {
+                  driftProxyRunMaxFrames = driftProxyRunFrames;
+                }
+              } else {
+                driftProxyRunFrames = 0;
+              }
+            }
+          }
         }
-        if (litDrawBufferIdsThisFrame.length >= 5) {
-          var candidate = litDrawBufferIdsThisFrame[1];
+        if (models.length >= 5) {
+          // AC-078: the same relative measurements taken during the drift
+          // phase; the drift yaw must not split the tires from the body.
+          relativeYawWA.push(
+            wrapAngle(yawFromMatrixColumn3(models[3]) - yawFromMatrixColumn3(models[0]))
+          );
+          relativeOffsetWA.push(
+            wrapAngle(
+              offsetAngle(models[3][12] - models[0][12], models[3][14] - models[0][14]) -
+              yawFromMatrixColumn3(models[0])
+            )
+          );
+        }
+        // Peak speed over the drift phase: the arcade drift only engages
+        // above 15 m/s, so the speed proves the contract was exercised.
+        var phaseSpeed = readSpeed(speedLabel);
+        if (phaseSpeed > maxSpeedKmhDrift) maxSpeedKmhDrift = phaseSpeed;
+        var candidate = pickWheelBufferIdThisFrame();
+        if (candidate) {
           wheelBufferIdsSeen.set(candidate, (wheelBufferIdsSeen.get(candidate) || 0) + 1);
         }
-        carLitModelsThisFrame.length = 0;
-        litDrawBufferIdsThisFrame.length = 0;
-        litApplyThisFrame.length = 0;
+        resetFrameCapture();
       });
       dispatchKey('KeyW', false);
       dispatchKey('KeyA', false);
@@ -532,6 +855,29 @@ html, body { margin: 0; padding: 0; height: 100%; background: #05070d; overflow:
       var wheelShading = analyzeWheelShading();
       var avgA = average(steerSamplesA);
       var avgD = average(steerSamplesD);
+      // AC-078: the attached tires must follow the body drift angle, so the
+      // tire-to-body relative yaw and the tire-to-body offset heading stay
+      // at their at-rest baselines while the body yaws into the slide.
+      var baselineRelativeYaw = average(relativeYawA);
+      var baselineRelativeOffset = average(relativeOffsetA);
+      var maxRelativeYawError = 0;
+      var maxRelativeOffsetError = 0;
+      for (var relYawIndex = 0; relYawIndex < relativeYawWA.length; relYawIndex++) {
+        var relYawError = Math.abs(wrapAngle(relativeYawWA[relYawIndex] - baselineRelativeYaw));
+        if (relYawError > maxRelativeYawError) maxRelativeYawError = relYawError;
+      }
+      for (var relOffsetIndex = 0; relOffsetIndex < relativeOffsetWA.length; relOffsetIndex++) {
+        var relOffsetError = Math.abs(
+          wrapAngle(relativeOffsetWA[relOffsetIndex] - baselineRelativeOffset)
+        );
+        if (relOffsetError > maxRelativeOffsetError) maxRelativeOffsetError = relOffsetError;
+      }
+      var tireYawDriftEngaged =
+        relativeYawA.length > 0 &&
+        relativeYawWA.length > 0 &&
+        maxSpeedKmhDrift >= DRIFT_MIN_SPEED_KMH &&
+        maxDriftProxyRad >= DRIFT_PROXY_MIN_RAD &&
+        driftProxyRunMaxFrames >= DRIFT_PROXY_MIN_FRAMES;
       var yawChange = (startBody && endBody) ? wrapAngle(endBody.yaw - startBody.yaw) : 0;
       var distMoved = (startBody && endBody) ? Math.hypot(endBody.x - startBody.x, endBody.z - startBody.z) : 0;
       var finalSpeed = readSpeed(speedLabel);
@@ -574,13 +920,27 @@ html, body { margin: 0; padding: 0; height: 100%; background: #05070d; overflow:
         frontWheelSteerAD: (avgA * avgD) < -0.000001 && Math.abs(avgA) > 0.005 && Math.abs(avgD) > 0.005,
         frontWheelSteerMagnitude: Math.abs(avgA) > 0.05 && Math.abs(avgD) > 0.05,
         speedUnderW: finalSpeed > 0,
-        driftTurnWA: Math.abs(yawChange) > 0.05 && distMoved > 0.5
+        driftTurnWA: Math.abs(yawChange) > 0.05 && distMoved > 0.5,
+        // AC-078: the ATTACHED tires move and yaw with the body drift angle,
+        // so their relative pose to the body is unchanged by the drift.
+        tireYawFollowsBodyDuringDrift: tireYawDriftEngaged &&
+          maxRelativeYawError <= TIRE_YAW_FOLLOW_TOLERANCE_RAD &&
+          maxRelativeOffsetError <= TIRE_YAW_FOLLOW_TOLERANCE_RAD,
+        // AC-079: the tires actually LOSE TRACTION proportionally during a
+        // full-speed drift. The old model held the whole top speed through a
+        // hard turn (the grip floor never let the tire give up more than 30%
+        // of its grip and there was no forward traction term at all), so a
+        // sustained hard turn that stays below the top-speed ceiling proves
+        // the forward grip was spent on the slide.
+        proportionalTractionLoss: tireYawDriftEngaged &&
+          maxSpeedKmhDrift > 0 &&
+          maxSpeedKmhDrift < TRACTION_LOSS_MAX_SPEED_KMH
       };
       result.passed = Object.values(result.checks).every(Boolean);
       result.notes = JSON.stringify({
         gridSpacing: capturedGridSpacing,
-        gridDeltas: { A: obsA.gridDelta, D: obsD.gridDelta, WA: obsWA.gridDelta },
-        trackDeltas: { A: obsA.trackDelta, D: obsD.trackDelta, WA: obsWA.trackDelta },
+        gridDeltas: { A: obsA.gridDelta, D: obsD.gridDelta, ACCEL: obsAccel.gridDelta, WA: obsWA.gridDelta },
+        trackDeltas: { A: obsA.trackDelta, D: obsD.trackDelta, ACCEL: obsAccel.trackDelta, WA: obsWA.trackDelta },
         vboSummary: { minY: vboInfo.minY, maxY: vboInfo.maxY, edgeMaxY: vboInfo.edgeMaxY, paintMinY: vboInfo.paintMinY, singlePlanePaint: vboInfo.singlePlanePaint, neonCount: vboInfo.neonCount, red: vboInfo.red, yellow: vboInfo.yellow, green: vboInfo.green, teal: vboInfo.teal, matteCount: vboInfo.matteCount, fillCount: vboInfo.fillCount, edgeCount: vboInfo.edgeCount, topOldColors: vboInfo.topOldColors, topLayerCount: vboInfo.topLayerCount, greenMeanEdge: vboInfo.greenMeanEdge, yellowMeanEdge: vboInfo.yellowMeanEdge, redMeanEdge: vboInfo.redMeanEdge, blackOutlineCount: vboInfo.blackOutlineCount },
         shadowDraws: shadowDraws,
         shadowColor: shadowColorFeeds.length > 0 ? shadowColorFeeds[0] : null,
@@ -588,7 +948,37 @@ html, body { margin: 0; padding: 0; height: 100%; background: #05070d; overflow:
         shadowModelScales: shadowModelScales,
         wheelShading: wheelShading,
         steer: { avgA: avgA, avgD: avgD },
-        drift: { yawChange: yawChange, distMoved: distMoved, finalSpeed: finalSpeed }
+        drift: { yawChange: yawChange, distMoved: distMoved, finalSpeed: finalSpeed },
+        tireYawFollow: {
+          baselineRelativeYaw: baselineRelativeYaw,
+          baselineRelativeOffset: baselineRelativeOffset,
+          maxRelativeYawError: maxRelativeYawError,
+          maxRelativeOffsetError: maxRelativeOffsetError,
+          toleranceRad: TIRE_YAW_FOLLOW_TOLERANCE_RAD,
+          driftEngaged: tireYawDriftEngaged,
+          maxSpeedKmhDrift: maxSpeedKmhDrift,
+          maxSpeedKmhAccel: maxSpeedKmhAccel,
+          accelReachedTarget: obsAccel.satisfied,
+          maxDriftProxyRad: maxDriftProxyRad,
+          driftProxyMinRad: DRIFT_PROXY_MIN_RAD,
+          driftProxyWindow: DRIFT_PROXY_WINDOW,
+          driftProxyFrames: driftProxyFrameCount,
+          driftProxyRunMaxFrames: driftProxyRunMaxFrames,
+          driftProxyMinFrames: DRIFT_PROXY_MIN_FRAMES,
+          accelFrames: obsAccel.frames,
+          accelGridDelta: obsAccel.gridDelta,
+          accelTrackDelta: obsAccel.trackDelta,
+          baselineSamples: relativeYawA.length,
+          driftSamples: relativeYawWA.length
+        },
+        tractionLoss: {
+          maxSpeedKmhDrift: maxSpeedKmhDrift,
+          maxSpeedKmhAccel: maxSpeedKmhAccel,
+          finalSpeedKmh: finalSpeed,
+          maxSpeedCeilingKmh: TRACTION_LOSS_MAX_SPEED_KMH,
+          driftEngaged: tireYawDriftEngaged,
+          maxDriftProxyRad: maxDriftProxyRad
+        }
       });
     } catch (err) {
       result.consoleErrors.push(String(err));

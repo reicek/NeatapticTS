@@ -20,9 +20,9 @@ agents: []
 skills: ['summarizing-session-log', 'tracker-handoff', 'research-methodology']
 ---
 
-## CRITICAL RULE — NEVER RUN GIT
+## CRITICAL RULE — GIT: READ-ONLY INSPECTION ALLOWED, MUTATION BANNED
 
-**NEVER run ANY git command.** No git checkout, git reset, git revert, git stash, git clean, git add, git commit, git push, or any other git operation. Git is UNINSTALLED. Running git commands has destroyed hours of work by reverting files. All file changes must use the edit or create tools ONLY. If you need to see file contents, use the view tool.
+**NEVER run a mutating git command.** Read-only inspection is ALWAYS allowed: `git status [-v]`, `git diff`, `git log`, `git show`, `git blame`, `git remote -v`, `git rev-parse`, `git ls-files`; `--no-pager` is permitted (e.g. `git --no-pager log`). All mutating commands stay BANNED: `git add`, `git commit`, `git push`, `git pull`, `git fetch`, `git checkout`, `git reset`, `git restore`, `git revert`, `git stash`, `git clean`, `git merge`, `git rebase`, `git apply`, and any other command that mutates the worktree, index, refs, or remote. Mutating git is UNINSTALLED here — running it has destroyed hours of work by reverting files. All file changes must use the `edit` or `create` tools ONLY. If you need to see file contents, use the `view` tool. Read-only inspection is EVIDENCE ONLY and never a substitute for the write path. This rule applies to ALL agents and ALL operations.
 
 ## Purpose
 

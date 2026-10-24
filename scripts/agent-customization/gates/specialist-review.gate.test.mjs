@@ -63,6 +63,26 @@ const WIP_NO_EVIDENCE =
   '[WIP]\nSome plan content without validation evidence section.\n';
 const WIP_NO_MARKERS =
   '[WIP]\n## VALIDATION_EVIDENCE\nSome evidence but no specialist markers.\n';
+// A long multi-step plan carries one evidence block per step packet, so the
+// reviewed step's block is NOT the first one in the file.
+const WIP_TWO_EVIDENCE_SECTIONS = [
+  '[WIP]',
+  '## Step 14C',
+  '```yaml',
+  'PlanUpdate:',
+  '  slice_id: "fix-packet-closed-step"',
+  '  validation_evidence:',
+  '    - "npx tsc --noEmit -> pass"',
+  '```',
+  '## Step 14J',
+  '```yaml',
+  'PlanUpdate:',
+  '  slice_id: "active-step"',
+  '  validation_evidence:',
+  '    - "specialist_review: APPROVE"',
+  '```',
+  '',
+].join('\n');
 const NO_WIP = 'Completed plan with no WIP markers.\n';
 
 // --- Tests ----------------------------------------------------------------
@@ -175,6 +195,17 @@ describe('specialist-review gate', () => {
         'no specialist review evidence found',
       );
       assert.equal(process.exitCode, 1);
+    });
+
+    it('scans every validation-evidence region, not only the first one', async () => {
+      // The reviewed step's evidence block is NOT the first one in a long
+      // multi-step plan, so a leftmost-match scan would miss it.
+      mockReadFileSyncFn = () => WIP_TWO_EVIDENCE_SECTIONS;
+      const logs = await importGate(['--json', '--plan=plans/test.plans.md']);
+      const parsed = JSON.parse(logs[0]);
+      assert.equal(parsed.pass, true);
+      assert.ok(parsed.evidence.planResults[0].found);
+      assert.equal(process.exitCode, 0);
     });
 
     it('returns found=false when file not readable on second call', async () => {

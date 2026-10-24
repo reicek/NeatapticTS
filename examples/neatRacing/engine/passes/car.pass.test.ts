@@ -1,12 +1,14 @@
 /**
- * Green-phase contract tests for the NeatRacing car pass visual drift-yaw
- * offset (slice P1-arcade-drift-visual; AC-047C).
+ * Contract tests for the NeatRacing car pass visual drift-yaw offset
+ * (slice P1-arcade-drift-visual; AC-047C) and for the attached tires that
+ * follow the body during a drift (slice P1-drift-tire-follow; AC-078).
  *
  * The physics step (sibling slice P1-arcade-drift-model) already stores the
- * visual drift offset in `PhysicsCarState.driftYawOffset`. This slice only
- * consumes that offset and adds it to the car *body* transform; wheels and
- * blob shadow stay aligned to the base yaw. No per-frame `Math.atan2` is
- * reintroduced here.
+ * visual drift offset in `PhysicsCarState.driftYawOffset`. The pass consumes
+ * that offset on the car body transform, and because the tires are ATTACHED
+ * to the body, the wheel chain is parented onto the SAME drift-yawed matrix
+ * (AC-078), so the rendered wheel transform carries the same drift yaw as
+ * the body. No per-frame `Math.atan2` is reintroduced here.
  *
  * The tests drive the pass against a hand-rolled WebGL2 recording mock and
  * inspect the `uModel` matrices uploaded during the lit draw phase.
@@ -14,6 +16,11 @@
 import { describe, expect, it } from '@jest/globals';
 import { VOXEL_EMPTY_PALETTE_ENTRY } from '../../voxel/model.schema';
 import type { VoxelBinModel, VoxelBinQuad } from '../../voxel/bin.codec';
+import {
+  resolveVoxelWheelMountTransform,
+  resolveVoxelWheelSockets,
+  type VoxelWheelMountTransform,
+} from '../../voxel/wheel.mount.utils';
 import {
   NEATRACING_DRIFT_MAX_SLIP_ANGLE_RAD,
   NEATRACING_DRIFT_VISUAL_YAW_GAIN_RAD,
@@ -246,6 +253,66 @@ function expectedBodyMatrix(
   return Array.from(out);
 }
 
+/** Column-major rotation around the model depth axis (the pre-mount spin axis). */
+function rotationZMat4(out: Float32Array, angleRad: number): void {
+  identityMat4(out);
+  const cos = Math.cos(angleRad);
+  const sin = Math.sin(angleRad);
+  out[0] = cos;
+  out[1] = sin;
+  out[4] = -sin;
+  out[5] = cos;
+}
+
+/**
+ * Expected wheel model matrix for one socket =
+ * `T(x,0,z) * R(yaw + drift) * T(mount) * R(mount yaw) * R(steer) * R(spin)`.
+ * The drift offset is part of the car yaw the tire is mounted on, so the
+ * rendered tire inherits it.
+ */
+function expectedWheelMatrix(
+  worldX: number,
+  worldZ: number,
+  yawRad: number,
+  driftOffsetRad: number,
+  mount: VoxelWheelMountTransform,
+  steerRad: number,
+  spinRad: number,
+): readonly number[] {
+  const a = new Float32Array(16);
+  const b = new Float32Array(16);
+  const out = new Float32Array(16);
+  translationMat4(a, worldX, 0, worldZ);
+  rotationYMat4(b, yawRad + driftOffsetRad);
+  multiplyMat4(out, a, b);
+  translationMat4(a, mount.position[0], mount.position[1], mount.position[2]);
+  multiplyMat4(b, out, a);
+  rotationYMat4(a, mount.rotationYawRad);
+  multiplyMat4(out, b, a);
+  rotationYMat4(a, steerRad);
+  multiplyMat4(b, out, a);
+  rotationZMat4(a, spinRad);
+  multiplyMat4(out, b, a);
+  return Array.from(out);
+}
+
+/**
+ * Extracts the yaw around world up from a column-major model matrix using
+ * its third column (the model's local +Z axis). The wheel chain ends with a
+ * spin rotation about the model depth axis, which leaves that column
+ * untouched, so the extracted yaw is the car yaw plus the mount yaw.
+ */
+function yawFromModelColumn(model: readonly number[]): number {
+  return Math.atan2(model[8], model[10]);
+}
+
+/** Wraps an angle difference into the (-pi, pi] range. */
+function wrapAngle(angleRad: number): number {
+  const twoPi = 2 * Math.PI;
+  const wrapped = (((angleRad + Math.PI) % twoPi) + twoPi) % twoPi;
+  return wrapped - Math.PI;
+}
+
 /** Asserts two 16-element matrices are element-wise close. */
 function expectMatricesClose(
   received: readonly number[],
@@ -304,8 +371,8 @@ const TEST_VIEW_PROJECTION = new Float32Array([
 const DRIFT_VISUAL_YAW_LIMIT_RAD =
   NEATRACING_DRIFT_MAX_SLIP_ANGLE_RAD * NEATRACING_DRIFT_VISUAL_YAW_GAIN_RAD;
 
-describe('NeatRacing car pass visual drift yaw (AC-047C)', () => {
-  it('applies driftYawOffsetRad only to the body uModel matrix', () => {
+describe('NeatRacing car pass visual drift yaw (AC-047C + AC-078)', () => {
+  it('applies driftYawOffsetRad to the car body uModel matrix', () => {
     const harness = createMockGl();
     const carPass = createCarPass(harness.gl, TEST_MODELS);
     const state: CarPassDrawState = {
@@ -330,46 +397,53 @@ describe('NeatRacing car pass visual drift yaw (AC-047C)', () => {
     expectMatricesClose(bodyMatrix, expectedBodyMatrix(3, 5, 0.7, 0.35));
   });
 
-  it('keeps wheels and shadow using the base yaw when a drift offset is present', () => {
-    const offsetHarness = createMockGl();
-    const zeroHarness = createMockGl();
-    const baseCar = {
-      worldX: 2,
-      worldZ: -1,
-      yawRad: 0.4,
-      teamColorId: 0,
-      wheelSpinRad: 0,
-    };
-    const offsetPass = createCarPass(offsetHarness.gl, TEST_MODELS);
-    const zeroPass = createCarPass(zeroHarness.gl, TEST_MODELS);
-    const baseState = (driftYawOffsetRad: number): CarPassDrawState => ({
+  it('parents the attached wheel chain onto the drift-yawed body matrix', () => {
+    const harness = createMockGl();
+    const carPass = createCarPass(harness.gl, TEST_MODELS);
+    const state: CarPassDrawState = {
       viewProjection: TEST_VIEW_PROJECTION,
       cameraWorld: [0, 5, 0],
-      cars: [{ ...baseCar, driftYawOffsetRad }],
-    });
+      cars: [
+        {
+          worldX: 2,
+          worldZ: -1,
+          yawRad: 0.4,
+          teamColorId: 0,
+          wheelSpinRad: 1.25,
+          driftYawOffsetRad: 0.5,
+        },
+      ],
+    };
+    carPass.draw(state);
 
-    offsetPass.draw(baseState(0.5));
-    zeroPass.draw(baseState(0));
+    const litMatrices = harness.modelMatricesForLitPass();
+    expect(litMatrices.length).toBeGreaterThanOrEqual(5);
+    const bodyYawRad = yawFromModelColumn(litMatrices[0]);
+    expect(bodyYawRad).toBeCloseTo(0.4 + 0.5, 6);
 
-    const offsetLit = offsetHarness.modelMatricesForLitPass();
-    const zeroLit = zeroHarness.modelMatricesForLitPass();
-    // Lit phase: body first, then four wheels. Wheels must be identical
-    // across the two frames because they ignore the drift offset.
-    expect(offsetLit.length).toBeGreaterThanOrEqual(5);
-    expect(zeroLit.length).toBeGreaterThanOrEqual(5);
-    for (let i = 0; i < 4; i += 1) {
-      expectMatricesClose(offsetLit[i + 1], zeroLit[i + 1]);
+    const mounts = resolveVoxelWheelSockets().map((socket) =>
+      resolveVoxelWheelMountTransform(socket.id),
+    );
+    for (let index = 0; index < mounts.length; index += 1) {
+      const mount = mounts[index];
+      const wheelMatrix = litMatrices[index + 1];
+      // The rendered wheel transform carries the SAME drift yaw as the body:
+      // the tire's own mount yaw is the only difference between the two.
+      expect(
+        wrapAngle(yawFromModelColumn(wheelMatrix) - bodyYawRad),
+      ).toBeCloseTo(mount.rotationYawRad, 6);
+      // The tire's mount position orbits with the drifting body, so the tire
+      // is still attached to the body instead of sliding off it. Precision 6
+      // absorbs the float32 rounding of the composed chain.
+      expectMatricesClose(
+        wheelMatrix,
+        expectedWheelMatrix(2, -1, 0.4, 0.5, mount, 0, 1.25),
+        6,
+      );
     }
-
-    // Body matrices must differ because only the body consumes the offset.
-    expect(offsetLit[0]).not.toEqual(zeroLit[0]);
-
-    // The wheel matrices must be the same as the no-offset body matrix would
-    // be (the wheels mount off the base car model matrix).
-    expectMatricesClose(zeroLit[0], expectedBodyMatrix(2, -1, 0.4, 0));
   });
 
-  it('zero drift offset leaves the body matrix equal to the base-yaw matrix', () => {
+  it('keeps the attached wheel chain on the base yaw when the drift offset is zero', () => {
     const harness = createMockGl();
     const carPass = createCarPass(harness.gl, TEST_MODELS);
     const state: CarPassDrawState = {
@@ -390,6 +464,16 @@ describe('NeatRacing car pass visual drift yaw (AC-047C)', () => {
 
     const litMatrices = harness.modelMatricesForLitPass();
     expectMatricesClose(litMatrices[0], expectedBodyMatrix(-2, 4, 1.1, 0));
+    const mounts = resolveVoxelWheelSockets().map((socket) =>
+      resolveVoxelWheelMountTransform(socket.id),
+    );
+    for (let index = 0; index < mounts.length; index += 1) {
+      expectMatricesClose(
+        litMatrices[index + 1],
+        expectedWheelMatrix(-2, 4, 1.1, 0, mounts[index], 0, 0),
+        6,
+      );
+    }
   });
 
   it('maps drift offset monotonically within the natural slip-angle bounds', () => {

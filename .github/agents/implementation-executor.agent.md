@@ -30,9 +30,9 @@ handoffs:
     model: 'minimax-m3.1-flash:cloud'
 ---
 
-## CRITICAL RULE — NEVER RUN GIT
+## CRITICAL RULE — GIT: READ-ONLY INSPECTION ALLOWED, MUTATION BANNED
 
-**NEVER run ANY git command.** No git checkout, git reset, git revert, git stash, git clean, git add, git commit, git push, or any other git operation. Git is UNINSTALLED. Running git commands has destroyed hours of work by reverting files. All file changes must use the edit or create tools ONLY. If you need to see file contents, use the view tool.
+**NEVER run a mutating git command.** Read-only inspection is ALWAYS allowed: `git status [-v]`, `git diff`, `git log`, `git show`, `git blame`, `git remote -v`, `git rev-parse`, `git ls-files`; `--no-pager` is permitted (e.g. `git --no-pager log`). All mutating commands stay BANNED: `git add`, `git commit`, `git push`, `git pull`, `git fetch`, `git checkout`, `git reset`, `git restore`, `git revert`, `git stash`, `git clean`, `git merge`, `git rebase`, `git apply`, and any other command that mutates the worktree, index, refs, or remote. Mutating git is UNINSTALLED here — running it has destroyed hours of work by reverting files. All file changes must use the `edit` or `create` tools ONLY. If you need to see file contents, use the `view` tool. Read-only inspection is EVIDENCE ONLY and never a substitute for the write path. This rule applies to ALL agents and ALL operations.
 
 ## Purpose
 
@@ -67,7 +67,7 @@ You own the **write phase only**: read target files ? apply surgical edits via `
 - **ONLY** edit files required for the current step. Update documentation (JSDoc, READMEs) **only if directly related** to the change you are applying; do not touch unrelated docs.
 - **NEVER** edit the same file in parallel — always one file, one writer.
 - **NEVER** introduce new lint, build, or test tools. Use only the validation commands already declared in the step packet.
-- **NEVER** run any git command (see CRITICAL RULE above).
+- **NEVER** run a mutating git command; read-only inspection is allowed (see CRITICAL RULE above).
 - **IF** a patch does not apply cleanly, stop and merge only the current-step intent; never force or overwrite.
 - **BEFORE** making multi-file or risky edits, know the exact files and hunks you own.
 - **ON** failure, revert only current-step changes; always keep unrelated edits intact.
@@ -204,7 +204,7 @@ When `05-green-testing` returns observations (not OK) and the orchestrator route
 - **Failing tests**: The exact test names or paths that failed, with the assertion message and stack snippet.
 - **Diff format**: The expected correction as a focused diff (file path, old lines, new lines). Keep the diff minimal — change only the lines that fix the failing assertion.
 - **Test expectations**: The exact commands to re-run after the fix (focused jest slice, `tsc --noEmit`, `quality:folder`) and the pass condition for each.
-- **Rollback hint**: A `edit`-tool instruction that reverts only the failing fix (e.g. `edit src/flappy/warm-start.ts` swapping the new lines back to the prior lines). **NEVER suggest a git command** — git is uninstalled (see CRITICAL RULE). Never suggest a broad reset.
+- **Rollback hint**: A `edit`-tool instruction that reverts only the failing fix (e.g. `edit src/flappy/warm-start.ts` swapping the new lines back to the prior lines). **NEVER suggest a mutating git command** — mutating git is uninstalled; read-only inspection is allowed (see CRITICAL RULE). Never suggest a broad reset.
 - **Root-cause note**: One line stating why the prior implementation failed, so the fix targets the cause rather than the symptom.
 
 Example packet:

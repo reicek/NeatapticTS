@@ -103,6 +103,25 @@ sequential dispatch only as a fallback when the environment is constrained to
 a limit of **2** (typical for BYOK users without a GitHub plan tier), where
 nested delegation beyond depth 2 is not possible.
 
+### Doctrine Binding
+
+The five canonical orchestration rules live in the `execute` skill §9.0
+(Canonical Orchestration Doctrine) and are audited by the
+`routing-optimization-policy` skill. This skill owns **packet construction**
+— how a scope is expressed — while the doctrine owns **when a scope is
+legal**. Read the doctrine before dispatching; do not restate it here.
+
+- **Thin scope (Rule 1):** each packet carries exactly one objective and the
+  minimum file set. Two live packets MUST NOT own the same file.
+- **Parallel scouts (Rule 2):** independent read-only packets are dispatched
+  in parallel, not sequentially.
+- **Central merge (Rule 3):** the parent agent is the single merge point.
+  Specialists report findings; they do not chain results to peers.
+- **Parallel executors (Rule 4):** write-capable packets may run in parallel
+  only over non-overlapping file sets.
+- **Time-budget exit (Rule 5):** a specialist that hits its time budget
+  stops and returns a gap report for a fresh takeover.
+
 ## Before / After Examples
 
 **Before:**
@@ -133,6 +152,10 @@ Return: list of crossing surfaces with transport type and coverage gaps
   the packet and retry.
 - Do not embed full skill workflows inside a delegation packet; reference the
   relevant skill by name and let the specialist invoke it.
+- Do not issue a packet whose scope overlaps a live packet's file set; split it
+  or serialize it (doctrine Rule 1 and Rule 4).
+- Do not let a specialist that exhausted its time budget keep working; require
+  a gap report and take over with a fresh instance (doctrine Rule 5).
 
 ## Expected Final Output
 

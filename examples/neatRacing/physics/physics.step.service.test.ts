@@ -41,6 +41,7 @@ import {
   NEATRACING_PHYSICS_STEERING_RATE,
   stepPhysics,
 } from './physics.step.service';
+import { NEATRACING_DRIFT_MAX_SLIP_ANGLE_RAD } from './drift.model';
 import type { PhysicsCarState, PhysicsStepInput } from './physics.step.service';
 
 /** Minimal surface labels used by the fixture resolver. */
@@ -70,6 +71,24 @@ const runSteps = (
 /** Deterministic JSON serialization for byte-identity comparisons. */
 const serializeState = (state: PhysicsCarState): string =>
   JSON.stringify(state);
+
+/**
+ * Runs the step service for a fixed number of 60 Hz ticks from an explicit
+ * start state (the AC-079 fixtures start from a known speed).
+ */
+const runStepsFrom = (
+  start: PhysicsCarState,
+  steps: number,
+  input = FIXTURE_INPUT,
+  surface: FixtureSurface = 'road',
+): PhysicsCarState => {
+  let state = start;
+  const surfaceResolver = (): FixtureSurface => surface;
+  for (let step = 0; step < steps; step++) {
+    state = stepPhysics(state, input, surfaceResolver);
+  }
+  return state;
+};
 
 describe('physics step service constants (spec §5.2, AC-023)', () => {
   it('exposes a deterministic 60 Hz fixed timestep', () => {
@@ -190,5 +209,59 @@ describe('physics step service longitudinal motion on road (AC-023)', () => {
     }
 
     expect(state.x).toBeGreaterThan(spawnX);
+  });
+});
+
+describe('physics step service proportional traction loss (AC-079)', () => {
+  it('AC-079: a sustained full-speed turn scrubs the forward speed below the top speed', () => {
+    const start: PhysicsCarState = {
+      ...createInitialPhysicsCarState(42),
+      speed: NEATRACING_PHYSICS_MAX_SPEED_UNITS_PER_S,
+    };
+
+    const state = runStepsFrom(start, 1200);
+
+    // The old model held the whole top speed through a full-throttle turn
+    // because the tires never lost any forward grip.
+    expect(state.speed).toBeLessThan(
+      NEATRACING_PHYSICS_MAX_SPEED_UNITS_PER_S - 20,
+    );
+    expect(state.speed).toBeGreaterThan(0);
+  });
+
+  it('AC-079: the sustained high-speed slide stays bounded', () => {
+    const start: PhysicsCarState = {
+      ...createInitialPhysicsCarState(42),
+      speed: NEATRACING_PHYSICS_MAX_SPEED_UNITS_PER_S,
+    };
+
+    const state = runStepsFrom(start, 1200);
+
+    expect(Math.abs(state.slipAngle)).toBeGreaterThan(0.2);
+    expect(Math.abs(state.slipAngle)).toBeLessThan(
+      NEATRACING_DRIFT_MAX_SLIP_ANGLE_RAD,
+    );
+    expect(Number.isFinite(state.lateralVelocity)).toBe(true);
+  });
+
+  it('AC-079: a straight-line full-throttle run still reaches the top speed', () => {
+    const state = runSteps(600, 42, { throttle: 1, brake: 0, steer: 0 });
+
+    expect(state.speed).toBe(NEATRACING_PHYSICS_MAX_SPEED_UNITS_PER_S);
+    expect(state.slipAngle).toBe(0);
+  });
+
+  it('AC-079: a low-speed car neither slides nor loses forward grip', () => {
+    const start: PhysicsCarState = {
+      ...createInitialPhysicsCarState(42),
+      speed: 10,
+    };
+
+    // Coasting below the 15 m/s arcade drift threshold: the outward push
+    // is zero there, so the car never slides and keeps all of its grip.
+    const state = runStepsFrom(start, 120, { throttle: 0, brake: 0, steer: 1 });
+
+    expect(state.lateralVelocity).toBe(0);
+    expect(state.slipAngle).toBe(0);
   });
 });

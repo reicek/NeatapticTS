@@ -26,7 +26,10 @@
  * Draw order per frame: cars sort far -> near by squared XZ camera distance
  * inside a reused scratch array (strict-compare insertion sort keeps equal
  * distances stable), then all blob shadows draw (loop 1), then each car's
- * body plus its four wheel-mounted wheels draw (loop 2). No per-frame
+ * body plus its four wheel-mounted wheels draw (loop 2). The arcade drift
+ * yaw (AC-047C) rotates the body into the slide, and because the tires are
+ * ATTACHED to the body, the wheel chain and the car shadow inherit that same
+ * drift yaw (AC-078) instead of staying on the base yaw. No per-frame
  * allocation: every matrix and sort scratch is module-scope and reused (P9).
  *
  * @module
@@ -426,9 +429,11 @@ export interface CarPassCarState {
    */
   readonly steerAngleRad?: number;
   /**
-   * Optional visual arcade drift yaw offset in radians (AC-047C). Added only
-   * to the car body transform so the body visibly rotates into the slide;
-   * wheels and shadow keep the base yaw. Zero or omitted means no offset.
+   * Optional visual arcade drift yaw offset in radians (AC-047C). The car
+   * body rotates into the slide by this offset, and the ATTACHED wheel chain
+   * plus the car shadow inherit the SAME offset (AC-078), so the tires move
+   * and yaw with the body instead of staying on the base yaw. Zero or
+   * omitted means no offset.
    */
   readonly driftYawOffsetRad?: number;
 }
@@ -947,13 +952,14 @@ const NEATRACING_CAR_TRANSLATION_MATRIX = new Float32Array(16);
 /** Car yaw scratch fed by state.yawRad. */
 const NEATRACING_CAR_YAW_MATRIX = new Float32Array(16);
 
-/** Composed car model matrix fed to uModel for the wheel chain. */
+/** Composed car model matrix (base yaw, no drift) fed to uModel. */
 const NEATRACING_CAR_MODEL_MATRIX = new Float32Array(16);
 
 /**
  * Composed car body model matrix fed to uModel for the body draw. It equals
- * the wheel-chain matrix multiplied by a drift-yaw rotation so the body can
- * yaw into the slide independently of the wheels (AC-047C).
+ * the base-yaw car matrix multiplied by a drift-yaw rotation so the body can
+ * yaw into the slide (AC-047C). The attached wheel chain is parented onto
+ * this SAME matrix, so the tires inherit the body's drift yaw (AC-078).
  */
 const NEATRACING_CAR_BODY_MODEL_MATRIX = new Float32Array(16);
 
@@ -1354,6 +1360,9 @@ export function createCarPass(
     for (let slot = 0; slot < carCount; slot += 1) {
       const carIndex = NEATRACING_CAR_SORT_ORDER_SCRATCH[slot];
       const car = state.cars[carIndex];
+      // AC-078: the shadow stays attached to the drifting car, so it uses the
+      // same drift-yawed orientation as the body and the wheel chain.
+      const shadowYawRad = car.yawRad + (car.driftYawOffsetRad ?? 0);
       // Body blob shadow covering the full car footprint (OBS-21).
       translationMat4(
         NEATRACING_SHADOW_TRANSLATION_MATRIX,
@@ -1361,7 +1370,7 @@ export function createCarPass(
         NEATRACING_BLOB_SHADOW_Y_OFFSET_M,
         car.worldZ,
       );
-      rotationYMat4(NEATRACING_SHADOW_YAW_MATRIX, car.yawRad);
+      rotationYMat4(NEATRACING_SHADOW_YAW_MATRIX, shadowYawRad);
       multiplyMat4(
         NEATRACING_CAR_MATRIX_SCRATCH_A,
         NEATRACING_SHADOW_TRANSLATION_MATRIX,
@@ -1382,8 +1391,10 @@ export function createCarPass(
 
       // Per-wheel contact-patch shadows (OBS-24): dark quads directly under
       // each tire so the tires cast a visible shadow, not just the body.
-      const cos = Math.cos(car.yawRad);
-      const sin = Math.sin(car.yawRad);
+      // AC-078: the patches use the drift-yawed orientation, so they stay
+      // under the tires that now move and yaw with the body.
+      const cos = Math.cos(shadowYawRad);
+      const sin = Math.sin(shadowYawRad);
       for (const mount of wheelMounts) {
         const localX = mount.position[0];
         const localZ = mount.position[2];
@@ -1395,7 +1406,7 @@ export function createCarPass(
           NEATRACING_BLOB_SHADOW_Y_OFFSET_M,
           wheelWorldZ,
         );
-        rotationYMat4(NEATRACING_SHADOW_YAW_MATRIX, car.yawRad);
+        rotationYMat4(NEATRACING_SHADOW_YAW_MATRIX, shadowYawRad);
         multiplyMat4(
           NEATRACING_CAR_MATRIX_SCRATCH_A,
           NEATRACING_SHADOW_TRANSLATION_MATRIX,
@@ -1550,8 +1561,7 @@ export function createCarPass(
       );
       // AC-047C: body yaw = base yaw + visual drift offset. The offset is
       // applied as a post-translation rotation so the body rotates around
-      // the car's world-up axis at its current position; wheels and shadow
-      // keep the base yaw.
+      // the car's world-up axis at its current position.
       rotationYMat4(
         NEATRACING_CAR_DRIFT_YAW_MATRIX,
         car.driftYawOffsetRad ?? 0,
@@ -1571,6 +1581,11 @@ export function createCarPass(
       gl.bindBuffer(GL_ARRAY_BUFFER, wheelBuffer);
       pointLitMeshAttributes();
       feedTireGradientUniforms(true);
+      // AC-078: the tires are ATTACHED to the body, so the wheel chain is
+      // parented onto the SAME drift-yawed matrix as the body. Each tire
+      // therefore inherits the body's drift yaw (its mount position orbits
+      // with the body and its yaw carries the same offset) instead of
+      // staying on the base yaw.
       for (const mount of wheelMounts) {
         translationMat4(
           NEATRACING_WHEEL_TRANSLATION_MATRIX,
@@ -1580,7 +1595,7 @@ export function createCarPass(
         );
         multiplyMat4(
           NEATRACING_CAR_MATRIX_SCRATCH_A,
-          NEATRACING_CAR_MODEL_MATRIX,
+          NEATRACING_CAR_BODY_MODEL_MATRIX,
           NEATRACING_WHEEL_TRANSLATION_MATRIX,
         );
         rotationYMat4(NEATRACING_WHEEL_MOUNT_YAW_MATRIX, mount.rotationYawRad);

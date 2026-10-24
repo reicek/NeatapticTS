@@ -279,6 +279,53 @@ If the observations cannot be stored in the plan or cannot be retrieved by
 RAG, the orchestrator MUST fall back to the standard RAG-Based Dispatch
 rule and MUST NOT embed the observations inline in the dispatch prompt.
 
+## Gap-Report YAML Schema (Time-Budget Exit)
+
+Emitted by a dispatched agent that reached its time budget (Doctrine Rule 5,
+`execute` skill §9.1). A fresh instance takes over from this report.
+
+```yaml
+gap_report:
+  slice_id: '<slice_id or step id>'
+  status: budget-exhausted | blocked | partial
+  completed:
+    - '<what is done and verified>'
+  remaining:
+    - '<what is NOT done>'
+  blockers: ['<specific blocker>', ...] # or NONE
+  next_action: '<the single next concrete step>'
+  evidence:
+    - '<command run / gate result / artifact path>'
+  files_touched: ['<path>', ...]
+```
+
+### Rules
+
+- The report is **self-contained**: a fresh instance with no prior context
+  must be able to resume from it.
+- It is **not** a fix packet. A fix packet (`status: FAILED | REQUEST_CHANGES
+| OBSERVATIONS`) describes a failed validation; a gap report describes an
+  exhausted budget with work still outstanding.
+- The orchestrator records the report in the plan (same location rules as
+  the fix packet) and dispatches a **fresh** instance seeded with it. The
+  overrunning agent does **not** forward its own context.
+
+## Orchestration Doctrine Decision Table
+
+Quick reference for `execute` skill §9.0. Consult that section for the
+binding rules; this table is a lookup aid only.
+
+| Situation                                           | Action                                                     |
+| --------------------------------------------------- | ---------------------------------------------------------- |
+| Two dispatches would own the same file              | Split the scope; serialize via the file-lock tracker       |
+| Two independent read-only scouts                    | Dispatch both in parallel                                  |
+| Two scouts whose questions depend on each other     | Dispatch sequentially                                      |
+| Two write-capable agents over disjoint file sets    | Dispatch in parallel                                       |
+| Two write-capable agents over overlapping file sets | Serialize; never co-write                                  |
+| Agent reached its time budget                       | Stop it; capture the gap report; dispatch a fresh instance |
+| Agent still progressing at cap+50%                  | Grant one grace extension                                  |
+| Agent static across multiple checks at cap+50%      | Stop it; capture the gap report; dispatch a fresh instance |
+
 ## Gate Reliability (Consolidated Gate Graceful Degradation)
 
 The consolidated `slice-advancement` gate calls multiple sub-gates

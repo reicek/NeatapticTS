@@ -29,6 +29,11 @@ This skill owns the durable knowledge surface for routing policy in this reposit
 - A `.github/agents/*.agent.md` file is missing the `skills: [...]` frontmatter field.
 - A skill and companion agent overlap in ownership; the agent needs updating to follow the skill's durable policy.
 - Gate failures are being routed back for continued repair without an artificial retry threshold.
+- A dispatch overlaps another live dispatch on the same file, or a single dispatch owns too many files (Doctrine Rule 1).
+- Independent scouts are being dispatched one after another instead of in parallel (Doctrine Rule 2).
+- Findings are being merged in more than one place, or agents are chaining results to peers (Doctrine Rule 3).
+- Two write-capable agents are dispatched over overlapping file sets (Doctrine Rule 4).
+- An agent exceeded its time budget without stopping to return a gap report (Doctrine Rule 5).
 
 ## When NOT to use
 
@@ -69,6 +74,42 @@ The main agent (Tier 0) must not perform implementation, refactoring, research, 
 
 - Trivial factual answers (single-sentence lookups, no file changes).
 - Direct operator commands with zero file reads/writes.
+
+## Orchestration Doctrine
+
+The `execute` skill (§9.0) is the canonical statement of orchestration
+doctrine. This skill **audits compliance** with it; it does not restate a
+second, divergent copy of the mechanics. The five rules are binding for
+every dispatch in the repository:
+
+| #   | Rule                   | Requirement                                                                                                                   | Audited by                        |
+| --- | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
+| 1   | **Thin scope**         | Every dispatched agent gets exactly **one** objective and the **minimum** file set. No two live dispatches own the same file. | §9.1 "Thin Scope Before Dispatch" |
+| 2   | **Parallel scouts**    | Independent scouts (read-only, mutually independent questions) MUST be dispatched **in parallel**.                            | §9.2 "Parallel Scouts"            |
+| 3   | **Central merge**      | Findings merge at **one** central point — the orchestrator. No agent-to-agent chaining; scouts report, not decide.            | §9.2 "Central Merge"              |
+| 4   | **Parallel executors** | Write-capable agents may run in parallel **only** over **non-overlapping file sets**; overlap is serialized.                  | §9.2 "Parallel Executors"         |
+| 5   | **Time-budget exit**   | An agent exceeding its time budget **stops** and returns a **gap report** for a fresh takeover.                               | §9.1 "Gap Report Contract"        |
+
+### Doctrine-to-Tier Mapping
+
+| Rule                   | Applies to                                | Violation symptom                                                     |
+| ---------------------- | ----------------------------------------- | --------------------------------------------------------------------- |
+| 1 — Thin scope         | Every dispatch, Tier 1 → 4                | Two dispatches touch the same file; a dispatch owns a whole directory |
+| 2 — Parallel scouts    | Tier 1 → Tier 3 read-only scouts          | Independent scouts dispatched one after another                       |
+| 3 — Central merge      | Every orchestrator and Tier-2 coordinator | Findings merged in more than one place; sideways chaining             |
+| 4 — Parallel executors | Tier 2/3/4 write-capable agents           | Two agents writing the same file concurrently                         |
+| 5 — Time-budget exit   | Every dispatched agent                    | Agent overruns silently; unfinished work is unowned                   |
+
+### Violation Handling
+
+A doctrine violation is a **routing defect**, not a stylistic nit:
+
+1. Record the violation with the specific dispatch that broke the rule.
+2. Correct it in place — re-split an overlapping scope, re-dispatch
+   independent scouts in parallel, or stop and re-dispatch an overrunning
+   agent with a fresh instance seeded by its gap report.
+3. Do NOT apply an artificial retry threshold: continue correcting until
+   resolved or a true technical limit is reached.
 
 ## Flow and Gate Protocol
 
@@ -135,29 +176,46 @@ The routing table is the authoritative catalog of all agents and skills.
    - Confirm no Tier 2/3/4 agent is delegating upward without `00.cross-tier-helper`.
    - Confirm Tier 0 is not performing substantive work without routing to Tier 1.
 
-3. **Check flow-and-gate compliance.**
+3. **Audit orchestration doctrine.**
+   - **Thin scope:** confirm each live dispatch owns one objective and a
+     minimal file set, with zero file overlap between live dispatches.
+   - **Parallel scouts:** confirm mutually independent read-only scouts were
+     dispatched in parallel, not sequentially.
+   - **Central merge:** confirm findings merge at exactly one central point
+     (the orchestrator) with no agent-to-agent chaining.
+   - **Parallel executors:** confirm parallel write dispatches cover
+     non-overlapping file sets, and that overlapping sets were serialized
+     through the file-lock tracker.
+   - **Time-budget exit:** confirm any agent that exceeded its budget
+     stopped and returned a gap report, and that a fresh instance took over
+     from that report.
+   - Reference: `execute` skill §9.0 (Canonical Orchestration Doctrine),
+     §9.1, §9.2.
+
+4. **Check flow-and-gate compliance.**
    - Verify the numbered agent selected a named flow from `.github/flows/`.
    - Verify exit gates ran and returned the structured contract.
    - If gates failed, confirm exceptions were recorded and routed back for
      continued repair without an artificial retry threshold. Continue retrying
      until resolved or a true technical limit is reached. No concessions.
 
-4. **Audit routing-table freshness.**
+5. **Audit routing-table freshness.**
    - Run `npm run agents:routing-table:gate` to confirm the routing table reflects current agent/skill inventory.
    - If stale, run `npm run agents:routing-table` to regenerate.
 
-5. **Verify skill frontmatter.**
+6. **Verify skill frontmatter.**
    - Confirm every `.github/agents/*.agent.md` has a `skills: [...]` field.
    - If missing, update the agent frontmatter to declare its skill dependencies.
 
-6. **Resolve skill-companion overlap.**
+7. **Resolve skill-companion overlap.**
    - If a companion agent restates durable policy owned by a skill, update the agent to defer to the skill.
    - Record the alignment fix in the agent file.
 
-7. **Report the routing audit.**
+8. **Report the routing audit.**
    - Document which tier boundaries were validated.
    - List any violations found and remediation taken.
-   - Confirm routing-table freshness and gate protocol compliance.
+   - Confirm orchestration-doctrine compliance, routing-table freshness, and
+     gate protocol compliance.
 
 ## Examples
 
@@ -216,6 +274,38 @@ until resolved or a true technical limit is reached. No artificial threshold.
 Validate: grep .github/ai-learning/learning-log.jsonl for gate_exception entries.
 ```
 
+### Example 5: Overlapping Dispatch Scopes
+
+**Scenario:** `04-implementing` and `docs-writer` are dispatched at the same
+time; both own `src/neat/index.ts`.
+
+**Correct Action:**
+
+```text
+Use routing-optimization-policy to enforce Doctrine Rule 1 and Rule 4.
+Violation: two live dispatches own the same file.
+Expected: split the scope so each dispatch owns a disjoint file set, then
+re-dispatch in parallel; if the overlap cannot be split, serialize via the
+file-lock tracker.
+Validate: confirm no two live dispatches share a file path.
+```
+
+### Example 6: Agent Overran Its Time Budget
+
+**Scenario:** A `04-implementing` instance has run past cap+50% with a static
+`tool_calls_completed` and has not returned.
+
+**Correct Action:**
+
+```text
+Use routing-optimization-policy to enforce Doctrine Rule 5.
+Violation: agent exceeded its time budget without a gap report.
+Expected: stop the agent, capture its gap report (completed / remaining /
+blockers / next_action), and dispatch a FRESH instance against the same slice
+seeded with that report.
+Validate: confirm the plan records the gap report and the takeover dispatch.
+```
+
 ## Coordination
 
 - Use `agent-inventory-auditor` to discover tier violations across the full agent graph.
@@ -236,6 +326,11 @@ Flowchart summary: "Routing question" → "What kind?"; "What kind?" → "Use ex
 - Do not allow a skill and companion agent to maintain overlapping durable policy; align the agent to the skill.
 - Do not treat a stale routing table as acceptable; regenerate and validate before marking routing work complete.
 - Do not skip gate exception logging; every gate failure must append to `.github/ai-learning/learning-log.jsonl`.
+- Do not dispatch an agent with an overlapping or oversized scope; split it first (Doctrine Rule 1).
+- Do not dispatch mutually independent scouts sequentially; parallelize them (Doctrine Rule 2).
+- Do not merge findings in more than one place; the orchestrator is the single merge point (Doctrine Rule 3).
+- Do not co-write a file from two live dispatches; serialize overlapping file sets (Doctrine Rule 4).
+- Do not let an overrunning agent grind past its budget; it must stop and return a gap report (Doctrine Rule 5).
 
 ## Expected Final Output
 
@@ -243,6 +338,7 @@ A strong routing-optimization pass should produce:
 
 - confirmation that Tier 0 routed all substantive work to the smallest relevant Tier 1 orchestrator,
 - validation that no Tier 2/3/4 agent delegated upward without `00.cross-tier-helper`,
+- validation that the five orchestration-doctrine rules hold — thin non-overlapping scopes, parallel independent scouts, single central merge point, parallel executors over disjoint file sets, and time-budget exit via gap report,
 - evidence that numbered agents selected named flows and ran exit gates with structured JSON contracts,
 - confirmation that gate exceptions were logged and routed back for continued
   repair without an artificial retry threshold,

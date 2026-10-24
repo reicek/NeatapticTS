@@ -2,25 +2,29 @@
  * Red-phase contract tests for the Neat Racing arcade drift model
  * (slice P1-arcade-drift; AC-047; spec §5.2 drift amendment).
  *
- * Red phase: this suite must fail while './drift.model' does not exist
- * ("Cannot find module './drift.model'" under ts-jest diagnostics).
- * A green suite during the red phase would be a contract defect.
+ * AC-079 (slice P1-drift-traction-loss) re-authored the tire grip
+ * contract: the old hard grip floor (`NEATRACING_DRIFT_MIN_GRIP_FACTOR =
+ * 0.7`) and the `computeGripFalloff` helper it clamped are GONE, replaced
+ * by the proportional traction law and the longitudinal traction term. The
+ * no-deferred-cleanup pin below keeps the old floor from coming back.
  *
- * Green contract for the implementer: './drift.model' exports the named
- * drift constants, the pure `stepDriftModel(prev, input)` function, and
- * the focused helpers `computeOutwardPush`, `computeGripFalloff`,
- * `computeCountersteerDelta`, and `computeSlipAngle`.
+ * Green contract: './drift.model' exports the named drift constants, the
+ * pure `stepDriftModel(prev, input)` function, and the focused helpers
+ * `computeOutwardPush`, `computeTractionFactor`,
+ * `computeLongitudinalTractionLoss`, `computeCountersteerDelta`, and
+ * `computeSlipAngle`.
  *
  * The model is deterministic (spec §5.3): no `Math.random`, no side effects,
  * so the same inputs always produce byte-identical state.
  */
 
 import { describe, expect, it } from '@jest/globals';
+import * as driftModel from './drift.model';
 import {
   NEATRACING_DRIFT_MAX_SLIP_ANGLE_RAD,
   NEATRACING_DRIFT_GRIP_FALLOFF_THRESHOLD_RAD,
   NEATRACING_DRIFT_GRIP_FALLOFF_RATE_PER_RAD,
-  NEATRACING_DRIFT_MIN_GRIP_FACTOR,
+  NEATRACING_DRIFT_LONGITUDINAL_TRACTION_LOSS_RATE_PER_S,
   NEATRACING_DRIFT_COUNTERSTEER_RECOVERY_RATE_PER_S,
   NEATRACING_DRIFT_LATERAL_GRIP_RATE_PER_S,
   NEATRACING_DRIFT_MIN_SPEED_MPS,
@@ -28,7 +32,8 @@ import {
   createZeroDriftState,
   stepDriftModel,
   computeOutwardPush,
-  computeGripFalloff,
+  computeTractionFactor,
+  computeLongitudinalTractionLoss,
   computeCountersteerDelta,
   computeSlipAngle,
   computeDriftYawOffset,
@@ -65,8 +70,10 @@ describe('drift model constants (spec §5.2 drift amendment)', () => {
     expect(NEATRACING_DRIFT_MAX_SLIP_ANGLE_RAD).toBe(Math.PI / 2);
     expect(NEATRACING_DRIFT_GRIP_FALLOFF_THRESHOLD_RAD).toBeGreaterThan(0);
     expect(NEATRACING_DRIFT_GRIP_FALLOFF_RATE_PER_RAD).toBeGreaterThan(0);
-    expect(NEATRACING_DRIFT_MIN_GRIP_FACTOR).toBeGreaterThan(0);
-    expect(NEATRACING_DRIFT_MIN_GRIP_FACTOR).toBeLessThan(1);
+    expect(NEATRACING_DRIFT_LONGITUDINAL_TRACTION_LOSS_RATE_PER_S).toBeGreaterThan(0);
+    expect(NEATRACING_DRIFT_LONGITUDINAL_TRACTION_LOSS_RATE_PER_S).toBeLessThan(
+      NEATRACING_DRIFT_LATERAL_GRIP_RATE_PER_S,
+    );
     expect(NEATRACING_DRIFT_COUNTERSTEER_RECOVERY_RATE_PER_S).toBeGreaterThan(
       0,
     );
@@ -98,21 +105,21 @@ describe('drift model helpers (AC-047)', () => {
     expect(belowThreshold).toBe(0);
   });
 
-  it('computes grip falloff: full grip near zero slip, reduced grip at large slip', () => {
-    const fullGrip = computeGripFalloff(0);
-    const thresholdGrip = computeGripFalloff(
+  it('computes the traction factor: full grip below the grip peak, less grip at a large slip', () => {
+    const fullGrip = computeTractionFactor(0, 1);
+    const thresholdGrip = computeTractionFactor(
       NEATRACING_DRIFT_GRIP_FALLOFF_THRESHOLD_RAD,
+      1,
     );
-    const largeSlipGrip = computeGripFalloff(
+    const largeSlipGrip = computeTractionFactor(
       NEATRACING_DRIFT_MAX_SLIP_ANGLE_RAD * 0.75,
+      1,
     );
 
     expect(fullGrip).toBe(1);
     expect(thresholdGrip).toBe(1);
     expect(largeSlipGrip).toBeLessThan(1);
-    expect(largeSlipGrip).toBeGreaterThanOrEqual(
-      NEATRACING_DRIFT_MIN_GRIP_FACTOR - 1e-12,
-    );
+    expect(largeSlipGrip).toBeGreaterThan(0);
   });
 
   it('computes countersteer delta only when steer matches the slip sign (countersteer into the skid)', () => {
@@ -140,6 +147,47 @@ describe('drift model helpers (AC-047)', () => {
     expect(computeSlipAngle(10, 10)).toBeCloseTo(Math.PI / 4, 10);
     expect(Math.abs(computeSlipAngle(100, 10))).toBeLessThan(Math.PI / 2);
     expect(computeSlipAngle(5, 0)).toBe(0);
+  });
+});
+
+describe('drift model proportional traction loss (AC-079)', () => {
+  it('AC-079: the hard grip floor is gone - no minimum grip factor is exported', () => {
+    expect('NEATRACING_DRIFT_MIN_GRIP_FACTOR' in driftModel).toBe(false);
+    expect('computeGripFalloff' in driftModel).toBe(false);
+  });
+
+  it('AC-079: the traction falls with the slip demand and with the speed demand', () => {
+    const lowSlip = computeTractionFactor(0.4, 1);
+    const highSlip = computeTractionFactor(0.9, 1);
+    const lowSpeed = computeTractionFactor(0.9, 0.2);
+    const highSpeed = computeTractionFactor(0.9, 1);
+
+    expect(highSlip).toBeLessThan(lowSlip);
+    expect(highSpeed).toBeLessThan(lowSpeed);
+  });
+
+  it('AC-079: a sliding tire gives up more grip than the old 30% cap allowed', () => {
+    const traction = computeTractionFactor(0.8, 1);
+
+    expect(traction).toBeLessThan(0.7);
+    expect(traction).toBeGreaterThan(0);
+  });
+
+  it('AC-079: the longitudinal traction loss is zero on a straight line and grows with the slide', () => {
+    const straight = computeLongitudinalTractionLoss(0, 60, 0.67);
+    const slightSlide = computeLongitudinalTractionLoss(0.1, 60, 0.67);
+    const bigSlide = computeLongitudinalTractionLoss(0.6, 60, 0.67);
+
+    expect(straight).toBe(0);
+    expect(slightSlide).toBeGreaterThan(0);
+    expect(bigSlide).toBeGreaterThan(slightSlide);
+  });
+
+  it('AC-079: the longitudinal traction loss scales with the speed', () => {
+    const slow = computeLongitudinalTractionLoss(0.4, 20, 0.22);
+    const fast = computeLongitudinalTractionLoss(0.4, 80, 0.9);
+
+    expect(fast).toBeGreaterThan(slow);
   });
 });
 

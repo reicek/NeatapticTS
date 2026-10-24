@@ -80,11 +80,16 @@ function checkPlanForSpecialistReview(planPath) {
     /specialistCount:\s*0/i,
   ];
 
-  const evidenceSection = content.match(
-    /VALIDATION_EVIDENCE[\s\S]*?(?=##|PlanUpdate|$)/i,
-  );
+  // Collect EVERY validation-evidence region of the plan, not just the
+  // first one. A long multi-step plan carries one evidence block per step
+  // packet and per PlanUpdate, so a leftmost-match scan reads the evidence
+  // of a CLOSED step and reports "no specialist review evidence" for a step
+  // that was in fact reviewed.
+  const evidenceSections = [
+    ...content.matchAll(/VALIDATION_EVIDENCE[\s\S]*?(?=##|PlanUpdate|$)/gi),
+  ].map((match) => match[0]);
 
-  if (!evidenceSection) {
+  if (evidenceSections.length === 0) {
     return {
       plan: path.basename(planPath),
       found: false,
@@ -92,7 +97,7 @@ function checkPlanForSpecialistReview(planPath) {
     };
   }
 
-  const evidenceText = evidenceSection[0];
+  const evidenceText = evidenceSections.join('\n');
   const matchedSpecialist = specialistMarkers.filter((m) =>
     m.test(evidenceText),
   );

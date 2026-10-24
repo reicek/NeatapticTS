@@ -420,6 +420,11 @@ iteration <n> status=<failed|passed>` markers, counts iterations, and
 - **The orchestrator MUST NOT perform code edits itself.** The
   orchestrator's job is to classify, dispatch, wait, and advance — never to
   implement.
+- **Every dispatch MUST be thin, non-overlapping, and budget-bounded.**
+  See §9.0 (Canonical Orchestration Doctrine) for the five binding rules:
+  thin non-overlapping scope, parallel independent scouts, central merge,
+  parallel executors over non-overlapping file sets, and time-budget exit
+  via gap report.
 - **For `tdd_sequence: green-only` steps**, skip the RED phase and start at
   IMPLEMENT. Valid only when tests already exist from a prior red phase or a
   pre-existing test file.
@@ -476,6 +481,24 @@ flowchart TD
     MGreen --> Advance
 ```
 
+### §9.0 — Canonical Orchestration Doctrine
+
+Five rules govern every dispatch in this repository. They are **binding, not
+advisory**: a dispatch that violates any of them is a workflow defect, not a
+style preference.
+
+| #   | Rule                   | Binding requirement                                                                                                                                                                         |
+| --- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **Thin scope**         | Every dispatched agent receives exactly **one** objective, one boundary, and the **minimum** file set needed. Two live dispatches MUST NOT own the same file. Overlap is a planning defect. |
+| 2   | **Parallel scouts**    | Independent scouts — read-only agents answering mutually independent questions — MUST be dispatched **in parallel**, not sequentially.                                                      |
+| 3   | **Central merge**      | Findings merge at exactly **one** central point: the orchestrator. Scouts MUST NOT chain results to each other; the orchestrator merges, dedupes, and decides.                              |
+| 4   | **Parallel executors** | Write-capable agents MAY run in parallel **only** over **non-overlapping file sets**. Overlapping file sets MUST be serialized through the file-lock tracker — never co-written.            |
+| 5   | **Time-budget exit**   | An agent that exceeds its time budget **stops** and returns a **gap report** for a fresh takeover. It does not keep grinding and does not forward its own context.                          |
+
+§9.1 carries the time-box and thin-scope mechanics for rules 1 and 5. §9.2
+carries the parallelism mechanics for rules 2, 3, and 4. The
+`routing-optimization-policy` skill audits compliance with all five.
+
 ### §9.1 — Slice Time-Boxing
 
 - **Soft cap:** ~20 min for trivial/moderate slices, ~30 min for complex.
@@ -484,10 +507,68 @@ flowchart TD
   dispatch.
 - If an agent is still running at cap+50% (30/45 min), check
   `tool_calls_completed`. If progressing, allow one grace extension. If
-  static across multiple checks, stop and re-dispatch with a fix packet.
+  static across multiple checks, stop the agent and re-dispatch a fresh
+  instance seeded with its gap report.
 - The orchestrator MAY stop a running agent and pass follow-up instructions
   via `write_agent` (queued for next turn), or stop and re-dispatch a fresh
   instance.
+
+#### Thin Scope Before Dispatch (Doctrine Rule 1)
+
+Every dispatch MUST be thin. A thin scope has:
+
+| Dimension | Requirement                                                            |
+| --------- | ---------------------------------------------------------------------- |
+| Objective | Exactly **one** behavioral intent. Two intents means two dispatches.   |
+| File set  | The **minimum** files required — ideally ≤ 3. Never a whole directory. |
+| Boundary  | Named in the plan/slice; the agent MUST NOT expand past it.            |
+| Context   | Loaded via RAG (slice/step ID), never inlined in the prompt.           |
+| Overlap   | **Zero.** No two live dispatches own the same file.                    |
+
+An overlapping scope is a **planning defect**, not a runtime condition: split
+the work and dispatch the pieces. Overlapping _write_ scopes MUST be
+serialized through the file-lock tracker (§12) — never co-written.
+
+#### Time Budget Is a Contract (Doctrine Rule 5)
+
+The time budget is enforced by the agent, not merely observed by the
+orchestrator. An agent that reaches its budget:
+
+1. **Stops** the current line of work. It does not start a new
+   investigation, refactor, or validation sweep.
+2. **Returns a gap report** (schema below) that a **fresh** instance can take
+   over from.
+3. **Does not** hand its context forward. The takeover instance starts clean
+   and loads context from RAG/plan, exactly like any other dispatch.
+
+#### Gap Report Contract (Doctrine Rule 5)
+
+```yaml
+gap_report:
+  slice_id: <slice or step id>
+  status: budget-exhausted | blocked | partial
+  completed: <what is done and verified>
+  remaining: <what is NOT done>
+  blockers: <the specific blocker, or NONE>
+  next_action: <the single next concrete step>
+  evidence: <commands run, gate results, file paths touched>
+  files_touched: [<paths>]
+```
+
+The orchestrator MUST record the gap report, then dispatch a **fresh**
+instance against the same slice/step with that gap report as the starting
+point. An agent that overruns without returning a gap report is a workflow
+violation — the remaining work is unowned.
+
+#### Orchestrator Overrun Handling
+
+- At cap+50%, check `tool_calls_completed`. Progressing → one grace
+  extension. Static across multiple checks → stop the agent, capture its gap
+  report, re-dispatch a fresh instance.
+- Prefer a **fresh** instance over a continued context for any overrun: a
+  fresh instance re-reads the plan and cannot inherit a stale mental model.
+- Use `write_agent` for small, cheap clarifications — not for handing off
+  unfinished work.
 
 ### §9.2 — Sync vs Background Mode
 
@@ -500,6 +581,50 @@ flowchart TD
   completion).
 - **Always reserve ≥ 1 slot for the orchestrator.** See §12 for concurrency
   limits.
+
+#### Parallel Scouts (Doctrine Rule 2)
+
+Independent scouts — read-only agents answering mutually independent
+questions, with no shared write surface — MUST be dispatched **in parallel**,
+not one after another.
+
+- **Parallel-safe:** `plan-scout`, `docs-scout`, `implementation-pattern-scout`,
+  `boundary-mapper`, `coverage-analyst`, `repo-cortex-scout` and other
+  read-only scouts, when their questions do not depend on each other.
+- **Sequential-only:** a scout whose question depends on another scout's
+  answer, and any scout that shares a file set with a live write agent.
+
+Dispatching independent scouts sequentially is a workflow defect: it spends
+orchestrator wall-clock for no reason.
+
+#### Central Merge (Doctrine Rule 3)
+
+Findings merge at **exactly one** central point: the orchestrator.
+
+- Scouts report **findings**, not decisions. They do not dispatch other
+  agents, and they do not chain their output to a peer scout.
+- The orchestrator dedupes overlapping findings, resolves conflicts, and
+  decides the next dispatch.
+- A coordinator MAY aggregate the results of scouts it dispatched itself —
+  that is a legal central point for its own sub-tree — but it MUST return
+  the merged result to the orchestrator rather than chaining sideways to a
+  peer.
+
+#### Parallel Executors (Doctrine Rule 4)
+
+Write-capable agents MAY run in parallel **only** when their file sets are
+**non-overlapping**.
+
+| Condition                    | Action                                      |
+| ---------------------------- | ------------------------------------------- |
+| Disjoint file sets           | Dispatch in parallel.                       |
+| Overlapping file sets        | Serialize via the file-lock tracker (§12).  |
+| Same file, different concern | Treat as overlapping — one writer per file. |
+| Unclear ownership            | Assume overlap and serialize.               |
+
+Two agents MUST NOT write the same file concurrently. If the plan cannot
+express disjoint file sets, the work is not ready for parallel dispatch —
+split the slice first (Rule 1).
 
 ## §10 — Pre-Green Specialist Review
 
@@ -663,6 +788,13 @@ When a step declares `parallelizable: true` slices, dispatch up to
 orchestrator. If a parallel dispatch hits the limit, queue remaining slices
 and dispatch them as slots free up.
 
+Parallel dispatch is governed by the doctrine in §9.0: parallel executors
+require **non-overlapping file sets** (Rule 4), and independent scouts run
+in parallel (Rule 2). A `parallelizable: true` step whose slices touch the
+same files is a **planning defect** — split the slices (Rule 1) before
+dispatching. Overlapping write scopes are serialized through the file-lock
+tracker, never co-written.
+
 ### Background Agent Polling
 
 When waiting for background agents, use `read_agent` with `timeout: 1200`
@@ -711,6 +843,7 @@ For the following extracted reference material, see
 - MCP tool name format (HYPHENS not underscores)
 - Tier 3 dispatch capability table
 - Fix-packet YAML schema
+- Gap-report YAML schema (§9.1, Doctrine Rule 5)
 - Gate reliability / graceful degradation (gate_error vs content failure)
 - Cortex freshness and file-lock hooks
 - Chrome DevTools MCP specialist quick reference
