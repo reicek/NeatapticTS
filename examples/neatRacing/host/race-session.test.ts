@@ -86,6 +86,35 @@
  * session, fresh log arrays, fresh counters) so no state crosses a test
  * boundary; there is no teardown because nothing leaks past the harness.
  *
+ * RED-14R (slice P1-drift-presentation-red, RED-3; AC-088): the session
+ * must build the HUD read model with the PUBLISHED traction severity -
+ * the ONE shared scalar Step 14Q publishes on the physics car state - so
+ * the HUD, the car pass and the browser seam all read the SAME number
+ * and no consumer re-derives it. Two RED contracts are authored here:
+ *
+ * 1. [RED-14R-SESSION-HUD-TRACTION] the last HUD read model of a real
+ *    drive carries EXACTLY `session.state.car.tractionSeverity`. The
+ *    contract fails today because the session builds the HUD state from
+ *    the speed and the rules only (race-session.ts:262-263).
+ * 2. [RED-14R-SESSION-HUD-TRACTION-EVERY-REPAINT] EVERY repaint of the
+ *    drive carries a numeric severity - the read model never drops the
+ *    published number.
+ *
+ * RED DECISIONS: the HUD state field is NAMED `tractionSeverity` (the
+ * SAME name the physics state publishes and the HUD reads) and it is
+ * OPTIONAL in the production type, so the sibling suite
+ * `host/mode-selector.test.ts` (NOT owned by the green slice) keeps
+ * compiling. The contracts read the field through a cast, so the suite
+ * compiles today and fails on its ASSERTION - never on a compile error.
+ *
+ * Fixture: the drift is driven by the REAL physics step through the
+ * real keyboard sampler (full throttle + a hard left steer) over 60
+ * saturated catch-up frames (240 simulation ticks), which is far past the
+ * ~55 ticks the rear tires need to break away; the published severity
+ * then leaves zero (0.52 at the last repaint) and the contract asserts
+ * that guard BEFORE the value, so a fixture that stops drifting fails
+ * loudly instead of passing silently.
+ *
  * Deliberately NOT pinned (implementation freedom): per-step versus
  * per-frame `hud.update` counts (order only), rules stepping after a
  * terminal state (the pure module freezes itself), the composer frame
@@ -114,6 +143,7 @@ import { sampleKeyboardInput, type NeatRacingKeyboardPresses } from './input';
 import type { NeatRacingHudState } from './hud';
 import {
   createRaceSession,
+  type NeatRacingRaceSession,
   type NeatRacingRaceSessionDeps,
 } from './race-session';
 import {
@@ -136,7 +166,7 @@ interface PhysicsRecord {
 
 /** Live race-session test harness rebuilt fresh for every test. */
 interface RaceSessionHarness {
-  readonly session: { handleFrame(timestampMs: number): void };
+  readonly session: NeatRacingRaceSession;
   readonly log: string[];
   readonly physicsRecords: PhysicsRecord[];
   readonly rulesInputs: RaceRulesStepInput[];
@@ -185,6 +215,25 @@ const LEFT_STEER_PRESSES: NeatRacingKeyboardPresses = {
   left: true,
   right: false,
 };
+
+/**
+ * Throttle-plus-hard-left-steer press fixture (the DRIVING input of the
+ * traction wave: full throttle while steering hard left is what makes the
+ * rear tires break away, so the published traction severity leaves zero).
+ */
+const THROTTLE_LEFT_STEER_PRESSES: NeatRacingKeyboardPresses = {
+  up: true,
+  down: false,
+  left: true,
+  right: false,
+};
+
+/**
+ * Number of saturated catch-up frames used by the traction-drive fixture.
+ * Every frame releases the catch-up cap (4 simulation ticks), so 60 frames
+ * are 240 ticks - far past the ~55 ticks the rear tires need to break away.
+ */
+const DRIFT_FRAMES = 60;
 
 /** Neutral (all-keys-up) press fixture. */
 const NEUTRAL_PRESSES: NeatRacingKeyboardPresses = {
@@ -356,6 +405,24 @@ function createHarness(
       for (const listener of switchListeners) listener(mode);
     },
   };
+}
+
+/**
+ * Drives the session with saturated catch-up frames so the car really
+ * drifts (the fixture the traction contracts need: a published traction
+ * severity strictly above zero).
+ *
+ * The first frame (timestamp 0) releases no step (the accumulator starts
+ * empty); every following frame carries the catch-up ceiling delta, so
+ * each one releases the catch-up cap of four simulation ticks.
+ *
+ * @param harness - The harness to drive.
+ */
+function driveUntilTheTiresBreakAway(harness: RaceSessionHarness): void {
+  harness.runFrame(0);
+  for (let frame = 0; frame < DRIFT_FRAMES; frame += 1) {
+    harness.runFrame((frame + 1) * NEATRACING_CATCHUP_CEILING_MS);
+  }
 }
 
 describe('createRaceSession (P1-drive-loop-live red contract)', () => {
@@ -584,6 +651,44 @@ describe('createRaceSession (P1-drive-loop-live red contract)', () => {
           isTagAfterAll(partition, 'composer', ['physics', 'rules']),
         ),
       ).toBe(true);
+    });
+  });
+
+  describe('the published traction severity reaches the HUD state (AC-088, RED 14R)', () => {
+    // [RED-14R-SESSION-HUD-TRACTION]
+    it('builds the HUD state with the published traction severity of the physics state', () => {
+      // Arrange - full throttle while steering hard left: the rear tires
+      // break away, so the physics publishes a severity above zero.
+      const harness = createHarness({ presses: THROTTLE_LEFT_STEER_PRESSES });
+      // Act
+      driveUntilTheTiresBreakAway(harness);
+      // Assert - the HUD state carries the SAME published number the
+      // physics state publishes (no consumer re-derives it). The field is
+      // read through a cast because the production type does not carry it
+      // yet (the read model is unchanged today).
+      const published = harness.session.state.car.tractionSeverity;
+      expect(published).toBeGreaterThan(0);
+      const lastHudState = harness.hudStates[harness.hudStates.length - 1]!;
+      const hudSeverity = (
+        lastHudState as unknown as { tractionSeverity?: number }
+      ).tractionSeverity;
+      expect(hudSeverity).toBe(published);
+    });
+
+    // [RED-14R-SESSION-HUD-TRACTION-EVERY-REPAINT]
+    it('publishes the traction severity on every HUD repaint of the drive', () => {
+      // Arrange
+      const harness = createHarness({ presses: THROTTLE_LEFT_STEER_PRESSES });
+      // Act
+      driveUntilTheTiresBreakAway(harness);
+      // Assert - every repaint carries a NUMBER: the read model never
+      // drops the published severity.
+      const severities = harness.hudStates.map(
+        (state) =>
+          (state as unknown as { tractionSeverity?: number }).tractionSeverity,
+      );
+      expect(severities.length).toBeGreaterThan(0);
+      expect(severities.every((value) => typeof value === 'number')).toBe(true);
     });
   });
 

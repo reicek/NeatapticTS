@@ -106,7 +106,7 @@ should follow this policy before falling back to native tools (`grep`, `glob`,
 ### Slice-aware context retrieval
 
 When a step packet declares a `pre_execute_hook` (for example,
-`neataptic-workflow-mcp/get_slice_context` with `{ slice_id: "..." }`), invoke it
+`neataptic-workflow-mcp-get_slice_context` with `{ slice_id: "..." }`), invoke it
 **before** any search or file read and use the returned slice context as the
 primary source for the active plan, phase step contract, and relevant source
 files. Only fall back to direct `read_file`/`view` calls for plan/research files

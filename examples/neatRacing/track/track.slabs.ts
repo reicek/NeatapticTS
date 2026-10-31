@@ -15,6 +15,17 @@
  * floors, walls, and the ground plane meet exactly with no z-fighting
  * seams.
  *
+ * THE EDGE IS NOT THIS MODULE'S TO DECIDE: the road edge is the NAMED
+ * asymmetric pair published by the edge seam (`./track.edge`) - an inner
+ * half-width (the road never narrows) and an outer half-width (the inner
+ * one plus the corner-measured drift room). This module MEASURES the road
+ * through that seam - the published half-width pair, the loop-global side
+ * assignment and the canonical chord distance - and keeps only its OWN
+ * ratified band policy (the min-past-edge UNION over every chord, road
+ * before curb before grass). It derives NO half-width of its own, so the
+ * rasterizer, the tri-colour band paint and the containment bound can never
+ * disagree about how WIDE the road is.
+ *
  * Determinism: {@link buildTrackSlabs} is a pure function of
  * `{ seed, layoutVersion, sizeBucket }` — two calls with the same input
  * produce byte-identical `JSON.stringify` output in the same runtime
@@ -30,6 +41,13 @@ import type {
   TrackSegment,
   TrackSpec,
 } from '../../racing_curriculum/track/track.generator.types';
+import {
+  distanceToTrackChordMAtWorldZ,
+  resolveTrackEdgeHalfWidthM,
+  resolveTrackEdgeProfile,
+  resolveTrackEdgeSideAtWorldZ,
+} from './track.edge';
+import type { TrackEdgeProfile } from './track.edge';
 import { meshVoxelModel } from '../voxel/greedy-mesher';
 import type { VoxelMesh, VoxelQuad } from '../voxel/greedy-mesher';
 import type { DecodedVoxelModel } from '../voxel/model.decode.utils';
@@ -149,87 +167,55 @@ interface TrackSpanAabb {
 }
 
 /**
- * Distance from a ground-plane point to the segment's centerline chord.
- *
- * `startY`/`endY` on a {@link TrackSegment} are ground-plane coordinates
- * (the generator works in the x/y plane). The slab lattice rasterizes in
- * generator ground coordinates with `pointZ` on the same y axis; the mirror
- * into the rendered scene (world z = -y) happens at the lattice origin,
- * where each painted cell's query point negates the lattice z (see
- * {@link paintTrackSlabSlices}).
- *
- * @param pointX - Ground-plane x of the sample point.
- * @param pointZ - Ground-plane y-axis coordinate of the sample point (the
- *   generator's y, in generator plane meters).
- * @param segment - Segment whose centerline chord is measured against.
- * @returns Euclidean distance to the clamped nearest chord point.
- *
- * @example
- * ```ts
- * const { generateTrack } = require('../../racing_curriculum/track/track.generator');
- * distanceToSegment2D(0, 0, generateTrack({ seed: 42, layoutVersion: 1, sizeBucket: 'large' }).segments[0]);
- * ```
- */
-function distanceToSegment2D(
-  pointX: number,
-  pointZ: number,
-  segment: TrackSegment,
-): number {
-  const chordX = segment.endX - segment.startX;
-  const chordZ = segment.endY - segment.startY;
-  const chordLengthSquared = chordX * chordX + chordZ * chordZ;
-
-  if (chordLengthSquared <= 0) {
-    return Math.hypot(pointX - segment.startX, pointZ - segment.startY);
-  }
-
-  const projection =
-    ((pointX - segment.startX) * chordX + (pointZ - segment.startY) * chordZ) /
-    chordLengthSquared;
-  const clampedProjection = Math.min(1, Math.max(0, projection));
-  const nearestX = segment.startX + clampedProjection * chordX;
-  const nearestZ = segment.startY + clampedProjection * chordZ;
-
-  return Math.hypot(pointX - nearestX, pointZ - nearestZ);
-}
-
-/**
  * Classifies one ground-plane point into a lattice surface palette index.
  *
- * Bands are measured from the centerline of the nearest segment: road
- * core, then curb, then grass apron, then air. When a point sits in the
- * widening of one segment but inside the road core of another, the
+ * Bands are measured from the centerline of every chord, through the edge
+ * seam: the half-width of a chord is the PUBLISHED half-width of the side
+ * the point sits on (the inner half-width on the inner side, the widened
+ * outer half-width on the outer side), so the road is WIDER on the outer
+ * side of a corner and never narrower on the inner side. When a point sits
+ * in the widening of one chord but inside the road core of another, the
  * highest-priority surface wins (road before curb before grass), keeping
  * junctions and overlapping corner ribbons drivable.
  *
- * @param pointX - Ground-plane x of the sample point.
- * @param pointZ - Ground-plane z of the sample point.
- * @param segments - Closed-loop segments defining the ribbon.
+ * @param pointX - World-frame x of the sample point.
+ * @param worldZ - World-frame z of the sample point.
+ * @param edgeProfile - The edge profile published by the edge seam for the
+ *   ribbon being rasterized.
  * @returns Lattice palette index: 1 road, 2 curb, 3 grass, 0 air.
  *
  * @example
  * ```ts
- * resolveSurfaceIndexAt(0, 0, spec.segments); // 1 -> road core
+ * resolveSurfaceIndexAt(0, 0, resolveTrackEdgeProfile(spec.segments)); // 1 -> road core
  * ```
  */
 function resolveSurfaceIndexAt(
   pointX: number,
-  pointZ: number,
-  segments: readonly TrackSegment[],
+  worldZ: number,
+  edgeProfile: TrackEdgeProfile,
 ): number {
   let inRoadCore = false;
   let inCurbBand = false;
   let inGrassApron = false;
 
-  for (const segment of segments) {
-    const halfWidth = segment.width / 2;
-    const distance = distanceToSegment2D(pointX, pointZ, segment);
+  for (let segmentIndex = 0; segmentIndex < edgeProfile.chords.length; segmentIndex += 1) {
+    const chord = edgeProfile.chords[segmentIndex];
+    const segment = edgeProfile.segments[segmentIndex];
+    if (chord === undefined || segment === undefined) {
+      continue;
+    }
 
-    if (distance <= halfWidth - TRACK_SLAB_CURB_WIDTH_M) {
+    const halfWidthM = resolveTrackEdgeHalfWidthM(
+      chord,
+      resolveTrackEdgeSideAtWorldZ(edgeProfile, segmentIndex, pointX, worldZ),
+    );
+    const distance = distanceToTrackChordMAtWorldZ(segment, pointX, worldZ);
+
+    if (distance <= halfWidthM - TRACK_SLAB_CURB_WIDTH_M) {
       inRoadCore = true;
-    } else if (distance <= halfWidth) {
+    } else if (distance <= halfWidthM) {
       inCurbBand = true;
-    } else if (distance <= halfWidth + TRACK_SLAB_GRASS_APRON_WIDTH_M) {
+    } else if (distance <= halfWidthM + TRACK_SLAB_GRASS_APRON_WIDTH_M) {
       inGrassApron = true;
     }
   }
@@ -264,12 +250,13 @@ function resolveSurfaceIndexAt(
  * @param originX - World-meter x of lattice cell x = 0.
  * @param originZ - Mirrored world-meter z of lattice cell z = 0 (the
  *   query point per row is the generator y at -worldZ).
- * @param segments - Closed-loop segments defining the ribbon.
+ * @param edgeProfile - The edge profile published by the edge seam for the
+ *   ribbon being rasterized.
  * @returns One painted slice per lattice z, in ascending z order.
  *
  * @example
  * ```ts
- * paintTrackSlabSlices(4, 4, -1, -1, spec.segments);
+ * paintTrackSlabSlices(4, 4, -1, -1, resolveTrackEdgeProfile(spec.segments));
  * // -> [Uint8Array(4), Uint8Array(4), Uint8Array(4), Uint8Array(4)]
  * ```
  */
@@ -278,7 +265,7 @@ function paintTrackSlabSlices(
   cellsZ: number,
   originX: number,
   originZ: number,
-  segments: readonly TrackSegment[],
+  edgeProfile: TrackEdgeProfile,
 ): Uint8Array[] {
   const slices: Uint8Array[] = [];
 
@@ -288,8 +275,7 @@ function paintTrackSlabSlices(
     for (let cellX = 0; cellX < cellsX; cellX++) {
       const pointX = originX + (cellX + 0.5) * NEATRACING_TRACK_SLAB_PITCH_M;
       const worldZ = originZ + (sliceZ + 0.5) * NEATRACING_TRACK_SLAB_PITCH_M;
-      const pointZ = -worldZ;
-      slice[cellX] = resolveSurfaceIndexAt(pointX, pointZ, segments);
+      slice[cellX] = resolveSurfaceIndexAt(pointX, worldZ, edgeProfile);
     }
 
     slices.push(slice);
@@ -375,6 +361,9 @@ function synthesizeTrackSlabLattice(spec: TrackSpec): TrackSlabLattice {
   const originZ = Math.floor(mirroredMinZ / pitch) * pitch;
   const cellsX = Math.max(1, Math.ceil((span.maxX - originX) / pitch));
   const cellsZ = Math.max(1, Math.ceil((mirroredMaxZ - originZ) / pitch));
+  // The edge profile is resolved ONCE for the whole lattice: it is the
+  // published width profile every cell measures the road through.
+  const edgeProfile = resolveTrackEdgeProfile(spec.segments.slice());
 
   const model: DecodedVoxelModel = {
     name: TRACK_SLAB_MODEL_NAME,
@@ -386,7 +375,7 @@ function synthesizeTrackSlabLattice(spec: TrackSpec): TrackSlabLattice {
       cellsZ,
       originX,
       originZ,
-      spec.segments,
+      edgeProfile,
     ),
   };
 
@@ -473,11 +462,24 @@ export interface TrackSlabSurfaceClassification {
  * road-edge flat paint) emit geometry whose cells sit exactly on the ribbon's
  * road/curb/grass boundaries without duplicating classification logic.
  *
- * @param pointX - Ground-plane x of the sample point.
- * @param pointZ - Ground-plane z of the sample point. Internally mirrored to
- *   generator y via `-pointZ`, matching the `worldZ = -y` convention used by
- *   the slab rasterizer.
+ * THE EDGE IS THE SEAM'S: the half-width of every chord is the PUBLISHED
+ * half-width of the side the point sits on (the inner half-width on the
+ * inner side, the widened outer half-width on the outer side), measured
+ * through the edge seam - this reader derives NO half-width of its own. The
+ * band policy stays THIS reader's: the min-past-edge UNION over every chord
+ * with the road-before-curb-before-grass priority.
+ *
+ * @param pointX - World-frame x of the sample point.
+ * @param pointZ - World-frame z of the sample point. The edge seam mirrors
+ *   the world z back into the generator plane (`worldZ = -y`), the same
+ *   handedness the slab rasterizer uses.
  * @param segments - Closed-loop segments defining the ribbon.
+ * @param edgeProfile - The edge profile published by the edge seam for those
+ *   segments. It is OPTIONAL: a caller that classifies many points of the
+ *   same ribbon passes the profile it resolved ONCE, so the published width
+ *   profile is not rebuilt per point. When it is omitted the profile is
+ *   resolved from `segments` - a caller that passes a profile MUST pass one
+ *   resolved from the SAME segments.
  * @returns Surface label plus signed distance past the nearest track edge.
  *   `distancePastEdgeM` is always defined: it is negative inside the roadway,
  *   zero on the curb outer edge, and positive outside.
@@ -486,28 +488,36 @@ export function classifyTrackSlabSurfaceAt(
   pointX: number,
   pointZ: number,
   segments: readonly TrackSegment[],
+  edgeProfile: TrackEdgeProfile = resolveTrackEdgeProfile(segments.slice()),
 ): TrackSlabSurfaceClassification {
   let inRoadCore = false;
   let inCurbBand = false;
   let inGrassApron = false;
   let minDistancePastEdgeM = Number.POSITIVE_INFINITY;
 
-  for (const segment of segments) {
-    const halfWidth = segment.width / 2;
-    // Mirror world z to generator y so the road-edge classifier uses the
-    // same handedness as the slab rasterizer (worldZ = -y).
-    const distance = distanceToSegment2D(pointX, -pointZ, segment);
-    const pastEdge = distance - halfWidth;
+  for (let segmentIndex = 0; segmentIndex < edgeProfile.chords.length; segmentIndex += 1) {
+    const chord = edgeProfile.chords[segmentIndex];
+    const segment = edgeProfile.segments[segmentIndex];
+    if (chord === undefined || segment === undefined) {
+      continue;
+    }
+
+    const halfWidthM = resolveTrackEdgeHalfWidthM(
+      chord,
+      resolveTrackEdgeSideAtWorldZ(edgeProfile, segmentIndex, pointX, pointZ),
+    );
+    const distance = distanceToTrackChordMAtWorldZ(segment, pointX, pointZ);
+    const pastEdge = distance - halfWidthM;
 
     if (pastEdge < minDistancePastEdgeM) {
       minDistancePastEdgeM = pastEdge;
     }
 
-    if (distance <= halfWidth - TRACK_SLAB_CURB_WIDTH_M) {
+    if (distance <= halfWidthM - TRACK_SLAB_CURB_WIDTH_M) {
       inRoadCore = true;
-    } else if (distance <= halfWidth) {
+    } else if (distance <= halfWidthM) {
       inCurbBand = true;
-    } else if (distance <= halfWidth + TRACK_SLAB_GRASS_APRON_WIDTH_M) {
+    } else if (distance <= halfWidthM + TRACK_SLAB_GRASS_APRON_WIDTH_M) {
       inGrassApron = true;
     }
   }

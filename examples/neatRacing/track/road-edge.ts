@@ -17,7 +17,19 @@
  *
  * The honeycomb lattice is derived from the same track geometry that builds
  * the 0.5 m slab ribbon, so the paint aligns with the ribbon and its edge
- * markers rather than being a separate approximation.
+ * markers rather than being a separate approximation. The sampled lattice
+ * window is measured from the RIBBON itself (the centerline AABB grown by
+ * the widest published half width) plus the full 6 m border band, so the
+ * tri-color band stays COMPLETE around the convex corners, where the ribbon
+ * cap reaches past the slab raster bounds.
+ *
+ * THE EDGE IS NOT THIS MODULE'S TO DECIDE: the band is measured from the
+ * NAMED asymmetric edge published by the edge seam (`./track.edge`) - the
+ * widened outer half-width on the outer side of a corner, the inner
+ * half-width on the inner side - so the band starts where the road actually
+ * ends. This module derives NO half-width of its own and keeps only its OWN
+ * ratified policy: the ladder constants and their CUMULATIVE outer
+ * semantics are untouched, only the base the bands are measured from moves.
  *
  * Determinism: {@link buildRoadEdgeHexVoxels} is a pure function of the same
  * `{ seed, layoutVersion, sizeBucket }` tuple used by the slab builder. Two
@@ -26,10 +38,10 @@
  */
 
 import { generateTrack } from '../../racing_curriculum/track/track.generator';
+import { resolveTrackEdgeProfile } from './track.edge';
+import type { TrackEdgeProfile } from './track.edge';
 import {
-  buildTrackSlabSurfaceGrid,
   classifyTrackSlabSurfaceAt,
-  NEATRACING_TRACK_SLAB_PITCH_M,
   type TrackSlabBuildInput,
 } from './track.slabs';
 
@@ -166,8 +178,13 @@ export interface RoadEdgeHexLattice {
 /** Synthetic type alias for the public input tuple. */
 export type RoadEdgeHexBuildInput = TrackSlabBuildInput;
 
-/** Tile colorway emitted for one honeycomb cell. */
-type TileColorway = 'road' | 'red' | 'yellow' | 'green';
+/**
+ * Tile colorway emitted for one honeycomb cell.
+ *
+ * `road` covers the drivable ribbon and its curb band; the three border
+ * colorways name the successive rings painted beyond the track edge.
+ */
+export type TileColorway = 'road' | 'red' | 'yellow' | 'green';
 
 const HEX_VERTEX_COUNT = 6;
 const HEX_ANGLE_STEP = Math.PI / 3;
@@ -181,6 +198,36 @@ const HEX_APOTHEM_M =
  */
 const HEX_STROKE_HALF_WIDTH_M =
   HEX_APOTHEM_M - NEATRACING_ROAD_EDGE_HEX_INNER_RADIUS_M;
+
+/**
+ * CUMULATIVE outward distance from the track edge, in meters, at which the
+ * green band ENDS. The green band therefore spans 0-2 m past the edge.
+ *
+ * These three limits are CUMULATIVE outer bounds, not per-band widths: each
+ * one is measured from the track edge, so the yellow band is 2 m wide (2-4 m
+ * past the edge) and the red band is 2 m wide (4-6 m past the edge). Do not
+ * read them as the width of their own band.
+ */
+export const ROAD_EDGE_BORDER_GREEN_M = 2;
+
+/**
+ * CUMULATIVE outward distance from the track edge, in meters, at which the
+ * yellow band ENDS. The yellow band therefore spans 2-4 m past the edge.
+ *
+ * This is a cumulative outer bound measured from the track edge, NOT the
+ * width of the yellow band itself (the yellow band is 2 m wide).
+ */
+export const ROAD_EDGE_BORDER_YELLOW_M = 4;
+
+/**
+ * CUMULATIVE outward distance from the track edge, in meters, at which the
+ * red band ENDS. The red band therefore spans 4-6 m past the edge.
+ *
+ * This is a cumulative outer bound measured from the track edge, NOT the
+ * width of the red band itself (the red band is 2 m wide). It is also the
+ * OUTERMOST painted distance: no tile is emitted beyond it.
+ */
+export const ROAD_EDGE_BORDER_RED_M = 6;
 
 /** Precedence used to choose the visible color of a shared edge. */
 const COLORWAY_PRECEDENCE: Readonly<Record<TileColorway, number>> = {
@@ -243,9 +290,11 @@ export function buildRoadEdgeHexLattice(
   input: TrackSlabBuildInput,
 ): RoadEdgeHexLattice {
   const spec = generateTrack(input);
-  const fineGrid = buildTrackSlabSurfaceGrid(input);
+  // The edge profile is resolved ONCE for the whole lattice: it is the
+  // published width profile every cell measures the road through.
+  const edgeProfile = resolveTrackEdgeProfile(spec.segments.slice());
 
-  const tiles = collectHoneycombTiles(fineGrid, spec);
+  const tiles = collectHoneycombTiles(spec, edgeProfile);
   const tileMap = new Map<string, RoadEdgeHexLatticeTile>();
   for (const tile of tiles) {
     tileMap.set(tileKey(tile.q, tile.r), tile);
@@ -298,25 +347,35 @@ export function buildRoadEdgeHexLattice(
 }
 
 /**
- * Builds a flat-topped axial honeycomb grid covering the track slab bounds plus
- * a ~6 m border band, classifies each cell center with the same track-edge
- * logic that paints the ribbon, and returns the cells that should emit tiles.
+ * Builds a flat-topped axial honeycomb grid covering the track ribbon plus
+ * the full ~6 m border band, classifies each cell center with the same
+ * track-edge logic that paints the ribbon, and returns the cells that should
+ * emit tiles.
+ *
+ * The sampled window is measured from the RIBBON (the union of the
+ * per-segment capsules), NOT from the slab raster bounds: the slab grid
+ * spans the centerline AABB, so at a convex corner the ribbon cap - and with
+ * it the whole border band - reaches past that grid. A window derived from
+ * the slab bounds therefore cut the red shell off at the outer corners and
+ * left them with an incomplete marker set.
+ *
+ * @param spec - Generated track spec.
+ * @param edgeProfile - The edge profile published by the edge seam for the
+ *   ribbon being painted.
+ * @returns The cells that should emit tiles.
  */
 function collectHoneycombTiles(
-  fineGrid: ReturnType<typeof buildTrackSlabSurfaceGrid>,
   spec: ReturnType<typeof generateTrack>,
+  edgeProfile: TrackEdgeProfile,
 ): RoadEdgeHexLatticeTile[] {
-  const pitch = NEATRACING_TRACK_SLAB_PITCH_M;
   const outerR = NEATRACING_ROAD_EDGE_HEX_OUTER_RADIUS_M;
-  const xMin = fineGrid.origin[0];
-  const xMax = fineGrid.origin[0] + fineGrid.cellsX * pitch;
-  const zMin = fineGrid.origin[2];
-  const zMax = fineGrid.origin[2] + fineGrid.cellsZ * pitch;
+  const bounds = measureTrackBorderBandBounds(spec, edgeProfile);
 
-  // Pad enough cells to cover the ~6 m border band plus one cell of diameter.
-  const pad = 4;
-  const qMin = Math.floor(xMin / (outerR * 1.5)) - pad;
-  const qMax = Math.ceil(xMax / (outerR * 1.5)) + pad;
+  // One cell of slack on every side keeps the window inclusive of the
+  // outermost band cells.
+  const pad = 1;
+  const qMin = Math.floor(bounds.minX / (outerR * 1.5)) - pad;
+  const qMax = Math.ceil(bounds.maxX / (outerR * 1.5)) + pad;
 
   const tiles: RoadEdgeHexLatticeTile[] = [];
   const seen = new Set<string>();
@@ -324,9 +383,9 @@ function collectHoneycombTiles(
   for (let q = qMin; q <= qMax; q++) {
     const z0 = (Math.sqrt(3) / 2) * outerR * q;
     const rMin =
-      Math.floor((zMin - z0) / (outerR * Math.sqrt(3))) - pad;
+      Math.floor((bounds.minZ - z0) / (outerR * Math.sqrt(3))) - pad;
     const rMax =
-      Math.ceil((zMax - z0) / (outerR * Math.sqrt(3))) + pad;
+      Math.ceil((bounds.maxZ - z0) / (outerR * Math.sqrt(3))) + pad;
 
     for (let r = rMin; r <= rMax; r++) {
       const [x, z] = axialToWorld(q, r);
@@ -334,16 +393,17 @@ function collectHoneycombTiles(
         x,
         z,
         spec.segments,
+        edgeProfile,
       );
 
       let colorway: TileColorway | null = null;
       if (surface === 'road' || surface === 'curb') {
         colorway = 'road';
-      } else if (distancePastEdgeM <= 2) {
+      } else if (distancePastEdgeM <= ROAD_EDGE_BORDER_GREEN_M) {
         colorway = 'green';
-      } else if (distancePastEdgeM <= 4) {
+      } else if (distancePastEdgeM <= ROAD_EDGE_BORDER_YELLOW_M) {
         colorway = 'yellow';
-      } else if (distancePastEdgeM <= 6) {
+      } else if (distancePastEdgeM <= ROAD_EDGE_BORDER_RED_M) {
         colorway = 'red';
       }
 
@@ -372,9 +432,85 @@ function collectHoneycombTiles(
 }
 
 /**
- * Builds a 2 m honeycomb grid aligned to the track slab bounds, classifies
- * each cell center with the same track-edge logic that paints the ribbon, and
- * returns every cell that should emit a roadway or border-line tile.
+ * Measures the world-space rectangle that has to be sampled so the tri-color
+ * border band is COMPLETE around the whole ribbon.
+ *
+ * The ribbon is the union of the per-segment capsules (each chord grown by
+ * its PUBLISHED half width - the widened outer half-width on the outer side
+ * of a corner, the inner half-width on the inner side), so the ribbon AABB
+ * is the centerline AABB grown by the WIDEST published half width. The
+ * border band reaches 6 m past that ribbon, and one hex radius of margin is
+ * added so the outermost tile geometry stays inside the sampled rectangle.
+ *
+ * The world z axis mirrors the generator y axis (`worldZ = -y`), the same
+ * handedness the slab builder uses.
+ *
+ * A spec with NO segments has no ribbon to grow, so the helper returns an
+ * inverted (empty) rectangle instead of an unbounded one: the caller then
+ * samples no cell at all and emits no tile. This keeps the helper total for
+ * degenerate specs - it never yields NaN bounds and never throws.
+ *
+ * @param spec - Generated track spec.
+ * @param edgeProfile - The edge profile published by the edge seam for the
+ *   ribbon being painted.
+ * @returns World-space bounds of the sampled rectangle, in meters.
+ */
+function measureTrackBorderBandBounds(
+  spec: ReturnType<typeof generateTrack>,
+  edgeProfile: TrackEdgeProfile,
+): {
+  readonly minX: number;
+  readonly maxX: number;
+  readonly minZ: number;
+  readonly maxZ: number;
+} {
+  if (spec.segments.length === 0) {
+    return {
+      minX: Number.POSITIVE_INFINITY,
+      maxX: Number.NEGATIVE_INFINITY,
+      minZ: Number.POSITIVE_INFINITY,
+      maxZ: Number.NEGATIVE_INFINITY,
+    };
+  }
+
+  let minX = Number.POSITIVE_INFINITY;
+  let maxX = Number.NEGATIVE_INFINITY;
+  let minY = Number.POSITIVE_INFINITY;
+  let maxY = Number.NEGATIVE_INFINITY;
+  // The WIDEST published half width of the ribbon: the outer half-width of
+  // a corner is the widest one, so the window still covers the whole
+  // asymmetric ribbon and the band around it.
+  let maxHalfWidthM = 0;
+
+  for (const segment of spec.segments) {
+    minX = Math.min(minX, segment.startX, segment.endX);
+    maxX = Math.max(maxX, segment.startX, segment.endX);
+    minY = Math.min(minY, segment.startY, segment.endY);
+    maxY = Math.max(maxY, segment.startY, segment.endY);
+  }
+
+  for (const chord of edgeProfile.chords) {
+    maxHalfWidthM = Math.max(maxHalfWidthM, chord.outerHalfWidthM);
+  }
+
+  const marginM =
+    maxHalfWidthM +
+    ROAD_EDGE_BORDER_RED_M +
+    NEATRACING_ROAD_EDGE_HEX_OUTER_RADIUS_M;
+
+  return {
+    minX: minX - marginM,
+    maxX: maxX + marginM,
+    minZ: -maxY - marginM,
+    maxZ: -minY + marginM,
+  };
+}
+
+/**
+ * Builds a 2 m honeycomb grid aligned to the track ribbon geometry,
+ * classifies each cell center with the same track-edge logic that paints the
+ * ribbon, and returns every cell that should emit a roadway or border-line
+ * tile.
  *
  * Exported as a test seam so contract tests can verify lattice alignment
  * without reverse-engineering centers from overlapping triangle vertices.

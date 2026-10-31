@@ -27,6 +27,12 @@ html, body { margin: 0; padding: 0; height: 100%; background: #05070d; overflow:
     consoleErrors: [],
     networkFailures: [],
     checks: {},
+    // The ACTUAL number of named checks in result.checks, computed from the
+    // object itself (never the expected number).
+    checkCount: 0,
+    // The ACTUAL names of the named checks, published next to the count so
+    // the gate can assert the exact SET and not only the total.
+    checkNames: [],
     notes: ''
   };
   window.p1TurnDriftGreenSmokeResult = result;
@@ -94,6 +100,98 @@ html, body { margin: 0; padding: 0; height: 100%; background: #05070d; overflow:
   var driftProxyRunFrames = 0;
   var driftProxyRunMaxFrames = 0;
   var driftProxySamples = [];
+  // 14N drift-feel measurement state (the P0-P6 phase sequence). The
+  // browser-computable observables (the body-to-travel angle and its sign)
+  // are measured on a SEPARATE rolling window, so the retained W+A
+  // measurement (maxDriftProxyRad, driftProxyRunMaxFrames) is never
+  // perturbed by the new phases.
+  var feelProxySamples = [];
+  // The per-frame SIGNED body-to-travel angle of the new phases. The log
+  // is the evidence behind the far-side pop, the sign consistency and the
+  // slide prominence, so every one of those measurements is auditable
+  // after the run.
+  var feelProxyLog = [];
+  var feelProxyMaxRad = 0;
+  var feelProxyFrameCount = 0;
+  var feelProxyRunMaxFrames = 0;
+  var feelPhases = {};
+  // The per-frame seam samples of the new phases. The seam carries exactly
+  // EIGHT fields (poseRad, poseRateRadPerS, slipAngleRad, speedMps, tickHz,
+  // tick, followOffsetRad - the chase-camera follow offset, added by Step
+  // 14P - and tractionSeverity - the PUBLISHED traction severity, added by
+  // Step 14Q2); the phase label, the frame index, the wall-clock stamp and
+  // the body position are the FIXTURE's own bookkeeping.
+  var feelSeamSamples = [];
+  // Step 14R: the FIELD-COUNT ASSERTION state. The seam READER owns the
+  // eight-field contract, so it COUNTS the fields the seam actually
+  // publishes and the run only passes when the count is EXACTLY eight (a
+  // seam with seven means the writer never landed; a seam with nine means
+  // a field grew without a re-base record). The observed count and the
+  // number of observations are published next to the check count, so the
+  // gate can assert the exact SET and not only the total.
+  var observedSeamFieldCount = 0;
+  var observedSeamFieldSamples = 0;
+  // Step 14R: the HUD TRACTION READOUT element. The overlay paints the
+  // PUBLISHED traction severity as a whole percent ('Traction 42%') on
+  // its FOURTH label (the order the production appends them in: speed,
+  // lap, time, traction, hint - examples/neatRacing/host/hud.ts), and
+  // the fixture READS that text to compare the rendered readout against
+  // the PUBLISHED severity on the seam. The fixture NEVER re-derives the
+  // severity: it compares the two PUBLISHED numbers.
+  var hudTractionLabel = null;
+  // The AC-079 comparable capture pair: the capture point of P1 and the
+  // capture point of P2 (both at the SAME tick budget, so the two speeds
+  // are comparable). The speed trace makes a polluted capture diagnosable.
+  // A null capture means the capture point was never reached.
+  var straightCaptureSpeedKmh = null;
+  var driftCaptureSpeedKmh = null;
+  var straightCaptureX = null;
+  var straightCaptureZ = null;
+  var driftCaptureX = null;
+  var driftCaptureZ = null;
+  // The capture TICKS (the simulation tick the capture was taken at) and
+  // the REGIME evidence of each capture: the distance to the nearest road
+  // vertex (the road is 30 m wide, so the half-width is 13.5-16.5 m) and
+  // the HUD cross-check of the seam speed. The browser has no surface
+  // classifier, so this geometry measurement IS the regime evidence.
+  var straightCaptureTick = null;
+  var driftCaptureTick = null;
+  var straightCaptureRoadDistanceM = null;
+  var driftCaptureRoadDistanceM = null;
+  var straightCaptureHudKmh = null;
+  var driftCaptureHudKmh = null;
+  var straightCaptureSlipRad = null;
+  var driftCaptureSlipRad = null;
+  // The road vertices of the captured track VBO (published by
+  // analyzeTrackVbo), so a capture point can be classified as ON-ROAD or
+  // OFF-ROAD.
+  var capturedRoadPoints = [];
+  // The tick budget each phase actually ran (the MEASURED tick delta), so
+  // the notes show that the phase budgets are TICK budgets and not frame
+  // budgets.
+  var feelPhaseTickDeltas = {};
+  // The input alignment log (the tick-aligned key dispatch): every flip
+  // records the tick it was issued on, the tick it landed on and whether
+  // the simulation clock had advanced when the flip was issued.
+  var feelInputAlignment = [];
+  // The throttle state the fixture believes it holds, so the speed
+  // governor never re-dispatches the same key every frame.
+  var feelThrottleDown = false;
+  var feelSpeedTrace = [];
+  // The countersteer key order. The release MUST come first, so the order is
+  // recorded and the checks can read the fact.
+  var countersteerKeyOrder = [];
+  var mirrorKeyOrder = [];
+  var countersteerReleasedBeforePress = false;
+  var mirrorReleasedBeforePress = false;
+  // The uTireGradient* fragment-stage capture (AC-088). It is DEFENSIVE: a
+  // uniform that is never fed leaves its slot undefined and the dependent
+  // check reports false - it never throws.
+  var tireGradientBrightFactor = undefined;
+  var tireGradientDarkFactor = undefined;
+  var tireGradientRadius = undefined;
+  var tireGradientThreshold = undefined;
+  var tireGradientApplyEnabled = false;
   // AC-078 tolerance: the attached tire must keep the same relative pose to
   // the body while the body yaws into the slide. The float32 matrix noise is
   // ~1e-5 rad, so 0.002 rad is a tight but safe band (the drift yaw reaches
@@ -104,7 +202,51 @@ html, body { margin: 0; padding: 0; height: 100%; background: #05070d; overflow:
   // model held that whole top speed through any turn because the tires
   // never gave up any forward grip. A sustained hard turn that stays below
   // this ceiling proves the forward grip was spent on the slide.
-  var TRACTION_LOSS_MAX_SPEED_KMH = 290;
+  //
+  // 14N (D1.3 and D3.1 line 107, RE-SEMANTIC + RE-PIN): the ceiling is
+  // RE-PINNED strictly ABOVE the scenario top speed so it stops being the
+  // binding constraint. The retained 290 km/h figure is NOT carried
+  // forward: it was a ceiling-only artifact, never a measurement.
+  //
+  // GAP-N4 D1.3 (the ratified scrub coefficient 0.55, which SUPERSEDES the
+  // projected 0.25): the scrub max is 22.0275 m/s2, which is ABOVE the
+  // 17.8 m/s2 engine, so the SCRUB wins above the 4/9 (about 0.444444)
+  // SCRUB-COEFFICIENT crossover (the engine wins while c <= 4/9, and the
+  // interior equilibrium is s* = sqrt(3520.4444 / c) = 80.0 m/s at
+  // c = 0.55) - the drift phase no longer holds the arcade
+  // top speed through the turn. MEASURED on the final bytes: the drift
+  // terminal speed is 79.85793 m/s = 287.49 km/h, i.e. a 32.91146 km/h
+  // deficit against the 320.4 km/h straight-line top speed (32.55473 km/h
+  // at the 600-tick capture). The ceiling stays a LOOSE bound: 340 km/h
+  // clears the 320.4 km/h top speed by about 6 percent, so it is not the
+  // deciding term - the DEFICIT form below is the contract.
+  var TRACTION_LOSS_MAX_SPEED_KMH = 340;
+  // AC-079 (D1.3): the NEW named export NEATRACING_DRIFT_MIN_SPEED_DEFICIT_KMH
+  // (owned by the tune-model slice, examples/neatRacing/physics/drift.model.ts)
+  // is MIRRORED here, exactly the way TRACK_LIT_FLOATS_PER_VERTEX mirrors
+  // NEATRACING_TRACK_LIT_FLOATS_PER_VERTEX in engine/passes/track.pass.ts.
+  // The mirror has to live in the fixture because the debug seam is FIXED
+  // at seven fields (poseRad, slipAngleRad, speedMps, tickHz, tick,
+  // followOffsetRad, tractionSeverity) and cannot carry a constant.
+  //
+  // Derivation (RED-DECIDED, 14N-rebaseline-risk.md D1.3 and D3.1, ratified
+  // by the GAP-N4 D1.3 decision):
+  //  - the OLD model's deficit at the two comparable capture points was
+  //    MEASURED in the jest lane at 112.26 km/h (straight 600 ticks =
+  //    320.4 km/h against drift 600 ticks = 208.14 km/h);
+  //  - the NEW model's deficit (scrub coefficient 0.55) is now MEASURED
+  //    and no longer projected: 32.55473 km/h at the 600-tick capture and
+  //    32.91146 km/h at the 1200-tick terminal (the scrub max is
+  //    22.0275 m/s2, above the 17.8 m/s2 engine);
+  //  - the floor is pinned at 20 km/h as a NON-VACUOUS lower bound that the
+  //    measured NEW-model deficit has to clear (20 is about 0.61x the
+  //    measured 32.55 km/h deficit and about 0.18x the measured old-model
+  //    deficit).
+  // BLOCKING RULE: if the measured new-model deficit falls BELOW 20 km/h
+  // then the MODEL is at fault and not the floor - the step BLOCKS and
+  // escalates through 00.cross-tier-helper. The floor is NEVER silently
+  // relaxed and the ceiling is NEVER silently re-pinned.
+  var DRIFT_MIN_SPEED_DEFICIT_KMH = 20;
   // The arcade drift only engages above 15 m/s (54 km/h), so the scenario
   // must reach that speed for the tire-yaw contract to be exercised at all.
   var DRIFT_MIN_SPEED_KMH = 54;
@@ -125,11 +267,36 @@ html, body { margin: 0; padding: 0; height: 100%; background: #05070d; overflow:
   // speed gate alone does not prove a slide). The gate also requires a
   // CONSECUTIVE run of at least DRIFT_PROXY_MIN_FRAMES frames above the
   // threshold, so a single-frame transient cannot decide the phase.
-  var DRIFT_PROXY_MIN_RAD = 0.01;
+  //
+  // 14N (D3.1 line 128, RE-BASELINE - relative, not absolute): the gate is
+  // RE-DERIVED from the AC-087 authority so the fixture and the unit live
+  // in ONE system: DRIFT_PROXY_MIN_RAD = 0.25 x
+  // NEATRACING_DRIFT_MIN_SLIDE_PROXY_RAD = 0.25 x 0.20 = 0.05. The 0.25
+  // coefficient is the RED slice's decision (the browser proxy is
+  // render-rate dependent, so the browser can only carry a LOOSE fraction
+  // of the deterministic unit floor) and the derivation is PINNED here so
+  // the gate threshold and the production constant cannot drift apart. The
+  // OLD 0.01 rad figure is NOT carried forward.
+  var DRIFT_PROXY_MIN_RAD = 0.05;
   // Minimum number of CONSECUTIVE drift-phase frames that must reach
   // DRIFT_PROXY_MIN_RAD for the drift engagement to count (a sustained
   // slide, not a spike).
+  //
+  // 14N (D3.1 line 132, RE-BASELINE - split): 3 stays for the ENGAGEMENT
+  // gate and is NOT moved. The 7f regression guard is the pair
+  // (NEATRACING_DRIFT_PROXY_ENGAGEMENT_MIN_RAD, NEATRACING_DRIFT_PROXY_MIN_FRAMES)
+  // = (0.01, 3) in the jest lane, and the browser twin
+  // (driftGateSurvivesThreeConsecutiveFrames) measures the SAME run length,
+  // so the two lanes cannot drift apart.
   var DRIFT_PROXY_MIN_FRAMES = 3;
+  // 14N (D3.1 line 132, the NEW half of the split): the AC-087 SUSTAIN is
+  // the NEW hold and not the new entry, so it gets its OWN named constant.
+  // The value mirrors the unit lane's 120 CONSECUTIVE ticks of a sustained
+  // full-speed full-steer turn: 120 browser frames at the 60 Hz fixed
+  // timestep is the same 2 s of held slide, so the browser and the unit
+  // observe the SAME sustain window. The P2 phase runs 5x this window, so
+  // the sustain is observable with margin.
+  var DRIFT_PROXY_MIN_HOLD_FRAMES = 120;
   // AC-078 drift proxy window: the travel direction is derived from a chord
   // across this many body samples and is compared against the MEAN OF THE
   // TWO ENDPOINT yaws of the same window. The chord of a circular arc is
@@ -140,10 +307,505 @@ html, body { margin: 0; padding: 0; height: 100%; background: #05070d; overflow:
   // 0-4 simulation ticks per rendered frame). The residual is bounded by the
   // yaw-acceleration term (alpha * T^2 / 8 over the window) plus the
   // speed-variation term, which is <= 0.002 rad at the observed drift speed
-  // - 5x below the 0.01 rad DRIFT_PROXY_MIN_RAD gate. The scenario itself
+  // - 5x below the DRIFT_PROXY_MIN_RAD gate. The scenario itself
   // (the fixed-frame drift phase) stays render-rate dependent - that is
   // pre-existing and out of this contract's scope.
+  //
+  // 14N (D3.1 line 146, RE-BASELINE the BOUND, keep the WINDOW): the 0.002
+  // rad residual above was derived under a LINEAR body-yaw assumption, and
+  // the 14N pose spring makes the body yaw SECOND ORDER (zeta = 0.35, so
+  // about 31 percent overshoot), so the linear argument is no longer valid
+  // and the bound is RE-DERIVED from the overshoot:
+  //  - the pose spring runs at omega_n = sqrt(324) = 18 rad/s, so the damped
+  //    ring sits at omega_d = 18 * sqrt(1 - 0.35^2) = 16.86 rad/s;
+  //  - a step of amplitude A rings down with a first overshoot of
+  //    exp(-zeta * pi / sqrt(1 - zeta^2)) = 1.31 x A, so the ring amplitude
+  //    after the step is A_ring = 0.31 * A;
+  //  - over a 6-frame window (T = 0.1 s at 60 Hz) the endpoint-mean chord
+  //    estimator's error on a sinusoid of amplitude A_ring is
+  //    A_ring * (omega_d * T)^2 / 8 = 0.31 * A * 0.355 = 0.11 * A, so with
+  //    the declared pose envelope (0.30185 rad since the Step 14Q2
+  //    re-pin; it read 0.3050 rad before) the residual bound is
+  //    0.11 * 0.30185 = 0.0332 rad, rounded DOWN to 0.030 rad (the
+  //    rounding is UNCHANGED by the re-pin);
+  //  - 0.030 rad is about 15x LOOSER than the linear 0.002 rad assumption
+  //    (the bound MUST be looser, because the second-order ring adds energy
+  //    the linear argument did not account for) and still 1.7x below the
+  //    re-baselined 0.05 rad engagement gate.
+  // A too-loose bound fails SILENTLY (RB-13), so the derivation is pinned
+  // here instead of being asserted.
   var DRIFT_PROXY_WINDOW = 6;
+  // The re-derived endpoint-mean chord residual bound (see the derivation
+  // above). It is the proxy's ERROR FLOOR, so a proxy reading is only
+  // meaningful above it.
+  var DRIFT_PROXY_RESIDUAL_MAX_RAD = 0.03;
+  // 14N phase budgets. The P1/P2 pair is the COMPARABLE capture pair of the
+  // re-semanticized AC-079 check, so the two phases must have the SAME
+  // elapsed SIMULATION count: the capture point is the first frame whose
+  // tick delta reaches the budget.
+  //
+  // 14N W3 (the RC-2 tick conversion, the S3 table of the determinism
+  // review): every budget is now a TICK budget, not a FRAME budget. A
+  // rendered frame is not a simulation instant - the host releases 0-4
+  // simulation ticks per rendered frame - so a frame budget measures a
+  // different amount of simulation time on every machine (a 600-tick
+  // phase spans about 1622 frames at 163 fps and about 330 frames at 30
+  // fps). The budgets keep their VALUES in ticks (1 frame at the 60 Hz
+  // fixed timestep = 1 tick), so the tick totals are the ones the jest
+  // lane measured.
+  //
+  // The CAPTURE budget is the one value that is NOT carried over from the
+  // 600-frame horizon, and the reason is the ribbon: the browser lane
+  // drives a CLOSED loop (the 'large' track bucket, a 240 m radius with
+  // a 30 m road), so a straight line cannot be held for 600 ticks (10 s
+  // at the top speed is about 890 m, more than three corners of the
+  // loop) - the car leaves the ribbon, the off-road floor takes the
+  // speed, and the AC-079 capture pair degrades to two off-road speeds
+  // whose difference is noise. The determinism review records the same
+  // blocker ("the capture horizon is shortened to a tick budget the track
+  // can hold") and the browser lane is the LOOSE lane (the two-tier
+  // rule), so the capture budget is the shortest horizon that still
+  // (a) keeps the car inside the ribbon's straight budget (see
+  // FEEL_STRAIGHT_MAX_SPEED_KMH) and (b) holds the D1.3 deficit floor of
+  // 20 km/h. The D1.3 FLOOR is NOT relaxed: the capture pair stays
+  // internally comparable (both phases run the same tick budget) and the
+  // floor is asserted against the measured deficit.
+  //
+  // 14N W3 (the re-based capture budget, derived against the production
+  // simulation): the budget is 210 TICKS and the D1.3 deficit is carried
+  // by the SLIDE LENGTH, not by the road regime.
+  //
+  // The previous 180-tick budget split the regimes on purpose (the
+  // straight capture on the ribbon, the drift capture off it), because
+  // the on-road scrub was believed to be too weak to reach the 20 km/h
+  // floor. The production simulation OVERTURNS that premise: the body
+  // yaws INTO the slide, so the slide's world-frame lateral offset at
+  // the capture is only 0.05-3.2 m - far inside the 13.5-16.5 m road
+  // half-width band - and the regime split was therefore an
+  // UNSATISFIABLE witness. The deficit has to be carried by the slide
+  // itself, over a long enough slide.
+  //
+  // The simulation (the compiled physics.step.service + the real 'large'
+  // track, seed 42 - the same spec the browser lane drives) measures the
+  // re-based pair at this budget: the straight capture 224.28 km/h, the
+  // drift capture 198.66 km/h, the DEFICIT 25.62 km/h - 11.42 percent of
+  // the straight capture and a 1.28x margin over the 20 km/h floor. The
+  // re-entry jitter sweep (the spawn pose and the frame alignment moved
+  // over their measured spread) gives a deficit range of 24.10-27.19
+  // km/h with 0 violations of the floor.
+  //
+  // The pair is COMPARABLE BY CONSTRUCTION: both runs start from the
+  // SAME fresh spawn state (the ribbon re-entry) and both run the SAME
+  // 210-tick budget, so the two capture points sit at the same elapsed
+  // simulation tick. The capture window is UNCAPPED (the speed governor
+  // only acts AFTER the capture), because a capped capture run and an
+  // uncapped one are not comparable: the previous 120 km/h cap on the
+  // straight run against an uncapped drift run measured the CAP, not the
+  // scrub.
+  //
+  // The RIBBON STAY: the straight run travels about 109 m and the drift
+  // run about 106 m, both inside the first segment's 175.09 m straight,
+  // and the drift capture's lateral offset from the centreline is 0.05 m
+  // - so BOTH capture points are ON-ROAD (the conservative same-regime
+  // witness).
+  var SPEED_CAPTURE_TICKS = 210;
+  // The POST-CAPTURE speed governor of the straight-line scenario.
+  //
+  // The CAPTURE window is NOT governed: the two capture points have to
+  // be measured at the same free-acceleration speed, so a cap that acts
+  // before the capture would compare a capped run against an uncapped
+  // one. The cap only acts on the release/settle/straight phases, where
+  // it has two jobs: keep the car on the ribbon and keep the drift model
+  // engaged (a coasting car drops below the 15 m/s engagement gate, the
+  // drift disengages and the pose snaps to zero for the WRONG reason -
+  // the vacuous pass the re-based expectation forbids).
+  //
+  // The cap is 120 km/h: the 210-tick capture leaves the car at about
+  // 198.7 km/h, and the release/settle/straight window is 90 ticks
+  // (1.5 s), so the governor brings the speed down inside the release
+  // window and the settle/straight phases run at about 96-121 km/h (the
+  // simulation measures 120.5 km/h at the end of the straight phase).
+  // The travel after the capture is about 60 m, so the drift run ends at
+  // about 169 m of travel and a 0.87 m lateral offset - inside the
+  // 175.09 m straight and inside the road half-width.
+  var FEEL_STRAIGHT_MAX_SPEED_KMH = 120;
+  // The hysteresis of the speed governor: the throttle is re-applied only
+  // below the cap minus this margin, so the governor does not chatter
+  // around the cap (the throttle key flip is a per-frame decision).
+  var FEEL_SPEED_CAP_HYSTERESIS_KMH = 10;
+  // The road half-width band of the 'large' track bucket: the road is 30 m
+  // wide with a 10 percent variation, so the half-width is 13.5-16.5 m.
+  // A capture point within the WIDE half-width is classified ON-ROAD (the
+  // conservative reading: a point that is not classified ON-ROAD is
+  // OFF-ROAD, never the other way round).
+  //
+  // The classification is measured against the RENDERED ribbon (the road
+  // mesh's own teal edge and fill vertices), not against the track spec,
+  // so it reads the road the browser actually drew. The production
+  // simulation measures the drift capture's lateral offset at 0.05 m
+  // from the centreline - far inside BOTH bands - so the classification
+  // is not the binding evidence of the capture pair.
+  var FEEL_ROAD_HALF_WIDTH_MIN_M = 13.5;
+  var FEEL_ROAD_HALF_WIDTH_MAX_M = 16.5;
+  // The 7b-HOLD floors: the committed slide that the neutral steer HOLDS
+  // (the D5 decision) has to be VISIBLE in the hold window. The committed
+  // budget is 0.45 rad and the pose target is the committed slip * 0.5
+  // (0.225 rad), so the floors sit an order of magnitude below the
+  // expected values: they exclude a vanished slide (the 0.02 rad snap
+  // band is 10x below the slip floor) without pinning the model.
+  var DRIFT_FEEL_HOLD_MIN_SLIP_RAD = 0.2;
+  var DRIFT_FEEL_HOLD_MIN_POSE_RAD = 0.05;
+  // The snap band of the release: the model zeroes the committed slip when
+  // |slip| <= 0.02 rad, so a released slide has to be back inside that
+  // band. The band is the PRODUCTION value (the snap band of the
+  // commitment model), not a fixture tolerance.
+  var DRIFT_FEEL_RELEASE_SLIP_MAX_RAD = 0.02;
+  // The straight-line expectation, re-based (14N W3, the D5 re-base). The
+  // pose spring has NO snap: its target is the committed slip, so after a
+  // release the pose decays asymptotically and an EXACT zero is
+  // structurally unreachable. The production simulation measures 0.0607
+  // rad at the release and 1.835e-8 rad after a 120-tick settle, so the
+  // expectation is "the pose RETURNED to the hard zero" inside the
+  // declared 0.002 rad render-jitter headroom.
+  //
+  // The re-based browser measurement: the pose over the straight-line
+  // phases (the straight line AFTER the release and the re-check) has to
+  // be inside this headroom. The simulation measures 0.000076 rad over
+  // the straight phase and 0.000075 rad over the re-check - a 26x margin
+  // under the bound.
+  var DRIFT_FEEL_STRAIGHT_ZERO_MAX_RAD = 0.002;
+  // The SETTLE-TAIL bound (the pose half of the 7b-RELEASE evidence).
+  // The settle window is NOT the straight line: it still carries the
+  // far-side pop's residual ringing (the release overshoots to the
+  // opposite side and rings down), so the settle's tail is bounded by
+  // its OWN declared bound instead of the straight-line zero headroom.
+  // The simulation measures 0.00304 rad (0.17 deg) over the last 30
+  // ticks of the settle - the bound is a 1.64x headroom over that, and
+  // 14x below the committed 0.45 rad budget.
+  var DRIFT_FEEL_SETTLE_TAIL_MAX_RAD = 0.005;
+  // The frame watchdog of a tick-budgeted phase. The tick budget is the
+  // contract; the frame count is only a watchdog, because an absent seam
+  // (or a stalled simulation) must never hang the fixture. At 30 fps a
+  // 120-tick phase spans about 240 frames, so 4x the budget plus a fixed
+  // slack never truncates a healthy run.
+  var FEEL_FRAME_WATCHDOG_PER_TICK = 4;
+  var FEEL_FRAME_WATCHDOG_FRAMES = 120;
+  // The frame watchdog of the TICK-ALIGNED key dispatch: the flip waits
+  // for the simulation clock to advance before it is issued, and the wait
+  // is bounded so a stalled simulation can never hang the fixture.
+  var FEEL_TICK_ALIGN_MAX_FRAMES = 120;
+  // The DRIFT RUN's phase budgets. The run is the 7b-HOLD half of the
+  // re-based 7b observable: the fixture's OWN commit (the left steer goes
+  // in) is followed by a NEUTRAL steer (the left steer is released and
+  // NOTHING else is pressed). The D5 decision (RATIFIED) is that a
+  // neutral steer HOLDS the committed slide - the latch is the ratified
+  // design, and the release paths are the countersteer unwind and the
+  // minimum speed gate. The window is the EVIDENCE of that half: the
+  // slide must still be there (a non-zero committed slip and a non-zero
+  // body pose) while the steer is neutral.
+  //
+  // The three budgets add up to the capture budget, so the DRIFT capture
+  // point sits at the same elapsed tick as the STRAIGHT capture point by
+  // construction - the comparability of the AC-079 pair is structural,
+  // not a coincidence of the phase order.
+  //  - FEEL_ACCEL_TICKS: the throttle down before the steer, so the car
+  //    clears the drift engagement gate (15 m/s) before the slide can
+  //    latch, and so the slide is committed at a HIGH speed (the scrub
+  //    is proportional to the speed, so the deficit is only measurable
+  //    at speed). 140 ticks (2.33 s) of the engine's 17.8 m/s^2 reaches
+  //    41.5 m/s (149 km/h).
+  //  - FEEL_COMMIT_TICKS: the steer in and the slip ramp to the
+  //    committed 0.45 rad. 30 ticks (0.5 s) - the entry rate is
+  //    3.5 rad/s, so the 0.45 rad commitment needs about 13 ticks and
+  //    the window is 2.3x that.
+  //  - FEEL_HOLD_TICKS: the neutral-steer hold - the remaining budget
+  //    (40 ticks). The simulation measures the hold's committed slip at
+  //    0.4448 rad and its body pose at 0.2247 rad, so the slide is
+  //    clearly present while the steer is neutral.
+  var FEEL_ACCEL_TICKS = 140;
+  var FEEL_COMMIT_TICKS = 30;
+  var FEEL_HOLD_TICKS = SPEED_CAPTURE_TICKS - FEEL_ACCEL_TICKS - FEEL_COMMIT_TICKS;
+  // The straight line AFTER the release: the pose has to be back at the
+  // hard zero, and the throttle stays down so the slide cannot
+  // disengage for the WRONG reason (a coasting car drops below the drift
+  // gate, the drift disengages and the pose snaps to 0 - the vacuous pass
+  // the re-based expectation forbids). 20 ticks: the pose has rung down
+  // to 0.000076 rad by the end of the settle, and the 20-tick window is
+  // the straight-line evidence.
+  var FEEL_STRAIGHT_TICKS = 20;
+  // The 7b-RELEASE window: the countersteer that releases the retained
+  // commit, held long enough for the unwind (the model unwinds the
+  // committed slip at 2.5 rad/s toward the 0.02 rad snap band, so the
+  // 0.45 rad commitment needs about 12 ticks; the window is 2.5x that).
+  var RELEASE_TICKS = 30;
+  // The tail of the release window where the slip has to be back INSIDE
+  // the 0.02 rad snap band: the countersteer unwinds the committed slip
+  // at 2.5 rad/s, so the 0.45 rad commitment needs about 12 ticks and the
+  // last 10 ticks of the 30-tick release window are the evidence that the
+  // commitment was RELEASED (and not merely bent).
+  var RELEASE_TAIL_TICKS = 10;
+  // The settle after a release: the pose spring has to ring down towards
+  // its hard zero before the straight-line measurement starts. 40 ticks
+  // (0.67 s): the simulation measures 0.00304 rad over the last 30
+  // ticks of the settle (the far-side pop's residual ringing) and
+  // 0.000076 rad over the straight phase that follows.
+  var SETTLE_TICKS = 40;
+  // P3: the countersteer catch window (the mirror's release).
+  var CATCH_TICKS = 30;
+  // P3: the MIRROR run. The mirror is the same manoeuvre with the OTHER
+  // steer sign (the right steer), so the OTHER side of the slide can be
+  // observed. It runs on its own fresh spawn state (the third ribbon
+  // re-entry), so it has its own accel budget: the simulation measures
+  // the mirror's hold at 0.4435 rad of committed slip and 0.1879 rad of
+  // body pose, and the whole mirror run stays on the ribbon until the
+  // re-check's tail leaves the first straight (which no assertion
+  // depends on - the published-slip peak is measured in the on-road hold
+  // window).
+  var MIRROR_ACCEL_TICKS = 120;
+  // P3: the mirror's own commit (the right steer goes in).
+  var MIRROR_COMMIT_TICKS = 30;
+  // P3: the mirror's neutral-steer hold (the right steer is released and
+  // nothing else is pressed) - the mirror's 7b-HOLD window.
+  var MIRROR_HOLD_TICKS = 40;
+  // The tail of the settle that has to be flat (the "no stuck offset" window).
+  var STUCK_OFFSET_TAIL_TICKS = 30;
+  // P6: the straight-line re-check.
+  var RECHECK_TICKS = 120;
+  // The speed trace of the new phases is sampled every N frames, so a
+  // polluted capture (the browser lane drives on a closed 240 m-radius
+  // track, so a long straight run can leave the road and the off-road
+  // decel would then dominate the measurement) stays diagnosable.
+  var FEEL_SPEED_TRACE_STEP = 30;
+  // 14N drift-feel bounds. The browser lane is the LOOSE lane: every bound
+  // is a lower bound (or an upper bound on a bounded quantity) derived from
+  // the jest lane's measured value with a stated headroom.
+  // The far-side pop at the catch: 1.0 deg to 6.0 deg inclusive (the jest
+  // lane measures 2.22 deg; 1.0 deg is about 45 percent of the 2.0 deg
+  // contract floor and 6.0 deg is about 2.7x the measured value but far
+  // below the OLD model's 14 deg mirrored inversion, which is the root
+  // cause this bound keeps out).
+  var DRIFT_FEEL_POP_MIN_DEG = 1.0;
+  var DRIFT_FEEL_POP_MAX_DEG = 6.0;
+  // The settle has to complete within 900 ms (the jest lane measures 550 ms;
+  // 900 ms is a 1.6x headroom for the frame-rate sampling, because the
+  // last sampled frame may straddle the 550 ms crossing).
+  var DRIFT_FEEL_SETTLE_MAX_MS = 900;
+  // The settle band the browser uses: the pose is back inside 0.5 deg of the
+  // pre-drift baseline and stays there for 250 ms (the jest lane's
+  // definition).
+  var DRIFT_FEEL_SETTLE_BASELINE_TOL_DEG = 0.5;
+  var DRIFT_FEEL_SETTLE_HOLD_MS = 250;
+  // After the catch the pose has to come back: the tail of the settle must
+  // stay within 1.0 deg, so the body cannot remain stuck at an offset.
+  var DRIFT_FEEL_STUCK_OFFSET_MAX_DEG = 1.0;
+  // The pose rate stays at or below 128 deg per s, computed frame-rate
+  // independently as (deg per frame) * tickHz (the jest lane's provable
+  // per-tick target bound is 2.13 deg/tick = 128 deg/s and the measured
+  // peak pose rate is 92 deg/s).
+  var DRIFT_FEEL_POSE_RATE_MAX_DEG_PER_S = 128;
+  // The declared pose envelope plus the 0.002 rad render-jitter headroom.
+  //
+  // Step 14Q2 RE-PINS this browser literal 0.305 -> 0.30185 on the
+  // PUBLISHED basis: the production export
+  // NEATRACING_DRIFT_POSE_ENVELOPE_RAD now carries
+  // `max(PUBLISHED_SLIP_MAX, PUBLISHED_SLIP_OFFROAD_MAX) * 0.45 + 0.08`
+  // = 0.493 * 0.45 + 0.08 = 0.30185 rad, so the browser asserts the SAME
+  // envelope the production publishes (the value is bit-exact).
+  //
+  // THE TWO BASES ARE NEVER CONFLATED: this browser literal is on the
+  // PUBLISHED basis (the widest published-slip ceiling 0.493). The 2
+  // SERVICE-TEST envelope pins (0.2025 and 0.2825) are on the COMMITTED
+  // basis; they were re-pinned in Step 14Q and are NOT touched here.
+  var DRIFT_FEEL_POSE_ENVELOPE_RAD = 0.30185;
+  var DRIFT_FEEL_POSE_ENVELOPE_TOLERANCE_RAD = 0.002;
+  // The browser slide-prominence floor: a PRESENCE observable, about 2x the
+  // 0.0494 rad Step 14G baseline and loose enough to survive the recorded
+  // 0.0494 / 0.0603 / 0.3599 rad render-rate spread. It is NEVER compared
+  // numerically against NEATRACING_DRIFT_MIN_SLIDE_PROXY_RAD (0.20 rad):
+  // the browser cannot separate the pose from the heading, so every
+  // browser-computable angle is (pose - slip) and the two-tier rule keeps
+  // the AC-087 floor on the deterministic jest proxy.
+  var DRIFT_FEEL_SLIDE_PROMINENCE_MIN_RAD = 0.1;
+  // The regime-aware PUBLISHED-SLIP mirrors (14N W3, the D6 decision).
+  //
+  // The published slip is the COMMITTED slide carried through the first-order
+  // chase, and the chase LAGS a target that shrinks as the speed scrub bleeds
+  // speed, so the published slip peaks slightly ABOVE the committed 0.45 rad
+  // budget. The bound is therefore an ASSERTION bound (NEVER a clip) and it
+  // is REGIME-AWARE: the ON-ROAD ceiling is DERIVED (the committed budget
+  // plus the chase-lag overshoot allowance) and the OFF-ROAD ceiling is
+  // DECLARED from a measurement.
+  //
+  // MIRROR 1 (on-road, DERIVED): NEATRACING_DRIFT_PUBLISHED_SLIP_MAX_RAD =
+  // 0.452 (the committed 0.45 plus the 0.002 overshoot allowance). The
+  // jest lane's measured on-road peak is 0.4511617369362305 rad, i.e.
+  // 0.00084 rad of headroom under this ceiling. This is the value the
+  // previous fixture's 0.45 + 0.02 = 0.47 bound was an UNRE-DEclared
+  // approximation of: the 0.47 bound is what let the 0.5038 rad
+  // off-road artifact through, so it is REPLACED, not widened.
+  //
+  // The mirror is a FORMULA, not a literal (the "mirrors from the named
+  // exports, no literals" rule): the browser fixture cannot import the
+  // TypeScript exports, so it re-derives the bound from the same two
+  // named components the export is derived from.
+  var DRIFT_FEEL_MAX_SLIP_ANGLE_RAD = 0.45;
+  var DRIFT_FEEL_PUBLISHED_SLIP_OVERSHOOT_RAD = 0.002;
+  var DRIFT_FEEL_PUBLISHED_SLIP_MAX_RAD =
+    DRIFT_FEEL_MAX_SLIP_ANGLE_RAD + DRIFT_FEEL_PUBLISHED_SLIP_OVERSHOOT_RAD;
+  // MIRROR 2 (off-road, DECLARED): NEATRACING_DRIFT_PUBLISHED_SLIP_OFFROAD_MAX_RAD
+  // = 0.493 (the smallest 0.001-grid value at or above the W2a post-RC-1 raw
+  // off-road peak 0.4872167352892035 plus the 0.005 rad margin). The
+  // mirror is the SAME declaration rule, expressed as a formula over the
+  // measured peak, so a re-declaration of the named export only needs the
+  // measured peak and the margin to be updated here.
+  var DRIFT_FEEL_OFFROAD_MEASURED_PEAK_RAD = 0.4872167352892035;
+  var DRIFT_FEEL_OFFROAD_CEILING_MARGIN_RAD = 0.005;
+  var DRIFT_FEEL_OFFROAD_CEILING_GRID = 0.001;
+  var DRIFT_FEEL_OFFROAD_CEILING_GRID_INDEX = Math.ceil(
+    (DRIFT_FEEL_OFFROAD_MEASURED_PEAK_RAD + DRIFT_FEEL_OFFROAD_CEILING_MARGIN_RAD)
+    / DRIFT_FEEL_OFFROAD_CEILING_GRID
+  );
+  var DRIFT_FEEL_PUBLISHED_SLIP_OFFROAD_MAX_RAD =
+    DRIFT_FEEL_OFFROAD_CEILING_GRID_INDEX / 1000;
+  // The browser lane asserts against the REGIME-AWARE bound (14N W3): the
+  // phase that carried the published-slip peak decides the mirror - the
+  // ON-ROAD mirror (the derived 0.452 rad) when that phase was on the
+  // rendered ribbon, the OFF-ROAD mirror (the declared 0.493 rad) when it
+  // was not, and the WIDEST declared bound when the regime could not be
+  // measured (a missing measurement never tightens the assertion).
+  //
+  // The regime classifier is the RENDERED ribbon, not the track spec: the
+  // fixture measures the distance from the phase position to the road
+  // mesh's own teal edge and fill vertices, so the classification reads
+  // the road the browser actually drew. The seam still carries no surface
+  // field (the 5-field seam is the whole contract), so the classification
+  // is a GEOMETRIC measurement and not a model read.
+  //
+  // The widest declared bound stays the fallback (and the notes carry the
+  // per-regime headroom plus the `aboveOnRoadCeiling` diagnostic), so a
+  // road-regime excursion is still visible in the evidence.
+  //
+  // THE 0.45 COMMITTED BUDGET IS NOT RELAXED: the mirrors are the
+  // PUBLISHED-slip assertion bounds, and the committed 0.45 rad budget
+  // (NEATRACING_DRIFT_MAX_SLIP_ANGLE_RAD) is untouched - the 0.002 rad
+  // overshoot allowance is the ONLY slack above it, and it is mirrored
+  // here exactly as the production derives it.
+  var DRIFT_FEEL_PUBLISHED_SLIP_ENVELOPE_RAD = DRIFT_FEEL_PUBLISHED_SLIP_OFFROAD_MAX_RAD;
+
+  // Step 14P (the camera follow offset): the constants of the ONE new
+  // named check, `driftFeelCameraFollowOffset`. They are declared here,
+  // with the other drift-feel mirrors, and NOT inside the check, so the
+  // check reads a named bound instead of a literal.
+  //
+  // The FLOOR: the camera has to measurably LEAVE the nose. A camera
+  // that stayed on the nose (the frozen-camera defect the chase-camera
+  // module closes) reports a zero offset and fails here. 0.05 rad is
+  // about 2.9 degrees - far under the measured follow offset (the follow
+  // converges on the published travel divergence, which reaches about
+  // 0.45 rad in the hold) and far over the zero.
+  var DRIFT_FEEL_CAMERA_FOLLOW_MIN_RAD = 0.05;
+  // The CEILING tolerance: the camera aim converges on the PUBLISHED
+  // travel direction and never swings past it, so the follow offset can
+  // never exceed the published slip it tracks. The tolerance is the
+  // 0.002 rad render-jitter headroom the other 14N mirrors use.
+  var DRIFT_FEEL_CAMERA_FOLLOW_TOLERANCE_RAD = 0.002;
+  // The CONVERGENCE tolerance: the camera's aim (the nose heading plus
+  // the follow offset) must CLOSE on the published travel direction
+  // (the nose heading plus the published slip), so the AIM ERROR - the
+  // published slip minus the follow offset - must fall to at or below
+  // this bound at least once during the drift. 0.1 rad is about 5.7
+  // degrees: the camera is aimed WITHIN 5.7 degrees of the direction
+  // the car is actually travelling. A camera that never tracks (a
+  // follow law with no convergence, or a camera that is pinned to the
+  // nose) never reaches it and the check fails.
+  var DRIFT_FEEL_CAMERA_FOLLOW_CONVERGED_RAD = 0.1;
+  // The comparison floors: the convergence and the sign agreement are
+  // only asserted where BOTH quantities are unambiguous. The published
+  // slide has to be at least this large (0.2 rad is about 11.5 degrees -
+  // well under the 0.45 rad committed budget and well over the
+  // far-side pop the catch is allowed to produce, which is bounded to
+  // 6.0 degrees), and the follow offset has to have left zero (a camera
+  // that has not started to move yet carries no sign and is never
+  // counted).
+  var DRIFT_FEEL_CAMERA_FOLLOW_SLIP_FLOOR_RAD = 0.2;
+  var DRIFT_FEEL_CAMERA_FOLLOW_SIGN_MIN_OFFSET_RAD = 0.01;
+
+  // Step 14Q2 (the traction severity): the constants of the ONE new named
+  // check, `driftFeelTractionSeverityRatio`. They are declared here, with
+  // the other drift-feel mirrors, and NOT inside the check, so the check
+  // reads a named bound instead of a literal.
+  //
+  // THE SUBJECT OF THE CHECK IS THE PUBLISHED SEVERITY, READ FROM THE
+  // SEVENTH SEAM FIELD (tractionSeverity). The production NEVER
+  // re-derives it in the browser: the seam WRITER (browser-entry.ts)
+  // READS the physics state's own `tractionSeverity` field and publishes
+  // that EXACT number, and the law itself lives in
+  // `examples/neatRacing/physics/drift.model.ts`
+  // (`computeTractionSeverity`).
+  //
+  // THE ORACLE BELOW IS THE FIXTURE'S VERIFICATION MIRROR OF THAT LAW -
+  // the same "mirror the FORMULA over the named components, never
+  // hard-code a literal" rule the other 14N mirrors follow (the published
+  // slip ceilings are mirrored the same way). It is NOT a consumer: no
+  // production value is derived from it, and the check NEVER
+  // substitutes it for the published severity - the published number is
+  // the number under test. It exists so the check can assert a RATIO
+  // (published / oracle == 1) instead of a FLOOR, which is the D5 / R5
+  // audit constraint ("the traction check must be RATIO-shaped, not a
+  // floor") - the constraint the Step 14P record left OPEN.
+  //
+  // THE LAW (drift.model.ts, `computeTractionSeverity`):
+  //   severity = clamp(|slip| / MAX_SLIP_ANGLE_RAD * speed / TOP_SPEED, 0, 1)
+  // with the committed slide budget 0.45 rad and the traction top speed
+  // 89 m/s. The service publishes the severity from the POST-TRACTION
+  // speed and the PUBLISHED slip - the very two numbers the seam
+  // publishes - so the RATIO is EXACTLY 1 for every sample of a correct
+  // build.
+  var DRIFT_FEEL_TRACTION_SLIP_BUDGET_RAD = 0.45;
+  var DRIFT_FEEL_TRACTION_TOP_SPEED_MPS = 89;
+  // The RATIO tolerance: the published severity is BIT-IDENTICAL to the
+  // law on the same published slip and speed (the production computes it
+  // from those two numbers in the same tick), so this tolerance only
+  // absorbs a float round trip. It is NEVER a slack band that could
+  // hide a stale, zeroed or re-derived value.
+  var DRIFT_FEEL_TRACTION_RATIO_TOLERANCE = 1e-9;
+  // The SLIP FLOOR: the ratio is only asserted where the published slide
+  // is unambiguous - the same 0.2 rad floor the camera check uses (well
+  // over the far-side pop the catch is allowed to produce, which is
+  // bounded to 6.0 deg). Below it the severity is legitimately tiny and
+  // a ratio would amplify the float noise.
+  var DRIFT_FEEL_TRACTION_SLIP_FLOOR_RAD = 0.2;
+
+  // Step 14R: the constants of the ONE new named check,
+  // `driftFeelHudTractionReadoutRatio`, and of the seam FIELD-COUNT
+  // assertion. They are declared here, with the other drift-feel
+  // mirrors, and NOT inside the check, so the check reads a named bound
+  // instead of a literal.
+  //
+  // THE SEAM FIELD COUNT (the 2026-10-27 VERIFICATION 4 blocker B-3): the
+  // seam WRITER (browser-entry.ts) published the EIGHTH field in the
+  // slice P1-drift-presentation-car, and this READER - the fixture - is
+  // updated in the SAME edit, so the count is asserted HERE. The seam is
+  // EXACTLY eight fields: poseRad, poseRateRadPerS, slipAngleRad,
+  // speedMps, tickHz, tick, followOffsetRad and tractionSeverity. The
+  // EIGHTH field is a NAMED CHANNEL (the PUBLISHED pose-spring RATE in
+  // rad/s) and is NEVER the severity: the severity stays the SEVENTH
+  // field (Step 14Q) and is NOT re-published.
+  var DRIFT_SEAM_FIELD_COUNT = 8;
+  // THE HUD READOUT QUANTIZATION BAND (percent): the overlay renders the
+  // PUBLISHED severity as a WHOLE percent (Math.round(severity * 100)),
+  // so the rendered percent is within HALF a point of the published
+  // share. The band is a DISPLAY quantization, not a slack tolerance: a
+  // stale, zeroed, clamped or re-derived readout is off by far more than
+  // half a point, and a FLOOR (percent > 0) would have passed all of
+  // them - which is why the check is a two-sided EQUALITY band and never
+  // a floor.
+  var DRIFT_FEEL_HUD_TRACTION_QUANTIZATION_BAND_PERCENT = 0.5;
+  // The readout TEXT the production paints: the word, the whole percent
+  // and the percent sign (hud.ts - HUD_TRACTION_WORD 'Traction' and
+  // HUD_TRACTION_PERCENT_SCALE 100). The fixture parses the percent out
+  // of the RENDERED text; it never re-derives the severity.
+  var HUD_TRACTION_READOUT_PATTERN = /Traction\s+(-?\d+)\s*%/;
 
   function sourceOf(program) {
     return programSources.get(program) || '';
@@ -155,6 +817,19 @@ html, body { margin: 0; padding: 0; height: 100%; background: #05070d; overflow:
     if (name === 'uSpacing' && sourceOf(currentProgram).indexOf('uSpacing') !== -1) {
       capturedGridSpacing = value;
       gridProgram = currentProgram;
+    }
+    // 14N (AC-088): capture the FOUR tire-gradient floats the fragment stage
+    // reads, so the check can prove the gradient is NON-DEGENERATE (a real
+    // bright/dark spread) instead of a flat constant. The capture is
+    // DEFENSIVE: a uniform that is never fed leaves its slot undefined and
+    // the dependent check reports false - it never throws. The numeric guard
+    // also keeps the matrix4 feeds (which arrive here as a Float32Array)
+    // from being mistaken for a scalar.
+    if (typeof value === 'number') {
+      if (name === 'uTireGradientBrightFactor') tireGradientBrightFactor = value;
+      if (name === 'uTireGradientDarkFactor') tireGradientDarkFactor = value;
+      if (name === 'uTireGradientRadius') tireGradientRadius = value;
+      if (name === 'uTireGradientThreshold') tireGradientThreshold = value;
     }
   }
 
@@ -192,6 +867,10 @@ html, body { margin: 0; padding: 0; height: 100%; background: #05070d; overflow:
       if (name === 'uApplyTireGradient' && sourceOf(currentProgram).indexOf('shadeLitSurface') !== -1) {
         currentTireGradientApply = args[1];
         tireGradientApplySequence.push(args[1]);
+        // 14N (AC-088): the gate that says the tire gradient is actually
+        // enabled on the car draws. The four uTireGradient* floats are
+        // captured in recordUniform.
+        if (args[1] >= 1) tireGradientApplyEnabled = true;
       }
       return orig.apply(this, args);
     });
@@ -467,6 +1146,11 @@ html, body { margin: 0; padding: 0; height: 100%; background: #05070d; overflow:
       }
     }
     buildRoadGrid();
+    // 14N W3: the road vertices are published at the file scope so the
+    // NAMED capture points can be classified as ON-ROAD or OFF-ROAD (the
+    // browser has no surface classifier, so this geometry measurement is
+    // the regime evidence of the AC-079 capture pair).
+    capturedRoadPoints = roadPoints;
     var greenEdgeDists = [];
     for (var gi = 0; gi < greenPoints.length; gi++) {
       greenEdgeDists.push(nearestRoadDistance(greenPoints[gi].x, greenPoints[gi].z));
@@ -564,6 +1248,987 @@ html, body { margin: 0; padding: 0; height: 100%; background: #05070d; overflow:
     var t = label ? label.textContent : '';
     var m = t.match(/(\d+)/);
     return m ? parseInt(m[1], 10) : 0;
+  }
+
+  // Step 14R: the HUD TRACTION READOUT text, read from the DOM. The
+  // readout is a RENDERED value, so the fixture reads the TEXT the
+  // overlay painted in this frame and never re-derives the severity. A
+  // missing element yields null, which the measurement counts as a
+  // parse failure (it can never pass silently).
+  function readHudTractionText(label) {
+    if (!label) return null;
+    var text = label.textContent;
+    if (typeof text !== 'string') return null;
+    return text;
+  }
+
+  // Step 14R: the whole percent out of the RENDERED traction readout. The
+  // production paints 'Traction 42%' for a published severity of 0.42
+  // (hud.ts - the word, the ROUNDED percent and the percent sign), so
+  // the parse accepts exactly that shape. A text that does not match is
+  // a PARSE FAILURE and the check fails - the read can never quietly
+  // fall back to another number in the overlay.
+  function parseHudTractionPercent(text) {
+    if (typeof text !== 'string') return null;
+    var m = HUD_TRACTION_READOUT_PATTERN.exec(text);
+    if (!m) return null;
+    var value = parseInt(m[1], 10);
+    if (isNaN(value)) return null;
+    return value;
+  }
+
+  // The distance from a point to the nearest ROAD vertex of the captured
+  // track. The road is 30 m wide (the 'large' bucket: 27-33 m with the
+  // variation), so a distance of at most FEEL_ROAD_HALF_WIDTH_MAX_M is
+  // ON-ROAD and a larger distance is OFF-ROAD. The measurement is only
+  // taken at the two NAMED capture points, so the exhaustive scan is cheap.
+  function feelNearestRoadDistance(x, z) {
+    if (typeof x !== 'number' || typeof z !== 'number') return null;
+    if (!capturedRoadPoints.length) return null;
+    var best = Infinity;
+    for (var i = 0; i < capturedRoadPoints.length; i++) {
+      var dx = x - capturedRoadPoints[i][0];
+      var dz = z - capturedRoadPoints[i][1];
+      var d2 = dx * dx + dz * dz;
+      if (d2 < best) best = d2;
+    }
+    return Math.sqrt(best);
+  }
+  // The ON-ROAD classification of a measured road distance.
+  function feelIsOnRoad(distanceM) {
+    if (typeof distanceM !== 'number') return false;
+    return distanceM <= FEEL_ROAD_HALF_WIDTH_MAX_M;
+  }
+
+  // The current simulation tick, read from the seam. A null means the seam
+  // does not report a tick (an absent or an older seam), and every
+  // tick-addressed measurement degrades to a frame count.
+  function feelCurrentTick() {
+    var seam = sampleDriftSeam();
+    if (seam && typeof seam.tick === 'number') return seam.tick;
+    return null;
+  }
+
+  // The TICK-ALIGNED key dispatch (14N W3).
+  //
+  // The production host samples the keyboard ONCE per rendered frame and
+  // applies that ONE sample to every catch-up tick of that frame, so the
+  // fixture CANNOT apply an input per tick: the input contract of the
+  // production is per FRAME. What the fixture CAN do is align the flip to
+  // a simulation-tick boundary (the flip waits until the seam's tick
+  // counter has advanced) and REPORT the residual alignment, so the
+  // tick-alignment of every measurement is auditable instead of assumed.
+  //
+  // The alignment log records the tick the flip was ISSUED on
+  // (`tickAtFlip`), the tick the wait started from (`tickBefore`),
+  // whether the simulation clock had advanced when the flip was issued
+  // (a false `advanced` means the seam never reported a tick) and how
+  // many frames the wait took (`alignFrames`).
+  //
+  // It does NOT record the tick the input LANDS on: the host samples the
+  // keyboard once per rendered frame and replays that sample into every
+  // catch-up tick of the frame, so the sample that carries the flip is
+  // the NEXT frame's - the input lands 1 to 4 ticks after `tickAtFlip`.
+  // The recorded alignment is therefore an UPPER BOUND on the
+  // misalignment, and it is reported (not hidden) so the tick-alignment
+  // of every measurement stays auditable.
+  function waitForTickAdvance(previousTick, maxFrames) {
+    return new Promise(function (resolve) {
+      var frames = 0;
+      function tick() {
+        frames += 1;
+        var current = feelCurrentTick();
+        if (current === null) {
+          // No seam tick: the alignment cannot be established. The flip
+          // still happens (the scenario continues) and the log says so.
+          resolve({ tick: null, advanced: false, reset: false, frames: frames });
+          return;
+        }
+        if (previousTick === null || current !== previousTick) {
+          // A DECREASE is a RESET: the ribbon re-entry restarts the
+          // simulation clock, so the new clock is also a clock advance
+          // for the alignment (the flip lands on the first tick of the
+          // new clock).
+          resolve({
+            tick: current,
+            advanced: true,
+            reset: previousTick !== null && current < previousTick,
+            frames: frames
+          });
+          return;
+        }
+        if (frames >= maxFrames) {
+          resolve({ tick: current, advanced: false, reset: false, frames: frames });
+          return;
+        }
+        requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    });
+  }
+  function dispatchKeyAligned(phase, code, down) {
+    var before = feelCurrentTick();
+    return waitForTickAdvance(before, FEEL_TICK_ALIGN_MAX_FRAMES).then(function (after) {
+      dispatchKey(code, down);
+      var atFlip = feelCurrentTick();
+      feelInputAlignment.push({
+        phase: phase,
+        code: code,
+        down: down,
+        tickBefore: before,
+        tickAtFlip: atFlip,
+        advanced: after.advanced,
+        reset: after.reset,
+        alignFrames: after.frames
+      });
+      return atFlip;
+    });
+  }
+  // The throttle dispatch the fixture controls, so the speed governor and
+  // the phase setup never fight over the throttle key.
+  function setFeelThrottle(down) {
+    if (feelThrottleDown === down) return;
+    dispatchKey('KeyW', down);
+    feelThrottleDown = down;
+  }
+
+  // The RIBBON RE-ENTRY (14N W3).
+  //
+  // The recorded browser lane enters the 14N block OFF-ROAD: the retained
+  // W+A slide leaves the ribbon, and an off-road car can never produce the
+  // ON-ROAD straight capture the AC-079 capture pair needs - off-road the
+  // speed settles at the 22.25 m/s floor (80.1 km/h) whatever the throttle
+  // does, so both capture points would read the same number and the
+  // deficit would be noise.
+  //
+  // The PRODUCTION surface for a fresh car is the AC-033 restart carrier:
+  // the race session subscribes to the mode switch and re-seeds the car
+  // state at the spawn pose (the first segment's centreline, ON the
+  // ribbon) and clears the drift model. The mode selector's change
+  // handler ignores a SAME-VALUE change, so the minimum that actually
+  // re-seeds the car is a two-step toggle: 'ai' and straight back to
+  // 'manual'. Both switches are issued inside ONE task, so the autopilot
+  // never drives a frame and the end state is a manual race with a fresh
+  // car on the ribbon.
+  //
+  // The re-entry is DEFENSIVE: a missing selector is reported and the
+  // scenario continues, so the checks report honestly on the state the car
+  // was actually in instead of aborting.
+  function reentryCarOnRibbon() {
+    var select = document.getElementById('neatracing-race-mode-selector');
+    if (!select) return false;
+    if (select.value !== 'ai') {
+      select.value = 'ai';
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    select.value = 'manual';
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    return true;
+  }
+
+  // 14N: the drift debug seam. The production browser entry (owned by a
+  // later slice) exposes the live drift state; it does not exist yet, so
+  // the read is DEFENSIVE: a missing or throwing seam yields null and
+  // every dependent check reports false instead of aborting the whole
+  // fixture (a throw would hide the other checks).
+  //
+  // 14N W3: the LEGACY `window.neatRacingDebug.drift` branch is REMOVED
+  // (No Deferred Cleanup). It was a DEAD path - `neatRacingDebug` is
+  // written NOWHERE in the repo - and it was a LATENT failure mode for
+  // the tick budgets: had that 4-field shape ever been reintroduced it
+  // would have been read INSTEAD of the five-field seam, `tick` would
+  // have been undefined, and the tick budgets would have silently
+  // degraded to frame budgets - exactly what the W3 re-base exists to
+  // prevent. The seam is now read from ONE place only.
+  function readDriftSeam() {
+    try {
+      var seam = window.neatRacingDriftState;
+      if (seam) return seam;
+    } catch (err) {
+      return null;
+    }
+    return null;
+  }
+  // The seam carries EXACTLY eight fields: poseRad, poseRateRadPerS,
+  // slipAngleRad, speedMps, tickHz, tick, followOffsetRad and
+  // tractionSeverity. 14N W3
+  // added the FIFTH field (the deterministic simulation tick counter)
+  // TOGETHER with the production write (browser-entry.ts) and the
+  // fixture-gate document: the browser half needs a simulation-clock
+  // address, because a rendered frame is not a simulation instant (the
+  // host releases 0-4 ticks per frame). Step 14P added the SIXTH field
+  // (the chase-camera follow offset) in the SAME three-place discipline:
+  // the production write, this reader and the fixture-gate document.
+  // Step 14Q2 added the SEVENTH field (the PUBLISHED traction severity)
+  // in the SAME three-place discipline: the production write
+  // (browser-entry.ts - the SEAM WRITER, owned by the slice
+  // P1-drift-traction-seam), this reader (the SEAM READER, owned by the
+  // green slice P1-drift-law-green) and the fixture-gate document. The
+  // severity is READ from the seam here - the browser NEVER re-derives
+  // it. A field that is not a number stays undefined, and a seam that
+  // carries none of them is treated as absent.
+  //
+  // Step 14R added the EIGHTH field (poseRateRadPerS) in the SAME
+  // three-place discipline: the production write (browser-entry.ts - the
+  // SEAM WRITER, owned by the slice P1-drift-presentation-car), this
+  // reader (the SEAM READER, owned by the green slice
+  // P1-drift-presentation-green) and the fixture-gate document. The
+  // EIGHTH field is a NAMED CHANNEL - the PUBLISHED pose-spring RATE
+  // (car.drift.pose.poseRate, in rad/s) - and it is NEVER the traction
+  // severity: the severity stays the SEVENTH field (Step 14Q) and is NOT
+  // re-published. The browser half can now measure the crab's ring-down
+  // and its far-side pop DIRECTLY, in simulation time, next to the pose
+  // it belongs to.
+  //
+  // THE FIELD-COUNT ASSERTION (Step 14R, the 2026-10-27 VERIFICATION 4
+  // blocker B-3): the seam WRITER and the seam READER can never share a
+  // slice (the 3-code-files cap), so the reader - which is what THIS
+  // slice owns - COUNTS the fields the seam actually publishes and the
+  // run only passes when the count is EXACTLY eight. A seam with seven
+  // means the writer never landed; a seam with nine means a field grew
+  // without a re-base record. The count is published next to the check
+  // count, so the gate can assert the exact SET and not only the total.
+  function sampleDriftSeam() {
+    var seam = readDriftSeam();
+    if (!seam) return null;
+    var poseRad = typeof seam.poseRad === 'number' ? seam.poseRad : undefined;
+    var poseRateRadPerS = typeof seam.poseRateRadPerS === 'number' ? seam.poseRateRadPerS : undefined;
+    var slipAngleRad = typeof seam.slipAngleRad === 'number' ? seam.slipAngleRad : undefined;
+    var speedMps = typeof seam.speedMps === 'number' ? seam.speedMps : undefined;
+    var tickHz = typeof seam.tickHz === 'number' ? seam.tickHz : undefined;
+    var tick = typeof seam.tick === 'number' ? seam.tick : undefined;
+    var followOffsetRad = typeof seam.followOffsetRad === 'number' ? seam.followOffsetRad : undefined;
+    var tractionSeverity = typeof seam.tractionSeverity === 'number' ? seam.tractionSeverity : undefined;
+    // The FIELD COUNT of the seam the reader actually saw: the number of
+    // PUBLISHED fields on the seam object, counted here so the assertion
+    // and the samples come from the SAME observation.
+    observedSeamFieldCount = countSeamFields(seam);
+    observedSeamFieldSamples += 1;
+    if (
+      poseRad === undefined &&
+      poseRateRadPerS === undefined &&
+      slipAngleRad === undefined &&
+      speedMps === undefined &&
+      tickHz === undefined &&
+      tick === undefined &&
+      followOffsetRad === undefined &&
+      tractionSeverity === undefined
+    ) {
+      return null;
+    }
+    return {
+      poseRad: poseRad,
+      poseRateRadPerS: poseRateRadPerS,
+      slipAngleRad: slipAngleRad,
+      speedMps: speedMps,
+      tickHz: tickHz,
+      tick: tick,
+      followOffsetRad: followOffsetRad,
+      tractionSeverity: tractionSeverity
+    };
+  }
+  // The number of PUBLISHED fields on the seam object (its own enumerable
+  // keys). The seam is a STABLE BAG with a FIXED field set, so the count
+  // is the seam's contract and not a per-frame accident.
+  function countSeamFields(seam) {
+    if (!seam) return 0;
+    var keys = Object.keys(seam);
+    return keys.length;
+  }
+  function nowMs() {
+    if (window.performance && typeof window.performance.now === 'function') return window.performance.now();
+    return Date.now();
+  }
+  // The per-phase measurement state of the 14N phase sequence.
+  function feelPhaseState(phase) {
+    if (!feelPhases[phase]) {
+      feelPhases[phase] = {
+        frames: 0,
+        seamSamples: 0,
+        maxAbsPoseRad: 0,
+        maxAbsSlipRad: 0,
+        maxPoseRateDegPerS: 0,
+        maxAbsProxyRad: 0,
+        engagedFrames: 0,
+        gateRunFrames: 0,
+        gateRunMaxFrames: 0,
+        signFlips: 0,
+        engagedSign: 0,
+        speedKmh: 0,
+        lastSlipRad: null,
+        lastX: null,
+        lastZ: null,
+        // The ROAD REGIME of the phase: the distance from the rendered
+        // ribbon at the phase's last sample and the ON-ROAD
+        // classification. The regime-aware published-slip mirror reads
+        // the regime of the phase that carried the peak, so the regime
+        // evidence is per phase and not only at the two capture points.
+        roadDistanceM: null,
+        onRoad: false,
+        startedAtMs: 0
+      };
+    }
+    return feelPhases[phase];
+  }
+  // Every phase boundary clears the rolling window: a chord across a phase
+  // change would measure a manoeuvre that was never observed, and the
+  // consecutive-run counters must be consecutive INSIDE a phase.
+  function resetFeelPhase(phase) {
+    feelProxySamples.length = 0;
+    feelPhases[phase] = null;
+    var state = feelPhaseState(phase);
+    state.startedAtMs = nowMs();
+    return state;
+  }
+  // The browser-computable body-to-travel angle: the body's rendered yaw
+  // against the direction of travel. The travel direction comes from a
+  // chord across the rolling window and the yaw anchor is the mean of the
+  // two ENDPOINT yaws, which is the SAME estimator the retained AC-078
+  // proxy uses, so the two lanes cannot drift apart. The window is a
+  // SEPARATE one, so the retained W+A measurement is never perturbed.
+  function sampleFeelProxy(phase, frameIndex, m) {
+    var state = feelPhaseState(phase);
+    var bodyYawRad = yawFromMatrixColumn3(m);
+    var lastSample = feelProxySamples.length > 0
+      ? feelProxySamples[feelProxySamples.length - 1]
+      : null;
+    var unwrappedYaw = lastSample
+      ? lastSample.unwrapped + wrapAngle(bodyYawRad - lastSample.yaw)
+      : bodyYawRad;
+    feelProxySamples.push({
+      x: m[12],
+      z: m[14],
+      yaw: bodyYawRad,
+      unwrapped: unwrappedYaw
+    });
+    if (feelProxySamples.length > DRIFT_PROXY_WINDOW) feelProxySamples.shift();
+    if (feelProxySamples.length < 3) return null;
+    var oldestSample = feelProxySamples[0];
+    var newestSample = feelProxySamples[feelProxySamples.length - 1];
+    var chordDx = newestSample.x - oldestSample.x;
+    var chordDz = newestSample.z - oldestSample.z;
+    if (chordDx === 0 && chordDz === 0) return null;
+    var endpointMidYawRad = (oldestSample.unwrapped + newestSample.unwrapped) / 2;
+    var signedProxyRad = wrapAngle(endpointMidYawRad - offsetAngle(chordDx, chordDz));
+    var absProxyRad = Math.abs(signedProxyRad);
+    if (absProxyRad > state.maxAbsProxyRad) state.maxAbsProxyRad = absProxyRad;
+    if (absProxyRad >= DRIFT_PROXY_MIN_RAD) {
+      state.engagedFrames += 1;
+      state.gateRunFrames += 1;
+      if (state.gateRunFrames > state.gateRunMaxFrames) state.gateRunMaxFrames = state.gateRunFrames;
+      var sign = signedProxyRad > 0 ? 1 : -1;
+      // The sign consistency: a slide is a coherent single-branch event, so
+      // the sign of the engaged body-to-travel angle must not flip inside
+      // the drift phase. A sign flip is the MIRROR, and the far-side pop at
+      // the catch is the ONE sanctioned sign flip.
+      if (state.engagedSign !== 0 && state.engagedSign !== sign) state.signFlips += 1;
+      state.engagedSign = sign;
+    } else {
+      state.gateRunFrames = 0;
+    }
+    feelProxyLog.push({ phase: phase, frame: frameIndex, signedRad: signedProxyRad });
+    return signedProxyRad;
+  }
+  // The 14N phase runner. It observes the phase, samples the seam and the
+  // body-to-travel proxy, and records the NAMED capture point when the
+  // phase is one of the two comparable AC-079 capture phases. A phase that
+  // cannot be observed degrades to empty measurements and the dependent
+  // checks report false - it never throws.
+  function observeFeelPhase(phase, tickBudget, speedLabel, captureLabel, options) {
+    var opts = options || {};
+    var speedCapKmh = typeof opts.speedCapKmh === 'number' ? opts.speedCapKmh : null;
+    var state = resetFeelPhase(phase);
+    // The frame count is only a WATCHDOG: the contract is the TICK
+    // budget, and an absent seam (or a stalled simulation) must never
+    // hang the fixture.
+    var maxFrames = tickBudget * FEEL_FRAME_WATCHDOG_PER_TICK + FEEL_FRAME_WATCHDOG_FRAMES;
+    return new Promise(function (resolve) {
+      var startGrid = gridDraws, startTrack = trackDraws;
+      var i = 0;
+      var startTick = null;
+      var lastTick = null;
+      var degraded = false;
+      var hudSpeedKmh = 0;
+      var seamSpeedKmh = null;
+      function tick() {
+        var models = carLitModelsThisFrame.slice();
+        if (models.length >= 1) {
+          sampleFeelProxy(phase, i, models[0]);
+          state.lastX = models[0][12];
+          state.lastZ = models[0][14];
+        } else {
+          // A frame without a car model breaks the consecutive gate run: the
+          // frames are not consecutive, so they must not be counted as one.
+          state.gateRunFrames = 0;
+        }
+        // The per-frame capture is cleared at the END of every phase frame, so
+        // the model array holds ONLY the current frame's body and wheels. The
+        // retained AC-078 lane uses the same per-frame semantics. Without it
+        // models[0] stays frozen at the phase's first frame, every
+        // rolling-window chord is (0,0) and the body-to-travel proxy never
+        // samples.
+        resetFrameCapture();
+        var seamSample = sampleDriftSeam();
+        if (seamSample) {
+          seamSample.phase = phase;
+          seamSample.frame = i;
+          seamSample.tMs = nowMs();
+          // Step 14R: the HUD TRACTION READOUT is read in the SAME frame
+          // as the seam sample, so the PAIR is same-instant: the rendered
+          // text and the PUBLISHED severity come from ONE rendered frame
+          // of the same car state. The readout is never re-derived - it
+          // is the DOM text the overlay painted.
+          seamSample.hudTractionText = readHudTractionText(hudTractionLabel);
+          feelSeamSamples.push(seamSample);
+          state.seamSamples += 1;
+          if (typeof seamSample.poseRad === 'number') {
+            var absPoseRad = Math.abs(seamSample.poseRad);
+            if (absPoseRad > state.maxAbsPoseRad) state.maxAbsPoseRad = absPoseRad;
+          }
+          if (typeof seamSample.slipAngleRad === 'number') {
+            var absSlipRad = Math.abs(seamSample.slipAngleRad);
+            if (absSlipRad > state.maxAbsSlipRad) state.maxAbsSlipRad = absSlipRad;
+            state.lastSlipRad = seamSample.slipAngleRad;
+          }
+          if (typeof seamSample.speedMps === 'number') {
+            seamSpeedKmh = seamSample.speedMps * 3.6;
+          }
+          if (typeof seamSample.tick === 'number') {
+            if (startTick === null) startTick = seamSample.tick;
+            lastTick = seamSample.tick;
+          }
+        }
+        // The speed of the phase: the SEAM is authoritative (the HUD text
+        // read returned 0 at the capture points in the recorded runs) and
+        // the HUD read is kept as the cross-check evidence.
+        hudSpeedKmh = readSpeed(speedLabel);
+        var phaseSpeed = (seamSpeedKmh === null) ? hudSpeedKmh : seamSpeedKmh;
+        state.speedKmh = phaseSpeed;
+        // The speed governor: the RIBBON STAY of the straight-line
+        // scenario. The throttle is released while the measured speed is
+        // above the cap and re-applied below the cap minus the hysteresis,
+        // so the scenario speed is BOUNDED and the straight run stays
+        // inside the ribbon's straight budget.
+        if (speedCapKmh !== null) {
+          if (phaseSpeed > speedCapKmh) {
+            setFeelThrottle(false);
+          } else if (phaseSpeed < speedCapKmh - FEEL_SPEED_CAP_HYSTERESIS_KMH) {
+            setFeelThrottle(true);
+          }
+        }
+        // The phase ends on the TICK budget: the first frame whose tick
+        // delta reaches the budget. The comparison is ">=" and not "==",
+        // because a frame can carry several ticks and skip a tick value.
+        var tickDelta = (startTick !== null && lastTick !== null)
+          ? (lastTick - startTick)
+          : null;
+        var completed = false;
+        if (tickDelta !== null) {
+          completed = tickDelta >= tickBudget;
+        } else {
+          // DEGRADED: the seam never reported a tick, so the phase falls
+          // back to a frame budget of the tick budget. A degraded phase
+          // NEVER produces a capture point (a capture taken at an unknown
+          // simulation instant is not a comparable capture).
+          degraded = true;
+          completed = i >= tickBudget;
+        }
+        if (i % FEEL_SPEED_TRACE_STEP === 0 || completed) {
+          feelSpeedTrace.push({
+            phase: phase, frame: i, tick: lastTick, kmh: phaseSpeed
+          });
+        }
+        if (!completed && i < maxFrames) {
+          i += 1;
+          requestAnimationFrame(tick);
+          return;
+        }
+        // The phase is over: the NAMED capture point (only when the phase
+        // ended ON the tick budget) and the measured tick delta.
+        feelPhaseTickDeltas[phase] = {
+          budgetTicks: tickBudget,
+          tickDelta: tickDelta,
+          frames: i + 1,
+          degraded: degraded,
+          completed: completed && !degraded
+        };
+        // The phase's ROAD REGIME (the distance from the rendered ribbon
+        // at the phase's last sample and the ON-ROAD classification).
+        // The regime-aware published-slip mirror reads the regime of the
+        // phase that carried the peak, so the regime evidence is per
+        // phase and not only at the two capture points.
+        state.roadDistanceM = feelNearestRoadDistance(state.lastX, state.lastZ);
+        state.onRoad = feelIsOnRoad(state.roadDistanceM);
+        if (captureLabel && !degraded && tickDelta !== null) {
+          var captureRoadDistanceM = state.roadDistanceM;
+          if (captureLabel === 'straight') {
+            straightCaptureSpeedKmh = phaseSpeed;
+            straightCaptureX = state.lastX;
+            straightCaptureZ = state.lastZ;
+            straightCaptureTick = lastTick;
+            straightCaptureRoadDistanceM = captureRoadDistanceM;
+            straightCaptureHudKmh = hudSpeedKmh;
+            straightCaptureSlipRad = state.lastSlipRad;
+          } else if (captureLabel === 'drift') {
+            driftCaptureSpeedKmh = phaseSpeed;
+            driftCaptureX = state.lastX;
+            driftCaptureZ = state.lastZ;
+            driftCaptureTick = lastTick;
+            driftCaptureRoadDistanceM = captureRoadDistanceM;
+            driftCaptureHudKmh = hudSpeedKmh;
+            driftCaptureSlipRad = state.lastSlipRad;
+          }
+        }
+        resetFrameCapture();
+        resolve({
+          gridDelta: gridDraws - startGrid,
+          trackDelta: trackDraws - startTrack,
+          frames: i + 1,
+          tickDelta: tickDelta,
+          degraded: degraded
+        });
+      }
+      requestAnimationFrame(tick);
+    });
+  }
+  // The seam samples of one phase, in observation order.
+  function seamSamplesForPhase(phase) {
+    var out = [];
+    for (var i = 0; i < feelSeamSamples.length; i++) {
+      if (feelSeamSamples[i].phase === phase) out.push(feelSeamSamples[i]);
+    }
+    return out;
+  }
+  // The peak |pose| over a set of phases, with the sample count (so "no
+  // data" never reads as "exactly zero").
+  function maxAbsPoseForPhases(phases) {
+    var maxRad = 0;
+    var count = 0;
+    for (var p = 0; p < phases.length; p++) {
+      var samples = seamSamplesForPhase(phases[p]);
+      for (var i = 0; i < samples.length; i++) {
+        var pose = samples[i].poseRad;
+        if (typeof pose !== 'number') continue;
+        count += 1;
+        var absPose = Math.abs(pose);
+        if (absPose > maxRad) maxRad = absPose;
+      }
+    }
+    return { maxRad: maxRad, count: count };
+  }
+  // The peak |pose| over the TAIL of a phase (the flat window after the
+  // catch has to be flat, so the body cannot remain stuck at an offset).
+  // The tail is measured in TICKS (the contract unit of 14N W3): the tail
+  // starts at the last observed tick minus the tail budget. When the seam
+  // reports no tick at all, the measurement degrades to a FRAME tail of
+  // the same length and reports the unit it used.
+  function maxAbsPoseInTail(phase, tailTicks) {
+    var samples = seamSamplesForPhase(phase);
+    if (!samples.length) return { maxRad: 0, count: 0, unit: 'none' };
+    var lastTick = null;
+    for (var t = 0; t < samples.length; t++) {
+      if (typeof samples[t].tick === 'number') lastTick = samples[t].tick;
+    }
+    var useTicks = lastTick !== null;
+    var lastFrame = samples[samples.length - 1].frame;
+    var maxRad = 0;
+    var count = 0;
+    for (var i = 0; i < samples.length; i++) {
+      var sample = samples[i];
+      if (useTicks) {
+        if (typeof sample.tick !== 'number') continue;
+        if (sample.tick < lastTick - tailTicks) continue;
+      } else {
+        if (sample.frame < lastFrame - tailTicks) continue;
+      }
+      var pose = sample.poseRad;
+      if (typeof pose !== 'number') continue;
+      count += 1;
+      var absPose = Math.abs(pose);
+      if (absPose > maxRad) maxRad = absPose;
+    }
+    return { maxRad: maxRad, count: count, unit: useTicks ? 'tick' : 'frame' };
+  }
+  // The peak |slip| over the TAIL of a phase (the catch signature: the
+  // slip AFTER the countersteer release must be SMALLER than the slip
+  // BEFORE it). The tail unit follows maxAbsPoseInTail.
+  function maxAbsSlipInTail(phase, tailTicks) {
+    var samples = seamSamplesForPhase(phase);
+    if (!samples.length) return { maxRad: 0, count: 0, unit: 'none' };
+    var lastTick = null;
+    for (var t = 0; t < samples.length; t++) {
+      if (typeof samples[t].tick === 'number') lastTick = samples[t].tick;
+    }
+    var useTicks = lastTick !== null;
+    var lastFrame = samples[samples.length - 1].frame;
+    var maxRad = 0;
+    var count = 0;
+    for (var i = 0; i < samples.length; i++) {
+      var sample = samples[i];
+      if (useTicks) {
+        if (typeof sample.tick !== 'number') continue;
+        if (sample.tick < lastTick - tailTicks) continue;
+      } else {
+        if (sample.frame < lastFrame - tailTicks) continue;
+      }
+      var slip = sample.slipAngleRad;
+      if (typeof slip !== 'number') continue;
+      count += 1;
+      var absSlip = Math.abs(slip);
+      if (absSlip > maxRad) maxRad = absSlip;
+    }
+    return { maxRad: maxRad, count: count, unit: useTicks ? 'tick' : 'frame' };
+  }
+  // The peak |slip| over a set of phases (the catch discriminator).
+  function maxAbsSlipForPhases(phases) {
+    var maxRad = 0;
+    var count = 0;
+    for (var p = 0; p < phases.length; p++) {
+      var samples = seamSamplesForPhase(phases[p]);
+      for (var i = 0; i < samples.length; i++) {
+        var slip = samples[i].slipAngleRad;
+        if (typeof slip !== 'number') continue;
+        count += 1;
+        var absSlip = Math.abs(slip);
+        if (absSlip > maxRad) maxRad = absSlip;
+      }
+    }
+    return { maxRad: maxRad, count: count };
+  }
+  // The peak pose RATE, computed frame-rate INDEPENDENTLY and TICK-BASED:
+  // the pose change of a frame divided by the ELAPSED SIMULATION TIME of
+  // that frame (the tick delta divided by the tick rate). The previous
+  // implementation multiplied the per-frame step by the tick rate, which
+  // OVER-counts whenever a frame carries several catch-up ticks (the
+  // recorded 155.03 deg/s failure at 163 fps). Only CONSECUTIVE frames of
+  // the SAME phase with an INCREASING tick are paired, so a gap between
+  // the phases (the sleep between the release and the opposite press)
+  // never reads as a spike.
+  function maxFeelPoseRateDegPerS() {
+    var maxRate = 0;
+    var pairs = 0;
+    var prev = null;
+    for (var i = 0; i < feelSeamSamples.length; i++) {
+      var s = feelSeamSamples[i];
+      if (
+        prev &&
+        prev.phase === s.phase &&
+        prev.frame === s.frame - 1 &&
+        typeof prev.poseRad === 'number' &&
+        typeof s.poseRad === 'number' &&
+        typeof prev.tick === 'number' &&
+        typeof s.tick === 'number' &&
+        s.tick > prev.tick &&
+        typeof s.tickHz === 'number' &&
+        s.tickHz > 0
+      ) {
+        var elapsedS = (s.tick - prev.tick) / s.tickHz;
+        var stepDeg = Math.abs(s.poseRad - prev.poseRad) * 180 / Math.PI;
+        var rateDegPerS = elapsedS > 0 ? stepDeg / elapsedS : 0;
+        pairs += 1;
+        if (rateDegPerS > maxRate) maxRate = rateDegPerS;
+      }
+      prev = s;
+    }
+    return { maxRate: maxRate, pairs: pairs };
+  }
+  // The settle time: the first sample after the catch whose pose is back
+  // inside the settle band around the pre-drift baseline AND stays inside
+  // it for the hold window. A settle that is never observed reports null
+  // (the check then reports false - it is never optimistically true).
+  function measureFeelSettle(catchStartMs, baselinePoseRad) {
+    var tolRad = DRIFT_FEEL_SETTLE_BASELINE_TOL_DEG * Math.PI / 180;
+    var samples = [];
+    for (var i = 0; i < feelSeamSamples.length; i++) {
+      if (feelSeamSamples[i].tMs >= catchStartMs) samples.push(feelSeamSamples[i]);
+    }
+    for (var j = 0; j < samples.length; j++) {
+      var pose = samples[j].poseRad;
+      if (typeof pose !== 'number') continue;
+      if (Math.abs(pose - baselinePoseRad) > tolRad) continue;
+      var holdEndMs = samples[j].tMs + DRIFT_FEEL_SETTLE_HOLD_MS;
+      var held = true;
+      var sawEnd = false;
+      for (var k = j; k < samples.length; k++) {
+        var holdPose = samples[k].poseRad;
+        if (typeof holdPose === 'number' && Math.abs(holdPose - baselinePoseRad) > tolRad) {
+          held = false;
+          break;
+        }
+        if (samples[k].tMs >= holdEndMs) {
+          sawEnd = true;
+          break;
+        }
+      }
+      if (held && sawEnd) return { settleMs: samples[j].tMs - catchStartMs, found: true };
+    }
+    return { settleMs: null, found: false };
+  }
+  // The far-side pop: the largest excursion of the POSE to the OPPOSITE
+  // side of the drift's own sign during the catch phase. The far-side pop
+  // is the ONE sanctioned sign flip (the 7a pop contract, measured on the
+  // pose because the pose is the quantity the unit lane pins).
+  function measureFeelPop(referenceSign, phase) {
+    var samples = seamSamplesForPhase(phase);
+    var popRad = 0;
+    var found = false;
+    if (referenceSign === 0) return { popRad: 0, found: false, samples: samples.length };
+    for (var i = 0; i < samples.length; i++) {
+      var pose = samples[i].poseRad;
+      if (typeof pose !== 'number') continue;
+      var sign = pose > 0 ? 1 : -1;
+      if (sign === referenceSign) continue;
+      var absPose = Math.abs(pose);
+      if (!found || absPose > popRad) {
+        popRad = absPose;
+        found = true;
+      }
+    }
+    return { popRad: popRad, found: found, samples: samples.length };
+  }
+  // The sustained sign of the pose over a phase (the drift's own side).
+  function feelPoseReferenceSign(phase) {
+    var samples = seamSamplesForPhase(phase);
+    var sign = 0;
+    for (var i = 0; i < samples.length; i++) {
+      var pose = samples[i].poseRad;
+      if (typeof pose !== 'number') continue;
+      if (sign === 0) sign = pose > 0 ? 1 : -1;
+    }
+    return sign;
+  }
+  // Step 14P: the camera follow offset (the SIXTH seam field). The chase
+  // camera aims along the PUBLISHED travel direction, so its follow
+  // offset CONVERGES on the published slip and never swings past it.
+  //
+  // THE MEASUREMENT IS A PARITY MEASUREMENT over the seam's OWN two
+  // fields - the published slip and the follow offset - so it is
+  // NON-VACUOUS: a camera pinned to the nose reports a zero offset (the
+  // floor fails and there is nothing to compare), and a camera that
+  // over-rotated past the published travel direction would break the
+  // ceiling.
+  //
+  // THE AIM ERROR is the published slip minus the follow offset: the
+  // camera's aim is the nose heading plus the follow offset and the
+  // published travel direction is the nose heading plus the published
+  // slip, so their difference is exactly the slip minus the offset. A
+  // camera that TRACKS the travel direction closes that error; a camera
+  // that never tracks keeps it open. The sign agreement is asserted on
+  // the CONVERGED samples only - a camera that has closed the error onto
+  // the travel direction points the SAME WAY as the travel direction by
+  // construction, so a disagreement there is a real defect, while the
+  // samples that are still converging (the follow re-closing after the
+  // mirror) are a legitimate transient and are NOT counted.
+  //
+  // The phases are the DRIFT phases only (the two commit/hold pairs).
+  // The straight phases carry a zero published slip, so a follow offset
+  // measured there would say nothing about the re-wiring. The CEILING
+  // bound is taken over the WHOLE run, because the follow is a carried
+  // state: it survives the phase boundaries, so its magnitude is bound
+  // by the largest published slip the WHOLE run produced and not by the
+  // largest slip of one phase.
+  function measureCameraFollowOffset(phases) {
+    var maxAbsRad = 0;
+    var maxAbsSlipRad = 0;
+    var samples = 0;
+    var convergedSamples = 0;
+    var signMismatches = 0;
+    for (var i = 0; i < feelSeamSamples.length; i++) {
+      var s = feelSeamSamples[i];
+      var slip = s.slipAngleRad;
+      if (typeof slip === 'number') {
+        var absSlipAll = Math.abs(slip);
+        if (absSlipAll > maxAbsSlipRad) maxAbsSlipRad = absSlipAll;
+      }
+      if (phases.indexOf(s.phase) === -1) continue;
+      var follow = s.followOffsetRad;
+      if (typeof follow !== 'number') continue;
+      samples += 1;
+      var absFollow = Math.abs(follow);
+      if (absFollow > maxAbsRad) maxAbsRad = absFollow;
+      if (typeof slip !== 'number') continue;
+      var absSlip = Math.abs(slip);
+      // The convergence and the sign: asserted only where the published
+      // slide AND the follow offset are both unambiguous.
+      if (
+        absSlip >= DRIFT_FEEL_CAMERA_FOLLOW_SLIP_FLOOR_RAD &&
+        absFollow >= DRIFT_FEEL_CAMERA_FOLLOW_SIGN_MIN_OFFSET_RAD
+      ) {
+        // The aim error: the published slip minus the follow offset.
+        var aimError = slip - follow;
+        if (Math.abs(aimError) <= DRIFT_FEEL_CAMERA_FOLLOW_CONVERGED_RAD) {
+          convergedSamples += 1;
+          var followSign = follow > 0 ? 1 : -1;
+          var slipSign = slip > 0 ? 1 : -1;
+          if (followSign !== slipSign) signMismatches += 1;
+        }
+      }
+    }
+    return {
+      samples: samples,
+      maxAbsRad: maxAbsRad,
+      maxAbsSlipRad: maxAbsSlipRad,
+      convergedSamples: convergedSamples,
+      signMismatches: signMismatches
+    };
+  }
+
+  // The TRACTION SEVERITY measurement (Step 14Q2, the SEVENTH seam
+  // field). It mirrors the shape of measureCameraFollowOffset: the
+  // samples are the DRIFT phases, the published severity is READ from
+  // the seam, and the RATIO is published next to the counts so the run
+  // carries the evidence the named check was decided on.
+  //
+  // THE RATIO IS published / oracle, where the oracle is the FIXTURE's
+  // mirror of the shared law (see the DRIFT_FEEL_TRACTION_* constants).
+  // The production publishes the severity from the POST-TRACTION speed
+  // and the PUBLISHED slip - the very two numbers the seam publishes -
+  // so the ratio is EXACTLY 1 for every sample of a correct build. The
+  // check is therefore RATIO-shaped (D5 / R5) and never a floor: a seam
+  // that carried a stale, zeroed, clamped or re-derived severity would
+  // break it.
+  function measureTractionSeverity(phases) {
+    var samples = 0;
+    var ratioSamples = 0;
+    var ratioMismatches = 0;
+    var outOfRange = 0;
+    var zeroSeverityAtSlip = 0;
+    var maxSeverity = 0;
+    var maxAbsSlipRad = 0;
+    var maxRatioDeviation = 0;
+    for (var i = 0; i < feelSeamSamples.length; i++) {
+      var s = feelSeamSamples[i];
+      if (phases.indexOf(s.phase) === -1) continue;
+      var severity = s.tractionSeverity;
+      if (typeof severity !== 'number') continue;
+      var slip = s.slipAngleRad;
+      var speed = s.speedMps;
+      if (typeof slip !== 'number' || typeof speed !== 'number') continue;
+      samples += 1;
+      var absSlip = Math.abs(slip);
+      if (absSlip > maxAbsSlipRad) maxAbsSlipRad = absSlip;
+      if (severity > maxSeverity) maxSeverity = severity;
+      // The law's closed unit interval: the severity is a share, never
+      // a percentage and never a negative.
+      if (severity < 0 || severity > 1) outOfRange += 1;
+      // Below the slip floor the severity is legitimately tiny, so the
+      // ratio is not asserted there.
+      if (absSlip < DRIFT_FEEL_TRACTION_SLIP_FLOOR_RAD) continue;
+      // The severity must RESPOND to the slide: a published severity of
+      // zero at a real slide means the tires show nothing (the D5 / R5
+      // failure mode, and the reason the check is not a floor).
+      if (severity <= 0) {
+        zeroSeverityAtSlip += 1;
+        continue;
+      }
+      // The ORACLE: the fixture's mirror of the shared law.
+      var speedShare = speed > 0 ? speed / DRIFT_FEEL_TRACTION_TOP_SPEED_MPS : 0;
+      var oracle = Math.min(
+        1,
+        Math.max(0, (absSlip / DRIFT_FEEL_TRACTION_SLIP_BUDGET_RAD) * speedShare)
+      );
+      if (oracle <= 0) continue;
+      var ratio = severity / oracle;
+      var deviation = Math.abs(ratio - 1);
+      ratioSamples += 1;
+      if (deviation > maxRatioDeviation) maxRatioDeviation = deviation;
+      if (deviation > DRIFT_FEEL_TRACTION_RATIO_TOLERANCE) ratioMismatches += 1;
+    }
+    return {
+      samples: samples,
+      ratioSamples: ratioSamples,
+      ratioMismatches: ratioMismatches,
+      outOfRange: outOfRange,
+      zeroSeverityAtSlip: zeroSeverityAtSlip,
+      maxSeverity: maxSeverity,
+      maxAbsSlipRad: maxAbsSlipRad,
+      maxRatioDeviation: maxRatioDeviation
+    };
+  }
+
+  // Step 14R: the HUD TRACTION READOUT measurement. The RENDERED readout
+  // (the overlay's 'Traction NN%' text) is compared against the
+  // PUBLISHED severity on the seam. The two numbers are READ, never
+  // derived: the overlay renders the severity the physics step
+  // published, and the seam publishes the same number, so a correct
+  // build shows the same value (up to the display quantization of the
+  // whole percent).
+  //
+  // THE CHECK IS AN EQUALITY BAND, NOT A FLOOR: the rendered percent has
+  // to be within HALF a point of the published share, so a stale, zeroed,
+  // clamped or re-derived readout FAILS. A floor ('the readout is above
+  // zero') would have passed every one of them - which is exactly the
+  // D5 / R5 failure mode ("the fixture reports GREEN while the tires show
+  // nothing").
+  //
+  // IT IS NON-VACUOUS: the measurement also counts a PARSE FAILURE (the
+  // readout text was missing or unreadable) as a failure, asserts that
+  // at least one sample carried a NON-ZERO published severity, and
+  // asserts that the readout showed a NON-ZERO percent at some point, so
+  // a run where the overlay never showed the traction can never pass.
+  //
+  // THE RATIO (the rendered percent over the published percent) is
+  // published as the EVIDENCE of the equality, and it is 1 for every
+  // sample of a correct build. The ASSERTION is the absolute band, not
+  // the ratio, because the readout is a ROUNDED percent: a share of
+  // 0.004 renders as 0% (a ratio of 0), which is the display
+  // quantization and not a defect. The band absorbs exactly that
+  // quantization and nothing else.
+  function measureHudTractionReadout(phases) {
+    var samples = 0;
+    var ratioSamples = 0;
+    var mismatches = 0;
+    var parseFailures = 0;
+    var zeroSeveritySamples = 0;
+    var maxSeverity = 0;
+    var maxHudPercent = 0;
+    var maxAbsDeviationPercent = 0;
+    var maxRatioDeviation = 0;
+    var lastReadoutText = null;
+    for (var i = 0; i < feelSeamSamples.length; i++) {
+      var s = feelSeamSamples[i];
+      if (phases.indexOf(s.phase) === -1) continue;
+      var severity = s.tractionSeverity;
+      if (typeof severity !== 'number') continue;
+      var text = typeof s.hudTractionText === 'string' ? s.hudTractionText : null;
+      if (text !== null) lastReadoutText = text;
+      var percent = parseHudTractionPercent(text);
+      if (percent === null) {
+        // The readout was not readable in this frame: the run must not
+        // pass on a missing readout.
+        parseFailures += 1;
+        continue;
+      }
+      samples += 1;
+      if (severity > maxSeverity) maxSeverity = severity;
+      if (percent > maxHudPercent) maxHudPercent = percent;
+      var seamPercent = severity * 100;
+      var deviation = Math.abs(percent - seamPercent);
+      if (deviation > maxAbsDeviationPercent) maxAbsDeviationPercent = deviation;
+      if (seamPercent > 0) {
+        ratioSamples += 1;
+        var ratio = percent / seamPercent;
+        var ratioDeviation = Math.abs(ratio - 1);
+        if (ratioDeviation > maxRatioDeviation) maxRatioDeviation = ratioDeviation;
+      } else {
+        zeroSeveritySamples += 1;
+      }
+      if (deviation > DRIFT_FEEL_HUD_TRACTION_QUANTIZATION_BAND_PERCENT) {
+        mismatches += 1;
+      }
+    }
+    return {
+      samples: samples,
+      ratioSamples: ratioSamples,
+      mismatches: mismatches,
+      parseFailures: parseFailures,
+      zeroSeveritySamples: zeroSeveritySamples,
+      maxSeverity: maxSeverity,
+      maxHudPercent: maxHudPercent,
+      maxAbsDeviationPercent: maxAbsDeviationPercent,
+      maxRatioDeviation: maxRatioDeviation,
+      lastReadoutText: lastReadoutText
+    };
   }
 
   function pickWheelBufferId() {
@@ -704,6 +2369,18 @@ html, body { margin: 0; padding: 0; height: 100%; background: #05070d; overflow:
       carLitModelsThisFrame.length = 0;
 
       var speedLabel = hudContainer ? hudContainer.querySelector('div > div') : null;
+      // Step 14R: the HUD TRACTION READOUT element. The overlay appends
+      // FIVE label divs to its wrapper in a fixed order - speed, lap,
+      // time, traction, hint (examples/neatRacing/host/hud.ts, createHud)
+      // - so the traction readout is the FOURTH label. The selector is
+      // EXPLICIT about the depth (the container's direct child is the
+      // WRAPPER, not a label), so the read can never land on the wrong
+      // element; and the readout text is parsed against the production's
+      // own shape ('Traction 42%'), so a wrong element would fail the
+      // parse and the check - it can never pass silently.
+      hudTractionLabel = hudContainer
+        ? hudContainer.querySelector('div > div > div:nth-child(4)')
+        : null;
 
       var steerSamplesA = [], steerSamplesD = [];
       dispatchKey('KeyA', true);
@@ -889,6 +2566,370 @@ html, body { margin: 0; padding: 0; height: 100%; background: #05070d; overflow:
       var singleTrackD = obsD.trackDelta >= 10 && obsD.trackDelta <= 13;
       var singleTrackWA = obsWA.trackDelta >= 95 && obsWA.trackDelta <= 103;
 
+      // 14N: the new phase sequence P0-P6. It is APPENDED after the
+      // retained W+A phase and BEFORE the checks object, and it runs on its
+      // OWN measurement state, so every retained check keeps the exact
+      // inputs it had before (the retained analysis above was already
+      // taken before this block runs).
+      //
+      // A failure inside the new phases must NOT abort the fixture: the
+      // catch-all would replace the whole notes payload and hide every
+      // other check. So the block is guarded, its failures land in
+      // feelErrors and in the notes, and the dependent checks report false.
+      var feelErrors = [];
+      var feelCatchStartMs = 0;
+      var feelMirrorCatchStartMs = 0;
+      try {
+        // P0: the boot and the mode switch. The bundle is already loaded and
+        // the mode is already manual, so P0 RE-AFFIRMS the existing code
+        // path (it does not re-implement the boot) and records the fact.
+        var p0State = resetFeelPhase('P0');
+        p0State.modeSwitchedToManual = setManualMode();
+        p0State.bundleReused = !!(result.bundleLoaded && result.neatRacingStartDefined);
+
+        // 14N W3 (the D5 re-base). The phase sequence is re-based around the
+        // RATIFIED D5 decision: a NEUTRAL steer HOLDS the committed slide,
+        // and the release is the COUNTERSTEER unwind. The 7b observable is
+        // therefore SPLIT into 7b-HOLD (the slide is still there while the
+        // steer is neutral) and 7b-RELEASE (the countersteer unwinds it and
+        // the pose returns to the hard zero), and the straight line is
+        // measured AFTER the release - never before it, because the pose
+        // spring has NO snap: its target is the committed slip, so a pose
+        // that was never loaded cannot prove that the slide was released.
+        //
+        // The two NAMED capture points (the AC-079 pair) are measured in
+        // TWO CONTROLLED RUNS that each start from the SAME fresh spawn
+        // state and each run the SAME tick budget, so the two capture
+        // points are comparable by construction (the same elapsed ticks
+        // from the same state) - not by hope. A THIRD run (the mirror)
+        // follows on its own fresh spawn state: it is not a capture pair,
+        // it only carries the OTHER steer sign.
+        //
+        // RIBBON RE-ENTRY (the "keep the car on the ribbon" clause of the
+        // 14N owner map). The recorded browser lane enters the 14N block
+        // OFF-ROAD: the retained W+A slide leaves the ribbon, and an
+        // off-road car can never produce the ON-ROAD straight capture the
+        // D1.3 capture pair needs (off-road, the speed settles at the
+        // 22.25 m/s floor - 80.1 km/h - whatever the throttle does, so both
+        // captures would read the same number and the deficit would be
+        // noise). The AC-033 restart carrier is the PRODUCTION surface for
+        // a fresh car: a mode switch re-seeds the car state at the spawn
+        // pose (the first segment's centreline, ON the ribbon) and clears
+        // the drift model. The fixture switches to 'ai' and straight back
+        // to 'manual' inside ONE task, so the autopilot never drives a
+        // frame and the final state is a fresh car on the ribbon in manual
+        // mode. The re-entry is an ACTION, not a phase: it consumes no
+        // ticks, so the capture runs stay tick-comparable.
+        //
+        // RUN 1 (the straight line): the car is released onto the ribbon
+        // and drives STRAIGHT (the throttle only, the speed UNCAPPED so
+        // the capture is read at the free-acceleration speed) for the
+        // whole capture budget. The NAMED 'straight' capture point is the
+        // end of this run.
+        p0State.ribbonReentry = reentryCarOnRibbon();
+        setFeelThrottle(true);
+        // The straight capture run is UNCAPPED: the two capture points
+        // have to be measured at the same free-acceleration speed, so the
+        // speed governor only acts AFTER the capture (on the
+        // release/settle/straight phases).
+        await observeFeelPhase('P1-STRAIGHT', SPEED_CAPTURE_TICKS, speedLabel, 'straight');
+
+        // RUN 2 (the drift + the D5 re-base): a second fresh car on the
+        // ribbon, the same capture budget, and the manoeuvre:
+        //   P2-ACCEL   the throttle down, so the car is above the drift
+        //               engagement gate (15 m/s) before the steer;
+        //   P2-COMMIT  the fixture's OWN commit (the left steer goes in
+        //               and the slip ramps to the committed 0.45 rad);
+        //   P2-HOLD    the NEUTRAL steer (the left steer is released and
+        //               NOTHING else is pressed) - the 7b-HOLD window: the
+        //               committed slide has to be STILL THERE;
+        //   the NAMED 'drift' capture point is the end of P2-HOLD, so the
+        //   two capture points sit at the same elapsed tick.
+        p0State.ribbonReentry2 = reentryCarOnRibbon();
+        await observeFeelPhase('P2-ACCEL', FEEL_ACCEL_TICKS, speedLabel, null);
+        await dispatchKeyAligned('P2-COMMIT', 'KeyA', true);
+        await observeFeelPhase('P2-COMMIT', FEEL_COMMIT_TICKS, speedLabel, null);
+        // The NEUTRAL steer: the left steer is released and no other steer
+        // key is pressed, so the D5 latch HOLDS the committed slide. The
+        // keyup is the FIRST half of the release contract, so it is
+        // recorded in the key order.
+        await dispatchKeyAligned('P2-HOLD', 'KeyA', false);
+        countersteerKeyOrder.push('KeyA:up');
+        await observeFeelPhase('P2-HOLD', FEEL_HOLD_TICKS, speedLabel, 'drift');
+
+        // P2-RELEASE: the COUNTERSTEER that releases the commitment. The
+        // release MUST come FIRST: the keyup of KeyA (already done, at the
+        // P2-HOLD boundary) and only THEN the keydown of KeyD. A
+        // simultaneous press (or a press while KeyA is still held) never
+        // arms the countersteer, so the order is recorded and the catch
+        // checks read the recorded order. The model unwinds the committed
+        // slip at 2.5 rad/s toward the 0.02 rad snap band, so the 0.45 rad
+        // commitment needs about 12 ticks; the window is 2.5x that.
+        await dispatchKeyAligned('P2-RELEASE', 'KeyD', true);
+        countersteerKeyOrder.push('KeyD:down');
+        countersteerReleasedBeforePress =
+          countersteerKeyOrder[0] === 'KeyA:up' && countersteerKeyOrder[1] === 'KeyD:down';
+        feelCatchStartMs = nowMs();
+        await observeFeelPhase('P2-RELEASE', RELEASE_TICKS, speedLabel, null, {
+          speedCapKmh: FEEL_STRAIGHT_MAX_SPEED_KMH
+        });
+
+        // P2-SETTLE: the ring-down. The pose spring decays asymptotically
+        // towards its hard zero (the production simulation measures
+        // 1.835e-8 rad after a 120-tick settle), so the window is the
+        // 40 ticks the ring-down needs: the simulation measures 0.00304
+        // rad over the last 30 ticks of the settle (the far-side pop's
+        // residual ringing) and 0.000076 rad over the straight phase
+        // that follows. The countersteer is released here, so the steer
+        // is neutral again (and the model re-arms on the neutral tick).
+        await dispatchKeyAligned('P2-SETTLE', 'KeyD', false);
+        await observeFeelPhase('P2-SETTLE', SETTLE_TICKS, speedLabel, null, {
+          speedCapKmh: FEEL_STRAIGHT_MAX_SPEED_KMH
+        });
+
+        // P2-STRAIGHT: the straight line AFTER the release. The pose has
+        // to be back at the hard zero (inside the declared 0.002 rad
+        // render-jitter headroom), and the throttle stays down so the
+        // slide cannot disengage for the WRONG reason (a coasting car
+        // drops below the drift gate, the drift disengages and the pose
+        // snaps to 0 - the vacuous pass the re-based expectation forbids).
+        await observeFeelPhase('P2-STRAIGHT', FEEL_STRAIGHT_TICKS, speedLabel, null, {
+          speedCapKmh: FEEL_STRAIGHT_MAX_SPEED_KMH
+        });
+
+        // P3: the MIRROR run - the same manoeuvre with the OTHER steer
+        // sign (the right steer), on its OWN fresh spawn state (the
+        // third ribbon re-entry), so the OTHER side of the slide can be
+        // observed. The mirror has its own accel budget: the mirror is
+        // not a capture pair, so it does not have to match the P2 tick
+        // count, but it has to clear the drift engagement gate and stay
+        // on the ribbon.
+        p0State.ribbonReentry3 = reentryCarOnRibbon();
+        await observeFeelPhase('P3-ACCEL', MIRROR_ACCEL_TICKS, speedLabel, null);
+        // P3-MIRROR-COMMIT: the right steer goes in.
+        await dispatchKeyAligned('P3-MIRROR-COMMIT', 'KeyD', true);
+        await observeFeelPhase('P3-MIRROR-COMMIT', MIRROR_COMMIT_TICKS, speedLabel, null);
+        // P3-MIRROR-HOLD: the NEUTRAL steer (the right steer is released
+        // and nothing else is pressed) - the mirror's 7b-HOLD window.
+        await dispatchKeyAligned('P3-MIRROR-HOLD', 'KeyD', false);
+        mirrorKeyOrder.push('KeyD:up');
+        await observeFeelPhase('P3-MIRROR-HOLD', MIRROR_HOLD_TICKS, speedLabel, null);
+        // P3-MIRROR-CATCH: the mirror's countersteer (the left steer).
+        // The catch is the same genuine release-then-opposite-press (the
+        // keyup of KeyD, and only THEN the keydown of KeyA).
+        await dispatchKeyAligned('P3-MIRROR-CATCH', 'KeyA', true);
+        mirrorKeyOrder.push('KeyA:down');
+        mirrorReleasedBeforePress =
+          mirrorKeyOrder[0] === 'KeyD:up' && mirrorKeyOrder[1] === 'KeyA:down';
+        feelMirrorCatchStartMs = nowMs();
+        await observeFeelPhase('P3-MIRROR-CATCH', CATCH_TICKS, speedLabel, null, {
+          speedCapKmh: FEEL_STRAIGHT_MAX_SPEED_KMH
+        });
+        await observeFeelPhase('P3-MIRROR-SETTLE', SETTLE_TICKS, speedLabel, null, {
+          speedCapKmh: FEEL_STRAIGHT_MAX_SPEED_KMH
+        });
+        await dispatchKeyAligned('P3-MIRROR-SETTLE', 'KeyA', false);
+
+        // P4-RECHECK: the straight-line re-check. The car drives straight
+        // again, so the pose has to be back at the hard zero again. The
+        // throttle STAYS DOWN on purpose: a coasting car drops below the
+        // drift gate, the drift disengages and the pose snaps to 0 for the
+        // WRONG reason, which would make the check pass VACUOUSLY. A
+        // driven straight line keeps the slide alive, so the pose has to
+        // return to 0 on its own.
+        await observeFeelPhase('P4-RECHECK', RECHECK_TICKS, speedLabel, null, {
+          speedCapKmh: FEEL_STRAIGHT_MAX_SPEED_KMH
+        });
+      } catch (feelErr) {
+        feelErrors.push(String(feelErr));
+      }
+
+      // 14N: the derived measurements of the new phase sequence. Every one
+      // of them degrades to a FALSE check when the measurement is missing
+      // (no seam, no capture, an unexpected frame count) - never to an
+      // optimistic true.
+      //
+      // The MOVE phases are the phases of the re-based manoeuvre. The
+      // re-based sequence (14N W3, the D5 re-base) is:
+      //   P1-STRAIGHT   the straight capture run - the NAMED 'straight'
+      //                  capture point (on the ribbon);
+      //   P2-ACCEL      the throttle down before the steer;
+      //   P2-COMMIT     the fixture's OWN commit (the left steer in);
+      //   P2-HOLD       the NEUTRAL steer - the 7b-HOLD evidence and the
+      //                  NAMED 'drift' capture point;
+      //   P2-RELEASE    the countersteer - the 7b-RELEASE evidence and
+      //                  the far-side pop;
+      //   P2-SETTLE     the ring-down towards the hard zero;
+      //   P2-STRAIGHT   the straight line AFTER the release - the re-based
+      //                  7b straight-line observable;
+      //   P3-ACCEL       the mirror run's accel (its own fresh spawn);
+      //   P3-MIRROR-*   the mirrored manoeuvre (the OTHER sign);
+      //   P4-RECHECK    the straight-line re-check.
+      var FEEL_MOVE_PHASES = [
+        'P1-STRAIGHT', 'P2-ACCEL', 'P2-COMMIT', 'P2-HOLD', 'P2-RELEASE',
+        'P2-SETTLE', 'P2-STRAIGHT', 'P3-ACCEL', 'P3-MIRROR-COMMIT',
+        'P3-MIRROR-HOLD', 'P3-MIRROR-CATCH', 'P3-MIRROR-SETTLE', 'P4-RECHECK'
+      ];
+      // The straight-line phases of the re-based observable: the pose has
+      // to be back at the hard zero in BOTH of them.
+      var FEEL_STRAIGHT_PHASES = ['P2-STRAIGHT', 'P4-RECHECK'];
+      var straightPose = maxAbsPoseForPhases(FEEL_STRAIGHT_PHASES);
+      var movePose = maxAbsPoseForPhases(FEEL_MOVE_PHASES);
+      var moveSlip = maxAbsSlipForPhases(FEEL_MOVE_PHASES);
+      // Step 14P: the camera follow offset measurement (the SIXTH seam
+      // field). The DRIFT phases are the two commit/hold pairs - the
+      // phases where the published slip is non-zero and the camera has
+      // to follow it. The straight phases carry a zero published slip,
+      // so they are excluded on purpose.
+      var FEEL_CAMERA_FOLLOW_PHASES = [
+        'P2-COMMIT', 'P2-HOLD', 'P3-MIRROR-COMMIT', 'P3-MIRROR-HOLD'
+      ];
+      var cameraFollow = measureCameraFollowOffset(FEEL_CAMERA_FOLLOW_PHASES);
+      // Step 14Q2: the traction severity measurement (the SEVENTH seam
+      // field). The SAME DRIFT phases as the camera check - the phases
+      // where the published slip is non-zero and the tires have to show
+      // it. The published severity is READ from the seam; the fixture
+      // NEVER recomputes it in the browser (the oracle below is the
+      // fixture's VERIFICATION MIRROR of the shared law, and it is never
+      // substituted for the published value).
+      var FEEL_TRACTION_PHASES = [
+        'P2-COMMIT', 'P2-HOLD', 'P3-MIRROR-COMMIT', 'P3-MIRROR-HOLD'
+      ];
+      var tractionMeasure = measureTractionSeverity(FEEL_TRACTION_PHASES);
+      // Step 14R: the HUD traction READOUT measurement (the RENDERED
+      // readout against the PUBLISHED severity on the seam). The SAME
+      // DRIFT phases as the camera check and the traction check - the
+      // phases where the published severity is non-zero and the overlay
+      // has to SHOW it. The readout is READ from the DOM and the
+      // severity is READ from the seam; the fixture NEVER re-derives
+      // the severity.
+      var FEEL_HUD_TRACTION_PHASES = [
+        'P2-COMMIT', 'P2-HOLD', 'P3-MIRROR-COMMIT', 'P3-MIRROR-HOLD'
+      ];
+      var hudTractionMeasure = measureHudTractionReadout(FEEL_HUD_TRACTION_PHASES);
+      // The REGIME-AWARE published-slip peak (14N W3, the D6 mirrors).
+      // The peak is measured PER PHASE, and the phase that carried it
+      // decides the bound: the ON-ROAD mirror (the DERIVED 0.452 rad)
+      // when the peak's phase was on the ribbon, the OFF-ROAD mirror
+      // (the DECLARED 0.493 rad) when it was not. A phase whose regime
+      // could not be measured falls back to the WIDEST declared bound,
+      // so a missing measurement never tightens the assertion.
+      //
+      // The regime is read at the phase's LAST sample, which is where the
+      // peak sits in the measured runs (the peak is the end of the hold
+      // window, one tick before the capture).
+      var publishedSlipPhases = [];
+      var publishedSlipPeak = null;
+      for (var publishedPhaseIndex = 0; publishedPhaseIndex < FEEL_MOVE_PHASES.length; publishedPhaseIndex++) {
+        var publishedPhaseName = FEEL_MOVE_PHASES[publishedPhaseIndex];
+        var publishedPhaseState = feelPhases[publishedPhaseName];
+        if (!publishedPhaseState) continue;
+        var publishedRow = {
+          phase: publishedPhaseName,
+          maxSlipRad: publishedPhaseState.maxAbsSlipRad,
+          roadDistanceM: publishedPhaseState.roadDistanceM,
+          onRoad: publishedPhaseState.onRoad === true
+        };
+        publishedSlipPhases.push(publishedRow);
+        if (!publishedSlipPeak || publishedRow.maxSlipRad > publishedSlipPeak.maxSlipRad) {
+          publishedSlipPeak = publishedRow;
+        }
+      }
+      var publishedSlipBoundRad = DRIFT_FEEL_PUBLISHED_SLIP_ENVELOPE_RAD;
+      if (publishedSlipPeak && publishedSlipPeak.onRoad) {
+        publishedSlipBoundRad = DRIFT_FEEL_PUBLISHED_SLIP_MAX_RAD;
+      } else if (publishedSlipPeak) {
+        publishedSlipBoundRad = DRIFT_FEEL_PUBLISHED_SLIP_OFFROAD_MAX_RAD;
+      }
+      var poseRate = maxFeelPoseRateDegPerS();
+      var settleTail = maxAbsPoseInTail('P2-SETTLE', STUCK_OFFSET_TAIL_TICKS);
+      var mirrorSettleTail = maxAbsPoseInTail('P3-MIRROR-SETTLE', STUCK_OFFSET_TAIL_TICKS);
+      var stuckOffsetRad = Math.max(settleTail.maxRad, mirrorSettleTail.maxRad);
+      var stuckOffsetSamples = settleTail.count + mirrorSettleTail.count;
+      // The pre-drift baseline of the pose: the last pose sample of the
+      // phase BEFORE the fixture's own commit (P2-ACCEL), which is the
+      // reference the settle band is measured against.
+      var baselinePoseRad = 0;
+      var accelSeam = seamSamplesForPhase('P2-ACCEL');
+      for (var baselineIndex = accelSeam.length - 1; baselineIndex >= 0; baselineIndex--) {
+        if (typeof accelSeam[baselineIndex].poseRad === 'number') {
+          baselinePoseRad = accelSeam[baselineIndex].poseRad;
+          break;
+        }
+      }
+      var settle = measureFeelSettle(feelCatchStartMs, baselinePoseRad);
+      var mirrorSettle = measureFeelSettle(feelMirrorCatchStartMs, baselinePoseRad);
+      // The far-side pop is the ONE sanctioned sign flip of the POSE: the
+      // largest excursion to the OPPOSITE side of the drift's own pose sign
+      // during the release phase.
+      var driftPoseSign = feelPoseReferenceSign('P2-HOLD');
+      var pop = measureFeelPop(driftPoseSign, 'P2-RELEASE');
+      var mirrorPop = measureFeelPop(feelPoseReferenceSign('P3-MIRROR-HOLD'), 'P3-MIRROR-CATCH');
+      // The proxy state of the two drift phases (the sign consistency and
+      // the slide prominence).
+      var driftProxyState = feelPhases['P2-HOLD'] || {
+        engagedFrames: 0, maxAbsProxyRad: 0, signFlips: 0, engagedSign: 0
+      };
+      var mirrorProxyState = feelPhases['P3-MIRROR-HOLD'] || {
+        engagedFrames: 0, maxAbsProxyRad: 0, signFlips: 0, engagedSign: 0
+      };
+      // The 7b-HOLD evidence: the committed slide is STILL THERE while the
+      // steer is neutral (the D5 latch). The floor excludes a vanished
+      // slide (the 0.02 rad snap band is 10x below the slip floor).
+      var holdSlip = maxAbsSlipForPhases(['P2-HOLD']);
+      var holdPose = maxAbsPoseForPhases(['P2-HOLD']);
+      // The 7b-RELEASE evidence: the countersteer unwinds the commitment,
+      // so the slip is back inside the 0.02 rad snap band at the end of
+      // the release window, and the pose rings down to the hard zero in
+      // the settle window.
+      var releaseSlipTail = maxAbsSlipInTail('P2-RELEASE', RELEASE_TAIL_TICKS);
+      var releasePoseTail = maxAbsPoseInTail('P2-SETTLE', STUCK_OFFSET_TAIL_TICKS);
+      // The longest CONSECUTIVE run of frames at or above the engagement
+      // gate over the new manoeuvre.
+      var feelGateRunMaxFrames = 0;
+      for (var gatePhaseIndex = 0; gatePhaseIndex < FEEL_MOVE_PHASES.length; gatePhaseIndex++) {
+        var gatePhaseState = feelPhases[FEEL_MOVE_PHASES[gatePhaseIndex]];
+        if (gatePhaseState && gatePhaseState.gateRunMaxFrames > feelGateRunMaxFrames) {
+          feelGateRunMaxFrames = gatePhaseState.gateRunMaxFrames;
+        }
+      }
+      // The AC-079 comparable capture pair: the LAST frame of P1-STRAIGHT
+      // and the LAST frame of P2-HOLD. Both runs start from the SAME fresh
+      // spawn state (the ribbon re-entry) and both run the SAME tick
+      // budget (SPEED_CAPTURE_TICKS), so the two capture points sit at
+      // the same elapsed simulation tick and the two speeds are
+      // comparable by construction. The deficit is the straight-phase speed
+      // minus the drift-phase speed; it stays null when a capture point was
+      // never reached (null never satisfies the floor).
+      var driftSpeedDeficitKmh = null;
+      if (typeof straightCaptureSpeedKmh === 'number' && typeof driftCaptureSpeedKmh === 'number') {
+        driftSpeedDeficitKmh = straightCaptureSpeedKmh - driftCaptureSpeedKmh;
+      }
+      // The SCALE-FREE form of the same deficit (the proportion of the
+      // straight capture the slide cost). It is reported next to the
+      // absolute floor, because the absolute floor only means something
+      // next to the scale it was measured at.
+      var driftSpeedDeficitPct = null;
+      if (
+        typeof driftSpeedDeficitKmh === 'number' &&
+        typeof straightCaptureSpeedKmh === 'number' &&
+        straightCaptureSpeedKmh > 0
+      ) {
+        driftSpeedDeficitPct = (driftSpeedDeficitKmh / straightCaptureSpeedKmh) * 100;
+      }
+      // The REGIME evidence of the two capture points (14N W3): the
+      // distance of the capture point from the nearest road vertex and the
+      // ON-ROAD classification (the conservative road half-width). The
+      // regime is what makes the deficit MEANINGFUL: off-road the speed
+      // settles at the 22.25 m/s floor (80.1 km/h) whatever the throttle
+      // does, so a capture pair in the SAME regime cannot separate the
+      // scrub from the noise. The classification is CONSERVATIVE: a
+      // capture point that is not classified ON-ROAD is OFF-ROAD, never the
+      // other way round.
+      var straightCaptureOnRoad = feelIsOnRoad(straightCaptureRoadDistanceM);
+      var driftCaptureOnRoad = feelIsOnRoad(driftCaptureRoadDistanceM);
+      var captureRegimeSplit = straightCaptureOnRoad !== driftCaptureOnRoad;
+
       result.checks = {
         bundleLoaded: result.bundleLoaded,
         canvasMounted: result.canvasMounted,
@@ -932,12 +2973,359 @@ html, body { margin: 0; padding: 0; height: 100%; background: #05070d; overflow:
         // of its grip and there was no forward traction term at all), so a
         // sustained hard turn that stays below the top-speed ceiling proves
         // the forward grip was spent on the slide.
+        //
+        // 14N (D1.3, RE-SEMANTIC): the NAME stays and the FORM is
+        // REPLACED. The old form was a ceiling-only test (0 < maxSpeedKmhDrift
+        // < 290 km/h), and under the GAP-N4 D1.3 scrub (coefficient 0.55,
+        // scrub max 22.0275 m/s2 above the 17.8 m/s2 engine) the ceiling
+        // alone is no longer a model-level statement - the drift speed is
+        // decided by the SCRUB (the measured terminal is 79.85793 m/s =
+        // 287.49 km/h, a 32.91146 km/h deficit against the 320.4 km/h
+        // straight-line top speed), so a ceiling-only form would judge
+        // proportionality for a reason that has nothing to do with it.
+        //
+        // 14N W3 (the re-based capture pair): the two NAMED capture points
+        // are the LAST frame of P1-STRAIGHT and the LAST frame of P2-HOLD.
+        // Both runs start from the SAME fresh spawn state (the ribbon
+        // re-entry) and both run the SAME tick budget, so the two capture
+        // points sit at the same elapsed simulation tick.
+        //
+        // The REGIME WITNESS is part of the check and not a note, but it
+        // is the SAME-regime witness, not a split: the production
+        // simulation shows the previous split form was UNSATISFIABLE
+        // (the body yaws into the slide, so the slide's world-frame
+        // lateral offset at the capture is 0.05-3.2 m - far inside the
+        // road half-width - and a regime split is not reachable from
+        // this manoeuvre). The deficit is carried by the SLIDE LENGTH
+        // instead: over the re-based 210-tick budget the simulation
+        // measures 224.28 km/h on the straight capture and 198.66 km/h
+        // on the drift capture, a 25.62 km/h deficit (11.42 percent)
+        // with the capture pair in the SAME on-road regime, and the
+        // jitter sweep keeps the deficit at 24.10-27.19 km/h.
+        //
+        // The witness stays CONSERVATIVE: both capture points have to be
+        // classified ON-ROAD (a capture point that is not classified
+        // on-road is off-road, never the other way round) and a split
+        // pair is rejected - a pair in DIFFERENT regimes would not
+        // separate the scrub from the regime.
+        //
+        // The D1.3 FLOOR is NOT relaxed: the measured deficit still has
+        // to be at least DRIFT_MIN_SPEED_DEFICIT_KMH.
         proportionalTractionLoss: tireYawDriftEngaged &&
-          maxSpeedKmhDrift > 0 &&
-          maxSpeedKmhDrift < TRACTION_LOSS_MAX_SPEED_KMH
+          driftSpeedDeficitKmh !== null &&
+          driftSpeedDeficitKmh >= DRIFT_MIN_SPEED_DEFICIT_KMH &&
+          maxSpeedKmhDrift <= TRACTION_LOSS_MAX_SPEED_KMH &&
+          straightCaptureOnRoad && driftCaptureOnRoad && !captureRegimeSplit,
+        // The far-side pop at the catch is the ONE sanctioned sign flip of
+        // the pose: the browser bound is 1.0 deg to 6.0 deg INCLUSIVE (the
+        // jest lane measures 2.22 deg, and the OLD model's 14 deg mirrored
+        // inversion is the root cause this bound keeps out). The catch has
+        // to be the genuine release-then-opposite-press, so the recorded
+        // key order is part of the contract.
+        // [RED-DRIFTFEEL-FAR-SIDE-POP]
+        driftFeelFarSidePop: countersteerReleasedBeforePress &&
+          pop.found &&
+          pop.popRad >= DRIFT_FEEL_POP_MIN_DEG * Math.PI / 180 &&
+          pop.popRad <= DRIFT_FEEL_POP_MAX_DEG * Math.PI / 180,
+        // The settle completes in at most 900 ms: the pose is back inside
+        // 0.5 deg of the pre-drift baseline and stays there for 250 ms
+        // (the jest lane measures 550 ms). A settle that was never observed
+        // reports false - it is never optimistically true.
+        // [RED-DRIFTFEEL-SETTLES]
+        driftFeelSettles: countersteerReleasedBeforePress &&
+          settle.found &&
+          settle.settleMs !== null &&
+          settle.settleMs <= DRIFT_FEEL_SETTLE_MAX_MS,
+        // After the catch the body cannot remain stuck at an offset: the
+        // tail of the settle (and of the mirror settle) stays within 1.0
+        // deg of the settled pose.
+        // [RED-DRIFTFEEL-NO-STUCK-OFFSET]
+        driftFeelNoStuckOffset: stuckOffsetSamples > 0 &&
+          stuckOffsetRad <= DRIFT_FEEL_STUCK_OFFSET_MAX_DEG * Math.PI / 180,
+        // The pose rate stays at or below 128 deg per s, computed frame-rate
+        // INDEPENDENTLY and TICK-BASED: the pose change of a frame divided
+        // by the ELAPSED SIMULATION TIME of that frame (the tick delta
+        // divided by the tick rate). Only consecutive frames of the same
+        // phase with an INCREASING tick are paired, so the gap between the
+        // release and the opposite press never reads as a spike.
+        // [RED-DRIFTFEEL-POSE-RATE-BOUNDED]
+        driftFeelPoseRateBounded: poseRate.pairs > 0 &&
+          poseRate.maxRate <= DRIFT_FEEL_POSE_RATE_MAX_DEG_PER_S,
+        // The peak |pose| over the new manoeuvre stays inside the DECLARED
+        // envelope (0.30185 rad since the Step 14Q2 re-pin) plus the
+        // 0.002 rad render-jitter headroom.
+        // [RED-DRIFTFEEL-POSE-ENVELOPE]
+        driftFeelPoseEnvelope: movePose.count > 0 &&
+          movePose.maxRad <= DRIFT_FEEL_POSE_ENVELOPE_RAD + DRIFT_FEEL_POSE_ENVELOPE_TOLERANCE_RAD,
+        // The straight-line identity (the 7b observable in the browser),
+        // RE-BASED (14N W3, the D5 re-base).
+        //
+        // The old form demanded the EXACT zero over the straight-line
+        // phases. That form is STRUCTURALLY UNREACHABLE after a drift:
+        // the pose spring has NO snap (its target is the committed slip),
+        // so the pose decays asymptotically towards the hard zero and the
+        // production simulation measures 0.0607 rad at the release and
+        // 1.835e-8 rad after a 120-tick settle - never 0.
+        //
+        // The re-based form is the SAME statement in a reachable shape:
+        // the pose RETURNED to the hard zero (inside the declared 0.002 rad
+        // render-jitter headroom) over the straight-line phases, and it
+        // only counts as a RETURN when the release and the hold actually
+        // happened: the 7b-HOLD evidence (the committed slide was still
+        // there while the steer was neutral), the 7b-RELEASE evidence (the
+        // countersteer unwound the commitment) and the settle evidence
+        // (the pose is inside the headroom at the end of the settle). A
+        // missing seam reports false, because "no data" is not "returned
+        // to zero".
+        // [RED-DRIFTFEEL-ZERO-STRAIGHT-LINE-YAW]
+        driftFeelZeroStraightLineYaw: straightPose.count > 0 &&
+          straightPose.maxRad <= DRIFT_FEEL_STRAIGHT_ZERO_MAX_RAD &&
+          holdSlip.count > 0 &&
+          holdSlip.maxRad >= DRIFT_FEEL_HOLD_MIN_SLIP_RAD &&
+          releaseSlipTail.count > 0 &&
+          releaseSlipTail.maxRad <= DRIFT_FEEL_RELEASE_SLIP_MAX_RAD &&
+          releasePoseTail.count > 0 &&
+          releasePoseTail.maxRad <= DRIFT_FEEL_SETTLE_TAIL_MAX_RAD,
+        // The 7b-HOLD half of the re-based 7b observable (14N W3): a
+        // NEUTRAL steer HOLDS the committed slide (the D5 decision). The
+        // committed slide has to be VISIBLE in the hold window (a
+        // non-zero committed slip and a non-zero body pose), otherwise
+        // the "the pose returned to zero" half would be VACUOUS: a slide
+        // that was never there cannot be released.
+        // [RED-DRIFTFEEL-SLIDE-HOLDS-ON-NEUTRAL-STEER]
+        driftFeelSlideHoldsOnNeutralSteer: holdSlip.count > 0 &&
+          holdSlip.maxRad >= DRIFT_FEEL_HOLD_MIN_SLIP_RAD &&
+          holdPose.count > 0 &&
+          holdPose.maxRad >= DRIFT_FEEL_HOLD_MIN_POSE_RAD,
+        // The 7b-RELEASE half of the re-based 7b observable (14N W3): the
+        // COUNTERSTEER releases the commitment. The slip has to be back
+        // inside the 0.02 rad snap band at the end of the release window,
+        // and the release has to be the genuine release-then-opposite-
+        // press (the recorded key order), so a simultaneous press - which
+        // never arms the countersteer - cannot satisfy the check.
+        // [RED-DRIFTFEEL-COUNTERSTEER-RELEASES-SLIDE]
+        driftFeelCountersteerReleasesSlide: countersteerReleasedBeforePress &&
+          releaseSlipTail.count > 0 &&
+          releaseSlipTail.maxRad <= DRIFT_FEEL_RELEASE_SLIP_MAX_RAD,
+        // The slide prominence is a PRESENCE observable with a loose,
+        // headroom-derived floor (0.10 rad, about 2x the 0.0494 rad Step 14G
+        // baseline). It is NEVER compared numerically against
+        // NEATRACING_DRIFT_MIN_SLIDE_PROXY_RAD (0.20 rad), because the
+        // browser CANNOT separate the pose from the heading: every
+        // browser-computable angle is (pose - slip), so the two-tier rule
+        // keeps the AC-087 floor on the deterministic jest proxy.
+        // The check ALSO asserts the SIGN consistency of the body-to-travel
+        // angle over the drift phase, because a bare magnitude floor can be
+        // satisfied by a VANISHED slide on the wrong visual branch: a sign
+        // flip is the mirror, and the far-side pop at the catch is the ONE
+        // sanctioned sign flip. The mirror phase therefore has to carry the
+        // OPPOSITE sign (a sign flip is the mirror).
+        // [RED-DRIFTFEEL-SLIDE-PROMINENCE]
+        driftFeelSlideProminence: driftProxyState.engagedFrames > 0 &&
+          driftProxyState.maxAbsProxyRad >= DRIFT_FEEL_SLIDE_PROMINENCE_MIN_RAD &&
+          driftProxyState.signFlips === 0 &&
+          mirrorProxyState.engagedFrames > 0 &&
+          mirrorProxyState.engagedSign === -driftProxyState.engagedSign,
+        // The AC-088 fragment-stage seam: the captured
+        // uTireGradientBrightFactor and uTireGradientDarkFactor must not be
+        // equal (a NON-DEGENERATE spread), the radius must be above 0 and
+        // the threshold must be strictly inside (0, 1). The check does NOT
+        // assert a vertex-colour gradient: the VBO vertex-colour probe is
+        // BLIND BY CONSTRUCTION, because the gradient is a per-FRAGMENT
+        // effect. A uniform that was never fed leaves its slot undefined
+        // and the check reports false.
+        // [RED-TIRE-GRADIENT-MAGNITUDE-IS-NON-DEGENERATE]
+        tireGradientMagnitudeIsNonDegenerate: tireGradientApplyEnabled &&
+          typeof tireGradientBrightFactor === 'number' &&
+          typeof tireGradientDarkFactor === 'number' &&
+          typeof tireGradientRadius === 'number' &&
+          typeof tireGradientThreshold === 'number' &&
+          tireGradientBrightFactor !== tireGradientDarkFactor &&
+          tireGradientRadius > 0 &&
+          tireGradientThreshold > 0 &&
+          tireGradientThreshold < 1,
+        // The catch discriminator, RE-SHAPED into a PARITY check (14N W3).
+        //
+        // The old form was an absolute bound against a fixture-local
+        // literal (0.45 + 0.02 = 0.47 rad) that was never derived from a
+        // named export - and the 0.47 bound is exactly what let the
+        // 0.5038 rad off-road artifact through. The production bounds the
+        // COMMITTED slip at NEATRACING_DRIFT_MAX_SLIP_ANGLE_RAD = 0.45 rad
+        // (the old model grew the slip without bound, to 1.15 rad and still
+        // growing); the PUBLISHED slip may overshoot that budget by the
+        // landed NEATRACING_DRIFT_PUBLISHED_SLIP_OVERSHOOT_RAD = 0.002 rad
+        // while the chase spring lags (the measured published peak is
+        // 0.45116 rad on-road and 0.48722 rad off-road).
+        //
+        // The re-shaped check is a PARITY check against the REGIME-AWARE
+        // MIRRORS (the mirrors are FORMULAS over the named exports, not
+        // literals): the measured published slip has to stay inside the
+        // mirrored envelope, AND the model has to show the CATCH
+        // SIGNATURE - the slip has to be back inside the snap band after
+        // the release, so the published slip is the output of a model that
+        // actually committed and actually released. The catch signature is
+        // what makes the check NON-VACUOUS: a slip that was never committed
+        // cannot produce it.
+        //
+        // The bound is the REGIME-AWARE one (14N W3): the phase that
+        // carried the peak decides the mirror, so an on-road run is held
+        // to the tight derived ceiling (0.452 rad) instead of the widest
+        // declared one (0.493 rad).
+        //
+        // There is NO clamp-presence guard: the publish-site clamp was
+        // DROPPED (the D6 fallback ratification), so a clamp could not
+        // make the bound inert, and the "clamp-inert equality" that the
+        // previous iteration asserted is GONE with it.
+        // [RED-DRIFTFEEL-MODEL-IDENTITY]
+        driftFeelModelIdentity: moveSlip.count > 0 &&
+          publishedSlipPeak !== null &&
+          moveSlip.maxRad <= publishedSlipBoundRad &&
+          releaseSlipTail.count > 0 &&
+          releaseSlipTail.maxRad <= DRIFT_FEEL_RELEASE_SLIP_MAX_RAD &&
+          holdSlip.count > 0 &&
+          holdSlip.maxRad >= DRIFT_FEEL_HOLD_MIN_SLIP_RAD,
+        // The 7f regression guard (the browser twin of the jest
+        // engagement-gate twin): the longest CONSECUTIVE run of frames whose
+        // body-to-travel proxy is at or above the engagement gate must be at
+        // least 3 frames, so a single-frame spike can never satisfy it.
+        // [RED-DRIFT-GATE-SURVIVES-THREE-CONSECUTIVE-FRAMES]
+        driftGateSurvivesThreeConsecutiveFrames: feelGateRunMaxFrames >= DRIFT_PROXY_MIN_FRAMES,
+        // Step 14P - the ONE new named check of this wave: the CAMERA
+        // FOLLOW OFFSET, the chase camera's own share of the shared slip
+        // scalar, read from the SIXTH seam field (followOffsetRad). This
+        // is the BROWSER half of the 14P camera re-wiring; the jest half
+        // is the RED-3..RED-7 chase-camera contract set.
+        //
+        // THE CONTRACT: the camera aims along the PUBLISHED travel
+        // direction, so its follow offset (a) LEAVES the nose by a
+        // measurable amount, (b) never swings FURTHER than the published
+        // slip it tracks (the follow converges on the travel direction
+        // and never overshoots it), and (c) CLOSES the aim error - the
+        // published slip minus the follow offset - onto the travel
+        // direction, which means the camera points the SAME WAY as the
+        // direction the car is travelling.
+        //
+        // IT IS NON-VACUOUS: a camera pinned to the nose (the frozen-
+        // camera defect the chase-camera module closes) reports a zero
+        // offset, so the floor fails AND there is no convergence to
+        // count; a camera that over-rotated past the published travel
+        // direction breaks the ceiling; a camera that never tracks the
+        // travel direction keeps the aim error open and the convergence
+        // count stays at zero.
+        //
+        // The named-check count therefore grows by EXACTLY ONE (43 -> 44).
+        // The count is still ASSERTED against the ACTUAL `result.checks`
+        // length below and is NEVER hard-coded in this fixture.
+        // [14P-CAMERA-FOLLOW-OFFSET]
+        driftFeelCameraFollowOffset: cameraFollow.samples > 0 &&
+          cameraFollow.maxAbsRad >= DRIFT_FEEL_CAMERA_FOLLOW_MIN_RAD &&
+          cameraFollow.maxAbsRad <= cameraFollow.maxAbsSlipRad + DRIFT_FEEL_CAMERA_FOLLOW_TOLERANCE_RAD &&
+          cameraFollow.convergedSamples > 0 &&
+          cameraFollow.signMismatches === 0,
+        // Step 14Q2 - the ONE new named check of this wave: the TRACTION
+        // SEVERITY RATIO, read from the SEVENTH seam field
+        // (tractionSeverity). This is the BROWSER half of the 14Q
+        // traction re-wiring; the jest half is the seam field count and
+        // the pinned key set (browser-entry.test.ts).
+        //
+        // THE CONTRACT: the published severity IS the shared law applied
+        // to the two PUBLISHED numbers (the published slip and the
+        // post-traction speed) - the service computes it in the same tick
+        // from those same values - so the RATIO published/oracle is 1 for
+        // every sample, the severity is a share inside [0, 1], and it
+        // RESPONDS to the slide (it is never zero at a real slide).
+        //
+        // IT IS NON-VACUOUS AND RATIO-SHAPED - never a floor. This is the
+        // D5 / R5 audit constraint ("the traction check must be a RATIO-
+        // shaped assertion, not a floor") that the Step 14P record left
+        // OPEN for the slice that grows the seam to seven fields. A
+        // severity that was always 1, always 0, stale, clamped to the
+        // wrong bound or re-derived in the browser breaks the RATIO; a
+        // floor would have passed all of them.
+        //
+        // The severity is READ from the seam and NEVER recomputed in the
+        // browser: the oracle below is the FIXTURE's verification mirror
+        // of the shared law and is never substituted for the published
+        // value.
+        //
+        // The named-check count therefore grows by EXACTLY ONE (44 -> 45).
+        // The count is still ASSERTED against the ACTUAL `result.checks`
+        // length below and is NEVER hard-coded in this fixture.
+        // [14Q2-TRACTION-SEVERITY-RATIO]
+        driftFeelTractionSeverityRatio: tractionMeasure.samples > 0 &&
+          tractionMeasure.ratioSamples > 0 &&
+          tractionMeasure.outOfRange === 0 &&
+          tractionMeasure.zeroSeverityAtSlip === 0 &&
+          tractionMeasure.ratioMismatches === 0 &&
+          tractionMeasure.maxSeverity > 0,
+        // Step 14R - the ONE new named check of this wave: the HUD
+        // TRACTION READOUT against the PUBLISHED severity. This is the
+        // BROWSER half of the 14R HUD re-wiring; the jest half is the
+        // RED-2 HUD contract set (examples/neatRacing/host/hud.test.ts)
+        // and the RED-3 session contract set.
+        //
+        // THE CONTRACT: the overlay SHOWS the published severity - the
+        // overlay renders the whole percent ('Traction 42%' for a
+        // published 0.42) and the seam publishes the same number, so the
+        // rendered percent is within HALF A POINT (the display
+        // quantization of a whole percent) of the published share. The
+        // pair is SAME-INSTANT: the readout text and the seam sample
+        // are read in ONE rendered frame of the same car state.
+        //
+        // IT IS AN EQUALITY BAND, NOT A FLOOR: a readout that is stale,
+        // zeroed, clamped to the wrong bound or re-derived in the
+        // browser is off by far more than half a point and FAILS. A
+        // floor ('the readout is above zero') would have passed every
+        // one of them - the D5 / R5 failure mode ("the fixture reports
+        // GREEN while the tires show nothing").
+        //
+        // IT IS NON-VACUOUS: a missing or unreadable readout is a PARSE
+        // FAILURE, the run has to have actually compared a sample, the
+        // published severity has to have reached a non-zero value and
+        // the readout has to have shown a non-zero percent - so a run
+        // where the overlay never showed the traction can never pass.
+        //
+        // The named-check count therefore grows by EXACTLY ONE (45 -> 46).
+        // The count is still ASSERTED against the ACTUAL `result.checks`
+        // length below and is NEVER hard-coded in this fixture.
+        // [14R-HUD-TRACTION-READOUT]
+        driftFeelHudTractionReadoutRatio: hudTractionMeasure.samples > 0 &&
+          hudTractionMeasure.parseFailures === 0 &&
+          hudTractionMeasure.mismatches === 0 &&
+          hudTractionMeasure.ratioSamples > 0 &&
+          hudTractionMeasure.maxSeverity > 0 &&
+          hudTractionMeasure.maxHudPercent > 0
       };
-      result.passed = Object.values(result.checks).every(Boolean);
+      // The check COUNT is ASSERTED against the ACTUAL result.checks length
+      // and is NEVER assumed: the expected total (the 45 named checks the
+      // 14Q2 re-base left, plus the ONE 14R HUD traction readout check) is
+      // a number the plan carries, not a number this fixture hard-codes.
+      // The NAMES are published next to the count, so the gate can assert
+      // the exact SET and not only the total.
+      var actualCheckCount = Object.keys(result.checks).length;
+      result.checkCount = actualCheckCount;
+      result.checkNames = Object.keys(result.checks);
+      // The SEAM FIELD-COUNT ASSERTION (Step 14R, the 2026-10-27
+      // VERIFICATION 4 blocker B-3). The seam WRITER (browser-entry.ts)
+      // published the EIGHTH field in the slice
+      // P1-drift-presentation-car, and the seam READER (this file) is
+      // updated in the SAME edit, so the reader COUNTS the fields the
+      // seam publishes and the run only passes when the count is EXACTLY
+      // eight. It is NOT a named check: the named-check count grows by
+      // EXACTLY ONE in this wave (45 -> 46), so the field-count
+      // assertion is a SEPARATE, PUBLISHED condition of `result.passed`
+      // (published as result.seamFieldCount and
+      // result.seamFieldCountMatches).
+      result.seamFieldCount = observedSeamFieldCount;
+      result.seamFieldCountSamples = observedSeamFieldSamples;
+      result.seamFieldCountMatches =
+        observedSeamFieldSamples > 0 &&
+        observedSeamFieldCount === DRIFT_SEAM_FIELD_COUNT;
+      result.passed =
+        Object.values(result.checks).every(Boolean) && result.seamFieldCountMatches;
       result.notes = JSON.stringify({
+        // The count of the ACTUAL check object.
+        checkCount: actualCheckCount,
         gridSpacing: capturedGridSpacing,
         gridDeltas: { A: obsA.gridDelta, D: obsD.gridDelta, ACCEL: obsAccel.gridDelta, WA: obsWA.gridDelta },
         trackDeltas: { A: obsA.trackDelta, D: obsD.trackDelta, ACCEL: obsAccel.trackDelta, WA: obsWA.trackDelta },
@@ -949,6 +3337,65 @@ html, body { margin: 0; padding: 0; height: 100%; background: #05070d; overflow:
         wheelShading: wheelShading,
         steer: { avgA: avgA, avgD: avgD },
         drift: { yawChange: yawChange, distMoved: distMoved, finalSpeed: finalSpeed },
+        // Step 14P: the camera follow offset evidence (the SIXTH seam
+        // field), so the run carries the MEASURED values the new named
+        // check was decided on.
+        cameraFollow: {
+          samples: cameraFollow.samples,
+          maxAbsRad: cameraFollow.maxAbsRad,
+          maxAbsSlipRad: cameraFollow.maxAbsSlipRad,
+          convergedSamples: cameraFollow.convergedSamples,
+          signMismatches: cameraFollow.signMismatches,
+          minRad: DRIFT_FEEL_CAMERA_FOLLOW_MIN_RAD,
+          toleranceRad: DRIFT_FEEL_CAMERA_FOLLOW_TOLERANCE_RAD,
+          convergedRad: DRIFT_FEEL_CAMERA_FOLLOW_CONVERGED_RAD,
+          slipFloorRad: DRIFT_FEEL_CAMERA_FOLLOW_SLIP_FLOOR_RAD,
+          phases: FEEL_CAMERA_FOLLOW_PHASES
+        },
+        // Step 14Q2: the traction severity evidence (the SEVENTH seam
+        // field), so the run carries the MEASURED values the new named
+        // check was decided on.
+        traction: {
+          samples: tractionMeasure.samples,
+          ratioSamples: tractionMeasure.ratioSamples,
+          ratioMismatches: tractionMeasure.ratioMismatches,
+          outOfRange: tractionMeasure.outOfRange,
+          zeroSeverityAtSlip: tractionMeasure.zeroSeverityAtSlip,
+          maxSeverity: tractionMeasure.maxSeverity,
+          maxAbsSlipRad: tractionMeasure.maxAbsSlipRad,
+          maxRatioDeviation: tractionMeasure.maxRatioDeviation,
+          slipBudgetRad: DRIFT_FEEL_TRACTION_SLIP_BUDGET_RAD,
+          topSpeedMps: DRIFT_FEEL_TRACTION_TOP_SPEED_MPS,
+          ratioTolerance: DRIFT_FEEL_TRACTION_RATIO_TOLERANCE,
+          slipFloorRad: DRIFT_FEEL_TRACTION_SLIP_FLOOR_RAD,
+          phases: FEEL_TRACTION_PHASES
+        },
+        // Step 14R: the seam field-count evidence (the EIGHTH field), so
+        // the run carries the MEASURED field count the eight-field
+        // contract was decided on.
+        seam: {
+          fieldCount: observedSeamFieldCount,
+          expectedFieldCount: DRIFT_SEAM_FIELD_COUNT,
+          fieldCountSamples: observedSeamFieldSamples,
+          fieldCountMatches: result.seamFieldCountMatches
+        },
+        // Step 14R: the HUD traction readout evidence (the RENDERED
+        // readout against the PUBLISHED severity), so the run carries the
+        // MEASURED values the new named check was decided on.
+        hudTraction: {
+          samples: hudTractionMeasure.samples,
+          ratioSamples: hudTractionMeasure.ratioSamples,
+          mismatches: hudTractionMeasure.mismatches,
+          parseFailures: hudTractionMeasure.parseFailures,
+          zeroSeveritySamples: hudTractionMeasure.zeroSeveritySamples,
+          maxSeverity: hudTractionMeasure.maxSeverity,
+          maxHudPercent: hudTractionMeasure.maxHudPercent,
+          maxAbsDeviationPercent: hudTractionMeasure.maxAbsDeviationPercent,
+          maxRatioDeviation: hudTractionMeasure.maxRatioDeviation,
+          lastReadoutText: hudTractionMeasure.lastReadoutText,
+          quantizationBandPercent: DRIFT_FEEL_HUD_TRACTION_QUANTIZATION_BAND_PERCENT,
+          phases: FEEL_HUD_TRACTION_PHASES
+        },
         tireYawFollow: {
           baselineRelativeYaw: baselineRelativeYaw,
           baselineRelativeOffset: baselineRelativeOffset,
@@ -977,7 +3424,162 @@ html, body { margin: 0; padding: 0; height: 100%; background: #05070d; overflow:
           finalSpeedKmh: finalSpeed,
           maxSpeedCeilingKmh: TRACTION_LOSS_MAX_SPEED_KMH,
           driftEngaged: tireYawDriftEngaged,
-          maxDriftProxyRad: maxDriftProxyRad
+          maxDriftProxyRad: maxDriftProxyRad,
+          // The D1.3 replacement: the scale-free speed-deficit assertion
+          // and the two NAMED comparable capture points it is read at (the
+          // LAST frame of P1-STRAIGHT and the LAST frame of P2-HOLD, both
+          // at SPEED_CAPTURE_TICKS ticks from the same fresh spawn state).
+          minSpeedDeficitKmh: DRIFT_MIN_SPEED_DEFICIT_KMH,
+          driftSpeedDeficitKmh: driftSpeedDeficitKmh,
+          driftSpeedDeficitPct: driftSpeedDeficitPct,
+          straightCaptureSpeedKmh: straightCaptureSpeedKmh,
+          driftCaptureSpeedKmh: driftCaptureSpeedKmh,
+          speedCaptureTicks: SPEED_CAPTURE_TICKS,
+          straightCapturePos: { x: straightCaptureX, z: straightCaptureZ },
+          driftCapturePos: { x: driftCaptureX, z: driftCaptureZ },
+          // The REGIME evidence of the two capture points: the distance
+          // from the rendered road and the ON-ROAD classification (the
+          // conservative road half-width). The regime is what makes the
+          // deficit MEANINGFUL, so it is evidence and not a footnote.
+          //
+          // The 14N W3 witness is the SAME regime: the simulation shows
+          // the regime split is not reachable from this manoeuvre (the
+          // body yaws into the slide, so the slide's lateral offset at
+          // the capture is 0.05-3.2 m), so the deficit is carried by the
+          // slide length. `captureRegimeSplit` stays in the evidence so
+          // a split pair is visible if a future run produces one.
+          straightCaptureRoadDistanceM: straightCaptureRoadDistanceM,
+          driftCaptureRoadDistanceM: driftCaptureRoadDistanceM,
+          straightCaptureOnRoad: straightCaptureOnRoad,
+          driftCaptureOnRoad: driftCaptureOnRoad,
+          captureRegimeSplit: captureRegimeSplit,
+          straightCaptureHudKmh: straightCaptureHudKmh,
+          driftCaptureHudKmh: driftCaptureHudKmh,
+          straightCaptureSlipRad: straightCaptureSlipRad,
+          driftCaptureSlipRad: driftCaptureSlipRad,
+          straightCaptureTick: straightCaptureTick,
+          driftCaptureTick: driftCaptureTick,
+          roadHalfWidthM: {
+            min: FEEL_ROAD_HALF_WIDTH_MIN_M,
+            max: FEEL_ROAD_HALF_WIDTH_MAX_M
+          },
+          straightCapKmh: FEEL_STRAIGHT_MAX_SPEED_KMH
+        },
+        // The 14N drift-feel evidence: every measurement behind the 10 new
+        // named checks, so a failure is diagnosable without a re-run.
+        driftFeel: {
+          errors: feelErrors,
+          countersteerKeyOrder: countersteerKeyOrder,
+          countersteerReleasedBeforePress: countersteerReleasedBeforePress,
+          mirrorKeyOrder: mirrorKeyOrder,
+          mirrorReleasedBeforePress: mirrorReleasedBeforePress,
+          catchStartMs: feelCatchStartMs,
+          mirrorCatchStartMs: feelMirrorCatchStartMs,
+          baselinePoseRad: baselinePoseRad,
+          straightPoseMaxRad: straightPose.maxRad,
+          straightPoseSamples: straightPose.count,
+          movePoseMaxRad: movePose.maxRad,
+          movePoseSamples: movePose.count,
+          moveSlipMaxRad: moveSlip.maxRad,
+          moveSlipSamples: moveSlip.count,
+          poseRateMaxDegPerS: poseRate.maxRate,
+          poseRatePairs: poseRate.pairs,
+          settleMs: settle.found ? settle.settleMs : null,
+          mirrorSettleMs: mirrorSettle.found ? mirrorSettle.settleMs : null,
+          stuckOffsetRad: stuckOffsetRad,
+          stuckOffsetSamples: stuckOffsetSamples,
+          popRad: pop.popRad,
+          popFound: pop.found,
+          mirrorPopRad: mirrorPop.popRad,
+          mirrorPopFound: mirrorPop.found,
+          driftPoseSign: driftPoseSign,
+          driftProxyMaxAbsRad: driftProxyState.maxAbsProxyRad,
+          driftProxyEngagedFrames: driftProxyState.engagedFrames,
+          driftProxySignFlips: driftProxyState.signFlips,
+          driftProxySign: driftProxyState.engagedSign,
+          mirrorProxyMaxAbsRad: mirrorProxyState.maxAbsProxyRad,
+          mirrorProxyEngagedFrames: mirrorProxyState.engagedFrames,
+          mirrorProxySignFlips: mirrorProxyState.signFlips,
+          mirrorProxySign: mirrorProxyState.engagedSign,
+          gateRunMaxFrames: feelGateRunMaxFrames,
+          gateMinFrames: DRIFT_PROXY_MIN_FRAMES,
+          holdMinFrames: DRIFT_PROXY_MIN_HOLD_FRAMES,
+          proxyMinRad: DRIFT_PROXY_MIN_RAD,
+          proxyResidualMaxRad: DRIFT_PROXY_RESIDUAL_MAX_RAD,
+          proxyLogFrames: feelProxyLog.length,
+          // The TICK bookkeeping of every phase (the contract unit of
+          // 14N W3): the budget, the measured tick delta, the frame count
+          // and whether the phase ran on the tick budget or degraded to a
+          // frame budget (a degraded phase NEVER produces a capture).
+          phaseTickDeltas: feelPhaseTickDeltas,
+          // The TICK-ALIGNED input log: every key flip is issued on a
+          // simulation-tick boundary, and the residual alignment (the
+          // flip lands on the first tick of the next frame, so the
+          // residual is the flip frame's catch-up burst) is REPORTED
+          // instead of assumed. The production host samples the keyboard
+          // ONCE per rendered frame and replays that sample into every
+          // catch-up tick, so a per-tick input is NOT available to the
+          // browser lane; the alignment is the honest mitigation.
+          inputAlignment: feelInputAlignment,
+          // The RIBBON RE-ENTRY evidence: whether the production restart
+          // carrier actually re-seeded the car onto the ribbon (and
+          // whether the capture runs therefore share the same fresh
+          // spawn state).
+          ribbonReentry: {
+            first: p0State.ribbonReentry === true,
+            second: p0State.ribbonReentry2 === true,
+            third: p0State.ribbonReentry3 === true
+          },
+          // The 7b-HOLD and 7b-RELEASE evidence of the re-based 7b
+          // observable (the D5 re-base).
+          holdEvidence: {
+            slipMaxRad: holdSlip.maxRad,
+            slipSamples: holdSlip.count,
+            poseMaxRad: holdPose.maxRad,
+            poseSamples: holdPose.count,
+            slipFloorRad: DRIFT_FEEL_HOLD_MIN_SLIP_RAD,
+            poseFloorRad: DRIFT_FEEL_HOLD_MIN_POSE_RAD
+          },
+          releaseEvidence: {
+            slipTailMaxRad: releaseSlipTail.maxRad,
+            slipTailSamples: releaseSlipTail.count,
+            slipTailUnit: releaseSlipTail.unit,
+            poseTailMaxRad: releasePoseTail.maxRad,
+            poseTailSamples: releasePoseTail.count,
+            snapBandRad: DRIFT_FEEL_RELEASE_SLIP_MAX_RAD
+          },
+          // The regime-aware PUBLISHED-SLIP mirrors and the per-regime
+          // headroom, so a road-regime excursion is visible in the
+          // evidence even though the assertion uses the widest declared
+          // bound.
+          publishedSlipMirrors: {
+            onRoadMaxRad: DRIFT_FEEL_PUBLISHED_SLIP_MAX_RAD,
+            offRoadMaxRad: DRIFT_FEEL_PUBLISHED_SLIP_OFFROAD_MAX_RAD,
+            envelopeRad: DRIFT_FEEL_PUBLISHED_SLIP_ENVELOPE_RAD,
+            measuredMaxRad: moveSlip.maxRad,
+            // The REGIME-AWARE bound: the phase that carried the peak
+            // decides the mirror (the on-road mirror when the peak's
+            // phase was on the rendered ribbon, the off-road mirror when
+            // it was not, and the widest declared bound when the regime
+            // could not be measured).
+            assertedBoundRad: publishedSlipBoundRad,
+            peakPhase: publishedSlipPeak ? publishedSlipPeak.phase : null,
+            peakOnRoad: publishedSlipPeak ? publishedSlipPeak.onRoad : null,
+            peakRoadDistanceM: publishedSlipPeak ? publishedSlipPeak.roadDistanceM : null,
+            perPhase: publishedSlipPhases,
+            onRoadHeadroomRad: DRIFT_FEEL_PUBLISHED_SLIP_MAX_RAD - moveSlip.maxRad,
+            offRoadHeadroomRad: DRIFT_FEEL_PUBLISHED_SLIP_OFFROAD_MAX_RAD - moveSlip.maxRad,
+            aboveOnRoadCeiling: moveSlip.maxRad > DRIFT_FEEL_PUBLISHED_SLIP_MAX_RAD
+          },
+          tireGradient: {
+            applyEnabled: tireGradientApplyEnabled,
+            brightFactor: tireGradientBrightFactor,
+            darkFactor: tireGradientDarkFactor,
+            radius: tireGradientRadius,
+            threshold: tireGradientThreshold
+          },
+          speedTrace: feelSpeedTrace,
+          phases: feelPhases
         }
       });
     } catch (err) {

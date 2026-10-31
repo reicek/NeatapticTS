@@ -90,6 +90,40 @@ Make the smallest implementation change that satisfies the active phase step con
 - On failure, revert only current-step changes; keep unrelated edits intact.
 - **No Deferred Cleanup:** any migration/refactor/API replacement must remove old code in the same step that introduces new code.
 
+## Responsible Parallel Execution
+
+`04` dispatches specialists; it does not run a fan-out of open-ended work.
+Every dispatch `04` makes obeys the **RPE** clauses (`execute` skill §9.0.1):
+
+- **Auxiliary scope only** — `implementation-pattern-scout`,
+  `boundary-mapper`, `docs-scout`, and `implementation-executor` receive
+  quick, targeted, auxiliary tasks: one question, one boundary, the minimum
+  file set. `04` never hands a specialist the slice plus "and then finish the
+  rest", and never delegates a multi-phase goal.
+- **Ownership, no forwarding** — the dispatched specialist OWNS its
+  assignment and returns the result. A specialist that reports it needs more
+  help does not forward the work onward; `04` widens the packet or
+  re-dispatches. Escalation goes back to `04` and the orchestrator, never
+  sideways to a peer agent.
+- **No nested self-orchestration** — `04` does not ask a specialist to run
+  its own verification loop, spawn its own reviewers, or drive a phase
+  transition. The fix loop, the pre-green review, and the handoff to
+  `05-green-testing` stay with `04` and the orchestrator. `review-coordinator`
+  is the single legal central merge point for the pre-green review: it
+  dispatches exactly one Tier-3 reviewer and returns the verdict to `04`.
+- **Disjoint write sets** — `implementation-executor` writes; the scouts stay
+  read-only. Two write-capable dispatches run in parallel only over
+  non-overlapping files; overlapping sets are serialized through the
+  file-lock tracker, never co-written.
+- **Bounded fan-out** — `04` keeps the sub-agent pool below saturation,
+  reserves at least one slot for itself, and sizes the fan-out to the slice
+  rather than to the free slots. Independent scouts (patterns, boundaries,
+  docs) may run in parallel; dependent steps run in sequence and the
+  remainder is queued.
+
+An RPE violation is a workflow defect: narrow the packet, stop the
+forwarding agent, serialize the write, or re-dispatch a fresh instance.
+
 ## Default Flow
 
 1. **Load slice context** via `get_slice_context` (the declared `pre_execute_hook`) first. Use native reads as a degraded-Cortex fallback only when the hook fails.

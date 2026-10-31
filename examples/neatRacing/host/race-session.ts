@@ -28,6 +28,13 @@
  * steppers — the red contract pins field-observable behavior, not
  * factory identity.
  *
+ * The HUD payload (AC-088; plan slice `P1-drift-presentation-hud`)
+ * carries the PUBLISHED traction severity (`state.car.tractionSeverity`)
+ * alongside the speed and the race state: the session is the seam that
+ * hands the ONE shared scalar to the display, and the HUD only SHOWS it
+ * (it never re-derives it). Every repaint carries the field, so the
+ * readout is live from the first painted frame.
+ *
  * Allocation policy (AC-042 vehicle): the render-loop buffers (16/16/3/3
  * float multiset) are allocated ONCE through the injected allocator seam
  * at creation and reused across every frame and every restart; the
@@ -35,7 +42,8 @@
  * not-yet-injected camera builder, and the only per-frame allocations
  * are the per-tick fresh `RaceRulesStepInput` record (contract: each
  * tick's input is an independently observable object) and the small HUD
- * payload bag that pairs the live speed with the final race state.
+ * payload bag that pairs the live speed with the final race state and
+ * the published traction severity.
  *
  * Determinism: the module never reads a clock (the caller supplies the
  * rAF timestamp), rolls dice, or touches the DOM — every dependency
@@ -257,10 +265,13 @@ export function createRaceSession(
         }
 
         // One read-model repaint after all of the frame's rules
-        // transitions (zero-step frames never touch the HUD).
+        // transitions (zero-step frames never touch the HUD). The
+        // published traction severity rides along unchanged (AC-088:
+        // the HUD SHOWS the ONE shared scalar, it never re-derives it).
         deps.hud.update({
           speedUnitsPerS: state.car.speed,
           raceState: state.rules,
+          tractionSeverity: state.car.tractionSeverity,
         });
       }
 

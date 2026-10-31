@@ -1,5 +1,5 @@
 <!-- generated-by: scripts/agent-customization/generate-agent-skill-routing-table.mjs -->
-<!-- source-hash: 28401c97872d36b363259cd4ab5be87b4458a2a0097b09f7f67857e5e7219ccc -->
+<!-- source-hash: d01c6204ac3f5f4e05cdacf670fc4a04d60f1749942f4d3f5c54a8c170da5996 -->
 <!-- source-file-count: 106 -->
 # Canonical Agent and Skill Routing Table
 

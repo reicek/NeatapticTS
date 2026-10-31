@@ -69,7 +69,7 @@ jest.mock('../host/mode-selector', () => ({
   createRaceModeSelector: jest.fn(),
 }));
 
-import { beforeEach, describe, expect, it } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, it } from '@jest/globals';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -86,6 +86,16 @@ import { createHud } from '../host/hud';
 import type { NeatRacingRaceModeSelector } from '../host/mode-selector';
 import { createRaceModeSelector } from '../host/mode-selector';
 import { advanceFrameSteps } from '../host/render-loop.utils';
+// The shared traction law, used here as the ORACLE for the seam contract:
+// the physics state publishes `computeTractionSeverity(slip, speed)`, so
+// the seam must carry that EXACT number for the slip and the speed it
+// publishes - the browser never re-derives the severity.
+import { computeTractionSeverity } from '../physics/drift.model';
+// The fixed physics timestep, used here as the ORACLE for the EIGHTH seam
+// field: the pose spring integrates the pose with the published rate
+// (`pose = prev.pose + rate * dt`), so the published pose rate is the
+// crab's own rate and not a re-derived number.
+import { NEATRACING_PHYSICS_FIXED_TIMESTEP_SECONDS } from '../physics/physics.step.service';
 // Side-effect import: evaluating the boot stub registers
 // `window.neatRacingStart` on the jsdom host.
 import './browser-entry';
@@ -146,6 +156,18 @@ const mockedCreateRaceModeSelector = jest.mocked(createRaceModeSelector);
 
 /** Timestamp handed to the captured RAF callback when tests drive frame one. */
 const DRIVEN_FRAME_TIMESTAMP_MS = 0;
+
+/**
+ * Number of driven frames the sliding seam contract releases.
+ *
+ * The car needs a real acceleration phase before the drift law publishes
+ * a non-zero slip, so the contract drives a short race (one simulation
+ * step per frame), not a single frame.
+ */
+const SLIDING_SEAM_FRAME_COUNT = 120;
+
+/** Timestamp step (ms) between the driven frames of the sliding contract. */
+const SLIDING_SEAM_FRAME_STEP_MS = 1000 / 60;
 
 /**
  * Reserved host DOM id the batch 94 handoff gives to the HUD container
@@ -351,6 +373,118 @@ describe('scene handedness mapping (Step 14B round-3: mirrored ground + nose yaw
   });
 });
 
+/**
+ * The EXACT field count the live drift debug seam must carry (Step 14P,
+ * slice `P1-drift-rewire-red`; the RED-8 acceptance criterion, grown by
+ * Step 14Q2, slice `P1-drift-traction-seam`, and by Step 14R, slice
+ * `P1-drift-presentation-car`; AC-088).
+ *
+ * The count is an EXACT number, never a range: the seam grows by exactly
+ * ONE field per growth wave - the camera follow offset in the re-wiring
+ * wave, the PUBLISHED traction severity in the traction wave, and the
+ * PUBLISHED pose-spring rate in this one - so seven fields are a defect
+ * and nine fields are a defect.
+ */
+const DRIFT_SEAM_FIELD_COUNT = 8;
+
+/**
+ * The pinned eight-field seam key set (sorted).
+ *
+ * The five live fields (poseRad, slipAngleRad, speedMps, tickHz, tick) plus
+ * the camera follow offset, the PUBLISHED traction severity and the
+ * PUBLISHED pose-spring rate.
+ */
+const DRIFT_SEAM_KEYS = [
+  'followOffsetRad',
+  'poseRad',
+  'poseRateRadPerS',
+  'slipAngleRad',
+  'speedMps',
+  'tick',
+  'tickHz',
+  'tractionSeverity',
+];
+
+/**
+ * The drift debug seam, read through the PUBLIC window handle.
+ *
+ * The seam type (`NeatRacingDriftState`, browser-entry.ts) is MODULE-LOCAL
+ * and UNEXPORTED - the slice forbids the export, because a new public
+ * export would be a new public API and would break the
+ * one-assignment-per-frame seam rule. The handle is therefore widened to a
+ * loose record here: the assertions read the LIVE seam object, never a
+ * re-derived local expression.
+ */
+type DriftSeamView = Record<string, unknown>;
+
+/**
+ * Reads the live drift debug seam off the window handle.
+ *
+ * @returns The live seam, or `undefined` while no frame has been driven.
+ */
+function readDriftSeam(): DriftSeamView | undefined {
+  return (window as unknown as { neatRacingDriftState?: DriftSeamView })
+    .neatRacingDriftState;
+}
+
+/**
+ * Reads a numeric field off the live seam.
+ *
+ * @param seam - The live seam view.
+ * @param key - The field name to read.
+ * @returns The field value, or `NaN` when the field is absent or is not a
+ *   number, so a law comparison fails LEGIBLY instead of passing on an
+ *   `undefined` field.
+ */
+function readSeamNumber(
+  seam: DriftSeamView | undefined,
+  key: string,
+): number {
+  const value = seam?.[key];
+  return typeof value === 'number' ? value : Number.NaN;
+}
+
+/**
+ * Counts the drift seam writes by installing a window property accessor.
+ *
+ * The production seam write is a plain `window.neatRacingDriftState =
+ * {...}` assignment inside the zero-arg frame builder, so an accessor
+ * observes every write: the one-assignment-per-frame seam rule is then
+ * observable from the LIVE seam instead of from a re-derived expression.
+ *
+ * @returns The write counter and the accessor restorer.
+ */
+function countDriftSeamAssignments(): {
+  count: () => number;
+  restore: () => void;
+} {
+  const original = Object.getOwnPropertyDescriptor(
+    window,
+    'neatRacingDriftState',
+  );
+  let writes = 0;
+  let current: DriftSeamView | undefined;
+  Object.defineProperty(window, 'neatRacingDriftState', {
+    configurable: true,
+    get: (): DriftSeamView | undefined => current,
+    set: (value: DriftSeamView): void => {
+      writes += 1;
+      current = value;
+    },
+  });
+  return {
+    count: (): number => writes,
+    restore: (): void => {
+      if (original !== undefined) {
+        Object.defineProperty(window, 'neatRacingDriftState', original);
+        return;
+      }
+      delete (window as unknown as { neatRacingDriftState?: unknown })
+        .neatRacingDriftState;
+    },
+  };
+}
+
 describe('Neat Racing browser entry boot wiring (Step 13, P1-boot-glue)', () => {
   /** Live-branch fixture captured before each test re-stamps the doubles. */
   let liveFixture: LiveInitResultFixture;
@@ -486,6 +620,264 @@ describe('Neat Racing browser entry boot wiring (Step 13, P1-boot-glue)', () => 
 
       expect(mockedInitRenderingContext).toHaveBeenCalledTimes(1);
       expect(mockedRunShaderWarmup).not.toHaveBeenCalled();
+    });
+  });
+
+  /**
+   * The DRIFT DEBUG SEAM contract (Step 14P, slice `P1-drift-rewire-red`;
+   * the RED-8 acceptance criterion and the plan's `red_contract_api`
+   * section 6).
+   *
+   * THE SEAM OWNER: the drift debug seam is assigned INSIDE the zero-arg
+   * `buildComposerFrame` closure (browser-entry.ts:931, the write at
+   * :980-986), so it is observable ONLY through the module's own public
+   * window handle (`window.neatRacingDriftState`) after a frame is driven.
+   * The module-local `NeatRacingDriftState` type is NEVER exported (the
+   * export is forbidden by this slice: a new public export would be a new
+   * public API and would break the one-assignment-per-frame seam rule),
+   * so the contracts read the LIVE handle through a widened local view and
+   * never name the type.
+   *
+   * RED-8: the seam grows by EXACTLY ONE field - the camera follow offset
+   * - so the field COUNT is asserted as the EXACT number six (never a
+   * range) and the field SET is asserted against the pinned key list. The
+   * seam MECHANICS are retained: ONE assignment per frame, which the
+   * assignment-count contract pins with a window property accessor.
+   *
+   * Step 14Q2 (slice `P1-drift-traction-seam`; AC-088): the seam grows by
+   * EXACTLY ONE more field - the PUBLISHED traction severity - so the
+   * field COUNT is now the EXACT number seven (never a range) and the
+   * field SET is asserted against the pinned seven-key list. The value is
+   * READ from the physics state and NEVER re-derived in the browser, which
+   * the traction-severity contract pins against the SHARED law value of
+   * the slip and the speed the seam itself publishes.
+   *
+   * Step 14R (slice `P1-drift-presentation-car`; AC-088): the seam grows by
+   * EXACTLY ONE more field - the PUBLISHED pose-spring rate - so the field
+   * COUNT is now the EXACT number eight (never a range) and the field SET
+   * is asserted against the pinned eight-key list. The EIGHTH field is a
+   * NAMED channel and it is NOT the traction severity (that is the SEVENTH
+   * field): the pose rate is the crab's own rate, READ from the physics
+   * state, so the browser half can measure the ring-down and the far-side
+   * pop in simulation time instead of differencing the pose across
+   * render-rate dependent frames.
+   */
+  describe('drift debug seam (Step 14P RED-8 + Step 14Q2 + Step 14R, P1-drift-presentation-car)', () => {
+    /** Restores the seam accessor after the assignment-count contract. */
+    let restoreSeamAccessor: (() => void) | null = null;
+
+    afterEach(() => {
+      restoreSeamAccessor?.();
+      restoreSeamAccessor = null;
+    });
+
+    /**
+     * Boots the page and drives ONE frame, so the zero-arg frame builder
+     * runs and the seam is written.
+     */
+    function driveSeamFrame(): void {
+      getBootStart()('neatracing-output');
+      scheduledRafCallbacks[0]?.(DRIVEN_FRAME_TIMESTAMP_MS);
+    }
+
+    // [RED-8-SEAM-FIELD-COUNT]
+    it('carries exactly eight fields on the live drift seam', () => {
+      // Arrange: the seam is written by the frame builder, so a frame runs.
+      driveSeamFrame();
+
+      // Act
+      const seam = readDriftSeam();
+
+      // Assert
+      expect(seam).toBeDefined();
+      expect(Object.keys(seam ?? {})).toHaveLength(DRIFT_SEAM_FIELD_COUNT);
+    });
+
+    // [RED-8-SEAM-KEY-SET]
+    it('carries the pinned eight-field key set on the live drift seam', () => {
+      // Arrange
+      driveSeamFrame();
+
+      // Act
+      const seam = readDriftSeam();
+
+      // Assert
+      expect(Object.keys(seam ?? {}).sort()).toEqual(DRIFT_SEAM_KEYS);
+    });
+
+    // [RED-8-SEAM-FOLLOW-OFFSET]
+    it('publishes the camera follow offset as a finite number on the live drift seam', () => {
+      // Arrange
+      driveSeamFrame();
+
+      // Act
+      const seam = readDriftSeam();
+
+      // Assert
+      expect(typeof seam?.followOffsetRad).toBe('number');
+      expect(Number.isFinite(seam?.followOffsetRad)).toBe(true);
+    });
+
+    // [14Q2-SEAM-TRACTION-SEVERITY]
+    it('publishes the traction severity as a finite number on the live drift seam', () => {
+      // Arrange
+      driveSeamFrame();
+
+      // Act
+      const seam = readDriftSeam();
+
+      // Assert
+      expect(typeof seam?.tractionSeverity).toBe('number');
+      expect(Number.isFinite(seam?.tractionSeverity)).toBe(true);
+    });
+
+    // [14Q2-SEAM-TRACTION-SEVERITY-LAW]
+    it('publishes the traction severity as the SHARED law value of the published slip and speed', () => {
+      // Arrange
+      driveSeamFrame();
+
+      // Act
+      const seam = readDriftSeam();
+
+      // Assert: the physics state publishes
+      // `computeTractionSeverity(slip, speed)`, so the seam carries that
+      // EXACT number for the slip and the speed it publishes: the
+      // browser READS the published severity and never re-derives it.
+      expect(seam?.tractionSeverity).toBe(
+        computeTractionSeverity(
+          readSeamNumber(seam, 'slipAngleRad'),
+          readSeamNumber(seam, 'speedMps'),
+        ),
+      );
+    });
+
+    // [14Q2-SEAM-TRACTION-SEVERITY-SLIDING]
+    it('publishes a NON-ZERO traction severity while the car slides', () => {
+      // Arrange: release ONE simulation step per frame and hold the
+      // throttle plus a steering key, so the car accelerates into a slide
+      // and the physics state publishes a non-zero severity.
+      mockedAdvanceFrameSteps.mockReturnValue(1);
+      getBootStart()('neatracing-output');
+      window.dispatchEvent(
+        new KeyboardEvent('keydown', { code: 'ArrowUp', cancelable: true }),
+      );
+      window.dispatchEvent(
+        new KeyboardEvent('keydown', { code: 'ArrowRight', cancelable: true }),
+      );
+      for (
+        let frame = 0;
+        frame < SLIDING_SEAM_FRAME_COUNT;
+        frame += 1
+      ) {
+        scheduledRafCallbacks[frame]?.(
+          DRIVEN_FRAME_TIMESTAMP_MS + frame * SLIDING_SEAM_FRAME_STEP_MS,
+        );
+      }
+
+      // Act
+      const seam = readDriftSeam();
+
+      // Assert: on a slide the published severity is positive, and it is
+      // STILL the shared law value of the published slip and speed.
+      expect(seam?.tractionSeverity).toBeGreaterThan(0);
+      expect(seam?.tractionSeverity).toBe(
+        computeTractionSeverity(
+          readSeamNumber(seam, 'slipAngleRad'),
+          readSeamNumber(seam, 'speedMps'),
+        ),
+      );
+    });
+
+    // [14R-SEAM-POSE-RATE]
+    it('publishes the pose-spring rate as a finite number on the live drift seam', () => {
+      // Arrange
+      driveSeamFrame();
+
+      // Act
+      const seam = readDriftSeam();
+
+      // Assert: the EIGHTH field is the PUBLISHED pose rate, READ from the
+      // physics state (`car.drift.pose.poseRate`) and never re-derived in
+      // the browser. It is a NAMED channel of its own, NOT the traction
+      // severity (that is the SEVENTH field).
+      expect(typeof seam?.poseRateRadPerS).toBe('number');
+      expect(Number.isFinite(seam?.poseRateRadPerS)).toBe(true);
+    });
+
+    // [14R-SEAM-POSE-RATE-IS-THE-POSE-RATE]
+    it('publishes the RATE of the pose it publishes beside it', () => {
+      // Arrange: drive a real slide (one simulation step per frame) and
+      // record the seam after every driven frame.
+      mockedAdvanceFrameSteps.mockReturnValue(1);
+      getBootStart()('neatracing-output');
+      window.dispatchEvent(
+        new KeyboardEvent('keydown', { code: 'ArrowUp', cancelable: true }),
+      );
+      window.dispatchEvent(
+        new KeyboardEvent('keydown', { code: 'ArrowRight', cancelable: true }),
+      );
+      const samples: Array<{
+        readonly tick: number;
+        readonly poseRad: number;
+        readonly poseRateRadPerS: number;
+      }> = [];
+      for (
+        let frame = 0;
+        frame < SLIDING_SEAM_FRAME_COUNT;
+        frame += 1
+      ) {
+        scheduledRafCallbacks[frame]?.(
+          DRIVEN_FRAME_TIMESTAMP_MS + frame * SLIDING_SEAM_FRAME_STEP_MS,
+        );
+        const seam = readDriftSeam();
+        samples.push({
+          tick: readSeamNumber(seam, 'tick'),
+          poseRad: readSeamNumber(seam, 'poseRad'),
+          poseRateRadPerS: readSeamNumber(seam, 'poseRateRadPerS'),
+        });
+      }
+
+      // Act: take the LAST pair of samples that are exactly ONE simulation
+      // tick apart (the frame accumulator may release a tick in a later
+      // frame, so only a one-tick step can be differenced).
+      let poseStep: { readonly delta: number; readonly rate: number } | null =
+        null;
+      for (let index = 1; index < samples.length; index += 1) {
+        const previous = samples[index - 1];
+        const current = samples[index];
+        if (current.tick - previous.tick === 1) {
+          poseStep = {
+            delta: current.poseRad - previous.poseRad,
+            rate: current.poseRateRadPerS,
+          };
+        }
+      }
+
+      // Assert: the pose spring integrates the pose with the PUBLISHED
+      // rate (`pose = prev.pose + rate * dt`), so the eighth field is the
+      // crab's own rate - the quantity the browser half would otherwise
+      // have to ESTIMATE by differencing the pose across rendered frames.
+      expect(poseStep).not.toBeNull();
+      expect(poseStep?.delta).toBeCloseTo(
+        (poseStep?.rate ?? 0) * NEATRACING_PHYSICS_FIXED_TIMESTEP_SECONDS,
+        10,
+      );
+    });
+
+    // [RED-8-SEAM-ONE-ASSIGNMENT-PER-FRAME]
+    it('assigns the drift seam exactly once per driven frame', () => {
+      // Arrange: the accessor counts the seam writes.
+      const assignments = countDriftSeamAssignments();
+      restoreSeamAccessor = assignments.restore;
+      getBootStart()('neatracing-output');
+
+      // Act + Assert: one write for the first driven frame ...
+      scheduledRafCallbacks[0]?.(DRIVEN_FRAME_TIMESTAMP_MS);
+      expect(assignments.count()).toBe(1);
+
+      // ... and exactly one more for the second driven frame.
+      scheduledRafCallbacks[1]?.(DRIVEN_FRAME_TIMESTAMP_MS);
+      expect(assignments.count()).toBe(2);
     });
   });
 });

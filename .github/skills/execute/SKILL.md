@@ -425,6 +425,11 @@ iteration <n> status=<failed|passed>` markers, counts iterations, and
   thin non-overlapping scope, parallel independent scouts, central merge,
   parallel executors over non-overlapping file sets, and time-budget exit
   via gap report.
+- **Every dispatch MUST obey Responsible Parallel Execution (RPE).**
+  See §9.0.1 for the five execution clauses that govern how the doctrine is
+  executed: auxiliary scope only, ownership without forwarding, no nested
+  self-orchestration, disjoint write sets for parallel writes, and a bounded
+  fan-out that never saturates the sub-agent pool.
 - **For `tdd_sequence: green-only` steps**, skip the RED phase and start at
   IMPLEMENT. Valid only when tests already exist from a prior red phase or a
   pre-existing test file.
@@ -498,6 +503,42 @@ style preference.
 §9.1 carries the time-box and thin-scope mechanics for rules 1 and 5. §9.2
 carries the parallelism mechanics for rules 2, 3, and 4. The
 `routing-optimization-policy` skill audits compliance with all five.
+
+### §9.0.1 — Responsible Parallel Execution (RPE)
+
+The five rules above state **what** must be true at dispatch time. The
+**Responsible Parallel Execution (RPE)** contract states **how** they are
+executed so that concurrency stays safe, bounded, and reviewable. RPE is
+binding on every dispatch in this repository and is the execution form of
+rules 1–5.
+
+| Clause   | Name                       | Binding requirement                                                                                                                                                                                                                                     |
+| -------- | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **RPE-1** | **Auxiliary scope only**  | A dispatched sub-agent receives a **quick, targeted, auxiliary** task — one question, one boundary, the minimum file set (Rule 1). It is never handed the orchestrator's whole job, a multi-phase goal, or an open-ended "figure it out and also do X" scope. If the task needs the orchestrator's judgment, the orchestrator keeps it. |
+| **RPE-2** | **Ownership, no forwarding** | A dispatched agent **OWNS** the work it was given and returns the result. It MUST NOT forward, re-dispatch, or chain its assignment onward to another sub-agent — not even "just for the next small piece". Escalating an unresolved blocker back to the orchestrator is correct; delegating it sideways is not. |
+| **RPE-3** | **No nested self-orchestration** | A dispatched agent does not re-enter the orchestration machinery on its own initiative: it does not spawn its own RED → IMPLEMENT → GREEN loop, its own reviewer chain, or its own phase transitions. Tier-authorized delegation inside an agent's own scope (a Tier-2 coordinator dispatching its own Tier-3 scouts) is permitted, but stays bounded by RPE-1, RPE-4, and RPE-5. Dispatching an SDLC phase agent from inside a dispatched task is not. |
+| **RPE-4** | **Disjoint write sets**  | Parallel writes happen **only** over non-overlapping files. Two agents that would touch the same file are serialized through the file-lock tracker (§12) and never co-written. This is the execution form of Rule 4. |
+| **RPE-5** | **Bounded fan-out**      | The orchestrator keeps the sub-agent pool **below saturation**: it reserves at least one slot for itself (§12), dispatches only as many agents as the remaining capacity allows, and queues the rest. Fan-out is sized to the task, never to the number of free slots. |
+
+```mermaid
+flowchart TD
+    Start(["Dispatch intent"]) --> Aux{"Quick, targeted,<br/>auxiliary task?"}
+    Aux -->|No| Keep["Orchestrator keeps it"]
+    Aux -->|Yes| Cap{"Pool below<br/>saturation?"}
+    Cap -->|No| Queue["Queue the dispatch"]
+    Cap -->|Yes| Files{"Parallel write?<br/>Files disjoint?"}
+    Files -->|No| Serialize["Serialize via file-lock tracker"]
+    Files -->|Yes| Dispatch["Dispatch sub-agent<br/>owns its work, no forwarding"]
+    Dispatch --> Owns{"Agent forwards or<br/>self-orchestrates?"}
+    Owns -->|Yes| Correct["Correct in place:<br/>narrow packet, stop,<br/>re-dispatch fresh"]
+    Owns -->|No| Merge["Agent returns result<br/>to the central merge point"]
+```
+
+**Violation handling:** an RPE violation is a workflow defect, not a style
+preference. Correct it in place — narrow the packet, stop the forwarding
+agent, serialize the write, or re-dispatch a fresh instance — and continue
+until the dispatch is compliant or a true technical limit is reached. No
+concessions, no artificial retry threshold.
 
 ### §9.1 — Slice Time-Boxing
 

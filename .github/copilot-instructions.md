@@ -112,8 +112,8 @@ Section 5.9. Under pragmatic mode the update is simplified but not skipped.
 ## Orchestration Doctrine
 
 Five binding rules for every dispatch. Violating one is a workflow defect,
-not a style choice. Full text: `execute` skill §9.0; audited by the
-`routing-optimization-policy` skill.
+not a style choice. Full text: `execute` skill §9.0 and §9.0.1; audited by
+the `routing-optimization-policy` skill.
 
 1. **Thin scope** — one objective, minimum file set; no two live dispatches
    own the same file.
@@ -125,6 +125,34 @@ not a style choice. Full text: `execute` skill §9.0; audited by the
    sets; overlapping sets are serialized.
 5. **Time-budget exit** — an agent over budget stops and returns a gap
    report for a fresh takeover.
+
+## Responsible Parallel Execution
+
+Dispatch is bounded delegation, not a fan-out of open-ended work. Every
+dispatch obeys the five **RPE** clauses (`execute` skill §9.0.1), which are
+the execution form of the doctrine above:
+
+1. **Auxiliary scope only** — a sub-agent gets a quick, targeted, auxiliary
+   task: one question, one boundary, the minimum file set. Never the
+   orchestrator's whole job, never a multi-phase goal, never "figure it out
+   and also do X".
+2. **Ownership, no forwarding** — a dispatched agent OWNS its assignment and
+   returns the result. It MUST NOT forward, re-dispatch, or chain its work
+   to another sub-agent. Escalating a blocker back to the orchestrator is
+   correct; delegating it sideways is not.
+3. **No nested self-orchestration** — a dispatched agent does not spawn its
+   own RED → IMPLEMENT → GREEN loop, its own reviewer chain, or its own
+   phase transitions. Tier-authorized delegation inside an agent's own scope
+   stays bounded by clauses 1, 4, and 5.
+4. **Disjoint write sets** — parallel writes only over non-overlapping
+   files; overlapping sets are serialized through the file-lock tracker,
+   never co-written.
+5. **Bounded fan-out** — never saturate the sub-agent pool. Reserve at least
+   one slot for the orchestrator, size the fan-out to the task rather than
+   to the free slots, and queue the rest.
+
+An RPE violation is a workflow defect: narrow the packet, stop the
+forwarding agent, serialize the write, or re-dispatch a fresh instance.
 
 ## Background Agent Polling Interval
 
@@ -158,6 +186,7 @@ This file is the always-loaded routing facade. Detailed playbooks live in canoni
 - **Documentation standards (tone model, generated READMEs, CI docs)** → `educational-docs` skill.
 - **Agent/skill frontmatter, routing-table freshness, tier-graph rules** → `agent-frontmatter-standards` and `routing-optimization-policy` skills.
 - **Orchestration doctrine (thin scope, parallel scouts, central merge, parallel executors, time-budget exit)** → `execute` skill §9.0.
+- **Responsible parallel execution (auxiliary scope, ownership without forwarding, no nested self-orchestration, disjoint write sets, bounded fan-out)** → `execute` skill §9.0.1.
 - **TDD/red-test contracts and test-fix workflows** → `red-test-contracts` and `test-fix-workflow` skills.
 - **Reproducibility, checkpointing, workers, hybrid training** → domain skills (`reproducibility-contracts`, `checkpointing-persistence`, `worker-inference-transport`, `hybrid-training-interop`).
 

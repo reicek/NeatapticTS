@@ -24,6 +24,17 @@
  *   INITIAL mode 'manual' (the "manual only" Phase 1 semantics: Phase 1
  *   boot glue keeps the race on manual and never switches it; the option
  *   list itself carries AI already so P2-S4-A only adds AI wiring).
+ * - Step 14P (AC-087, the L8 mask) re-pins the INITIAL mode to
+ *   'manual': the served page IS the acceptance surface and the
+ *   ai-mode page is never acceptable evidence (the AI autopilot only
+ *   crosses the 0.5 engage cliff on 176 of 7200 ticks, 2.44 percent,
+ *   so an AI boot masks the very slide the user has to judge). The
+ *   'ai' option stays SELECTABLE and the switch still notifies its
+ *   listeners (AC-089); the option ORDER is unchanged ('ai', 'manual').
+ *   The three switch pins that assumed an 'ai' boot (the initial-mode
+ *   render pin, the both-directions switch log, and the same-value
+ *   no-op call) are re-baselined IN THIS SLICE, in the same edit as
+ *   the production change.
  * - "Restart on switch" (LD-12: switching AI <-> manual restarts the
  *   race/simulation in both directions) binds at the component as an
  *   onSwitch notification: subscribers are notified exactly once per
@@ -71,7 +82,7 @@ import {
   NEATRACING_HUD_COLOR_CYAN,
   NEATRACING_HUD_COLOR_MAGENTA,
 } from './hud';
-import { createRaceModeSelector } from './mode-selector';
+import { createRaceModeSelector, INITIAL_RACE_MODE } from './mode-selector';
 import type { NeatRacingRaceMode } from './mode-selector';
 
 /** Host container element id reserved for the neatRacing HUD output. */
@@ -197,7 +208,22 @@ describe('neatRacing HUD + race mode selector (P1-S7-E)', () => {
   });
 
   describe('race mode selector (Neatenstein pattern, AC-024 style)', () => {
-    it('renders an ai/manual select whose initial mode is ai (batch 108)', () => {
+    it('boots the game page in MANUAL mode so the served page is not an AI-driven grass car (the L8 mask)', () => {
+      createHudFixture();
+      const selector = createRaceModeSelector(HUD_OUTPUT_ID);
+
+      expect({
+        exportedBootMode: INITIAL_RACE_MODE,
+        selectorMode: selector.mode,
+        domValue: selector.select.value,
+      }).toEqual({
+        exportedBootMode: 'manual',
+        selectorMode: 'manual',
+        domValue: 'manual',
+      });
+    });
+
+    it('renders an ai/manual select whose initial mode is manual (the L8 mask)', () => {
       createHudFixture();
       const selector = createRaceModeSelector(HUD_OUTPUT_ID);
 
@@ -210,7 +236,28 @@ describe('neatRacing HUD + race mode selector (P1-S7-E)', () => {
       }).toEqual({
         tag: 'SELECT',
         options: ['ai', 'manual'],
-        initialMode: 'ai',
+        initialMode: 'manual',
+      });
+    });
+
+    it('keeps the AI mode selectable and switching to AI at runtime still notifies the listeners', () => {
+      createHudFixture();
+      const selector = createRaceModeSelector(HUD_OUTPUT_ID);
+      const switchLog: NeatRacingRaceMode[] = [];
+      selector.onSwitch((mode) => switchLog.push(mode));
+
+      selector.setMode('ai');
+
+      expect({
+        options: Array.from(selector.select.options).map(
+          (option) => option.value,
+        ),
+        mode: selector.mode,
+        switchLog,
+      }).toEqual({
+        options: ['ai', 'manual'],
+        mode: 'ai',
+        switchLog: ['ai'],
       });
     });
 
@@ -269,17 +316,24 @@ describe('neatRacing HUD + race mode selector (P1-S7-E)', () => {
   });
 
   describe('toggle + restart-on-switch (AC-033 restart pre-verify)', () => {
-    it('switches to manual on a user change event and notifies the switch hook once', () => {
+    it('switches on a user change event and notifies the switch hook once per switch', () => {
       createHudFixture();
       const selector = createRaceModeSelector(HUD_OUTPUT_ID);
       const switchLog: NeatRacingRaceMode[] = [];
       selector.onSwitch((mode) => switchLog.push(mode));
 
+      selector.select.value = 'ai';
+      selector.select.dispatchEvent(new Event('change'));
       selector.select.value = 'manual';
       selector.select.dispatchEvent(new Event('change'));
 
-      expect(selector.mode).toBe('manual');
-      expect(switchLog).toEqual(['manual']);
+      expect({
+        mode: selector.mode,
+        switchLog,
+      }).toEqual({
+        mode: 'manual',
+        switchLog: ['ai', 'manual'],
+      });
     });
 
     it('notifies the restart-carrying switch hook in both directions', () => {
@@ -288,10 +342,10 @@ describe('neatRacing HUD + race mode selector (P1-S7-E)', () => {
       const switchLog: NeatRacingRaceMode[] = [];
       selector.onSwitch((mode) => switchLog.push(mode));
 
-      selector.setMode('manual');
       selector.setMode('ai');
+      selector.setMode('manual');
 
-      expect(switchLog).toEqual(['manual', 'ai']);
+      expect(switchLog).toEqual(['ai', 'manual']);
     });
 
     it('notifies exactly once per switch — never for a same-value setMode', () => {
@@ -300,7 +354,7 @@ describe('neatRacing HUD + race mode selector (P1-S7-E)', () => {
       const onSwitch = jest.fn();
       selector.onSwitch(onSwitch);
 
-      selector.setMode('ai');
+      selector.setMode('manual'); // the boot mode: a same-value no-op
 
       expect(onSwitch).not.toHaveBeenCalled();
     });
@@ -309,7 +363,7 @@ describe('neatRacing HUD + race mode selector (P1-S7-E)', () => {
       createHudFixture();
       const selector = createRaceModeSelector(HUD_OUTPUT_ID);
 
-      selector.setMode('ai');
+      selector.setMode('ai'); // a real switch away from the 'manual' boot
 
       expect(selector.select.value).toBe('ai');
     });

@@ -12,23 +12,53 @@
  * (spec section 8.1, LD-1) — the entry never touches `canvas.getContext`
  * directly beyond what `initRenderingContext` does.
  *
- * The session payload carries the initialized editor state container
- * (`model: null`) so later tool slices (editor.state, editor.palette,
- * editor.camera) can bind onto the same session without re-plumbing the
- * shell (AC-020 partial). The boot sizes the preview canvas to the preview
- * host's client box once at mount (live resize is a later slice's job) and
- * degrades to the service's fallback notice instead of throwing when WebGL2
- * is unavailable (LD-1); stop stops the preview loop and unmounts both the
- * canvas and the notice.
+ * The session payload carries the editor tool frame (`./editor.toolframe`):
+ * the tool frame owns the editor state container (the dense working volume
+ * plus its palette), the bounded undo stack, the mirror-symmetry surface,
+ * and the palette/undo/model-dropdown/CAD-view/symmetry control mounts in
+ * the reserved `neatracing-editor-tools` container, and it performs the
+ * initial model load (model-store list, read, and decode into the working
+ * volume). The session's `state` container is a live projection of that
+ * editor state, so later tool slices (editor.edit.loop, editor.controls)
+ * bind onto the same session without re-plumbing the shell (AC-020
+ * partial). The session's `currentDocument` is the same kind of live
+ * projection over the loaded model document, so a dropdown-driven
+ * `loadModel()` reaches the preview and the session without re-editing the
+ * boot. The boot takes an optional second argument
+ * (`NeatRacingEditorBootDeps`) whose `fetch` field injects the model-store
+ * fetch seam; it defaults to the ambient `globalThis.fetch`, so production
+ * call sites are unchanged.
+ *
+ * The control BEHAVIORS live in `./editor.controls`: the palette
+ * add/select handlers, the undo/redo buttons, the model dropdown, and the
+ * CAD-view buttons. The boot wires them onto the tool frame's mounts and
+ * hands the session the live `controls` surface plus the `camera` they
+ * drive. The controls own the shared paint entry and the undo seam the
+ * pointer edit loop captures its per-stroke snapshot through, so a paint
+ * follows the selected palette color and a new edit invalidates the redo
+ * history. The boot publishes the WORKING-VOLUME projection (the 128-cubed
+ * section 7.2 document the pointer picker inverts) whenever the volume
+ * changed — at boot, after a model load, after an undo/redo, and after a
+ * full rebuild — so the preview and the picker agree on the lattice
+ * (review obs 1). The boot camera starts on a working-volume framing
+ * instead of the camera's game-scale default distance (review obs 5), and
+ * the stopped flag cancels the rebuild pipeline's pending debounced flush
+ * when the session is stopped (review obs 3).
+ * The boot sizes the preview canvas to the preview host's client
+ * box once at mount (live resize is a later slice's job) and degrades to
+ * the service's fallback notice instead of throwing when WebGL2 is
+ * unavailable (LD-1); stop stops the preview loop and unmounts the
+ * tool frame, the canvas, and the notice.
  *
  * AC-019 preview lane: when the acquired context is live WebGL2 (unavailable
  * or structurally stubbed contexts keep the earlier boot shape), the boot
  * starts the RAF-driven preview render loop (`./editor-preview.render`)
  * under the Step 08 editor camera and wires the production bins draw adapter
  * over the engine's `createCarPass` (the selected document renders as the
- * car body; the wheel bin is empty). The boot also best-effort selects the
- * first listed dev-server model so the preview shows a scene out of the box;
- * every selection failure degrades silently (LD-1) to an empty selection.
+ * car body; the wheel bin is empty). The preview renders the model the
+ * tool frame loaded, so the served page shows a scene out of the box
+ * without a second model-store round trip; every selection failure
+ * degrades silently (LD-1) to an empty selection.
  *
  * @module
  */
@@ -47,6 +77,29 @@ import type {
   EditorPreviewRenderLoopHandle,
 } from './editor-preview.render';
 import { createEditorCamera } from './editor.camera';
+import type { EditorCamera } from './editor.camera';
+import { createEditorControls } from './editor.controls';
+import type { EditorControls } from './editor.controls';
+import { createEditorToolframe } from './editor.toolframe';
+import type {
+  EditorToolframeFetch,
+  EditorToolframeSession,
+} from './editor.toolframe';
+import { NEATRACING_EDITOR_VOLUME_EDGE } from './editor.state';
+import { NEATRACING_VOXEL_WORLD_SIZE } from '../voxel/lod.distance.utils';
+import { createEditorRebuildPipeline } from './editor.rebuild.pipeline';
+import {
+  NEATRACING_EDITOR_DEFAULT_MODEL_NAME,
+  buildEditorVolumeDocument,
+  createEditorEditLoop,
+  createEditorVoxelPicker,
+} from './editor.edit.loop';
+import type { EditorEditLoop } from './editor.edit.loop';
+import { createEditorLiveSave, createEditorLiveSymmetry } from './editor.live.save';
+import type {
+  EditorLiveSave,
+  EditorLiveSaveFetch,
+} from './editor.live.save';
 
 /**
  * Editor state container shared by the tool slices (AC-020 partial).
@@ -55,22 +108,80 @@ import { createEditorCamera } from './editor.camera';
  *   model is selected yet.
  */
 export interface NeatRacingEditorState {
-  model: string | null;
+  readonly model: string | null;
+}
+
+/**
+ * Optional boot dependencies for the editor boot.
+ *
+ * The boot injects the model-store fetch seam through this object so the
+ * initial model load chain (model-store list, read, decode into the working
+ * volume) can be exercised end to end without a dev server. Production call
+ * sites omit it and keep the ambient `globalThis.fetch`.
+ *
+ * @property fetch - Fetch seam the tool frame drives; defaults to the
+ *   ambient `globalThis.fetch`.
+ * @property saveFetch - Fetch seam the immediate live save drives; it is
+ *   the WRITE seam (the model store's save route needs a `PUT`), so it
+ *   stays separate from the tool frame's GET-only seam. Defaults to the
+ *   ambient `globalThis.fetch`.
+ */
+export interface NeatRacingEditorBootDeps {
+  readonly fetch?: EditorToolframeFetch;
+  readonly saveFetch?: EditorLiveSaveFetch;
 }
 
 /**
  * Session handle returned by the editor boot.
  *
  * Calling {@link NeatRacingEditorSession.stop} stops the AC-019 preview
- * render loop when one was started, then removes the mounted preview canvas
- * plus the tracked context-service fallback notice so an embedding page or
- * test can unmount the editor cleanly. The `state` container is fresh per
- * boot so successive boots never share state.
+ * render loop when one was started, then removes the mounted tool frame,
+ * the preview canvas, and the tracked context-service fallback notice so an
+ * embedding page or test can unmount the editor cleanly. The `state`
+ * container is fresh per boot so successive boots never share state.
  */
 export interface NeatRacingEditorSession {
-  /** Initialized editor state container owned by the tool slices. */
+  /** Live projection of the tool frame's editor state container. */
   state: NeatRacingEditorState;
-  /** Stops the preview loop, then unmounts the canvas and fallback notice. */
+  /**
+   * Live projection of the tool frame's loaded model document: the document
+   * currently decoded into the working volume, or null while no model is
+   * loaded.
+   */
+  readonly currentDocument: VoxelModelDocument | null;
+  /**
+   * Live projection of the EDITED working volume: the section 7.2 model
+   * document the rebuild pipeline published after the last full rebuild,
+   * or null while no full rebuild ran yet (the pointer-pick edit loop
+   * publishes it on every pointer-up flush).
+   */
+  readonly editedDocument: VoxelModelDocument | null;
+  /**
+   * Pointer-pick edit loop bound to the preview canvas: the canvas
+   * pointer chain (pick -> symmetry-canonicalized paint -> undo push ->
+   * rebuild pipeline edit -> pointer-up full flush).
+   */
+  readonly editLoop: EditorEditLoop;
+  /**
+   * Wired control behaviors over the tool frame's mounts: the palette
+   * add/select handlers, the undo/redo buttons, the model dropdown, and the
+   * CAD-view buttons (AC-020 completion).
+   */
+  readonly controls: EditorControls;
+  /**
+   * Immediate live save over the working volume: every edit flight
+   * enqueues one save that PUTs the edited volume into the dev-server
+   * model store and triggers the rebuild flight (AC-021 completion).
+   */
+  readonly liveSave: EditorLiveSave;
+  /**
+   * Editor camera the preview renders with and the CAD-view buttons drive
+   * (AC-019).
+   */
+  readonly camera: EditorCamera;
+  /** Editor tool frame (state container, controls, initial model load). */
+  toolframe: EditorToolframeSession;
+  /** Stops the preview loop, then unmounts the tool frame and the canvas. */
   stop: () => void;
 }
 
@@ -79,10 +190,12 @@ export interface NeatRacingEditorSession {
  *
  * @param previewHostId - Editor shell element id that owns the preview
  *   canvas.
+ * @param deps - Optional boot dependencies (the model-store fetch seam).
  * @returns A session with the fresh editor state and a stop handle.
  */
 export type NeatRacingEditorStart = (
   previewHostId: string,
+  deps?: NeatRacingEditorBootDeps,
 ) => NeatRacingEditorSession;
 
 /** Element id given to the preview canvas mounted by the editor boot. */
@@ -93,6 +206,30 @@ const NEATRACING_EDITOR_PREVIEW_LABEL = 'neatRacing editor preview';
 
 /** Per-dimension floor for the boot-time preview canvas size in pixels. */
 const MIN_PREVIEW_CANVAS_SIZE = 1;
+
+/**
+ * World extent of the editor working volume in meters: the 128-cubed
+ * lattice at the fine voxel size (4.5 m, spec section 7.3.4 G1).
+ */
+const NEATRACING_EDITOR_WORKING_VOLUME_EXTENT_M =
+  NEATRACING_EDITOR_VOLUME_EDGE * NEATRACING_VOXEL_WORLD_SIZE;
+
+/**
+ * Boot camera distance in world units: 1.5 working-volume extents, so the
+ * 4.5 m model fills the preview viewport instead of the camera's
+ * game-scale default of 192 m (review obs 5 — the default framed the model
+ * at ~2 % of the viewport).
+ */
+const NEATRACING_EDITOR_BOOT_CAMERA_DISTANCE =
+  NEATRACING_EDITOR_WORKING_VOLUME_EXTENT_M * 1.5;
+
+/**
+ * Boot camera focus height in world units: half the working volume's
+ * extent, so the volume's vertical center sits at the viewport's center
+ * and the viewport center picks the lattice's center cell.
+ */
+const NEATRACING_EDITOR_BOOT_CAMERA_CENTER_Y =
+  NEATRACING_EDITOR_WORKING_VOLUME_EXTENT_M / 2;
 
 /** Background clear color channels for the one-time editor preview clear. */
 const PREVIEW_CLEAR_RED = 0.08;
@@ -126,9 +263,6 @@ const PREVIEW_CARS: readonly CarPassCarState[] = [
   },
 ];
 
-/** Dev-server model list route used by the boot-time best-effort selection. */
-const MODEL_LIST_API_PATH = '/api/models';
-
 /** Per-frame preview clear mask: `gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT`.
  *
  * The preview has no full-coverage composer pass ahead of the car pass, so
@@ -152,6 +286,7 @@ const PREVIEW_FRAME_CLEAR_MASK = 0x4100;
  *
  * @param previewHostId - Editor shell element id that owns the preview
  *   canvas.
+ * @param deps - Optional boot dependencies (the model-store fetch seam).
  * @returns A session with the fresh editor state container and a stop handle.
  * @throws When no element with `previewHostId` exists in the document.
  *
@@ -162,11 +297,19 @@ const PREVIEW_FRAME_CLEAR_MASK = 0x4100;
  * session.stop(); // stops the preview loop and unmounts the canvas/notice
  * ```
  */
-function neatRacingEditorStart(previewHostId: string): NeatRacingEditorSession {
+function neatRacingEditorStart(
+  previewHostId: string,
+  deps?: NeatRacingEditorBootDeps,
+): NeatRacingEditorSession {
   const previewHost = document.getElementById(previewHostId);
   if (!(previewHost instanceof HTMLElement)) {
     throw new Error(`Preview host #${previewHostId} not found`);
   }
+
+  // Step 0: the stopped flag. The rebuild pipeline owns a 250 ms trailing
+  // debounce with no dispose seam, so the boot cancels its pending flush by
+  // refusing to publish once the session was stopped (review obs 3).
+  let stopped = false;
 
   // Step 1: Mount the preview canvas into the preview host, sized to the
   // host's client box at boot. The floor constant keeps a host without a
@@ -242,36 +385,236 @@ function neatRacingEditorStart(previewHostId: string): NeatRacingEditorSession {
   // Step 4: Start the AC-019 preview lane — live WebGL2 only. Unavailable or
   // structurally stubbed contexts (jsdom-style `{}` contexts without GL
   // methods) keep the exact earlier boot shape: no camera, no RAF chain, no
-  // draws, no fetch. The preview provider is a mutable closure the
-  // best-effort boot-time model fetch fills in asynchronously; the loop
-  // memoizes on document identity, so the fetch only affects the NEXT frame.
+  // draws. The preview provider reads the tool frame's LIVE loaded document
+  // through the holder below, so a later dropdown-driven load reaches the
+  // preview without re-editing the boot; the loop memoizes on document
+  // identity, so a load only affects the NEXT frame.
   let previewHandle: EditorPreviewRenderLoopHandle | null = null;
+  // Live holder for the tool frame: the preview lane starts before the tool
+  // frame is mounted below (the boot order is unchanged), so the provider
+  // reads the mounted frame through this holder instead of a one-shot
+  // snapshot of the initial load result.
+  let toolframeHolder: EditorToolframeSession | null = null;
+  // Live holder for the EDITED working volume's projection: the section 7.2
+  // model document the rebuild pipeline publishes after a full rebuild. It
+  // stays null until the first pointer stroke flushes, and the preview lane
+  // prefers it over the loaded document so the preview redraws the edited
+  // volume (AC-021: "the Step 14 preview lane redrawing the edited volume").
+  let editedDocument: VoxelModelDocument | null = null;
+  const getSelectedModelDocument = (): VoxelModelDocument | null =>
+    editedDocument ?? toolframeHolder?.currentDocument ?? null;
+  // The editor camera is hoisted OUT of the WebGL2 gate on purpose: the
+  // pointer-pick edit loop casts its ray through the SAME camera the
+  // preview renders with, so the picker stays correct on hosts without a
+  // live context (the picker lane never needs a GL context). The boot pose
+  // frames the working volume (review obs 5): the camera's game-scale
+  // default (192 m) framed the 4.5 m model at ~2 % of the viewport.
+  const camera = createEditorCamera({
+    center: [0, NEATRACING_EDITOR_BOOT_CAMERA_CENTER_Y, 0],
+    distance: NEATRACING_EDITOR_BOOT_CAMERA_DISTANCE,
+  });
   const previewGl = pickPreviewRenderingContext(rendering);
   if (previewGl !== null) {
-    const camera = createEditorCamera();
     const binsDraw = createEditorPreviewBinsDraw(previewGl, canvas);
-    let currentDocument: VoxelModelDocument | null = null;
-    const getSelectedModelDocument = (): VoxelModelDocument | null =>
-      currentDocument;
     previewHandle = startEditorPreviewRenderLoop({
       canvas,
       camera,
       getSelectedModelDocument,
       binsDraw,
     });
-    void loadFirstModelIntoProvider((document) => {
-      currentDocument = document;
+  }
+
+  // Step 5: Mount the editor tool frame — the editor state container, the
+  // control mounts in the reserved `neatracing-editor-tools` container, and
+  // the initial model load (model-store list, read, and decode into the
+  // working volume). The tool frame resolves its container or throws
+  // (batch-94 handoff contract), so a shell that lost the container fails
+  // loudly instead of rendering an editor without controls. The boot injects
+  // the model-store fetch seam through the optional deps, so the load chain
+  // can be exercised without a dev server; a boot without deps keeps the
+  // ambient `globalThis.fetch`.
+  //
+  // The preview render loop is ALREADY RUNNING at this point, so a shell
+  // that lost the reserved container would leak an unreapable RAF chain (the
+  // throw leaves no session behind, so no stop() can ever reap it). The
+  // mount is therefore guarded: the loop is stopped before the error leaves
+  // the boot, and the original error still propagates (the shell keeps
+  // failing loudly instead of rendering an editor without controls).
+  let toolframe: EditorToolframeSession;
+  try {
+    toolframe = createEditorToolframe({ fetchImpl: deps?.fetch });
+  } catch (error) {
+    previewHandle?.stop();
+    previewHandle = null;
+    throw error;
+  }
+  toolframeHolder = toolframe;
+
+  // Step 5b: Wire the control BEHAVIORS onto the tool frame's mounts — the
+  // palette add/select handlers, the undo/redo buttons, the model dropdown,
+  // and the CAD-view buttons (AC-020 completion). The controls own the
+  // shared paint entry and the undo seam the pointer edit loop captures its
+  // per-stroke snapshot through, so the edit loop paints with the selected
+  // palette color and a new edit invalidates the redo history.
+  const controls = createEditorControls({
+    toolframe,
+    camera,
+    onWorkingVolumeChanged: () => {
+      publishWorkingVolume();
+    },
+  });
+
+  // Step 5c: Wire the LIVE mirror-X symmetry and the immediate live save
+  // (AC-021 completion, LD-28). The tool frame's symmetry policy freezes
+  // its axis flags at construction, so the paint path could never follow
+  // a mid-session toggle flip; the live symmetry reads the toggle's
+  // checked state at paint time instead. The live save PUTs the edited
+  // working volume into the dev-server model store and triggers the
+  // rebuild flight - no import/export UI (LD-28).
+  const liveSymmetry = createEditorLiveSymmetry({
+    toggle: toolframe.controls.symmetryToggle,
+    base: toolframe.symmetry,
+  });
+  const liveSave = createEditorLiveSave({
+    modelName: () => toolframe.state.snapshot().model,
+    readSource: () => ({
+      volume: toolframe.state.volume,
+      palette: toolframe.palette,
+    }),
+    fetchImpl: deps?.saveFetch,
+    mirrorXEnabled: () => toolframe.controls.symmetryToggle.checked,
+  });
+
+  /**
+   * Publishes the working volume as a section 7.2 model document.
+   *
+   * The pointer picker inverts the 128-cubed working lattice, so the
+   * preview must render THAT projection and not the loaded document's own
+   * dims (review obs 1: a 32-cubed wheel document previewed at the working
+   * volume's scale made every pick land on the wrong voxel). The document
+   * is published at boot (after the initial model load landed), after every
+   * model load, after every undo/redo, and after every full rebuild.
+   */
+  function publishWorkingVolume(): void {
+    if (stopped) {
+      return;
+    }
+    editedDocument = buildEditorVolumeDocument({
+      volume: toolframe.state.volume,
+      palette: toolframe.palette,
+      name:
+        toolframe.state.snapshot().model ??
+        NEATRACING_EDITOR_DEFAULT_MODEL_NAME,
     });
   }
 
-  // Step 5: Hand the tool slices a fresh state container per boot.
+  // Publish the working volume once the initial model load landed, so the
+  // preview renders the working lattice the picker inverts.
+  void toolframe.ready.then(() => {
+    publishWorkingVolume();
+  });
+
+  // Step 6: Mount the pointer-pick edit loop — the canvas pointer chain
+  // (pick -> symmetry-canonicalized paint -> undo push -> rebuild pipeline
+  // edit -> pointer-up full flush). The rebuild pipeline's executor
+  // republishes the edited working volume as a section 7.2 model document
+  // on every FULL rebuild; the dirty slice window only remeshes the edited
+  // slices, so the whole-volume projection rides the full flush (the
+  // pointer-up flush or the trailing debounce).
+  const rebuildPipeline = createEditorRebuildPipeline({
+    rebuild: async (request) => {
+      if (request.mode !== 'full') {
+        return;
+      }
+      publishWorkingVolume();
+      // The live save rides the FULL rebuild flight: the dirty slice
+      // window only remeshes the edited slices and must not storm the
+      // model store, so one edit burst collapses into exactly one save.
+      liveSave.enqueueSave();
+    },
+  });
+  const editLoop = createEditorEditLoop({
+    canvas,
+    state: toolframe.state,
+    symmetry: liveSymmetry,
+    // The controls' undo seam captures the stroke snapshot AND invalidates
+    // the redo history; the controls' paint entry is the shared mutable
+    // tuple the selected palette color writes into.
+    undo: controls.undo,
+    pipeline: rebuildPipeline,
+    paintEntry: controls.paintEntry,
+    picker: createEditorVoxelPicker({
+      volume: toolframe.state.volume,
+      camera,
+      // The picker reads the viewport per pick: the CSS box is the pointer
+      // coordinate space, while the projection aspect follows the drawing
+      // buffer (the preview lane's own convention).
+      readViewport: () => ({
+        cssWidth: canvas.clientWidth > 0 ? canvas.clientWidth : canvas.width,
+        cssHeight:
+          canvas.clientHeight > 0 ? canvas.clientHeight : canvas.height,
+        aspect: canvas.width / Math.max(canvas.height, 1),
+      }),
+    }),
+  });
+  editLoop.attach();
+
+  // Step 7: Hand the tool slices the tool frame plus live projections of its
+  // editor state and its loaded document, so the session never carries a
+  // stale model name or a stale document.
   return {
-    state: { model: null },
+    state: createSessionStateView(toolframe),
+    get currentDocument(): VoxelModelDocument | null {
+      return toolframe.currentDocument;
+    },
+    get editedDocument(): VoxelModelDocument | null {
+      return editedDocument;
+    },
+    editLoop,
+    controls,
+    liveSave,
+    camera,
+    toolframe,
     stop: () => {
+      // The stopped flag cancels the rebuild pipeline's pending debounced
+      // flush: the executor refuses to publish after the stop (review
+      // obs 3 — the pipeline exposes no dispose seam).
+      stopped = true;
+      liveSave.stop();
       previewHandle?.stop();
       previewHandle = null;
+      editLoop.detach();
+      controls.stop();
+      toolframe.stop();
       canvas.remove();
       fallbackElement?.remove();
+    },
+  };
+}
+
+/**
+ * Builds the session's live projection of the tool frame's editor state.
+ *
+ * The projection reads the tool frame's state on every access, so the
+ * session's model name follows the tool frame's selection (the initial
+ * model load lands asynchronously) without the boot owning a second,
+ * diverging copy of the selection.
+ *
+ * @param toolframe - Tool frame owning the editor state container.
+ * @returns The session's editor state container.
+ *
+ * @example
+ * ```ts
+ * const view = createSessionStateView(toolframe);
+ * console.log(view.model); // null until the initial model load lands
+ * ```
+ */
+function createSessionStateView(
+  toolframe: EditorToolframeSession,
+): NeatRacingEditorState {
+  return {
+    get model(): string | null {
+      return toolframe.state.snapshot().model;
     },
   };
 }
@@ -393,62 +736,6 @@ function createEditorPreviewBinsDraw(
       currentBins = null;
     },
   };
-}
-
-/**
- * Best-effort boot-time model selection for the manual smoke path.
- *
- * Fetches the dev server's `/api/models` list, then the first model's
- * document, and hands the raw document to the provider callback. The loop's
- * decode memo is the single normative validation gate, so the raw payload is
- * cached structurally unchecked. Every failure — missing fetch, non-JSON
- * body, non-OK response, empty list, missing document field — degrades
- * silently (LD-1): the editor simply previews nothing until a model gets
- * selected. Fire-and-forget from boot; the boot itself stays synchronous.
- *
- * @param setDocument - Provider sink called with the best-effort document.
- *
- * @example
- * ```ts
- * void loadFirstModelIntoProvider((document) => { current = document; });
- * ```
- */
-async function loadFirstModelIntoProvider(
-  setDocument: (document: VoxelModelDocument | null) => void,
-): Promise<void> {
-  try {
-    if (typeof window.fetch !== 'function') {
-      return;
-    }
-    const listResponse = await window.fetch(MODEL_LIST_API_PATH);
-    if (!listResponse.ok) {
-      return;
-    }
-    const listBody = (await listResponse.json()) as { models?: unknown };
-    const models: readonly unknown[] = Array.isArray(listBody.models)
-      ? listBody.models
-      : [];
-    const firstName = models.find(
-      (name): name is string => typeof name === 'string' && name.length > 0,
-    );
-    if (firstName === undefined) {
-      return;
-    }
-    const modelResponse = await window.fetch(
-      `${MODEL_LIST_API_PATH}/${encodeURIComponent(firstName)}`,
-    );
-    if (!modelResponse.ok) {
-      return;
-    }
-    const modelBody = (await modelResponse.json()) as { document?: unknown };
-    if (modelBody.document === null || typeof modelBody.document !== 'object') {
-      return;
-    }
-    setDocument(modelBody.document as VoxelModelDocument);
-  } catch {
-    // Silent degrade (LD-1): without the dev server API the editor simply
-    // has no selection yet; the preview lane keeps ticking with no draws.
-  }
 }
 
 declare global {

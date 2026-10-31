@@ -71,6 +71,17 @@ import {
 import { createFrameComposer } from '../host/frame-composer';
 import { computeVisualWheelSpinDeltaRad } from '../voxel/wheel.mount.utils';
 import { fillCarRenderPose } from '../car/generate-car';
+import {
+  createChaseCameraFollowState,
+  resolveChaseCameraAimRad,
+  resolveChaseCameraBasis,
+  stepChaseCameraFollow,
+} from './chase-camera';
+import type {
+  ChaseCameraBasis,
+  ChaseCameraFollowState,
+  ChaseCameraFollowStep,
+} from './chase-camera';
 import type { NeatRacingFrameComposerFrame } from '../host/frame-composer';
 import type { NeatRacingHudState } from '../host/hud';
 import { createHud } from '../host/hud';
@@ -122,6 +133,90 @@ export type NeatRacingStop = () => void;
  * @returns A stop handle that removes the mounted canvas.
  */
 export type NeatRacingStart = (outputId: string) => NeatRacingStop;
+
+/**
+ * The 14N drift debug seam: the read-only, EXACTLY eight-field view of the
+ * live drift channel that the browser half measures. It is a debug
+ * surface, not a gameplay API.
+ */
+interface NeatRacingDriftState {
+  /**
+   * The chase-camera follow offset (rad): how far the camera aim is
+   * rotated off the nose heading, toward the PUBLISHED travel direction.
+   *
+   * Step 14P: the SIXTH seam field, added together with the camera
+   * re-wiring. It is the camera's own share of the shared slip scalar, so
+   * the browser half can measure how far the 3D view actually swung and
+   * compare it with the published slip.
+   */
+  readonly followOffsetRad: number;
+  /** The visible body yaw (rad) - the pose the renderer draws. */
+  readonly poseRad: number;
+  /**
+   * The PUBLISHED pose-spring rate (rad/s): how fast the visible body
+   * yaw is moving at this tick.
+   *
+   * Step 14R (AC-088): the EIGHTH seam field, added together with the
+   * drift-presentation car pass. The value is READ from the physics state
+   * (`car.drift.pose.poseRate`) and is NEVER re-derived in the browser.
+   *
+   * It is a NAMED channel and it is NOT the traction severity (that is the
+   * SEVENTH field): the pose rate is the crab's own rate, the exact
+   * per-tick published quantity the browser half would otherwise have to
+   * ESTIMATE by differencing the pose across rendered frames - and the
+   * browser half is render-rate dependent, so a frame difference measures
+   * the camera, not the car. With the published rate the fixture can
+   * measure the crab's ring-down and its far-side pop DIRECTLY, in
+   * simulation time, next to the pose it belongs to.
+   */
+  readonly poseRateRadPerS: number;
+  /** The published physics slip angle (rad). */
+  readonly slipAngleRad: number;
+  /** The longitudinal speed (m/s). */
+  readonly speedMps: number;
+  /** The fixed simulation tick rate (Hz). */
+  readonly tickHz: number;
+  /**
+   * The deterministic simulation tick counter (`car.tick`).
+   *
+   * 14N W3: the FIFTH seam field, added together with the fixture reader
+   * and the fixture-gate document. The browser half is render-rate
+   * dependent (the host releases 0-4 simulation ticks per rendered
+   * frame), so a FRAME count can never address a simulation instant: a
+   * 600-tick phase spans about 1622 frames at 163 fps and about 330
+   * frames at 30 fps. `car.tick` is the deterministic 60 Hz clock the
+   * production already owns, so the browser half can budget its phases
+   * in TICKS and compute a frame-rate-independent rate (deg per tick
+   * delta) instead of a per-frame step.
+   */
+  readonly tick: number;
+  /**
+   * The PUBLISHED traction severity: how much traction the car is
+   * spending, in the closed unit interval `[0, 1]`.
+   *
+   * Step 14Q2 (AC-088): the SEVENTH seam field, added together with the
+   * published state field (the slice `P1-drift-traction-scalar`). The
+   * value is READ from the physics state (`car.tractionSeverity`) and is
+   * NEVER re-derived in the browser, so the browser half reads the SAME
+   * number the tires, the HUD and the car pass read.
+   */
+  readonly tractionSeverity: number;
+}
+
+/**
+ * The mutable drift-seam BAG: the SAME field set as the published view
+ * with the `readonly` modifiers stripped, so the frame builder can
+ * refresh the seam IN PLACE.
+ *
+ * Step 14Q2 (AC-088): the zero per-frame allocation rule holds - the seam
+ * object is a STABLE BAG, not a fresh object per frame. ONE bag is born
+ * per boot and the window handle keeps pointing at the SAME object, so
+ * this seam growth (and the next one) adds a field WITHOUT adding a
+ * per-frame allocation.
+ */
+type NeatRacingDriftStateBag = {
+  -readonly [Key in keyof NeatRacingDriftState]: NeatRacingDriftState[Key];
+};
 
 /** Element id given to the game canvas mounted by the boot stub. */
 const NEATRACING_CANVAS_ID = 'neatracing-canvas';
@@ -485,13 +580,14 @@ const NEATRACING_DEMO_TRACK_GENERATION = {
   sizeBucket: 'large',
 } as const;
 
-/** Chase-camera distance behind the car (world units). */
-const NEATRACING_CHASE_CAMERA_BACK = 5.5;
-/** Chase-camera height above the ground plane (world units). */
-const NEATRACING_CHASE_CAMERA_HEIGHT = 2.4;
-/** Chase-camera look-ahead distance along the car heading (world units). */
-const NEATRACING_CHASE_CAMERA_LOOKAHEAD = 8;
-/** Chase-camera pitch (radians) fed to the starfield camera pose. */
+/**
+ * Chase-camera pitch (radians) fed to the starfield camera pose.
+ *
+ * The chase GEOMETRY (the eye distance, the height and the look-ahead) is
+ * owned by the shared chase-camera module (`./chase-camera`), so the camera
+ * placement, the look target and the camera forward can never be derived
+ * from two different sets of constants.
+ */
 const NEATRACING_CHASE_CAMERA_PITCH_RADIANS = 0.12;
 /** Chase-camera vertical field of view (radians). */
 const NEATRACING_CHASE_CAMERA_FOV_RADIANS = Math.PI / 3;
@@ -850,7 +946,17 @@ function startLiveDriveLoop(
   const viewProjection = new Float32Array(16);
   const view = new Float32Array(16);
   const projection = new Float32Array(16);
-  const cameraWorld: [number, number, number] = [0, 0, 0];
+  // The chase-camera basis (Step 14P): the camera eye, the look target and
+  // the camera forward in ONE stable bag, refreshed IN PLACE every frame
+  // (the zero per-frame allocation rule). The composer frame's
+  // `cameraWorld` IS the basis camera eye - one array, no copy - so the
+  // camera can never be placed by a SECOND set of chase constants.
+  const chaseBasis: ChaseCameraBasis = {
+    cameraWorld: [0, 0, 0],
+    lookTarget: [0, 0, 0],
+    forwardVector: [0, 0, 0],
+  };
+  const cameraWorld = chaseBasis.cameraWorld;
   const cameraPose = { yawRadians: 0, pitchRadians: 0 };
   const carPoseBag = {
     worldX: 0,
@@ -860,13 +966,43 @@ function startLiveDriveLoop(
     wheelSpinRad: 0,
     steerAngleRad: 0,
     driftYawOffsetRad: 0,
+    tractionSeverity: 0,
   };
   const carsBag = [carPoseBag];
+  // The drift debug seam BAG (Step 14Q2): ONE stable object, refreshed IN
+  // PLACE every frame, so the seam can carry the PUBLISHED traction
+  // severity WITHOUT a per-frame allocation (the zero per-frame
+  // allocation rule). The window handle is assigned this SAME bag once
+  // per frame, so the seam never hands out a fresh object per frame. The
+  // seeds below are never published: the bag is refreshed BEFORE every
+  // assignment.
+  const driftSeamBag: NeatRacingDriftStateBag = {
+    followOffsetRad: 0,
+    poseRad: 0,
+    poseRateRadPerS: 0,
+    slipAngleRad: 0,
+    speedMps: 0,
+    tick: 0,
+    tickHz: 0,
+    tractionSeverity: 0,
+  };
   // In-place ambient pulse bag (the frame property is a stable readonly
   // reference by composer contract; contents are refreshed per frame the
   // same way `cameraWorld` and `carPoseBag` mutate their stable buffers).
   const pulseListBag: AmbientPulse[] = [];
   let wheelRadius = NEATRACING_WHEEL_FALLBACK_RADIUS;
+  // The chase-camera follow state (Step 14P): a STABLE in-place bag - the
+  // frame never holds a fresh follow object (the zero per-frame allocation
+  // rule). The follow advances in TICKS, so the aim is frame-rate
+  // independent: the same number of ticks always yields the same offset.
+  const chaseFollow: ChaseCameraFollowState = createChaseCameraFollowState();
+  const chaseFollowStep: ChaseCameraFollowStep = {
+    ticks: 0,
+    headingRad: 0,
+    travelHeadingRad: 0,
+    speedMps: 0,
+    tick: 0,
+  };
   // Display wheel spin accumulates the clamped visual omega across frames
   // (AC-015 strobing cap); it resets when a new session binds or when a
   // restart winds the tick counter backwards.
@@ -902,12 +1038,26 @@ function startLiveDriveLoop(
     const boundSession = driveHolder.session;
     if (boundSession !== null) {
       const car = boundSession.state.car;
-      const forwardX = Math.cos(car.heading);
-      const sceneForwardZ = -Math.sin(car.heading);
       const carSceneZ = carSceneWorldZ(car.y);
-      cameraWorld[0] = car.x - forwardX * NEATRACING_CHASE_CAMERA_BACK;
-      cameraWorld[1] = NEATRACING_CHASE_CAMERA_HEIGHT;
-      cameraWorld[2] = carSceneZ - sceneForwardZ * NEATRACING_CHASE_CAMERA_BACK;
+      // Step 14P: the chase camera follows the TRAVEL direction (the
+      // PUBLISHED slip), not the nose. The follow advances in TICKS - the
+      // deterministic tick counter is the clock - so the aim is identical
+      // whether the frame released one tick or four.
+      chaseFollowStep.ticks = Math.max(0, car.tick - chaseFollow.lastTick);
+      chaseFollowStep.headingRad = car.heading;
+      chaseFollowStep.travelHeadingRad = car.travelHeadingRad;
+      chaseFollowStep.speedMps = car.speed;
+      chaseFollowStep.tick = car.tick;
+      stepChaseCameraFollow(chaseFollow, chaseFollowStep, chaseFollow);
+      // The ONE aim law: the nose heading plus the follow offset.
+      const chaseAimRad = resolveChaseCameraAimRad(
+        car.heading,
+        chaseFollow.offsetRad,
+      );
+      // The ONE basis: the camera eye, the look target and the camera
+      // forward are all derived from the aim ALONE (the shared
+      // chase-camera module owns the geometry).
+      resolveChaseCameraBasis(car.x, car.y, chaseAimRad, chaseBasis);
       if (
         wheelSpinBoundSession !== boundSession ||
         car.tick < wheelSpinLastTick
@@ -935,10 +1085,48 @@ function startLiveDriveLoop(
         NEATRACING_TEAM_ID_RED,
         boundSession.state.input?.steer,
       );
-      // AC-047C: feed the pre-computed visual drift yaw offset from the
-      // physics state directly into the car pass. This avoids a per-frame
-      // Math.atan2; the offset is recomputed once per 60 Hz physics tick.
-      carPoseBag.driftYawOffsetRad = car.driftYawOffset;
+      // AC-047C / AC-087: feed the pre-computed visual drift pose from the
+      // physics state directly into the car pass. The pose now lives in the
+      // NESTED drift channel (`car.drift.pose.pose`); it is recomputed once
+      // per 60 Hz physics tick, never per frame.
+      carPoseBag.driftYawOffsetRad = car.drift.pose.pose;
+      // AC-088: the car pass CONSUMES the published traction severity, so
+      // the ONE shared scalar the physics state publishes reaches the
+      // tires (the per-tire grip) and the front-wheel steer yaw. The value
+      // is READ here and NEVER re-derived in the browser.
+      carPoseBag.tractionSeverity = car.tractionSeverity;
+      // 14N drift debug seam: ONE assignment per frame, EXACTLY eight
+      // fields, and no new public gameplay API (it is a `window.` debug
+      // surface, not an exported module symbol). The browser half
+      // MEASURES the pose instead of inferring it. The fifth field is
+      // the deterministic simulation tick counter, so the browser half
+      // can budget its phases in TICKS and measure a rate per tick
+      // instead of per rendered frame. The sixth field (Step 14P) is the
+      // chase-camera follow offset: the camera's own share of the
+      // shared slip scalar, so the browser half can measure how far the
+      // 3D view actually swung. The seventh field (Step 14Q2) is the
+      // PUBLISHED traction severity: the ONE shared scalar the physics
+      // state publishes, READ here and NEVER re-derived in the browser.
+      // The eighth field (Step 14R) is the PUBLISHED pose-spring rate
+      // (rad/s): the crab's own rate, read from the physics state, so
+      // the browser half can measure the ring-down and the far-side pop
+      // in simulation time instead of differencing the pose across
+      // render-rate dependent frames. It is NOT the severity (that is the
+      // seventh field).
+      //
+      // The seam is a STABLE BAG (the zero per-frame allocation rule):
+      // the fields are refreshed IN PLACE and the window handle is
+      // assigned the SAME bag, so the seam never allocates a fresh
+      // object per frame.
+      driftSeamBag.poseRad = car.drift.pose.pose;
+      driftSeamBag.poseRateRadPerS = car.drift.pose.poseRate;
+      driftSeamBag.slipAngleRad = car.slipAngle;
+      driftSeamBag.speedMps = car.speed;
+      driftSeamBag.tickHz = 1 / NEATRACING_FIXED_TIMESTEP_SECONDS;
+      driftSeamBag.tick = car.tick;
+      driftSeamBag.followOffsetRad = chaseFollow.offsetRad;
+      driftSeamBag.tractionSeverity = car.tractionSeverity;
+      window.neatRacingDriftState = driftSeamBag;
       // Ambient pulse window (TP-20): the pure time-window collector turns
       // the deterministic physics tick count into the alive-set, newest
       // first, so the expanding ground rings replay identically per seed.
@@ -952,7 +1140,9 @@ function startLiveDriveLoop(
       for (const pulse of nextPulses) {
         pulseListBag.push(pulse);
       }
-      cameraPose.yawRadians = carPoseBag.yawRad;
+      // The starfield yaw follows the TRAVEL direction (Step 14P), so the
+      // sky swings with the slide instead of with the nose.
+      cameraPose.yawRadians = carSceneYawRad(chaseAimRad);
       cameraPose.pitchRadians = NEATRACING_CHASE_CAMERA_PITCH_RADIANS;
       const aspect = canvas.height > 0 ? canvas.width / canvas.height : 16 / 9;
       perspectiveInto(
@@ -962,9 +1152,9 @@ function startLiveDriveLoop(
         NEATRACING_CHASE_CAMERA_NEAR,
         NEATRACING_CHASE_CAMERA_FAR,
       );
-      const targetX = car.x + forwardX * NEATRACING_CHASE_CAMERA_LOOKAHEAD;
-      const targetY = NEATRACING_CHASE_CAMERA_HEIGHT / 2;
-      const targetZ = carSceneZ + sceneForwardZ * NEATRACING_CHASE_CAMERA_LOOKAHEAD;
+      const targetX = chaseBasis.lookTarget[0];
+      const targetY = chaseBasis.lookTarget[1];
+      const targetZ = chaseBasis.lookTarget[2];
       lookAtInto(
         view,
         cameraWorld[0],
@@ -978,15 +1168,12 @@ function startLiveDriveLoop(
       // Right-world billboarding basis: derive normalized camera-right/up from
       // the chase look direction so the public/agent sprites always face the
       // active camera. The basis is refreshed in-place on the shared draw-state
-      // bag (zero per-frame allocation).
-      const toTargetX = targetX - cameraWorld[0];
-      const toTargetY = targetY - cameraWorld[1];
-      const toTargetZ = targetZ - cameraWorld[2];
-      const forwardDistance =
-        Math.hypot(toTargetX, toTargetY, toTargetZ) || 1;
-      const fX = toTargetX / forwardDistance;
-      const fY = toTargetY / forwardDistance;
-      const fZ = toTargetZ / forwardDistance;
+      // bag (zero per-frame allocation). The forward vector comes from the
+      // shared chase basis (Step 14P), so the sprites and the camera can never
+      // disagree about where the camera looks.
+      const fX = chaseBasis.forwardVector[0];
+      const fY = chaseBasis.forwardVector[1];
+      const fZ = chaseBasis.forwardVector[2];
       const rX = fY * 0 - fZ * 1;
       const rY = fZ * 0 - fX * 0;
       const rZ = fX * 1 - fY * 0;
@@ -1101,7 +1288,8 @@ function startLiveDriveLoop(
     presses,
     sampleKeyboardInput,
     sampleAutoInput: (car) => stepAutopilotInput(car, trackSpec.splineSamples),
-    stepPhysics: (car, input) => stepPhysics(car, input, surfaceResolver),
+    stepPhysics: (car, input) =>
+      stepPhysics(car, input, surfaceResolver, trackSpec.segments),
     stepRaceRules,
     resolveForwardLapLineCrossing,
     createInitialCarState: () =>
@@ -1223,6 +1411,11 @@ declare global {
   interface Window {
     /** Neat Racing demo boot function installed by the host bundle. */
     neatRacingStart?: NeatRacingStart;
+    /**
+     * The 14N drift debug seam: the read-only eight-field view of the live
+     * drift channel. Assigned once per frame by the browser entry.
+     */
+    neatRacingDriftState?: NeatRacingDriftState;
   }
 }
 

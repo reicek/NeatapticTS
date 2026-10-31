@@ -18,13 +18,17 @@
  * user `change` event and a programmatic `setMode`); never rebuild DOM
  * on mode change (allocation policy: only allocation is mount-time).
  *
- * Phase-1 reconciliation (batch 108 user-gap patch): the overlay still
- * exposes both 'ai' and 'manual' options, but the INITIAL mode is 'ai' —
- * the served page must open as a running race (the AI autopilot seam in
- * race-session samples the deterministic driver), while the manual
- * option keeps the keyboard lap flow pickable; a user switch to
- * 'manual' fires the AC-033 restart hook. Same-value switches are
- * documented no-ops (and covered
+ * Boot mode (Step 14P / AC-087, the L8 mask, re-pointing the batch-108
+ * user-gap patch): the overlay still exposes both 'ai' and 'manual'
+ * options, but the INITIAL mode is 'manual'. WHY: the served page IS
+ * the acceptance surface (the user judges the drift on the page that
+ * is actually served) and the ai-mode page is never acceptable
+ * evidence — the AI autopilot crosses the 0.5 engage cliff on only 176
+ * of 7200 ticks (2.44 percent), so an AI boot masks the very slide
+ * the user has to judge. The 'ai' option stays SELECTABLE through the
+ * same switch, which still notifies its listeners and fires the
+ * AC-033 restart hook. Same-value switches are documented no-ops (and
+ * covered
  * by the slice contract's jest non-call assertion) rather than silent
  * restarts: the host shell must not reset a race because a user
  * re-picked the already-active mode.
@@ -59,8 +63,19 @@ const MODE_OPTIONS: readonly NeatRacingRaceMode[] = [
   MODE_OPTION_MANUAL,
 ];
 
-/** Initial race mode: the page opens as a running AI-driven race (batch 108). */
-const INITIAL_RACE_MODE: NeatRacingRaceMode = MODE_OPTION_AI;
+/**
+ * Initial race mode: the game page boots in MANUAL mode.
+ *
+ * WHY (Step 14P / AC-087, the L8 mask): the served page is the
+ * acceptance surface — the user judges the drift on the page that is
+ * actually served — and the ai-mode page is never acceptable evidence.
+ * The AI autopilot only crosses the 0.5 engage cliff on 176 of 7200
+ * ticks (2.44 percent), so an AI boot masks the very slide the user
+ * has to judge. This is a BOOT DEFAULT and nothing else: the 'ai'
+ * option stays selectable through the mode selector and a switch still
+ * notifies its listeners (AC-033).
+ */
+export const INITIAL_RACE_MODE: NeatRacingRaceMode = MODE_OPTION_MANUAL;
 
 /** Selector placement mode (fixed overlay corner, Neatenstein pattern). */
 const SELECT_POSITION_ABSOLUTE: string = 'absolute';
@@ -186,7 +201,7 @@ function createModeSelect(): HTMLSelectElement {
 /**
  * What: creates the race-mode selector overlay inside the reserved host
  * output container with the Neatenstein `hud.human-mode.utils.ts`
- * structure: a single `<select>` (ai, manual — initial 'ai'), a
+ * structure: a single `<select>` (ai, manual — initial 'manual'), a
  * closure-held current mode, an `onSwitch` subscription list, and one
  * `change` listener plus one `setMode` entry point that both notify
  * subscribers exactly once per actual switch and never notify on
@@ -195,8 +210,10 @@ function createModeSelect(): HTMLSelectElement {
  * Why (AC-033 pre-verify): the host shell will connect `onSwitch` to a
  * race restart (later-phase slice); this slice delivers and verifies the
  * hook so the restart wiring cannot be blocked by a missing selector
- * surface. Batch 108 opens the race in the 'ai' mode (running page);
- * the boot glue never calls `setMode`; the 'manual' option remains
+ * surface. Step 14P opens the race in the 'manual' mode (the served
+ * page is the acceptance surface and the ai-mode page is never
+ * acceptable evidence — see `INITIAL_RACE_MODE`); the boot glue never
+ * calls `setMode`; the 'ai' option remains
  * rendered
  * and selectable to keep the toggle contract fully exercisable (same
  * CSS tokens, cyan/magenta; option order `ai, manual` from AC-024).
@@ -213,8 +230,8 @@ function createModeSelect(): HTMLSelectElement {
  * @example
  * ```ts
  * const selector = createRaceModeSelector('neatracing-hud-output');
- * selector.mode; // 'ai'
- * selector.setMode('manual'); // notifies onSwitch listeners once with 'manual'
+ * selector.mode; // 'manual' (the boot default)
+ * selector.setMode('ai'); // notifies onSwitch listeners once with 'ai'
  * selector.setMode('ai'); // same-value: documented no-op, not notified
  * selector.onSwitch((mode) => restartRace(mode));
  * ```
@@ -240,7 +257,10 @@ export function createRaceModeSelector(
   const setMode: (next: NeatRacingRaceMode) => void = (
     next: NeatRacingRaceMode,
   ): void => {
-    /* istanbul ignore if -- no-op guard; the test always changes mode */
+    // Same-value guard: re-picking the already-active mode is a
+    // documented no-op, never a silent restart. The re-baselined
+    // same-value pin (Step 14P / AC-087) exercises this branch, so no
+    // coverage exemption is needed.
     if (next === mode) {
       return;
     }

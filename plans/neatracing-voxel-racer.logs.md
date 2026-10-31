@@ -13359,3 +13359,1314 @@ PlanUpdate:
   notes: 'All reviewer-requested changes applied and re-reviewed. No high-confidence render defects remain. Green-testing owns the fresh browser evidence.'
 ```
 
+## Step 14E audit - P1-spec-audit-physics (2026-10-29)
+
+**Slice:** `P1-spec-audit-physics` (Step 14E, phase 1) — READ-ONLY audit of the physics
+code against spec §5 (and the §7.4 G9 wheel-mount contract), plus the plan-recorded
+amendments of 14C / 14G / 14I / 14N–14S / 14T.
+
+**Mandate honoured:** NO production code, NO spec prose and NO production behaviour was
+changed by this slice. The only writes are this evidence section and the single slice-status
+flip in `plans/neatracing-voxel-racer.plans.md`.
+
+**Method:** cross-read of spec §5 (+ §7.4) against the live physics surface. Every claim
+below cites a file + line. Review-only slice: no jest / tsc / build was run (not required
+by the slice contract), no browser/CDP, no mutating git, no child agents (one slim
+dispatch).
+
+**Surfaces actually audited** (the slice packet names two files that do not exist — see F-01):
+
+- `examples/neatRacing/physics/physics.step.service.ts` (961 lines) — the top-down step service.
+- `examples/neatRacing/physics/drift.model.ts` — the drift / momentum laws.
+- `examples/neatRacing/physics/collision.utils.ts` — the road-containment bound.
+- `examples/neatRacing/physics/ai.autopilot.ts` — the AI turn-rate-percent channel.
+- `examples/neatRacing/host/race-session.ts` + `examples/neatRacing/host/input.ts` — the live tick + the D5 sampling seam.
+- `examples/neatRacing/engine/passes/car.pass.ts` — the AC-078 tire-follow chain.
+- `examples/neatRacing/voxel/wheel.mount.utils.ts` — the §7.4 G9 wheel-mount contract.
+- `examples/neatRacing/engine/lighting.ts` — the §5.2 fog constant owner.
+
+### Audit table — physics vs spec §5 / §7.4 and the plan-recorded amendments
+
+| ID | Gap | File / section reference | Severity | Clarification options (A / B / C) |
+| --- | --- | --- | --- | --- |
+| F-01 | The audited module names do not exist. The spec and the slice packet name a top-down `environment.step.service.ts` and a `physics/constants.ts`; the live physics surface is `physics.step.service.ts` (+ `drift.model.ts`, `collision.utils.ts`, `ai.autopilot.ts`) and the only `constants.ts` under the example is `browser-entry/constants.ts` (unrelated to physics). An audit or verification pass pointed at the named files would inspect nothing and read as green. | spec.md §5.2 (lines 288-289, "`environment.step.service.ts` shape"); plans.md:4322-4323 (`files_to_change`); actual owners: `examples/neatRacing/physics/physics.step.service.ts`, `physics/drift.model.ts`, `physics/collision.utils.ts`, `physics/ai.autopilot.ts` | HIGH | **A)** amend the spec §5.2 prose and the slice `files_to_change` to the landed module names; **B)** keep the prose generic ("the top-down physics step service") and drop the two phantom `files_to_change` entries; **C)** keep both and add an explicit legacy-name mapping note. |
+| F-02 | The §5.2 arcade-drift constant table is superseded: three of its six constants are asserted ABSENT by the landed test suite, and the two surviving names carry different values (max slip `0.45` vs `π/2`; grip-falloff threshold `0.2` vs `0.25`). | spec.md §5.2 drift table (lines 294-303); landed: `drift.model.ts:100` (`NEATRACING_DRIFT_MAX_SLIP_ANGLE_RAD = 0.45`), `:207` (`NEATRACING_DRIFT_GRIP_FALLOFF_THRESHOLD_RAD = 0.2`), `:216` (`GRIP_FALLOFF_RATE_PER_RAD = 2` — matches); retired: `drift.model.test.ts:921`, `:923`, `:951` assert `LATERAL_GRIP_RATE_PER_S`, `COUNTERSTEER_RECOVERY_RATE_PER_S`, `MIN_GRIP_FACTOR` are absent | HIGH | **A)** rewrite the §5.2 table to the landed model (`0.45` / `0.2` / rate `2` + the AC-087/088/091 laws), deleting the three retired rows; **B)** keep the π/2 table and re-land the retired constants (contradicts the 14G/14Q ledger and the absence pins — NOT recommended); **C)** keep the table as the arcade-drift charter and add a normative "as-landed" block that supersedes it. |
+| F-03 | The §5.2 per-tick helper list (5 helpers) and the 6-step integration order do not describe the landed pipeline. The outward-push / grip-floor / countersteer-rate helpers were replaced by the commitment + momentum law + rational grip budget + countersteer authority, and the tick now runs 7 stages (4a–4e). | spec.md §5.2 (helpers lines 305-320, integration order lines 322-334); landed: `physics.step.service.ts:504` (surface), `:509` (demanded turn rate), `:532` (longitudinal speed), `:542` (4a commitment), `:555` (4b chase), `:566` (4c speed scrub), `:579` (4c-bis off-road floor RC-1), `:597` (4d slip), `:602` (4e pose spring), `:616` (translate), `:623` (traction severity); `drift.model.ts:766` (momentum demand), `:1044` (grip budget), `:1072` (countersteer authority), `:1151` (next lateral velocity) | HIGH | **A)** replace the §5.2 helper list + integration order with the landed 7-stage order and the landed laws; **B)** keep the §5.2 prose as the charter and add the as-landed pipeline as a normative annex; **C)** retire the §5.2 drift-amendment block and point §5.2 at a new §5.2.1 as the only normative drift text. |
+| F-04 | The §5.2 `CENTRIFUGAL` row (outward push `0.3 × curvature × speedPercent²`) has NO code counterpart, and the constant is pinned GONE by the landed tests. The centrifugal effect now enters only through the AC-091 momentum law, so the row reads as a live locked-baseline constant that does not exist. | spec.md §5.2 row (line 281); no `CENTRIFUGAL` constant anywhere under `examples/neatRacing/physics`; `physics.step.service.test.ts:463-468` asserts `NEATRACING_PHYSICS_CENTRIFUGAL_MULTIPLIER` is gone; the replacement: `drift.model.ts:766-826` (`computeMomentumSlideDemandRad`) | HIGH | **A)** delete the row and replace it with the momentum-law row (the excess-share law); **B)** keep the row and mark it RETIRED (superseded by AC-091) with the replacement named; **C)** keep the row as javascript-racer provenance with a pointer to the replacement. |
+| F-07 | The AC-081 road-containment bound is LANDED as a pure util but is NOT applied by the shipped drive loop. The live tick calls `stepPhysics` only, so neither the manual lane nor the live `ai` lane is contained; the AI measurement lane contains itself inside the test harness. The user-reported "the AI-driven car leaves the road" defect is therefore still reproducible on the served page, while the AC-085 measurement reads green because the harness applies the bound itself. | landed bound: `collision.utils.ts:369-390` (`resolveTrackBoundaryCar`; drivable edge = `nearestChord.halfWidthM` at `:376`), `:608-625` (`reboundPastDrivableSurfaceEdge`, renamed from `reboundPastApronEdge`), `:66-77` (the 3.0 m apron constant now only mirrors a NON-drivable band); NOT WIRED: the only callers are `ai.autopilot.test.ts:827` / `:878` / `:929` and `collision.utils.test.ts`; the live loop is `host/race-session.ts:260` (`deps.stepPhysics(state.car, input)`) and `browser-entry/browser-entry.ts:799` (wires only `createTrackSurfaceResolver`) | HIGH | **A)** wire `resolveTrackBoundaryCar` into the live tick (race-session.ts, after every `stepPhysics`) and add a live-lane containment test; **B)** keep the bound harness-only and re-scope AC-081 to the AI measurement lane (requires a plan amendment that retires the user-facing "the AI-driven car must not leave the road" clause); **C)** wire it in the browser-entry AI seam only (leaves the manual lane unbounded). |
+| F-05 | The `STEERING_RATE` row states only the pre-14T user law. The landed service has TWO channels: the speed-softened user channel and the never-softened AI percent channel. The row therefore under-describes the locked baseline for every speed above the reduction band. | spec.md §5.2 row (line 282, "`dx = dt · 2 · speedPercent`"); landed: `physics.step.service.ts:269` (`STEERING_RATE = 2`), `:280` (reduction fraction `0.2`), `:293` (factor floor `0.75`), `:307` (reduction band `10` u/s), `:812-838` (`resolveTurnRateSpeedFactor`: `1` → `0.8` at the top speed), `:853-878` (`resolveDemandedTurnRateRadPerS`; AI channel `:862`, user channel `:874-881`); AI publisher `ai.autopilot.ts:298-300`, `:559` | MED | **A)** amend the row to the two-channel form with the named factor; **B)** keep the row and add a normative "Step 14T amendment" paragraph beneath it; **C)** keep the row and record the amendment plan-only (consistent with F-13/B, but leaves §5.2 non-normative). |
+| F-06 | The visual drift yaw formula in §5.2 is superseded by the 14N pose spring: the offset is no longer `clamp(lateralVelocity / speed · GAIN)` but a second-order spring toward `slipAngle · GAIN + POSE_STEER_YAW_RAD · articulation`, bounded by the declared pose envelope. | spec.md §5.2 visual-drift-yaw paragraph (lines 336-345); landed: `drift.model.ts:518` (`NEATRACING_DRIFT_VISUAL_YAW_GAIN_RAD = 0.45` — name and value survive), `:547` (`NEATRACING_DRIFT_POSE_ENVELOPE_RAD`), `:1240-1264` (`stepDriftPoseSpring`); consumers `car.pass.ts:1717-1727` (body), `:1745-1752` (wheels), `:1521` (shadow) | MED | **A)** amend the formula to the pose-spring target and the envelope; **B)** keep the formula as the first-order intent and append the pose-spring amendment; **C)** replace the paragraph with a pointer to the car-pass drift-yaw contract (the only binding consumer). |
+| F-08 | The AC-081 ledger text and the `P1-track-road-containment` slice packet still describe the PRE-tightening bound and cite retired names/lines, so a reader following the AC text inspects the wrong code and may conclude the 3.0 m apron is still drivable. | plans.md:531 (AC-081 row cites `collision.utils.ts:232` and `:238` and `reboundPastApronEdge` at `:433`); plans.md:4002-4024 (the slice packet; its `satisfaction_record` at `:4015-4021` records the landing); landed `collision.utils.ts:369` / `:376` / `:608` / `:77`; the slice status is deliberately still `[PLANNED]` (plans.md:4004) | MED | **A)** refresh the AC-081 row + slice packet citations to the landed names/lines (keeping `[PLANNED]` for the green slice); **B)** keep the "before" citations and append an explicit "landed as" note; **C)** defer the refresh to the 14I green slice that owns AC-081. |
+| F-09 | AC-079's ledger text still cites three RETIRED literals as if they were live (the `0.7` grip floor, `computeGripFalloff`, `effectiveGrip = 4 * gripFalloff`). The landed proportional-traction-loss law is the speed scrub plus the rational grip budget, so the AC text describes a model that no longer exists. | plans.md:529 (AC-079 row); retired references `drift.model.ts:54` / `:142` / `:224` — none exist in the landed file; landed: `drift.model.ts:1113-1121` (`computeLongitudinalSpeedScrub`, coeff `0.55`), `:1044-1060` (`computeGripBudgetFactor`), `:715-725` (`computeTractionSeverity`) | MED | **A)** re-pin the AC-079 row citations to the landed laws; **B)** keep the "before" citations and add a "landed as" column; **C)** leave the charter row untouched and put the re-pin only in the existing AC-087..AC-090 re-derivation subsection. |
+| F-13 | **NEEDS CLARIFICATION (the single marker for this slice).** The spec cannot express the amended physics contract at all: its appended AC list stops at AC-046, while the live physics contracts (AC-078..AC-093) live only in the plan ledger. "The spec" and "the landed law" are therefore two different documents, and every §5.2 gap above (F-02, F-03, F-04, F-05, F-06) is a symptom of that split. | spec.md:1966 (the last appended AC is AC-046); plans.md:528-544 (the AC-078..AC-093 ledger rows, the only record of the 14G / 14I / 14N-14T amendments) | MED | **A)** amend the spec: add a normative §5.4 "as-landed physics contract" block (or extend the §13.4 AC list through AC-093) so the spec is normative again; **B)** declare the plan ledger authoritative for the physics contracts and add a §5.2 pointer ("the drift and turn-rate laws are superseded by the plan ledger AC-078..AC-093"); **C)** dual-track: the spec carries the normative law names + values, the plan keeps the ledger and the measured evidence. |
+| F-10 | AC-078's ledger text cites the pre-fix defect lines. The landed code parents the wheel chain onto the drift-yawed body matrix, so the CONTRACT IS SATISFIED — only the citations are stale. | plans.md:528 (AC-078 row cites `car.pass.ts:1570` / `:1583` / `:1364` / `:1398`); landed: `car.pass.ts:1717-1727` (the body drift-yaw matrix), `:1745-1752` (the wheel chain parented onto `NEATRACING_CAR_BODY_MODEL_MATRIX`), `:1521` (the per-wheel shadow inherits the drift yaw) | LOW | **A)** refresh the citations to the landed lines; **B)** keep them as the defect record and append the landed reference; **C)** leave the charter row untouched. |
+| F-11 | `FOG_DENSITY` is listed in the §5.2 physics "locked tuning baseline" table, but its constant lives in the render surface. The VALUE matches, so this is a cross-reference drift only. | spec.md §5.2 row (line 283); landed: `examples/neatRacing/engine/lighting.ts:65` (`NEATRACING_FOG_DENSITY_1_PER_M = 0.006`) | LOW | **A)** annotate the row with its owning module; **B)** move the fog + draw-distance rows into §6 (rendering) where they belong; **C)** leave it (value matches; cosmetic). |
+| F-12 | §5.3's replay tuple is stale in two ways: it names a `seed` the physics surface does not have (the surface is RNG-free), and it does not name the two channels the replay now depends on (the optional AI turn-rate percent and the surface band law). | spec.md §5.3 (lines 355-359); landed: `physics.step.service.ts:100-123` (`PhysicsStepInput`, the optional `turnRatePercent` at `:117`), `:499` (`stepPhysics` with the optional surface resolver); no `Math.random` anywhere under `examples/neatRacing/physics` (grep: 0 hits); determinism twin-run `physics.step.service.test.ts:478-484` | LOW | **A)** amend §5.3 to the real tuple (car state + input incl. the optional turn-rate percent + the track band law); **B)** keep the "seed" wording and add "the physics surface is RNG-free"; **C)** leave it (Phase 2 §9.7 owns the full worker tuple). |
+| F-14 | §5.1's pacing paragraph is written for the Phase-2 worker (pull model, latest-wins, one in-flight request). Phase 1 runs the same accumulator on the host; the catch-up contract itself holds, so this is a phase-landing note, not a defect. | spec.md §5.1 (lines 231-244); landed: `host/render-loop.utils.ts:41` (`NEATRACING_MAX_CATCHUP_STEPS_PER_FRAME = 4`), `:177-214` (the accumulator, 0-or-1+ steps), `host/race-session.ts:245-260` (the per-frame sample replayed into every catch-up tick); the worker / latest-wins seam lands in Phase 2 (§9.2) | INFO | **A)** annotate §5.1 with the phase landing; **B)** leave it (the spec is phase-agnostic; §9.2 owns the landing); **C)** leave it. |
+
+### Verified conformant — no gap recorded
+
+| ID | Contract | Evidence |
+| --- | --- | --- |
+| V-01 | §5.1 top-down 2D + deterministic 60 Hz fixed timestep | `physics.step.service.ts:203` (`FIXED_TIMESTEP_MS = 1000/60`), `:210` (`FIXED_TIMESTEP_SECONDS = 1/60`); `host/render-loop.utils.ts:41` (catch-up cap 4) |
+| V-02 | §5.1 D5 — the keyboard is sampled ONCE per rAF frame and the SAME sample feeds every catch-up tick | `host/race-session.ts:245-260`; `host/input.ts:83-93` |
+| V-03 | §5.1 D6 — the collision radius is a named fixed physics constant, never derived from voxel models | `collision.utils.ts:58` (`NEATRACING_CAR_COLLISION_RADIUS_M = 1.0`) + its JSDoc `:44-57` |
+| V-04 | §5.1 TP-01 — the ~320 km/h / 89 u/s top-speed target | `physics.step.service.ts:219` (`MAX_SPEED_UNITS_PER_S = 89`) |
+| V-05 | §5.2 longitudinal baseline + off-road floor | `physics.step.service.ts:225` (`max/5`), `:232` (`−max`), `:240` (`−max/5`), `:250` (`−max/2`), `:259` (`max/4`); the floor gate `:912` (`isOffRoadSpeedFloorEngaged`) applied to the POST-scrub speed `:579` (RC-1) |
+| V-06 | §5.2 drift — `GRIP_FALLOFF_RATE_PER_RAD = 2` matches, and the drift surface is pure / RNG-free | `drift.model.ts:216`; no `Math.random` under `examples/neatRacing/physics` |
+| V-07 | §5.2 helper 1 — `slip = atan2(lateralVelocity, speed)`, `0` at standstill | `drift.model.ts:1271-1279` (`computeSlipAngle`) — the spec form HOLDS |
+| V-08 | §5.3 determinism — the twin-run RED test asserts byte-identical states; the service never mutates its input | `physics.step.service.test.ts:478-484` (single car), `:1733-1749` (fleet) |
+| V-09 | §7.4 G9 wheel-mount contract — pivot at the disc geometric center, hub height = wheel radius (contact patch at y=0), 90° mount so the spin axis is lateral, ω = v/r, spin cap 2 rev/s | `voxel/wheel.mount.utils.ts:57` (32³ grid), `:86` (`HUB_HEIGHT_M = WORLD_RADIUS_M`), `:92-99` (`PIVOT_VOXEL` = `[0.5,0.5,0.5]`), `:107` (`MOUNT_YAW_RAD = π/2`), `:364` (`trueWheelSpinOmega`), `:114` (`MAX_VISUAL_WHEEL_REV_PER_S = 2`) |
+| V-10 | AC-079 proportional traction loss — no constant grip floor survives | `drift.model.ts:1113-1121` (speed scrub) + `:1044-1060` (rational grip budget) |
+| V-11 | AC-088 — ONE shared traction severity, monotonic in slide and speed, clamped to `[0,1]`, consumed by the HUD without re-derivation | `drift.model.ts:715-725`; `host/race-session.ts:268-275` |
+| V-12 | AC-091 momentum law — the drift is produced by the momentum excess; the demanded turn RATE is the input, exactly `0` at a standstill and for a zero demanded rate; the per-tick delta is derived from the same rate | `drift.model.ts:766-826`; `physics.step.service.ts:509-531` (rate resolved once), `:889` (`resolveYawRatePerTick`) |
+| V-13 | AC-092 / AC-093 — the user channel is mildly softened, the AI channel is authoritative when present and NEVER softened, the keyboard sampler omits the percent (so the user channel is the default), and the AI keeps its 2.2 rad⁻¹ gain and 12 m lookahead (behaviour-preserving) | `physics.step.service.ts:812-838`, `:862-864`, `:874-881`; `host/input.ts:83-93`; `ai.autopilot.ts:74`, `:77`, `:298-300`, `:559` |
+| V-14 | AC-078 — the attached tires follow the body drift yaw (body, wheel chain and per-wheel shadow share the drift-yawed matrix) | `car.pass.ts:1717-1727`, `:1745-1752`, `:1521` |
+
+### Clarification ledger
+
+- **NEEDS CLARIFICATION markers raised by this slice: 1 of 3** (step-wide budget 3; this
+  slice's budget 1). The single marker is **F-13** (where the amended physics contract
+  canonically lives: a spec amendment vs a plan-only ledger). F-13 is recorded, not
+  resolved — it is an escalation item for the step owner, not a blocker for this
+  read-only slice. Every other row carries A/B/C options only.
+
+### Severity roll-up
+
+| Severity | Count | IDs |
+| --- | --- | --- |
+| HIGH | 5 | F-01, F-02, F-03, F-04, F-07 |
+| MED | 5 | F-05, F-06, F-08, F-09, F-13 |
+| LOW | 3 | F-10, F-11, F-12 |
+| INFO | 1 | F-14 |
+| **Total gaps** | **14** | — |
+| Verified conformant | 14 | V-01 .. V-14 |
+
+**Headline:** the code is the better-documented artifact — 14 of the audited contracts
+conform, and the 5 HIGH gaps are all *documentation/specification* gaps except F-07, which
+is a real wiring gap: the AC-081 containment bound exists and is tested, but the shipped
+drive loop never calls it, so the "AI car leaves the road" user defect survives on the
+served page. F-07 is the one row this audit escalates beyond documentation.
+
+```yaml
+phase: 1
+step: 14E
+slice_id: 'P1-spec-audit-physics'
+title: 'Audit physics code against spec §5'
+status: '[DONE]'
+goal: planning
+tdd_sequence: green-only
+mode: review-only
+source_of_truth: 'plans/neatracing-voxel-racer.plans.md'
+audit_scope: 'spec §5.1 / §5.2 / §5.3 and §7.4 (G9) vs examples/neatRacing/physics/* + the host tick seam, the car-pass wheel chain and the wheel-mount utils'
+read_only_mandate: honoured - no production code, no spec prose, no production behaviour changed
+files_changed:
+  - 'plans/neatracing-voxel-racer.logs.md'
+  - 'plans/neatracing-voxel-racer.plans.md'
+production_code_changed: false
+spec_prose_changed: false
+gaps_recorded: 14
+gaps_by_severity:
+  HIGH: 5
+  MED: 5
+  LOW: 3
+  INFO: 1
+conformant_contracts_verified: 14
+needs_clarification_markers: 1
+needs_clarification_marker_ids:
+  - 'F-13'
+validation_evidence:
+  - 'Review-only audit table (14 gaps with file/section reference, severity and A/B/C options + 14 verified-conformant contracts) appended to this log section'
+  - 'neataptic-gate-mcp:run_gate_check gate=slice-advancement slice-id=P1-spec-audit-physics changed-files=plans/neatracing-voxel-racer.plans.md,plans/neatracing-voxel-racer.logs.md -> PASS (TRIVIAL, 4/4 sub-gates pass: plan-sync, step-packet, plan-slice-quality, plan-command-lint; 0 failed, 0 errored)'
+  - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/neatracing-voxel-racer.plans.md -> PASS (ok: true, 0 errors, 0 warnings)'
+  - 'No jest/tsc/build run (review-only slice; the contract requires no test execution)'
+risks_or_gaps:
+  - 'F-07 HIGH: the AC-081 containment bound is landed as a util (collision.utils.ts:369) but is NOT wired into the live drive loop (host/race-session.ts:260 calls stepPhysics only) - the user-facing "the AI-driven car must not leave the road" defect is still reproducible on the served page. Owner: Step 14I P1-track-road-containment.'
+  - 'F-01 HIGH: the slice packet and the spec §5.2 name two non-existent inspection targets (environment.step.service.ts, physics/constants.ts) - a verification pass pointed at them would read as green without auditing anything.'
+  - 'F-02 / F-03 / F-04 HIGH: spec §5.2 still publishes the retired drift constant table, the retired helper list and the retired CENTRIFUGAL row - the spec is actively wrong against the landed model.'
+  - 'F-13 MED: the amended physics contract (AC-078..AC-093) exists only in the plan ledger; the spec stops at AC-046, so no single artifact is normative for the physics laws.'
+handoff_to: '05-green-testing'
+next_agent: '01-planning'
+next_steps:
+  - 'Step 14E remaining audit slices (P1-spec-audit-render, P1-spec-audit-voxel) and the step-wide clarification pass over the 3-marker budget.'
+  - 'Route F-07 to Step 14I (P1-track-road-containment) as the live-tick wiring gap; route F-01/F-02/F-03/F-04/F-05/F-06/F-13 to the spec-amendment owner.'
+notes: 'Single slim dispatch, no child agents, no browser/CDP, no mutating git, one NEEDS CLARIFICATION marker (F-13). The audit table is the deliverable; the slice status flip in the plans file is the only tracker mutation.'
+
+## EOL-PROBE
+
+```
+
+## Step 14E audit - P1-spec-audit-render (2026-10-29)
+
+**Slice:** `P1-spec-audit-render` (Step 14E, phase 1) — READ-ONLY audit of the renderer /
+composer code against spec §6 (canvas strategy, render loop, starfield, neon grid, pulse,
+car + glass passes, lighting and post, track and right-world rendering), plus the
+plan-recorded amendments of 14C / 14F / 14G / 14H / 14I / 14J / 14K / 14L / 14M / 14N.
+
+**Mandate honoured:** NO production code, NO spec prose and NO production behaviour was
+changed by this slice. The only writes are this evidence section and the single slice-status
+flip in `plans/neatracing-voxel-racer.plans.md`.
+
+**Method:** cross-read of spec §6 (lines 362-588) against the live render surface. Every
+claim below cites a file + line. Review-only slice: no jest / tsc / build was run (not
+required by the slice contract), no browser/CDP, no mutating git, no child agents (one slim
+dispatch).
+
+**Surfaces actually audited** (the slice packet names one file that does not exist — see R-01):
+
+- `examples/neatRacing/host/frame-composer.ts` (916 lines) — the scene FBO, the identity-stable pass bags, the per-frame draw order.
+- `examples/neatRacing/engine/passes/{grid,pulse,bloom,starfield,track,car,glass}.pass.ts` — §6.4.x / §6.5 / §6.6.
+- `examples/neatRacing/engine/lighting.ts` — the shared sun / hemisphere / fog model.
+- `examples/neatRacing/engine/context.service.ts` — the AC-040 warmup registry and sweep.
+- `examples/neatRacing/track/grid.pass.ts` + `track/grid.builder.ts` — the LIVE neon floor grid.
+- `examples/neatRacing/track/right-world.pass.ts` + `track/right-world.builder.ts` — the right-world props, bleachers and crowd billboards.
+- `examples/neatRacing/track/public.sprite.ts` — the public billboard atlas, the crowd roles and the billboard world scale.
+- `examples/neatRacing/track/road-edge.ts` + `track/track.slabs.ts` — the tri-color road-edge band and the slab pitch.
+- `examples/neatRacing/browser-entry/browser-entry.ts` + `browser-entry/canvas-dimensions.utils.ts` + `browser-entry/constants.starfield.ts` — the canvas ladder, the boot program registry and the starfield constants.
+- `examples/neatRacing/voxel/lod.distance.utils.ts` — the LOD swap focal length.
+
+### Audit table — renderer / composer vs spec §6 and the plan-recorded amendments
+
+| ID | Gap | File / section reference | Severity | Clarification options (A / B / C) |
+| --- | --- | --- | --- | --- |
+| R-01 | The first named inspection target does not exist. `examples/neatRacing/engine/renderer.ts` is absent from the example (a `**/renderer*.ts` glob over `examples/neatRacing` returns 0 matches) and no renderer module exists under `engine/`; the live render surface is `host/frame-composer.ts` + `engine/passes/*` + `engine/lighting.ts` + `engine/context.service.ts` + `track/grid.pass.ts` + `track/right-world.pass.ts` + `browser-entry/*`. A verification pass pointed at the named file would audit nothing and read as green. | slice packet `files_to_change` / audit scope (plans.md:4286-4400, the `P1-spec-audit-render` entry); the phantom path is absent; the real owners are `examples/neatRacing/host/frame-composer.ts`, `engine/passes/*.pass.ts`, `engine/lighting.ts`, `engine/context.service.ts`, `track/grid.pass.ts`, `track/right-world.pass.ts`, `browser-entry/browser-entry.ts`, `browser-entry/canvas-dimensions.utils.ts` | HIGH | **A)** amend the slice packet `files_to_change` and the audit scope to the landed surface; **B)** keep the scope generic ("the renderer/composer") and drop the phantom path; **C)** keep both and add an explicit legacy-name mapping note. |
+| R-02 | **NEEDS CLARIFICATION (the single marker for this slice).** The canvas strategy has two live answers and no canonical one. Spec §6.2 / LD-17 pin a FIXED 720 px backing-store height with a proportional width, a 1920 px clamp and a CSS stretch; the shipped host applies a FULL-WINDOW STRETCH instead (backing store = the CSS client size, CSS `width/height: 100%`), and that decision was recorded ONLY in the logs — never in the spec or the AC ledger. | spec.md:141 (LD-17), spec.md:376-387 (§6.2); plans.md:956 and :968 (AC-002 requires "updateRendererSize letterbox apply at boot + resize"); logs.md:12052-12054 and :12068-12072 (evidence batch 133, 2026-10-05 — the full-window stretch decision); landed: `browser-entry/browser-entry.ts:551-552` → `applyFullWindowStretchStyle` + `updateFullWindowRendererSize` → `browser-entry/canvas-dimensions.utils.ts:245-257` (`resolveFullWindowBackingDimensions`: client size → viewport → 1280×720 fallback); the §6.2-conformant ladder (`resolveCanvasBackingDimensions` / `updateRendererSize`) survives only in the starfield reference (`browser-entry.ts:531`) and in unit tests; the resize-listener JSDoc (`browser-entry.ts:1346-1348`) still claims it "re-applies the letterbox strategy from the live viewport (spec §6.2)" while the body applies the full-window stretch | HIGH | **A)** amend §6.2 / LD-17 to the full-window stretch (client-size backing store, the 1280×720 fallback, the CSS stretch) and re-pin plans.md AC-002; **B)** keep the letterbox normative and re-land the §6.2 ladder in the host (contradicts the 2026-10-05 decision and the visible-window evidence — NOT recommended); **C)** keep §6.2 as the charter and add a normative "full-window stretch (2026-10-05)" clause as the ONLY binding sizing rule. |
+| R-06 | The AC-080 continuous tri-color road-edge band is NOT implemented: the hard radial cut-off still truncates the red shell at a convex corner and no corner extension exists. This is the one open IMPLEMENTATION gap in the render surface. | AC-080 (plans.md:530) — the band must be CONTINUOUS along the affected outer section, "the known missing red tile at outer corner 2 (-4.00, -136.34) at seed 0 / small"; landed `track/road-edge.ts:333-351` (green ≤ 2 m, yellow ≤ 4 m, red ≤ 6 m, no tile beyond) with no corner extension; the RED contract `describe('outer-corner border markers')` in `track/road-edge.test.ts` (fixture note `:332-333` — "The current implementation is known to miss a red tile within the exterior bisector cone at vertex 2"; assertion `:465`) is documented failing — 18 passed / 1 failed (plans.md:3958-3998, `P1-track-outer-corner-markers-red` = `[DONE 2026-10-20]`); the implementing slice `P1-track-outer-corner-markers` is still `[PLANNED]` (plans.md:3972) and Step 14I is still `[PLANNED]` (plans.md:693) | HIGH | **A)** land the corner extension now — the RED contract already exists, so only the implementation is missing; **B)** keep the band as an explicitly open 14I deliverable and close the audit row against the plan citation (the owner is Step 14I, not this slice); **C)** narrow AC-080 to the sampled corner only (weakens the user-visible "continuous band" clause — NOT recommended). |
+| R-03 | The neon floor-grid pitch moved from the §6.4.2 "1.0 world unit" to the landed 5.0 m — and the spec now contradicts ITSELF, because its own AC-045 pins the 25 m² / 5.0 m footprint while §6.4.2 still publishes 1.0. The code follows AC-045; only the prose is stale. | spec.md §6.4.2 ("Grid pitch 1.0 world unit"); spec.md:1937-1943 (AC-045 — 25 m² footprint via `NEATRACING_TRACK_GRID_CELL_FOOTPRINT_AREA_MULTIPLIER = 25`, "giving a 5.0 m line spacing"); landed `track/grid.builder.ts:14` (baseline 1 m²), `:17` (multiplier 25), `:23-25` (target 25 m²), `:32-33` (`NEATRACING_TRACK_GRID_SPACING_M = sqrt(25) = 5.0`); plans.md:495 (the AC-045 ledger row, same 5 m / 25 m²) | MED | **A)** amend §6.4.2 to the 25 m² / 5.0 m footprint and delete the "1.0 world unit" clause; **B)** keep §6.4.2 as the intent and add a normative "Step 14C grid-footprint amendment" paragraph; **C)** keep §6.4.2 and add a pointer to AC-045 as the binding pitch. |
+| R-04 | TWO neon-grid implementations coexist and the key/program mapping contradicts itself. The 1 m engine grid pass is ORPHANED in production (no host caller) yet still owns the canonical `'grid'` program key and its own warmup converter, while the boot registry binds the `'grid'` key to the track-grid program — so the key name and the program it warms disagree. | `createGridPass` has NO production caller: grep over `examples/neatRacing/**/*.ts` returns only its definition (`engine/passes/grid.pass.ts:442`) and its own test (`:504`, `:532`, `:539`, `:544`, `:581`, `:625`, `:643`); `engine/passes/grid.pass.ts:559-565` (`toGridWarmupProgram`) is never called by the host; the composer keeps an optional `passes.grid` branch (`host/frame-composer.ts:830-833`) that the host never provides; `browser-entry.ts:497-513` (`createBootProgramRegistry`) binds the `'grid'` key to `toTrackGridWarmupProgram`; `engine/context.service.ts:42-44` claims the pinned key list makes "the warmup sweep and the pass registry cannot drift apart" — they have | MED | **A)** delete the orphaned engine grid pass AND its warmup converter in the same change that renames the registry key to `'track-grid'` (no deferred cleanup); **B)** keep the engine grid pass as a non-host surface but rename its key to `'engine-grid'` and give the track-grid its own `'track-grid'` key (the count becomes 10 — AC-040's "7–9" clause must move); **C)** keep both and add an explicit "which grid is live" sentence to §6.4.2. |
+| R-05 | AC-040's warmup sweep covers 9 programs while the LIVE program set is 11: the two right-world programs are compiled inside the pass factory and get NO off-screen warmup draw. The AC-040 INTENT holds (nothing compiles lazily mid-race, because the right-world programs compile during boot), but the letter does not: "compiles+links ALL shader programs and performs one off-screen draw per pass … the number of warmed programs (7–9) is a named constant asserted by test". | AC-040 (spec.md:1902-1911); `engine/context.service.ts:45-55` (the nine keys), `:64-65` (the derived count), `:240-...` (`runShaderWarmup` against a 1×1 offscreen target, one draw per program); `browser-entry.ts:497-513` (the boot registry builds exactly those nine); `browser-entry.ts:1235-1236` creates `createTrackGridPass(gl)` AND `createRightWorldPass(gl)`; `track/right-world.pass.ts:1118-1140` compiles + links the prop program inside the factory (the billboard program follows) and NO `toRightWorldWarmupProgram` exists anywhere (grep `WarmupProgram` over `examples/neatRacing` → 0 hits in `track/right-world.pass.ts`); the live per-frame draw set is 8 calls (`host/frame-composer.ts:822`, `:837`, `:841`, `:846`, `:852`, `:857`, `:861`, `:956`) — the `grid` branch at `:832` never fires because the host never provides it | MED | **A)** add a `toRightWorldWarmupProgram` seam for the two right-world programs and extend the registry to 11 keys (update the AC-040 count and the `NEATRACING_WARMED_PROGRAM_KEYS` test); **B)** keep the nine keys and amend AC-040's count clause to cover the programs that are NOT created by a pass factory (documents the exception, weaker contract); **C)** keep the nine keys and fold the right-world warmup into the `track` slot (no count change, one extra off-screen draw). |
+| R-07 | Spec §6 has NO clause for the right-world crowd / bleacher / billboard contract at all. The entire 14F / 14J / 14K / 14L render contract (bleacher count, seats per level, the four crowd roles, the counts, the billboard world scale, the personal space, the camera-relative facing) lives ONLY in the plan ledger, so "the spec" and "the shipped crowd" are two different documents. | spec.md §6.7 (lines ~510-530) — the only right-world sentence is "Voxel scenery props are optional per course (off by default at launch)"; a scan of the whole of §6 (362-588) finds no bleacher / seated / walker / standing / mechanic / billboard-scale / personal-space clause; the live contracts live only in plans.md:500-533 (AC-050 … AC-078) | MED | **A)** add a normative §6.9 "right-world crowd contract" block (bleacher count, seats per level, the roles, the counts, the scale, the personal space, the facing); **B)** declare the plan ledger authoritative for the crowd contract and add a §6.7 pointer; **C)** dual-track — the spec carries the names + values, the plan keeps the ledger and the measured evidence. |
+| R-08 | The §6.4.1 starfield table is superseded by the landed full-backdrop tile and the ×3 counts, so the flappy-parity clause is FALSE and the parity test still claims the spec table. | spec.md §6.4.1 (the 35 / 28 / 23 table, the 240 px sky band, "the horizon line sits at the band's bottom edge", and the AC-004 flappy-parity clause); landed `browser-entry/constants.starfield.ts:63` (105), `:68-70` (84 / 69), `:139-141` (the retained 240 px `NEATRACING_SKY_BAND_HEIGHT_PX`, now only a horizon reference); `engine/passes/starfield.pass.ts:549` + `:887` (`setBackdropSize` — the backdrop tile replaces the band), `:821` (`u_horizonNdcY` default −1.0) with the mapping `ndcY = 1.0 − (wrappedYPx / u_tileSizePx.y) * (1.0 − u_horizonNdcY)`; the flappy reference still pins 35 / 28 / 23 (`examples/flappy_bird/constants/constants.starfield.ts:74`, `:84`, `:94`); `engine/passes/starfield.pass.test.ts:49` and `:352-355` still title the case "the flappy-parity layer table the spec §6.4.1 pins verbatim (AC-004)" while binding the ×3 counts; the change IS plan-recorded (AC-059 / AC-060 rows, plans.md:507-508) but the spec prose was never amended | MED | **A)** amend §6.4.1 to the landed table (105 / 84 / 69 + the backdrop-tile horizon model) and re-title the parity test (or re-point it at the flappy constants); **B)** keep the spec table as the charter and add a normative "full-backdrop tile (AC-059 / AC-060)" clause as the binding model; **C)** keep both and re-state the flappy-parity clause as "the layer RATIOS are parity-preserving (35:28:23 → 105:84:69)" — the only option that keeps the AC-004 wording true without re-titling the test. |
+| R-09 | The LOD swap distance is derived from the FIXED 720 px render height while the live backing store is the client size, so the LOD threshold drifts with the window size (and the two disagree in the same way as R-02). | `voxel/lod.distance.utils.ts:80-110` (`NEATRACING_LOD_SWAP_FOCAL_PX` derived from `NEATRACING_FIXED_RENDER_HEIGHT` = 720); the live backing store is the CSS client size (`browser-entry/canvas-dimensions.utils.ts:245-257`); §6.7 / LD-17 tie the LOD and the projection to the fixed backing store | MED | **A)** derive the focal pixels from the LIVE backing-store height (upload it on every resize) so the LOD matches the actual projection; **B)** keep the fixed 720-px focal and pin the backing store back to 720 (depends on the R-02 outcome); **C)** keep the fixed focal and document that the LOD is deliberately resolution-independent (then the constant must be re-derived per FOV, not per height). |
+| R-10 | The bloom target is a FIXED 640×360, so §6.6's "half resolution of the 720p backing store" no longer holds — the bloom buffer is half-res only at exactly 1280×720. | spec.md §6.6 (threshold → ONE separable blur at half resolution, 640×360); `engine/passes/bloom.pass.ts:141` (`TARGET_WIDTH = 640`), `:147` (`TARGET_HEIGHT = 360`); the live backing store is the client size (`browser-entry/canvas-dimensions.utils.ts:245-257`) → at 1920×1080 the bloom target is ~1/5.4 of the frame area | LOW | **A)** derive the bloom target from the live backing store (half of it) — the same fix as R-09; **B)** keep 640×360 fixed and amend §6.6 to "a fixed 640×360 bloom target"; **C)** keep the constant and re-title the §6.6 clause as the launch-resolution statement. |
+| R-11 | Two coexisting "backdrop" notions: the starfield's backdrop reference is the LETTERBOX size while the framebuffer is the CLIENT size. Currently inert (the mapping divides by `u_tileSizePx` and `u_horizonNdcY` defaults to −1.0), but the contract is incoherent and any future `horizonNdcY ≠ −1` change would expose it. | `browser-entry/browser-entry.ts:531` (`resolveStarfieldBackingDimensions` → `resolveCanvasBackingDimensions`, the letterbox resolver) and `:1362`; the framebuffer is the client size (`browser-entry/canvas-dimensions.utils.ts:245-257`); `engine/passes/starfield.pass.ts:821` (`u_horizonNdcY` default −1.0), `:549`, `:887` | LOW | **A)** feed the starfield the LIVE backing-store size (one source of truth — the same fix as R-09 / R-10); **B)** keep the letterbox reference and pin the framebuffer to the letterbox size (depends on R-02); **C)** keep both and add a named comment that the backdrop reference is intentionally the letterbox size. |
+| R-12 | The pulse colour is a hex / decimal mismatch: the spec pins `#B7FF00` (hex 0xB7 = 183) while the implementation keeps the decimal triplet (185, 255, 0) authoritative. The implementation already documents the defect and deliberately did not "fix" it. | spec.md §6.4.3 (`#B7FF00`, glow alpha 0.42, depth-tested); `engine/passes/pulse.pass.ts:28` (`NEATRACING_PULSE_COLOR_HEX = '#B7FF00'`), `:33-43` (the JSDoc: "Spec defect (flagged to the spec owner, intentionally not 'fixed' here): the spec pins the hex token `#B7FF00` (hex 0xB7 decodes to 183) and the decimal triplet (185, 255, 0) … the decimal pin stays authoritative") | LOW | **A)** amend the spec to `#B9FF00` (185) so the hex and the decimal agree; **B)** amend the implementation to the spec's hex 0xB7 = 183 and drop the decimal pin; **C)** keep both and state in §6.4.3 that the DECIMAL triple is normative and the hex is a display alias. |
+| R-13 | Two stale JSDoc claims contradict the shipped constants and the shipped strategy (both are documentation drift, not behaviour). | (a) `browser-entry/browser-entry.ts:488-491` — "The legacy 1 m² engine grid pass has been replaced by the 2 m² track-grid pass" — the landed track-grid cell footprint is 25 m² with a 5.0 m spacing (`track/grid.builder.ts:17`, `:23-25`, `:32-33`), not 2 m²; (b) `browser-entry/browser-entry.ts:1346-1348` — the resize listener "re-applies the letterbox strategy from the live viewport (spec §6.2)" while the body calls `applyRendererSize` → the full-window stretch (`browser-entry/canvas-dimensions.utils.ts:245-257`) — the same strategy R-02 is about | LOW | **A)** re-author both docblocks to the landed values (25 m² / 5.0 m; full-window stretch); **B)** drop the parenthetical spec citations from the docblocks (they restate §6.2 / §6.4.2 in prose and drift); **C)** keep them and add a "see AC-045 / evidence batch 133" pointer. |
+
+### Verified conformant — no gap recorded
+
+| ID | Contract | Evidence |
+| --- | --- | --- |
+| RV-01 | §6.1 / AC-040 — the warmup registry is a named constant list with a DERIVED count, swept against a 1×1 offscreen target with one draw per program | `engine/context.service.ts:45-55` (the nine keys), `:64-65` (the derived count), `:131-137` (the offscreen warmup target), `:240-...` (`runShaderWarmup`) |
+| RV-02 | §6.3 / AC-042 — zero per-frame allocation: the pass bags are created once and mutated in place | `host/frame-composer.ts:530`, `:582` (identity-stable per-pass bags) |
+| RV-03 | §6.3 — the composer draw order is starfield → pulse → track → track-grid → right-world → car → glass, then exactly ONE bloom composite to the default framebuffer | `host/frame-composer.ts:822` (starfield), `:832` (the optional legacy `grid` branch — never provided by the host), `:837` (pulse), `:841` (track), `:846` (track-grid), `:852` (right-world), `:857` (car), `:861` (glass), `:956` (the single bloom composite); the module header at `:18` states the same order |
+| RV-04 | §6.5 — the glass pass draws after ALL opaque geometry, and the cars are drawn far → near | `host/frame-composer.ts:857` (cars), `:861` (glass, last into the scene FBO) |
+| RV-05 | §6.6 — fog is `exp2(−(FOG_DENSITY_1_PER_M · d)²)` with the shared constant 0.006, uploaded by the track pass | `engine/lighting.ts:65` (`NEATRACING_FOG_DENSITY_1_PER_M = 0.006`) + the shared GLSL chunk; `engine/passes/track.pass.ts:10-18` (the shared lighting imports), `:542-574` (`uSunDirection` / `uSunColor` / `uHemisphereSky` / `uHemisphereGround` / `uFogColor` / `uFogDensity`) |
+| RV-06 | §6.4.2 — the neon grid keeps the 0.05 → 0.58 alpha ramp, the 2 px core / 4 px halo at 0.8 and the fwidth smoothing; the LIVE track-grid pass reuses the SAME shared constants | `engine/passes/grid.pass.ts:25-40` (the constants), `:128-135` (the fwidth threshold), `:221-236` (the fog-envelope alpha); `track/grid.pass.ts:13-18` (the shared imports), `:263-274` (the uniform uploads) |
+| RV-07 | §6.4.3 — the pulse keeps `#B7FF00`, the 0.42 glow alpha, the depth test, the 2.4 s / 500 ms cadence and the 4-concurrent cap | `engine/passes/pulse.pass.ts:28` (hex), `:38-43` (the RGB decomposition), `:52` (`NEATRACING_PULSE_GLOW_ALPHA = 0.42`), `:58` (the 2 000 ms lifetime), `:64` (the 500 ms cadence), `:67` (max 4 concurrent) |
+| RV-08 | §6.6 — bloom is threshold → ONE separable blur at 640×360, at most 13 taps, additively composited | `engine/passes/bloom.pass.ts:11` (`NEATRACING_BLOOM_MAX_TAPS = 13`), `:141` (640), `:147` (360), `:938-942` (the three warmup programs) |
+| RV-09 | §6.6 — the bright-pass input is the glow voxels MINUS the starfield and the pulses, so only emissive voxels bloom | `engine/passes/bloom.pass.ts:811-812` |
+| RV-10 | §6.4.1 — the starfield horizon, blink and gloom are implemented and wired to the uniforms | `engine/passes/starfield.pass.ts:220-236` (the uniforms), `:408` (`computeStarfieldBlink`), `:428` (`computeStarfieldGloomAlphaScale`), `:821` (`u_horizonNdcY`), `:887` (`setBackdropSize`) |
+| RV-11 | §6.7 — the track renders on a 0.5 m slab pitch with the shared draw-distance extent | `track/track.slabs.ts:43` (`NEATRACING_TRACK_SLAB_PITCH_M = 0.5`), `:289-290` (the cell origin); `engine/passes/grid.pass.ts` (`NEATRACING_DRAW_DISTANCE_M = 320`) |
+| RV-12 | AC-067 — the track AND the right world share ONE lighting model (sun + hemisphere + fog) through the same named uniform set | `engine/lighting.ts` (the shared `NEATRACING_LIGHTING_UNIFORM_NAMES` + the chunk); `engine/passes/track.pass.ts:542-574`; `track/right-world.pass.ts:1145-1148` (the same uniform-name loop) |
+| RV-13 | AC-050 … AC-053 / 14F — right-world fidelity, colour diversity and placement: the six team accent colours, the 8 directions × 3 poses atlas (144 frames) and the four crowd roles | `track/public.sprite.ts:787` (`PUBLIC_TEAM_ACCENT_COLOR_IDS`), `:356` (the `seated | walker | standing | mechanic` role union), `:473` (`NEATRACING_PUBLIC_BILLBOARD_SEATED_PER_BLEACHER`), `:1106` (the 2.4 s walk-cycle period) |
+| RV-14 | AC-065 — the 1 m personal space with a named epsilon, applied to the robots, and NOT derived from the sprite size | `track/right-world.builder.ts:287` (`NEATRACING_ROBOT_PERSONAL_SPACE_M = 1.0`), `:313` (the epsilon), `:332` (the clearance constant), `:388` / `:403` (`filterRobotsByPersonalSpace`); `track/right-world.pass.ts:570` (the personal-space filter inside the scene build) |
+| RV-15 | AC-066 / AC-076 — the crowd repopulation: exactly 20 populated bleachers × 3 levels × 4 evenly spread seats = 240 seated, plus 20 walkers / 10 standing / 4 mechanics = 34 off-bleacher agents, i.e. 274 = the per-frame billboard budget EXACTLY; the bleachers have stepped rows with walk space, back stairs and track-facing guardrails | `track/right-world.builder.ts:90` (`NEATRACING_RIGHT_WORLD_BLEACHER_COUNT = 20`), `:1577` (`NEATRACING_BLEACHER_SEATS_PER_LEVEL = 4`), `:1045-1143` (the voxel rows / walk band / stairs / guardrails), `:1658+` (the level-major seat anchors); `track/public.sprite.ts:473` (12 seated per bleacher = 4 × 3), `:495` (`NEATRACING_PUBLIC_OFF_BLEACHER_AGENT_ALLOWANCE = 34`), `:506` (`NEATRACING_PUBLIC_BILLBOARD_DENSITY_BUDGET = 274`) — 20 × 12 = 240 seated + 34 = 274 |
+| RV-16 | The LIVE capacity filter is `filterBillboardsByAnchoringCapacity`; the DELETED `filterBillboardsByCrowdHost` is ABSENT from the file (confirmed absent, not audited) | `track/right-world.pass.ts:324` (the definition), `:569` (the single call site inside `buildRightWorldSceneData`); a grep for `filterBillboardsBy` over the file returns EXACTLY these two hits |
+| RV-17 | AC-077 — the crowd billboard world scale: `NEATRACING_PUBLIC_BILLBOARD_WORLD_SCALE = 0.5` × the SHARED `NEATRACING_BILLBOARD_WORLD_PIXEL_SCALE_M = 0.05`, applied INSIDE the distance-independent `computeBillboardScale`, with the foot anchor expanding the quad upward along `cameraUp` (so the seated sprites keep standing on their level). The AC-054 perspective-parity RATIO clause is retained; its absolute clause is superseded by AC-077. | `track/public.sprite.ts:587` (the shared 0.05 m/px), `:614` (`NEATRACING_PUBLIC_BILLBOARD_WORLD_SCALE = 0.5`), `:906-912` (the distance-independent `computeBillboardScale`); `track/right-world.pass.ts:1005` (the quad scale), `:957-984` (the camera-facing, foot-anchored quad build); plans.md:527 (AC-077 — "the AC-054 perspective-parity RATIO contract is RETAINED while its absolute … clause is SUPERSEDED by this row") |
+| RV-18 | AC-068 — the crowd billboards are camera-facing (the quad basis is derived from the host camera basis, not from a fixed world axis) | `track/right-world.pass.ts:20` and `:24` (the module contract), `:123-144` (the derived camera basis), `:368` / `:421-423` (the derived axis), `:957-984` (the camera-facing quad fill) |
+| RV-19 | AC-078 — the tire-follow visual: the attached tires follow the body drift yaw (body, wheel chain and per-wheel shadow share the drift-yawed matrix) — confirmed in the sibling physics audit (V-14) and re-verified on the render side | `engine/passes/car.pass.ts:1717-1727` (the body matrix), `:1745-1752` (the wheel chain), `:1521` (the per-wheel shadow) |
+| RV-20 | §6.2 — the canvas CSS stretch is applied (the canvas is stretched to fill its container) | `browser-entry/canvas-dimensions.utils.ts:215-...` (`applyFullWindowStretchStyle`), `:245-257` (`resolveFullWindowBackingDimensions`) |
+
+### Clarification ledger
+
+- **NEEDS CLARIFICATION markers raised by this slice: 1 of 3** (step-wide budget 3; this
+  slice's budget 1). The single marker is **R-02** (which canvas strategy is canonical:
+  the §6.2 / LD-17 fixed-720 letterbox or the shipped full-window stretch). R-02 is
+  recorded, not resolved — it is an escalation item for the step owner, not a blocker for
+  this read-only slice. Every other row carries A/B/C options only.
+- **R-07 is deliberately NOT counted as a marker.** It is the render-side twin of the
+  physics sibling's F-13 (the spec/ledger canon split); the step-wide budget already
+  spends one marker on that identical structural issue, so R-07 is recorded as a gap with
+  options only and cross-references F-13.
+
+### Severity roll-up
+
+| Severity | Count | IDs |
+| --- | --- | --- |
+| HIGH | 3 | R-01, R-02, R-06 |
+| MED | 6 | R-03, R-04, R-05, R-07, R-08, R-09 |
+| LOW | 4 | R-10, R-11, R-12, R-13 |
+| **Total gaps** | **13** | — |
+| Verified conformant | 20 | RV-01 .. RV-20 |
+
+**Headline:** the render surface is the better-specified half of the project — 20 audited
+contracts conform, including the whole right-world crowd contract (20 bleachers × 3 levels
+× 4 evenly spread seats = 240 seated + 34 off-bleacher agents = the 274 budget exactly, the
+LIVE `filterBillboardsByAnchoringCapacity`, the `0.5` world scale × the shared 0.05 m/px
+constant, the 1 m personal space and the shared sun/hemisphere/fog lighting). Only ONE row
+is a real implementation gap: **R-06**, the AC-080 continuous tri-color road-edge band —
+the hard 6 m radial cut-off is still in `road-edge.ts` and the RED contract is still
+failing (Step 14I owns it). The other two HIGH rows are documentation/canon rows: **R-01**
+(the slice's own first inspection target does not exist) and **R-02** (the canvas strategy
+has two live answers and no canonical one). The systemic theme is the SAME canon split the
+physics sibling recorded as F-13: the spec stops at AC-046 while the landed render contract
+runs to AC-078, so §6 prose and the shipped code disagree on the grid pitch (R-03), the
+starfield table (R-08) and the crowd contract (R-07) — while the LIVE code matches the
+plan ledger in every case.
+
+```yaml
+phase: 1
+step: 14E
+slice_id: 'P1-spec-audit-render'
+title: 'Audit renderer / composer code against spec §6'
+status: '[DONE]'
+goal: planning
+tdd_sequence: green-only
+mode: review-only
+source_of_truth: 'plans/neatracing-voxel-racer.plans.md'
+audit_scope: 'spec §6.1-§6.8 (canvas strategy, render loop, starfield, neon grid, pulse, car + glass, lighting + post, track + right-world) vs examples/neatRacing/host/frame-composer.ts + engine/passes/* + engine/lighting.ts + engine/context.service.ts + track/grid.pass.ts + track/right-world.pass.ts + track/public.sprite.ts + track/road-edge.ts + browser-entry/* + voxel/lod.distance.utils.ts'
+read_only_mandate: honoured - no production code, no spec prose, no production behaviour changed
+files_changed:
+  - 'plans/neatracing-voxel-racer.logs.md'
+  - 'plans/neatracing-voxel-racer.plans.md'
+production_code_changed: false
+spec_prose_changed: false
+gaps_recorded: 13
+gaps_by_severity:
+  HIGH: 3
+  MED: 6
+  LOW: 4
+conformant_contracts_verified: 20
+needs_clarification_markers: 1
+needs_clarification_marker_ids:
+  - 'R-02'
+validation_evidence:
+  - 'Review-only audit table (13 gaps with file/section reference, severity and A/B/C options + 20 verified-conformant contracts) appended to this log section'
+  - 'neataptic-gate-mcp:run_gate_check gate=slice-advancement slice-id=P1-spec-audit-render changed-files=plans/neatracing-voxel-racer.plans.md,plans/neatracing-voxel-racer.logs.md -> PASS (TRIVIAL, 4/4 sub-gates pass: plan-sync, step-packet, plan-slice-quality, plan-command-lint; 0 failed, 0 errored)'
+  - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/neatracing-voxel-racer.plans.md -> PASS (ok: true, 0 errors, 0 warnings)'
+  - 'No jest/tsc/build run (review-only slice; the contract requires no test execution)'
+risks_or_gaps:
+  - 'R-06 HIGH: the AC-080 continuous tri-color road-edge band is NOT implemented - the hard 6 m radial cut-off still truncates the red shell at a convex corner (road-edge.ts:333-351) and the RED contract in road-edge.test.ts is documented failing (18 passed / 1 failed). Owner: Step 14I P1-track-outer-corner-markers.'
+  - 'R-02 HIGH: the canvas strategy has two live answers and no canonical one - spec §6.2 / LD-17 pin a fixed 720 px letterbox while the shipped host applies a full-window stretch (decision recorded only in logs evidence batch 133).'
+  - 'R-01 HIGH: the slice packet names examples/neatRacing/engine/renderer.ts as an inspection target, but no renderer module exists - a verification pass pointed at it would audit nothing and read as green.'
+  - 'R-07 MED: the whole right-world crowd contract (AC-050..AC-078) exists only in the plan ledger; spec §6 has no crowd clause at all (the render-side twin of the physics sibling F-13).'
+handoff_to: '05-green-testing'
+next_agent: '01-planning'
+next_steps:
+  - 'Step 14E remaining audit slice (P1-spec-audit-voxel) and the step-wide clarification pass over the 3-marker budget (physics F-13 + render R-02 = 2 used).'
+  - 'Route R-06 to Step 14I (P1-track-outer-corner-markers) as the only open implementation gap; route R-01 / R-02 / R-03 / R-07 / R-08 to the spec-amendment owner.'
+notes: 'Single slim dispatch, no child agents, no browser/CDP, no mutating git, one NEEDS CLARIFICATION marker (R-02). The audit table is the deliverable; the slice status flip in the plans file is the only tracker mutation. The sibling P1-spec-audit-physics section (logs.md:13362) was NOT edited.'
+
+## EOL-PROBE
+
+```
+
+## Step 14E audit - P1-spec-audit-voxel (2026-10-29)
+
+**Slice:** `P1-spec-audit-voxel` (Step 14E, phase 1) — READ-ONLY audit of the voxel pipeline
+against spec §7 (on-disk model format §7.2, greedy mesher merge contract §7.3.1, `.bin` LOD
+format §7.3.2, LOD 64³ build rules §7.3.3, LOD swap distance §7.3.4), plus the AC rows the
+slice packet cites (AC-007 … AC-013) and the post-14-step deltas they depend on.
+
+**Mandate honoured:** NO production code, NO spec prose and NO production behaviour was
+changed by this slice. The only writes are this evidence section and the single slice-status
+flip in `plans/neatracing-voxel-racer.plans.md`.
+
+**Method:** cross-read of spec §7 (lines 589-826) and the §13.1 AC rows (lines 1573-1762)
+against the live voxel surface. Every claim below cites a file + line. Review-only slice: no
+jest / tsc / build was run (not required by the slice contract), no browser/CDP, no mutating
+git, no child agents (one slim dispatch). Both named inspection targets were read in FULL; the
+LOD builder, the LOD distance helper, the materials table, the build script, the model
+schema/decoder and the quad consumers were read as cross-references because the slice's own
+acceptance criteria name "greedy mesher, LOD/distance swap, bin codec, signed-face convention"
+and AC-010 names the build-script artifacts.
+
+**Surfaces actually audited** (both named inspection targets EXIST — no F-01/R-01-style
+missing-file finding in this slice):
+
+- `examples/neatRacing/voxel/greedy-mesher.ts` — the shared greedy mesher (merge key, face
+  mask, quad records, shade helper). NAMED TARGET.
+- `examples/neatRacing/voxel/bin.codec.ts` — the `.bin` writer/loader (header, quad body,
+  validation, error taxonomy). NAMED TARGET.
+- `examples/neatRacing/voxel/lod.builder.ts` — §7.3.3 rules 1-9 (cross-reference).
+- `examples/neatRacing/voxel/lod.distance.utils.ts` — §7.3.4 computed swap distance +
+  hysteresis (cross-reference).
+- `examples/neatRacing/voxel/materials.ts` — the palette material table / LD-23 black-exception
+  owner (cross-reference).
+- `examples/neatRacing/voxel/model.schema.ts` + `model.decode.utils.ts` — §7.2 decode
+  validation (cross-reference; NOT a named target).
+- `examples/neatRacing/scripts/build-voxel-bins.mjs` — the AC-010 build script (cross-reference).
+- `examples/neatRacing/engine/passes/car.pass.ts` (+ `track.pass.ts`, `glass.pass.ts`) — the
+  quad consumers that prove the merge-key / orientation / indexing behaviour in the shipped
+  render path (cross-reference).
+- `examples/neatRacing/browser-entry/browser-entry.ts` — the runtime model → mesh path
+  (cross-reference).
+- `examples/neatRacing/track/track.slabs.ts` — the track-slab mesh path (cross-reference).
+- `examples/neatRacing/assets/models/{car-f1,wheel}.model.json` — the two shipped model
+  documents (dims / symmetry / palette).
+
+### Audit table — voxel pipeline vs spec §7 and the cited AC rows
+
+| ID | Gap | File / section reference | Severity | Clarification options (A / B / C) |
+|---|---|---|---|---|
+| X-01 | The G3 T-junction measure is absent everywhere. §7.3.1 requires the mesher to weld all lattice vertices into a shared indexed buffer AND split long quad edges at neighbouring T-points. The mesher returns a flat quad list (`{dims, quads}`) with no vertex/index buffer, and every consumer expands each quad into 6 non-indexed vertices drawn with `gl.drawArrays(GL_TRIANGLES, …)`. A repo-wide grep for `weld` / `T-junction` / `fan-split` / `indexed buffer` under `examples/neatRacing` returns 0 matches, and no test asserts a crack-free seam. | spec §7.3.1 "T-junction cracking (G3)" + the merge-contract shading-invariant clause; `examples/neatRacing/voxel/greedy-mesher.ts:116-121` (`VoxelMesh` = dims + quads), `:154-158` (`meshVoxelModel`); `examples/neatRacing/engine/passes/car.pass.ts:199` (`NEATRACING_CAR_VERTICES_PER_QUAD = 6`), `:678-737` (`expandVoxelBinModelToCarMesh`), `:1658` (`drawArrays`); `examples/neatRacing/engine/passes/track.pass.ts:114`, `:206`, `:581` | HIGH | **A** — implement the two named measures in the mesher (shared indexed buffer + T-point fan-split) and add a seam fixture to the AC-009 lane. **B** — amend §7.3.1 to the shipped contract ("non-indexed quad expansion on exact lattice vertices; no T-point splitting") and record the G3 measures as a future gate tied to the first neighbour-dependent shading feature. **C** — keep the clause normative but gate it explicitly: forbid per-vertex lighting / AO until a weld+split slice has landed, and add that refusal to the render/lighting AC set. |
+| X-02 | `npm run voxel:build` does not emit the AC-010 artifact set. The script writes exactly one output per model document, always with the hard-coded `-lod128.bin` suffix, and never calls the landed LOD builder — so no `lod64` tier exists, the car lands as `car-f1-lod128.bin` (the AC names `car-lod128.bin`) and the 32³ wheel lands as `wheel-lod128.bin` (a 32³ wheel mislabelled as the 128 tier). The script's own header defers the lod64 output to "P1-S3-D" — that slice HAS landed (`voxel/lod.builder.ts` exists), so the deferral is stale and AC-010's "artifacts exist" validation clause is unmet. | spec §7.3.2 ("emits `assets/bins/car-lod128.bin`, `car-lod64.bin`, and the wheel bins"), AC-010 (spec:1636-1640); `examples/neatRacing/scripts/build-voxel-bins.mjs:30-34` (stale deferral note), `:59` (`LOD128_SUFFIX`), `:105-140` (directory scan), `:156-172` (per-model write path), `:158-166` (imports: decoder + mesher + codec only — no LOD builder); `examples/neatRacing/assets/models/car-f1.model.json` (128³, symmetric) and `wheel.model.json` (32³, symmetric) | HIGH | **A** — extend the build script to derive the coarse tier through `buildLodModel` and emit `<name>-lod64.bin` plus a tier-correct wheel bin, and settle the car file name (`car-lod128.bin` vs `car-f1-lod128.bin`) in the same change. **B** — amend AC-010 to the shipped names and move the lod64 emission into its own AC owned by the LOD/build-script slice. **C** — keep the AC text and mark the artifact clause as an open Step-14E blocker with a named owner and a due step (no silent partial pass). |
+| X-03 | The axis-1 tangent mapping diverges from the spec's pinned record layout. §7.3.1 pins "axis0 → (y,z), axis1 → (z,x), axis2 → (x,y)" (a cyclic next-axis pattern); the shipped mapping is axis1 → (x,z), i.e. the width/height roles of the X and Z tangents are transposed for every Y-normal face. The in-repo pipeline is self-consistent (mesher, car expansion and track expansion all use the shipped rule) so nothing breaks in game — but a spec-conformant reader of a `.bin` transposes X and Z extents on every horizontal face (a 40×20 top face reads as 20×40). | spec §7.3.1 (tangent-mapping clause); `examples/neatRacing/voxel/greedy-mesher.ts:65-72` (`FACE_TANGENT_AXES` = 0:[1,2], 1:[0,2], 2:[0,1]); `examples/neatRacing/engine/passes/car.pass.ts:661-662` (JSDoc) and `:738-780` (corner resolvers); `examples/neatRacing/engine/passes/track.pass.ts:386-394` (`resolveTangentAxes`) | MED | **A** — make the code match the spec (axis1 → [2,0]) in the mesher plus both consumers; mechanical, but it re-cuts every bin and invalidates the golden quad fixtures. **B** — amend §7.3.1 to the shipped mapping and state it in the `.bin` format table as the record layout of version 1. **C** — keep the bytes, add an explicit "record layout v1 = axis1 → (x,z)" clause to §7.3.2 and require every reader (including the LOD writer) to use it. |
+| X-04 | **NEEDS CLARIFICATION** — the pipeline topology has two live answers and no canonical one. §7.1's flow diagram puts the `.bin` between the mesher and the GPU (`JSON → DECODE → MESHER → BIN → GPU`), but the shipped runtime never loads a `.bin`: the browser entry builds its `VoxelBinModel` objects in memory from `meshVoxelModel(...)` and the dev server merely serves the bin directory. The `.bin` file is therefore a build-time artifact whose byte-exact round trip protects a file no runtime path reads — which is also why X-01 and X-02 have no in-game symptom today. | spec §7.1 (mermaid flow + "the `.bin` LOD binaries are build-script outputs"), §7.3.2 (round-trip clause); `examples/neatRacing/browser-entry/browser-entry.ts:1210-1227` (in-memory `bodyBins` / `wheelBins`); `examples/neatRacing/engine/passes/car.pass.ts:1400-1401` (expands the in-memory bins); repo-wide grep for `assets/bins` / a `.bin` fetch → only the build script and the dev-server route test | MED | **A** — make the runtime consume the built `.bin` (`loadVoxelBin` over the server route) so the shipped format IS the shipped contract, and let the lod64 tier earn its keep. **B** — amend §7.1/§7.3.2 to state that the `.bin` is a build-time interchange artifact and the runtime meshes in-browser; scope the round-trip contract to the artifact and drop the BIN → GPU arrow. **C** — keep both paths and add a build-time byte-equality check (regenerated `.bin` == runtime-meshed model) so format drift fails the build instead of the game. |
+| X-05 | The black exception is not enforced "in the mesher" as §7.2 and §7.3.3 rule 7 state. The mesher exports `resolveVoxelShade` (which implements LD-23), but its only caller is the mesher's own unit test — no production module imports it, and the mesher's quad records carry no glow field at all, so the mesher cannot enforce the exception in its own output. The shipped enforcement lives in `voxel/materials.ts` (`resolveVoxelMaterial` / `buildVoxelMaterialTable`), consumed by the car and glass passes. The LOD-builder half of the clause IS real (a derived `(0,0,0)` entry forces glow 0). | spec §7.2 ("enforced in the mesher and in the LOD builder"), §7.3.3 rule 7, AC-013; `examples/neatRacing/voxel/greedy-mesher.ts:176-190` (`resolveVoxelShade`, no production caller), `:88-104` (`VoxelQuad` has no glow field); `examples/neatRacing/voxel/materials.ts:104-125`, `:131-137` (the real owner); `examples/neatRacing/engine/passes/car.pass.ts:682`, `examples/neatRacing/engine/passes/glass.pass.ts:363`; `examples/neatRacing/voxel/lod.builder.ts:358-361` (rule 7) | MED | **A** — amend §7.2/§7.3.3 rule 7 to name `voxel/materials.ts` as the single enforcement owner and delete the unused `resolveVoxelShade` export from the mesher module. **B** — keep the helper and make it load-bearing by adding an emissive field to the quad record; this changes the §7.3.2 body layout and needs a format version bump. **C** — keep the helper as the shared implementation and have `materials.ts` delegate to it (one rule, one owner, no format change). |
+| X-06 | A partial-alpha authored palette entry becomes a partial-alpha body quad. §7.3.3 rule 8 states "No partial-alpha body quads exist", but the fine-tier mesher treats every entry with alpha ≥ 1 as an opaque body voxel and the schema validates palette components only as integers in 0-255 — an authored `a = 128` entry is accepted, meshed into solid body quads and drawn by the body pass (never routed to the glass pass), outside the §6.5 two-tier material model. The `{0, 255}` snap exists only in the LOD builder. Both shipped models use 0/255 only, so the gap is latent rather than active. | spec §7.3.3 rule 8, §6.5 (two-tier material model), §7.2 (palette bytes 0-255); `examples/neatRacing/voxel/greedy-mesher.ts:52` (`VOXEL_OPAQUE_ALPHA_MIN = 1`), `:333-336` (`isVoxelBodyEntry`); `examples/neatRacing/voxel/model.schema.ts:348-360` (byte-range-only palette validation); `examples/neatRacing/voxel/lod.builder.ts:93-104` + `:349-355` (the snap that exists only here) | MED | **A** — reject authored alphas outside {0, 255} in the schema (one validator, no format change). **B** — keep authored partial alpha and route alpha ∈ (0,255) body voxels to the glass pass; this is exactly the per-quad routing rule 8 says to avoid. **C** — snap authored partial alpha to {0, 255} at decode time (consistent with rule 8) and amend §7.2 to say the snap covers authored entries too. |
+| X-07 | The §7.3.3 rule 9 "hard cap 256" is implemented against the TOTAL palette, not against the distinct derived averages. The rule text caps the derived averages ("when a model's derived averages exceed 256 distinct entries"), but the builder seeds the derived palette with a copy of the SOURCE palette and caps `palette.length` at 256 — so a 256-entry authored palette leaves ZERO headroom (every derived tuple merges to the nearest existing entry) and a >256-entry authored palette exceeds the hard cap outright. The shipped >256 fixture locks the stricter reading (it asserts the total palette length is 256, reached at block k = 349 with a ~10-entry source palette). | spec §7.3.3 rule 9 (hard cap / merge-to-nearest clause), AC-011; `examples/neatRacing/voxel/lod.builder.ts:200` (palette seeded from the source), `:385-422` (`resolveDerivedPaletteIndex`), `:394` (the cap check on `palette.length`), `:424-455` (merge-to-nearest); `examples/neatRacing/voxel/lod.builder.test.ts:237-251` (fixture asserts the total length) | MED | **A** — implement the rule as written: cap the number of DISTINCT DERIVED entries at 256 (source entries sit outside the cap); the change is one comparison plus a fixture update. **B** — keep the code and amend rule 9 to "the derived palette (source entries + derived entries) is capped at 256 entries in total". **C** — bound the authored palette in the schema (e.g. ≤ 64 entries) so derived entries always have headroom, and state that bound in §7.2. |
+| X-08 | The `.bin` codec accepts any positive u16 dims and never checks the geometry against the declared dims: a quad at position `[60000, 0, 0]` inside a `[128, 128, 128]` model writes and loads cleanly. §7.2's dims contract ("dims ≠ 128³ (or the declared dims)") lives in the JSON decoder, so the codec is dims-agnostic by design — but a corrupt or hostile bin can therefore drive out-of-range geometry into the renderer with no error. | spec §7.2 (validation clause), §7.3.2 (header/body layout); `examples/neatRacing/voxel/bin.codec.ts:90` (`VOXEL_BIN_DIMS_COMPONENT_MIN = 1`), `:51` (u16 dims), `:313-330` (`validateBinDims`), `:411-423` (`validateBinQuadPosition` — u16 range only), `:774-796` (`readBinQuad` re-validation) | LOW | **A** — add a loader-side coherence check (quad position + extents ≤ dims) raising `VoxelBinFieldError`. **B** — state in §7.3.2 that the codec is dims-agnostic and that the CONSUMER must validate geometry extents. **C** — accept it and record "no geometry-extent validation in the codec" as an explicit risk in §12 (safety). |
+| X-09 | The `.bin` codec does not enforce the 256-entry palette ceiling: the palette count is a u16 (up to 65535 entries) while the quad record's `paletteIndex` is a u8, so indices above 255 are unreachable. §7.2's palette index is 0-255 hex and §7.3.3 rule 9 caps DERIVED palettes at 256, so the shipped palettes are legal — the writer simply never enforces the ceiling. | spec §7.2 (palette index 0-255), §7.3.3 rule 9 (256 cap); `examples/neatRacing/voxel/bin.codec.ts:51` (u16 palette count), `:75-76` (u8 paletteIndex), `:93` (`VOXEL_BIN_PALETTE_ENTRY_MIN = 1`), `:332-354` (`validateBinPalette`) | LOW | **A** — enforce `palette.length <= 256` in the writer and the loader with a named error. **B** — document the u16/u8 asymmetry in §7.3.2 ("a palette larger than 256 entries is writable but only indices 0-255 are addressable"). **C** — widen `paletteIndex` to u16 (format v2) if large palettes are a real requirement. |
+| X-10 | The `.bin` version is an exact-match gate: the loader accepts version 1 and rejects everything else with one `VoxelBinVersionError`, so the format cannot express a supported range and a future v2 bin is indistinguishable from a corrupt file. The clause as written ("loader rejects bad magic/version") is satisfied; the gap is forward-compatibility headroom. | spec §7.3.2 (header/version clause), AC-010 ("loader rejects wrong magic/version"); `examples/neatRacing/voxel/bin.codec.ts:39` (`VOXEL_BIN_VERSION = 1`), `:636-649` (exact-match rejection), `:172-180` (single version error class) | LOW | **A** — keep exact-version rejection but split the error into "unsupported version" vs "malformed version" and list the supported set in the message. **B** — define a min/max supported version window so future versions can be additive. **C** — leave as-is and note in §7.3.2 that any format change requires a coordinated rebuild of every consumer. |
+| X-11 | The server-triggered rebuild passes a model-name argument that the build script ignores. The dev server spawns `node build-voxel-bins.mjs <modelName>` (its argv builder pins the script path + the model name), but the script never reads `process.argv` — it rescans the models directory and rebuilds EVERY model, then exits 0 (or exits 0 with "nothing to build"). The per-model rebuild contract is therefore a fiction a caller cannot rely on. | spec §7.3.2 ("run via npm script and server-triggered rebuild"), §8.2 (dev-server contract); `examples/neatRacing/server/dev-server.ts:69-74` (pinned script), `:291-322` (argv builder + spawner), `:1077-1086` (`/api/models/:name/rebuild`); `examples/neatRacing/scripts/build-voxel-bins.mjs:105-140` (directory scan; no argv read) | LOW | **A** — make the script accept the model-name argument and build just that model (keeping the no-arg "build everything" mode). **B** — change the dev server to spawn the script without a model name (build-all semantics) and update the route docs. **C** — leave the wiring and record the mismatch in §8.2 as a known limitation. |
+| X-12 | The build script keeps a dead "mesher seam" fallback that would mask a missing-export regression: it falls back to "the module's single function export" when `meshVoxelModel` is absent, but the mesher module exports TWO functions (`meshVoxelModel`, `resolveVoxelShade`), so the fallback branch can never be taken — the recorded seam ("union reconciliation with the greedy-mesher slice is an orchestrator follow-up") was never closed. | `examples/neatRacing/scripts/build-voxel-bins.mjs:27-29` (the recorded seam note), `:181-205` (`resolveMesherExport` fallback), `:207-215` (`resolveMeshedQuads` shape fallback); `examples/neatRacing/voxel/greedy-mesher.ts:154`, `:176` (two function exports) | LOW | **A** — delete the fallback and import `meshVoxelModel` directly so a renamed export fails the build loudly. **B** — keep the fallback but turn it into an explicit error and close the recorded seam note. **C** — leave it and record it in §12 as a known build-script seam. |
+| X-13 | Spec §7.3.3 rule 3 points at the wrong rule for the glow exclusion ("excluded ONLY from multi-color averages (rule 5) and from glow (rule 8)") — glow exclusion is rule 6; rule 8 is the derived-alpha policy. The builder implements rule 6's semantics (black excluded from the glow average), so the code is right and the cross-reference is stale. | spec §7.3.3 rules 3, 6 and 8; `examples/neatRacing/voxel/lod.builder.ts:307-330` (rule 6 semantics in `resolveLodBlockIndex`: glow summed over non-black contributors only), `:344-346` | LOW | **A** — fix the cross-reference in §7.3.3 rule 3 ("rule 6"). **B** — renumber the rules so rule 8 IS the glow rule (then rule 9/10 shift and AC-011's rule list must follow). **C** — leave the prose and record the intended semantics in the consolidated gap inventory so no future implementer reads rule 8 as the glow rule. |
+
+### Verified conformant — no gap recorded
+
+| ID | Contract | Evidence |
+|---|---|---|
+| XV-01 | Merge key = (palette index, normal axis, face orientation) | `examples/neatRacing/voxel/greedy-mesher.ts:253-270` (`faceMaskValue` encodes the orientation as the sign of the mask value), `:349-402` (`mergeMaskRectangles` merges only on equal SIGNED values inside one (axis, plane) sweep), `:229-251` (`buildFaceMask` — one mask per face plane) |
+| XV-02 | Quad record shape `{position, normalAxis, width, height, paletteIndex}` | `examples/neatRacing/voxel/greedy-mesher.ts:88-104` (`VoxelQuad`), `:535-570` (`createQuadRecord`) |
+| XV-03 | `normalAxis` is an unsigned 0..2 index and the record carries NO winding/orientation field | `examples/neatRacing/voxel/greedy-mesher.ts:80` (`VoxelNormalAxis = 0 | 1 | 2`), `:384` (`Math.abs(value)` strips the orientation sign before the record is built) |
+| XV-04 | Signed-face-orientation convention: bins-derived meshes draw two-sided and the signed normal is reconstructed per fragment | `examples/neatRacing/engine/passes/car.pass.ts:113-114` + `:1676` (`CULL_FACE` never enabled), `:314-315` (fragment flip when `dot(normal, viewDir) > 0`), `examples/neatRacing/engine/passes/track.pass.ts:81-82` (same flip in the track shader) |
+| XV-05 | Merge-contract shading invariant (per-fragment, pure function of colour + signed normal + depth; no per-vertex lighting, no AO, no neighbour term) | `examples/neatRacing/engine/passes/car.pass.ts:300-330` (fragment lighting from the flipped axis normal + sun + hemisphere), `examples/neatRacing/engine/lighting.ts:148`, `examples/neatRacing/engine/passes/track.pass.ts:70-95`; no neighbour-dependent term exists in the voxel passes |
+| XV-06 | The mesher is the SINGLE shared implementation for car bodies, wheels, track slabs and the editor preview (LD-28 dogfooding) | `examples/neatRacing/browser-entry/browser-entry.ts:1219`, `:1224` (body + wheel), `examples/neatRacing/track/track.slabs.ts:33` + `:622` (track slabs), `examples/neatRacing/editor/editor-preview.render.ts:30` + `:161` (editor preview) |
+| XV-07 | The mesher emits NO glass quads (the glass pass is unaffected by the merge contract) | `examples/neatRacing/voxel/greedy-mesher.ts:52` (`VOXEL_OPAQUE_ALPHA_MIN = 1`), `:333-336` (`isVoxelBodyEntry`) — a glass cell (alpha 0) is non-occluding air, so no body quad is produced |
+| XV-08 | Deterministic emission order (axis ascending → plane ascending → row-major) so the bins are byte-stable | `examples/neatRacing/voxel/greedy-mesher.ts:58` (`VOXEL_MESH_AXES`), `:154-158`, `:197-227` |
+| XV-09 | `.bin` header: magic + version + dims + palette-with-glow | `examples/neatRacing/voxel/bin.codec.ts:36` (`NXVB`), `:39` (u32 LE version 1), `:51-54` (16-byte fixed header), `:57` (5-byte palette entry incl. glow), `:498-529` (`writeBinHeader`), `:602-649` (loader header checks) |
+| XV-10 | `.bin` quad body: position u16×3, normalAxis u8, width u16, height u16, paletteIndex u8 (12 bytes) | `examples/neatRacing/voxel/bin.codec.ts:63-76` (offsets), `:114-128` (`VoxelBinQuad`), `:575-601` (`writeBinQuad`), `:774-796` (`readBinQuad`) |
+| XV-11 | Round-trip: writer output re-parsed by the loader is byte-identical (AC-010 jest clause) | `examples/neatRacing/voxel/bin.codec.test.ts:269-274` (write → load → write byte-identical), `:275-278` (the zero-quad model); `examples/neatRacing/voxel/bin.codec.ts:223-263` |
+| XV-12 | The loader rejects bad magic, bad version and truncated files with named error classes | `examples/neatRacing/voxel/bin.codec.ts:143-200` (`VoxelBinCodecError` + magic/version/truncated/field subclasses with stable codes), `:602-649`; `examples/neatRacing/voxel/bin.codec.test.ts:289-331` |
+| XV-13 | Write-side AND load-side field validation (dims positive, palette ≥ 1 entry, bytes in range, extents ≥ 1, normalAxis 0..2, paletteIndex < palette size) | `examples/neatRacing/voxel/bin.codec.ts:90-102` (bounds), `:299-311` (`validateBinModel`), `:313-330`, `:332-354`, `:381-409`, `:432-447`; `examples/neatRacing/voxel/bin.codec.test.ts:192-263`, `:333-343` |
+| XV-14 | The header carries the palette WITH the glow byte (5 bytes/entry), and the glow byte is what the black exception acts on | `examples/neatRacing/voxel/bin.codec.ts:57`, `:530-555` (`writeBinPalette`), `examples/neatRacing/voxel/bin.codec.test.ts:171-177`; `examples/neatRacing/voxel/materials.ts:104-125` |
+| XV-15 | All nine §7.3.3 LOD 64³ build rules are implemented | `examples/neatRacing/voxel/lod.builder.ts` — rule 1 (even-dims gate `:196-204`), rule 2 (empties ignored `:250-262`), rule 3 (black solid; excluded from colour + glow `:296-330`), rule 4 (single index verbatim `:286-295`), rules 5-6 (half-up averages over non-black contributors `:332-346`), rule 7 (derived black → glow 0 `:358-361`), rule 8 (alpha snap {0,255} at 128 `:349-355`), rule 9 (dedup + 5-bit quantisation + 256 cap + merge-to-nearest `:385-455`, `:474-488`); `examples/neatRacing/voxel/lod.builder.test.ts:85-251` (one test per rule + the >256 fixture) |
+| XV-16 | The LOD swap distance is COMPUTED from car dims + fixed height + FOV, with ±10% hysteresis (AC-012) | `examples/neatRacing/voxel/lod.distance.utils.ts` — `NEATRACING_VOXEL_WORLD_SIZE = 4.5/128`, `NEATRACING_LOD_SWAP_FOCAL_PX = 720/2/tan(30°) ≈ 623`, `NEATRACING_LOD_SWAP_DISTANCE_M ≈ 44 m`, `NEATRACING_LOD_SWAP_DISTANCE_NEAR_M` / `_FAR_M` (±10%), `selectLodTier` (the band holds the current tier); `examples/neatRacing/browser-entry/constants.ts:24` (`NEATRACING_FIXED_RENDER_HEIGHT = 720`) |
+| XV-17 | §7.2 decode validation: RLE run-sum, hex validity, palette-index range, slice/row counts vs the declared dims, mirror-X col c ↔ dims[0]-1-c | `examples/neatRacing/voxel/model.decode.utils.ts:99-116`, `:140-160` (run-sum errors), `:182-200` (hex / zero-run errors); `examples/neatRacing/voxel/model.schema.ts:390-435` (slice/row counts vs dims), `:348-360` (palette bytes). Read as a cross-reference, NOT a named target |
+| XV-18 | The server-triggered rebuild is wired to the pinned bins script (§7.3.2) | `examples/neatRacing/server/dev-server.ts:69-74` (pinned script path), `:291-322` (argv + spawner), `:1077-1086` (`/api/models/:name/rebuild`) — with the per-model-argument caveat in X-11 |
+
+### Clarification ledger
+
+| Marker | Slice | Gap | Question | Budget |
+|---|---|---|---|---|
+| F-13 | P1-spec-audit-physics | physics canon drift | (sibling section — logs.md:13362) | used |
+| R-02 | P1-spec-audit-render | canvas strategy | (sibling section — logs.md:13499) | used |
+| **X-04** | **P1-spec-audit-voxel** | **pipeline topology** | **Is the `.bin` the runtime input (option A) or a build-time artifact only (options B / C)?** | **used — 3 of 3** |
+
+Step-wide NEEDS CLARIFICATION budget: 3 markers. Physics used 1 (F-13), render used 1 (R-02), this
+slice uses 1 (X-04). The budget is now EXHAUSTED: any further clarification must be resolved by
+the owner inside this ledger rather than by raising a new marker. No other finding in this
+section warrants a marker — X-01, X-02, X-03, X-05, X-06, X-07 and X-08…X-13 carry A/B/C options
+but are decision-shaped implementation gaps or prose amendments, not spec ambiguities.
+
+### Severity roll-up
+
+| Severity | Count | IDs |
+|---|---|---|
+| HIGH | 2 | X-01, X-02 |
+| MED | 5 | X-03, X-04, X-05, X-06, X-07 |
+| LOW | 6 | X-08, X-09, X-10, X-11, X-12, X-13 |
+| INFO | 0 | — |
+| **Total** | **13** | |
+
+**Headline:** the decode → mesh → encode CORE of the voxel pipeline is contract-clean (18
+verified-conformant rows, including the AC-009 merge-key + quad-shape fixture, the AC-010
+byte-identical round trip, all nine §7.3.3 LOD rules and the computed §7.3.4 swap formula with
+its ±10% hysteresis). TWO HIGH gaps block the §7 exit: the G3 T-junction measure is absent
+everywhere (the mesher emits a flat quad list and every consumer expands it into non-indexed
+triangles — neither the weld nor the T-point split exists), and `npm run voxel:build` never
+emits the AC-010 artifact set (no lod64 tier at all, a 32³ wheel mislabelled
+`wheel-lod128.bin`, and the car written as `car-f1-lod128.bin`), so the LOD builder that
+already landed is not wired into the build. FIVE MED gaps are canon/spec drift: the axis-1
+tangent mapping (spec (z,x) vs shipped (x,z)), the pipeline topology (the runtime never loads a
+`.bin`, so the §7.1 BIN → GPU arrow is unrealized), the black-exception owner (materials.ts,
+not "the mesher"), partial-alpha body quads (the {0,255} snap exists only in the LOD tier) and
+the rule-9 cap reading (total palette vs distinct derived averages). SIX LOW gaps are
+hardening (codec dims/palette/version bounds, the ignored per-model rebuild argument, a dead
+build-script seam, and one stale spec cross-reference). ONE NEEDS CLARIFICATION marker (X-04,
+pipeline topology) — the step-wide 3-marker budget is now exhausted.
+
+```yaml
+phase: 1
+step: 14E
+slice_id: 'P1-spec-audit-voxel'
+title: 'Audit voxel pipeline code against spec §7'
+status: '[DONE]'
+goal: planning
+tdd_sequence: green-only
+mode: review-only
+source_of_truth: 'plans/neatracing-voxel-racer.plans.md'
+audit_scope: 'spec §7.1-§7.4 (pipeline topology, on-disk model format, greedy mesher merge contract + G3 T-junction measure, .bin LOD format + round-trip, LOD 64 build rules, LOD swap distance) vs examples/neatRacing/voxel/greedy-mesher.ts + voxel/bin.codec.ts + voxel/lod.builder.ts + voxel/lod.distance.utils.ts + voxel/materials.ts + voxel/model.schema.ts + voxel/model.decode.utils.ts + scripts/build-voxel-bins.mjs + engine/passes/car.pass.ts + track.pass.ts + glass.pass.ts + browser-entry/browser-entry.ts + track/track.slabs.ts + assets/models/*.model.json'
+read_only_mandate: honoured - no production code, no spec prose, no production behaviour changed
+files_changed:
+  - 'plans/neatracing-voxel-racer.logs.md'
+  - 'plans/neatracing-voxel-racer.plans.md'
+production_code_changed: false
+spec_prose_changed: false
+gaps_recorded: 13
+gaps_by_severity:
+  HIGH: 2
+  MED: 5
+  LOW: 6
+conformant_contracts_verified: 18
+needs_clarification_markers: 1
+needs_clarification_marker_ids:
+  - 'X-04'
+step_wide_marker_budget:
+  allowed: 3
+  used: 3
+  rows:
+    - 'F-13 (P1-spec-audit-physics)'
+    - 'R-02 (P1-spec-audit-render)'
+    - 'X-04 (P1-spec-audit-voxel)'
+validation_evidence:
+  - 'Review-only audit table (13 gaps with file/section reference, severity and A/B/C options + 18 verified-conformant contracts) appended to this log section'
+  - 'neataptic-gate-mcp:run_gate_check gate=slice-advancement slice-id=P1-spec-audit-voxel changed-files=plans/neatracing-voxel-racer.logs.md,plans/neatracing-voxel-racer.plans.md plan=plans/neatracing-voxel-racer.plans.md -> PASS (TRIVIAL; 4/4 sub-gates pass: plan-sync, step-packet, plan-slice-quality, plan-command-lint)'
+  - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/neatracing-voxel-racer.plans.md -> PASS (ok: true, 0 errors, 0 warnings)'
+  - 'No jest/tsc/build run (review-only slice; the contract requires no test execution)'
+risks_or_gaps:
+  - 'X-01 HIGH: the G3 T-junction measure does not exist anywhere - the mesher returns a flat quad list (greedy-mesher.ts:116-121, :154-158) and every consumer expands each quad into 6 non-indexed vertices drawn with drawArrays (car.pass.ts:199, :678-737, :1658; track.pass.ts:114, :206, :581). Repo-wide grep for weld/T-junction/fan-split/indexed buffer under examples/neatRacing returns 0 matches.'
+  - 'X-02 HIGH: AC-010 artifact set unmet - build-voxel-bins.mjs emits only <name>-lod128.bin (never calls the landed lod.builder.ts), so there is no lod64 tier, the 32-cubed wheel is mislabelled wheel-lod128.bin and the car lands as car-f1-lod128.bin (AC names car-lod128.bin / car-lod64.bin).'
+  - 'X-04 MED: the runtime never loads a .bin - browser-entry.ts:1210-1227 meshes in memory, so the section 7.1 BIN -> GPU arrow is unrealized and the round-trip contract protects an artifact no runtime path reads.'
+  - 'X-03 MED: the axis-1 tangent mapping diverges from the spec record layout (spec axis1 -> (z,x); shipped axis1 -> (x,z) in greedy-mesher.ts:65-72, car.pass.ts:661-662, track.pass.ts:386-394). The in-repo pipeline is self-consistent, so the defect surfaces only for a spec-conformant .bin reader.'
+handoff_to: '05-green-testing'
+next_agent: '01-planning'
+next_steps:
+  - 'Step 14E remaining slices (P1-spec-gap-inventory, P1-spec-review-green) and the step-wide clarification pass - the 3-marker budget is now exhausted (F-13 + R-02 + X-04).'
+  - 'Route X-01 / X-02 to the implementation owners (mesher weld+split slice; build-script lod64 emission) and X-03 / X-04 / X-05 / X-06 / X-07 to the spec-amendment owner.'
+notes: 'Single slim dispatch, no child agents, no browser/CDP, no mutating git, one NEEDS CLARIFICATION marker (X-04). The audit table is the deliverable; the slice status flip in the plans file is the only tracker mutation. The sibling P1-spec-audit-physics section (logs.md:13362) and P1-spec-audit-render section (logs.md:13499) were NOT edited. Read-only git status confirms this slice wrote exactly two files (plans/neatracing-voxel-racer.logs.md, plans/neatracing-voxel-racer.plans.md); the other modified paths shown by git status are pre-existing uncommitted work from earlier steps (14F-14T), not from this slice - no production file and no spec prose was touched here.'
+
+```
+
+## EOL-PROBE
+
+```
+
+## Step 14E gap inventory (2026-10-29)
+
+**Slice:** `P1-spec-gap-inventory` (Step 14E, phase 1) — READ-ONLY consolidation of the three DONE
+domain audits into one deduplicated, prioritised gap inventory.
+
+**Inputs — all three DONE, READ and NOT edited by this slice:**
+
+| Source slice | Audit section | Gaps | Severity mix | Clarification marker |
+| --- | --- | --- | --- | --- |
+| `P1-spec-audit-physics` | logs.md:13362 | 14 | 5 HIGH / 5 MED / 3 LOW / 1 INFO | **F-13** |
+| `P1-spec-audit-render` | logs.md:13499 | 13 | 3 HIGH / 6 MED / 4 LOW | **R-02** |
+| `P1-spec-audit-voxel` | logs.md:13655 | 13 | 2 HIGH / 5 MED / 6 LOW | **X-04** |
+| **Total raw** | — | **40** | **10 HIGH / 16 MED / 13 LOW / 1 INFO** | **3 of 3 — exhausted** |
+
+**Mandate honoured:** NO production code, NO spec prose and NO production behaviour was changed;
+NO browser / NO Chrome DevTools MCP / NO CDP; NO mutating git (read-only inspection only); NO
+child agents (one slim dispatch). The three audit sections above were read and left byte-identical.
+
+### Consolidation method
+
+Four dedup rules, applied in this order:
+
+1. **One defect, one row** — two source rows that describe the SAME underlying defect observed from
+   two domains collapse into one consolidated row (a phantom inspection target named by both the
+   physics and the render slice).
+2. **One owner, one row** — source rows whose remedy is a single change to a single file set collapse
+   into one row even when the observed symptom differs (the orphaned grid pass and the two unwarmed
+   right-world programs are one registry-drift change).
+3. **One contract, one row** — several stale prose rows about the same spec contract collapse into
+   one rewrite (the six superseded §5.2 rows).
+4. **Decision rows stay split from their consumers** — a row that carries a NEEDS CLARIFICATION
+   marker keeps its OWN consolidated row; the rows it *gates* are recorded as dependent consumers,
+   never merged into it.
+
+Every consolidated row keeps its source audit IDs, the domain, the severity, the file/section
+reference and the **A/B/C options carried verbatim from its source audit**. **No new option was
+invented and NO new NEEDS CLARIFICATION marker was raised** — the step-wide budget is 3 and is
+already spent (F-13, R-02, X-04).
+
+### Consolidated gap inventory — 19 rows from 40 raw gaps
+
+| ID | Source gaps | Domain | Severity | Gap (merged) | Primary file / section reference | Disposition | Priority |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| G-01 | F-01 + R-01 | physics + render | HIGH | The spec and the slice packets name inspection targets that DO NOT EXIST — a verification pass pointed at them inspects nothing and reads green. | spec.md §5.2 (:288-289); plans.md:4286-4400, :4322-4323 | D1 | P1 |
+| G-02 | F-13 + R-07 | physics + render | MED | The spec/ledger canon split — the spec stops at AC-046 while the live physics contracts (AC-078..AC-093) and the whole right-world crowd contract live only in the plan ledger. | spec.md:1966; plans.md:500-533, :528-544 | D3 | P1 |
+| G-03 | F-07 + F-08 | physics | HIGH | The AC-081 containment bound is LANDED as a util but NOT wired into the live drive loop; the companion ledger row and slice packet still cite the pre-tightening bound. | `collision.utils.ts:369-390`; `host/race-session.ts:260`; plans.md:531, :4002-4024 | D2 (Step 14I) | P0 |
+| G-04 | R-06 | render | HIGH | The AC-080 continuous tri-color road-edge band is NOT implemented — the hard 6 m radial cut-off still truncates the red shell at outer corner 2. | `track/road-edge.ts:333-351`; `track/road-edge.test.ts:465`; plans.md:530, :3958-3998 | D2 (Step 14I) | P0 |
+| G-05 | R-02 + R-09 + R-10 + R-11 | render | HIGH | The canvas strategy has two live answers and no canonical one; three downstream constants still assume the fixed-720 letterbox while the host stretches to the client size. | spec.md:141, :376-387; `canvas-dimensions.utils.ts:245-257`; `lod.distance.utils.ts:80-110`; `bloom.pass.ts:141` | D3 | P1 |
+| G-06 | R-04 + R-05 | render | MED | An orphaned 1 m engine grid pass still owns the canonical `'grid'` key while the boot registry binds that key to the track-grid program, and the warmup sweep covers 9 programs against a live set of 11. | `grid.pass.ts:442`, `:559-565`; `browser-entry.ts:497-513`; `context.service.ts:42-55`; AC-040 | D2 | P1 |
+| G-07 | F-02 + F-03 + F-04 + F-05 + F-06 + F-11 | physics | HIGH | Six §5.2 prose rows are superseded by the landed model (constant table, helper list, integration order, CENTRIFUGAL, steering, drift yaw, fog ownership). | spec.md §5.2 (:281-345); `drift.model.ts`; `physics.step.service.ts` | D1 (gated by G-02) | P1 |
+| G-08 | F-09 + F-10 | physics | MED | Two AC ledger rows cite retired / pre-fix code as if it were live; AC-078's CONTRACT IS SATISFIED — only its citations are stale. | plans.md:528, :529 | D1 | P2 |
+| G-09 | X-01 | voxel | HIGH | The §7.3.1 G3 T-junction measure (weld + T-point split) is ABSENT everywhere — the mesher emits a flat quad list that every consumer expands into non-indexed triangles. | `greedy-mesher.ts:116-121`, `:154-158`; `car.pass.ts:199`; `track.pass.ts:114` | D2 (gated by G-12) | P0 |
+| G-10 | X-02 | voxel | HIGH | `npm run voxel:build` never emits the AC-010 artifact set — no lod64 tier, a mislabelled wheel bin and a car bin under the wrong name. | `build-voxel-bins.mjs:30-34`, `:59`, `:156-172`; AC-010 (spec:1636-1640) | D2 (gated by G-12) | P1 |
+| G-11 | X-03 | voxel | MED | The axis-1 tangent mapping diverges from the pinned record layout (spec (z,x) vs shipped (x,z)); the in-repo pipeline is self-consistent, so only a spec-conformant reader breaks. | spec §7.3.1; `greedy-mesher.ts:65-72`; `track.pass.ts:386-394` | D1 | P1 |
+| G-12 | X-04 | voxel | MED | The pipeline topology has two live answers — §7.1 shows JSON→DECODE→MESHER→BIN→GPU but the runtime never loads a `.bin`; it meshes in memory. | spec §7.1, §7.3.2; `browser-entry.ts:1210-1227` | D3 | P1 |
+| G-13 | X-05 + X-06 + X-07 | voxel | MED | Three rule-reading drifts: the black exception is enforced in `materials.ts` (not "the mesher"), a partial-alpha authored entry becomes a body quad, and the rule-9 256 cap is applied to the TOTAL palette rather than to the distinct derived entries. | spec §7.2, §7.3.3 rules 7/8/9; `materials.ts:104-137`; `lod.builder.ts:200`, `:394`; `model.schema.ts:348-360` | D2 | P2 |
+| G-14 | X-08 + X-09 + X-10 | voxel | LOW | The `.bin` codec enforces no geometry-extent coherence, no 256-entry palette ceiling and no version window. | `bin.codec.ts:51`, `:313-354`, `:411-423`, `:636-649` | D2 | P2 |
+| G-15 | X-11 + X-12 | voxel | LOW | The build script ignores the model-name argument it is spawned with, and keeps a dead "mesher seam" fallback that can never be taken. | `build-voxel-bins.mjs:27-29`, `:181-215`; `dev-server.ts:291-322` | D2 | P2 |
+| G-16 | X-13 | voxel | LOW | §7.3.3 rule 3 points at rule 8 for the glow exclusion; the glow exclusion is RULE 6 (the code is right, the cross-reference is stale). | spec §7.3.3 rules 3/6/8; `lod.builder.ts:307-330`, `:344-346` | D1 | P2 |
+| G-17 | F-12 + F-14 | physics | LOW | §5.3's replay tuple names a `seed` the RNG-free physics surface does not have and omits the turn-rate percent + band law; §5.1's pacing paragraph is written for the Phase-2 worker. | spec.md §5.1 (:231-244), §5.3 (:355-359); `physics.step.service.ts:100-123` | D1 | P3 |
+| G-18 | R-03 + R-08 + R-13 | render | MED | §6.4.2 still publishes the retired 1.0 grid pitch (the spec contradicts its OWN AC-045), §6.4.1's starfield table is superseded so the flappy-parity clause is FALSE, and two JSDoc claims contradict the shipped constants. | spec.md §6.4.1, §6.4.2, AC-045; `grid.builder.ts:32-33`; `constants.starfield.ts:63`; `browser-entry.ts:488-491`, `:1346-1348` | D1 | P1 |
+| G-19 | R-12 | render | LOW | The pulse colour is a hex/decimal mismatch — the spec pins `#B7FF00` (183) while the implementation keeps the decimal triplet (185, 255, 0) authoritative. | spec.md §6.4.3; `pulse.pass.ts:28`, `:33-43` | D1 | P3 |
+
+### Resolution options carried per consolidated row (verbatim from the source audits)
+
+No option below is new. Where a row merges several source gaps, the governing member's options are
+listed first and each remaining member's options follow, marked **conditional on the decision above**.
+
+#### G-01 — Phantom inspection targets — HIGH — physics + render — D1 — P1
+
+**Source gaps:** F-01 (`P1-spec-audit-physics`), R-01 (`P1-spec-audit-render`).
+**Gap.** The spec and the slice packets name inspection targets that do not exist. Physics names a
+top-down `environment.step.service.ts` and a `physics/constants.ts`; the live physics surface is
+`physics.step.service.ts` (+ `drift.model.ts`, `collision.utils.ts`, `ai.autopilot.ts`) and the only
+`constants.ts` under the example is `browser-entry/constants.ts` (unrelated to physics). Render names
+`examples/neatRacing/engine/renderer.ts` (a `**/renderer*.ts` glob over `examples/neatRacing` returns
+0 matches); the live render surface is `host/frame-composer.ts` + `engine/passes/*` +
+`engine/lighting.ts` + `engine/context.service.ts` + `track/grid.pass.ts` + `track/right-world.pass.ts`
++ `browser-entry/*`. An audit or verification pass pointed at the named files would inspect nothing
+and read as green.
+**References.** spec.md §5.2 (:288-289); plans.md:4286-4400 (render `files_to_change` / audit scope),
+plans.md:4322-4323 (physics `files_to_change`); the actual owners are listed above.
+**Options (carried).**
+- F-01: **A)** amend the spec §5.2 prose and the slice `files_to_change` to the landed module names;
+  **B)** keep the prose generic ("the top-down physics step service") and drop the two phantom
+  `files_to_change` entries; **C)** keep both and add an explicit legacy-name mapping note.
+- R-01: **A)** amend the slice packet `files_to_change` and the audit scope to the landed surface;
+  **B)** keep the scope generic ("the renderer/composer") and drop the phantom path; **C)** keep both
+  and add an explicit legacy-name mapping note.
+**Recommended branch.** The A-branch of both — it is the only one that leaves a reader with a
+clickable path. **Disposition:** D1 (plan-ledger + spec prose). NOT applied by this slice: this
+slice's only tracker mutation is its own status flip.
+
+#### G-02 — Spec/ledger canon split — MED — physics + render — D3 — P1
+
+**Source gaps:** F-13 (`P1-spec-audit-physics`, **marker**), R-07 (`P1-spec-audit-render`).
+**Gap.** The spec cannot express the amended contracts. Its appended AC list stops at AC-046
+(spec.md:1966) while the live physics contracts (AC-078..AC-093, plans.md:528-544) and the entire
+right-world crowd contract — bleacher count, seats per level, the four crowd roles, the counts, the
+billboard world scale, the personal space, the camera-relative facing (plans.md:500-533) — live only
+in the plan ledger. Spec §6.7 carries no bleacher / seated / walker / standing / mechanic /
+billboard-scale / personal-space / facing clause at all. "The spec" and "the shipped code" are two
+different documents, and every §5.2 and §6 prose drift below is a symptom of that split.
+**References.** spec.md:1966; plans.md:500-533, :528-544; spec.md §6.7 (~:510-530).
+**Marker.** **F-13** — the render sibling R-07 was deliberately NOT counted as a marker (the budget
+already spends one on the identical structural issue).
+**Options (carried).**
+- F-13: **A)** amend the spec: add a normative §5.4 "as-landed physics contract" block (or extend the
+  §13.4 AC list through AC-093) so the spec is normative again; **B)** declare the plan ledger
+  authoritative for the physics contracts and add a §5.2 pointer ("the drift and turn-rate laws are
+  superseded by the plan ledger AC-078..AC-093"); **C)** dual-track: the spec carries the normative law
+  names + values, the plan keeps the ledger and the measured evidence.
+- R-07: **A)** add a normative §6.9 "right-world crowd contract" block (bleacher count, seats per
+  level, the roles, the counts, the scale, the personal space, the facing); **B)** declare the plan
+  ledger authoritative for the crowd contract and add a §6.7 pointer; **C)** dual-track — the spec
+  carries the names + values, the plan keeps the ledger and the measured evidence.
+**Recommended branch.** C on both — the only branch that leaves a normative spec AND keeps the
+measured evidence in the ledger, and it satisfies both members without opening a second canon.
+**Disposition:** D3 (owner decision) → then D1 for the resulting amendment. It GATES G-07, G-18 and
+the wording of G-11.
+
+#### G-03 — AC-081 containment is landed but NOT wired — HIGH — physics — D2 (Step 14I) — P0
+
+**Source gaps:** F-07 (HIGH), F-08 (MED).
+**Gap.** The AC-081 road-containment bound is LANDED as a pure util but is NOT applied by the shipped
+drive loop. The live tick calls `stepPhysics` only, so neither the manual lane nor the live `ai` lane
+is contained; the AI measurement lane contains itself inside the test harness, so AC-085 reads green
+while the user-reported "the AI-driven car leaves the road" defect is still reproducible on the served
+page. Companion F-08: the AC-081 ledger text and the `P1-track-road-containment` slice packet still
+describe the PRE-tightening bound and cite retired names/lines, so a reader following the AC text
+inspects the wrong code and may conclude the 3.0 m apron is still drivable.
+**References.** landed `collision.utils.ts:369` / `:376` / `:608` / `:77`; NOT WIRED — the only callers
+are `ai.autopilot.test.ts:827` / `:878` / `:929` and `collision.utils.test.ts`; the live loop is
+`host/race-session.ts:260` and `browser-entry/browser-entry.ts:799` (wires only
+`createTrackSurfaceResolver`); plans.md:531 (the AC-081 row), plans.md:4002-4024 (the slice packet),
+plans.md:4004 (status deliberately still `[PLANNED]`).
+**Options (carried).**
+- F-07: **A)** wire `resolveTrackBoundaryCar` into the live tick (race-session.ts, after every
+  `stepPhysics`) and add a live-lane containment test; **B)** keep the bound harness-only and re-scope
+  AC-081 to the AI measurement lane (requires a plan amendment that retires the user-facing "the
+  AI-driven car must not leave the road" clause); **C)** wire it in the browser-entry AI seam only
+  (leaves the manual lane unbounded).
+- F-08: **A)** refresh the AC-081 row + slice packet citations to the landed names/lines (keeping
+  `[PLANNED]` for the green slice); **B)** keep the "before" citations and append an explicit "landed
+  as" note; **C)** defer the refresh to the 14I green slice that owns AC-081.
+**Recommended branch.** F-07 **A** + F-08 **C** — the citation refresh lands with the 14I green slice
+that owns AC-081, in the same change as the wiring (no deferred cleanup). F-07/B is rejected: it
+retires the user-facing clause. **Disposition:** D2 — the EXISTING Step 14I slice
+(`P1-track-road-containment`), NOT a new slice.
+
+#### G-04 — AC-080 continuous tri-color road-edge band NOT implemented — HIGH — render — D2 (Step 14I) — P0
+
+**Source gaps:** R-06.
+**Gap.** The band must be CONTINUOUS along the affected outer section ("the known missing red tile at
+outer corner 2 (-4.00, -136.34) at seed 0 / small"), but the hard radial cut-off still truncates the
+red shell there (green ≤ 2 m, yellow ≤ 4 m, red ≤ 6 m, no tile beyond) and no corner extension
+exists. The RED contract `describe('outer-corner border markers')` is documented failing — 18 passed /
+1 failed.
+**References.** AC-080 (plans.md:530); `track/road-edge.ts:333-351`; the RED contract in
+`track/road-edge.test.ts` (fixture note `:332-333`, assertion `:465`); plans.md:3958-3998
+(`P1-track-outer-corner-markers-red` = `[DONE 2026-10-20]`); the implementing slice
+`P1-track-outer-corner-markers` is still `[PLANNED]` (plans.md:3972); Step 14I is still `[PLANNED]`
+(plans.md:693).
+**Options (carried).** **A)** land the corner extension now — the RED contract already exists, so only
+the implementation is missing; **B)** keep the band as an explicitly open 14I deliverable and close the
+audit row against the plan citation (the owner is Step 14I, not this slice); **C)** narrow AC-080 to
+the sampled corner only (weakens the user-visible "continuous band" clause — NOT recommended).
+**Recommended branch.** **B** at the plan level (= run the already-planned 14I slice; the RED contract
+is the acceptance gate). **Disposition:** D2 — the EXISTING Step 14I slice, NOT a new slice.
+
+#### G-05 — Canvas / backing-store sizing cluster — HIGH — render — D3 — P1
+
+**Source gaps:** R-02 (HIGH, **marker**), R-09 (MED), R-10 (LOW), R-11 (LOW).
+**Gap.** ONE root cause with four observed symptoms. The canvas strategy has two live answers and no
+canonical one: spec §6.2 / LD-17 pin a FIXED 720 px backing-store height with a proportional width, a
+1920 px clamp and a CSS stretch, while the shipped host applies a FULL-WINDOW STRETCH (backing store =
+the CSS client size, CSS `width/height: 100%`, 1280×720 fallback) — and that decision was recorded
+ONLY in the logs (evidence batch 133, 2026-10-05), never in the spec or the AC ledger. Downstream,
+three constants still assume the letterbox: the LOD swap focal is derived from the fixed 720 px, the
+bloom target is a fixed 640×360 (so §6.6's "half resolution of the 720p backing store" holds only at
+exactly 1280×720), and the starfield's backdrop reference is the LETTERBOX size while the framebuffer
+is the CLIENT size.
+**References.** spec.md:141 (LD-17), spec.md:376-387 (§6.2); plans.md:956 / :968 (AC-002 requires the
+letterbox ladder); logs.md:12052-12054 / :12068-12072 (evidence batch 133); landed
+`browser-entry/browser-entry.ts:551-552` → `applyFullWindowStretchStyle` + `updateFullWindowRendererSize`
+→ `browser-entry/canvas-dimensions.utils.ts:245-257`; `voxel/lod.distance.utils.ts:80-110`;
+`engine/passes/bloom.pass.ts:141` / `:147`; `browser-entry/browser-entry.ts:531`; the §6.2-conformant
+ladder survives only in the starfield reference (`browser-entry.ts:531`) and in unit tests.
+**Marker.** **R-02**.
+**Options (carried).**
+- R-02: **A)** amend §6.2 / LD-17 to the full-window stretch (client-size backing store, the 1280×720
+  fallback, the CSS stretch) and re-pin plans.md AC-002; **B)** keep the letterbox normative and
+  re-land the §6.2 ladder in the host (contradicts the 2026-10-05 decision and the visible-window
+  evidence — NOT recommended); **C)** keep §6.2 as the charter and add a normative "full-window stretch
+  (2026-10-05)" clause as the ONLY binding sizing rule.
+- R-09 (conditional): **A)** derive the focal pixels from the LIVE backing-store height (upload it on
+  every resize) so the LOD matches the actual projection; **B)** keep the fixed 720-px focal and pin
+  the backing store back to 720 (depends on the R-02 outcome); **C)** keep the fixed focal and document
+  that the LOD is deliberately resolution-independent (then the constant must be re-derived per FOV, not
+  per height).
+- R-10 (conditional): **A)** derive the bloom target from the live backing store (half of it) — the
+  same fix as R-09; **B)** keep 640×360 fixed and amend §6.6 to "a fixed 640×360 bloom target";
+  **C)** keep the constant and re-title the §6.6 clause as the launch-resolution statement.
+- R-11 (conditional): **A)** feed the starfield the LIVE backing-store size (one source of truth — the
+  same fix as R-09 / R-10); **B)** keep the letterbox reference and pin the framebuffer to the letterbox
+  size (depends on R-02); **C)** keep both and add a named comment that the backdrop reference is
+  intentionally the letterbox size.
+**Recommended branch.** R-02 **C** (charter + one binding clause — the branch that does not re-land a
+rejected ladder) + R-09/R-10/R-11 **A** (one source of truth) + the plans.md AC-002 re-pin.
+**Disposition:** D3 (owner decision) → then D2 for the three derived consumers (one slice: the LOD
+focal, the bloom target and the starfield backdrop — `voxel/lod.distance.utils.ts` +
+`engine/passes/bloom.pass.ts` + `browser-entry/browser-entry.ts` = 3 code files exactly).
+**Cross-reference:** the letterbox half of R-13(b) (the resize-listener JSDoc) lands with G-18, in the
+same change.
+
+#### G-06 — Duplicate neon-grid implementation + warmup-count drift — MED — render — D2 — P1
+
+**Source gaps:** R-04, R-05.
+**Gap.** TWO neon-grid implementations coexist and the key/program mapping contradicts itself. The 1 m
+engine grid pass is ORPHANED in production (no host caller) yet still owns the canonical `'grid'`
+program key and its own warmup converter, while the boot registry binds the `'grid'` key to the
+track-grid program — so the key name and the program it warms disagree, and `engine/context.service.ts`
+claims the pinned key list makes "the warmup sweep and the pass registry cannot drift apart". They
+have. Companion R-05: AC-040's warmup sweep covers 9 programs while the LIVE program set is 11 — the
+two right-world programs are compiled inside the pass factory and get NO off-screen warmup draw (no
+`toRightWorldWarmupProgram` exists anywhere).
+**References.** `createGridPass` (`engine/passes/grid.pass.ts:442`, no production caller), its warmup
+converter (`:559-565`), `host/frame-composer.ts:830-833` (an optional `passes.grid` branch the host
+never provides) and the live 8-call draw set (`:822`, `:837`, `:841`, `:846`, `:852`, `:857`, `:861`,
+`:956` — the `grid` branch at `:832` never fires); `browser-entry.ts:497-513`, `:1235-1236`;
+`engine/context.service.ts:42-44`, `:45-55`, `:64-65`, `:240-`; AC-040 (spec.md:1902-1911);
+`track/right-world.pass.ts:1118-1140`.
+**Options (carried).**
+- R-04: **A)** delete the orphaned engine grid pass AND its warmup converter in the same change that
+  renames the registry key to `'track-grid'` (no deferred cleanup); **B)** keep the engine grid pass as
+  a non-host surface but rename its key to `'engine-grid'` and give the track-grid its own
+  `'track-grid'` key (the count becomes 10 — AC-040's "7–9" clause must move); **C)** keep both and add
+  an explicit "which grid is live" sentence to §6.4.2.
+- R-05: **A)** add a `toRightWorldWarmupProgram` seam for the two right-world programs and extend the
+  registry to 11 keys (update the AC-040 count and the `NEATRACING_WARMED_PROGRAM_KEYS` test);
+  **B)** keep the nine keys and amend AC-040's count clause to cover the programs that are NOT created
+  by a pass factory (documents the exception, weaker contract); **C)** keep the nine keys and fold the
+  right-world warmup into the `track` slot (no count change, one extra off-screen draw).
+**Recommended branch.** R-04 **A** + R-05 **A** — one change that makes the key name, the warmup
+converter and the live program set agree, with the AC-040 count clause moved in the same slice.
+**Disposition:** D2 — ONE future implementation slice (`engine/passes/grid.pass.ts` +
+`engine/context.service.ts` + `browser-entry.ts`).
+
+#### G-07 — Spec §5.2 prose superseded by the landed physics model — HIGH — physics — D1 (gated by G-02) — P1
+
+**Source gaps:** F-02, F-03, F-04 (HIGH), F-05, F-06 (MED), F-11 (LOW).
+**Gap.** SIX stale §5.2 rows, one rewrite. (a) The arcade-drift constant table is superseded — three of
+its six constants are asserted ABSENT by the landed test suite and the two surviving names carry
+different values (max slip `0.45` vs `π/2`; grip-falloff threshold `0.2` vs `0.25`). (b) The per-tick
+helper list (5 helpers) and the 6-step integration order do not describe the landed 7-stage (4a–4e)
+pipeline. (c) The `CENTRIFUGAL` row has NO code counterpart and its constant is pinned GONE — the
+effect now enters only through the AC-091 momentum law. (d) The `STEERING_RATE` row states only the
+pre-14T user law, while the landed service has TWO channels (speed-softened user / never-softened AI
+percent). (e) The visual drift yaw formula is superseded by the 14N pose spring. (f) `FOG_DENSITY` is
+listed in the §5.2 physics "locked tuning baseline" table but its constant lives in the render surface
+— the VALUE matches, so this is a cross-reference drift only.
+**References.** spec.md §5.2 (`:281` CENTRIFUGAL, `:282` steering, `:283` fog, `:288-289` module shape,
+`:294-303` constants, `:305-320` helpers, `:322-334` integration order, `:336-345` visual drift yaw);
+landed `physics.step.service.ts:269` / `:280` / `:293` / `:307` / `:504` / `:509` / `:532` / `:542` /
+`:555` / `:566` / `:579` / `:597` / `:602` / `:616` / `:623` / `:812-838` / `:853-878`;
+`drift.model.ts:100` / `:207` / `:216` / `:518` / `:547` / `:766` / `:1044` / `:1072` / `:1151` /
+`:1240-1264`; `engine/lighting.ts:65`.
+**Options (carried).**
+- F-02: **A)** rewrite the §5.2 table to the landed model (`0.45` / `0.2` / rate `2` + the
+  AC-087/088/091 laws), deleting the three retired rows; **B)** keep the π/2 table and re-land the
+  retired constants (contradicts the 14G/14Q ledger and the absence pins — NOT recommended); **C)** keep
+  the table as the arcade-drift charter and add a normative "as-landed" block that supersedes it.
+- F-03: **A)** replace the §5.2 helper list + integration order with the landed 7-stage order and the
+  landed laws; **B)** keep the §5.2 prose as the charter and add the as-landed pipeline as a normative
+  annex; **C)** retire the §5.2 drift-amendment block and point §5.2 at a new §5.2.1 as the only
+  normative drift text.
+- F-04: **A)** delete the row and replace it with the momentum-law row (the excess-share law); **B)**
+  keep the row and mark it RETIRED (superseded by AC-091) with the replacement named; **C)** keep the row
+  as javascript-racer provenance with a pointer to the replacement.
+- F-05: **A)** amend the row to the two-channel form with the named factor; **B)** keep the row and add
+  a normative "Step 14T amendment" paragraph beneath it; **C)** keep the row and record the amendment
+  plan-only (consistent with F-13/B, but leaves §5.2 non-normative).
+- F-06: **A)** amend the formula to the pose-spring target and the envelope; **B)** keep the formula as
+  the first-order intent and append the pose-spring amendment; **C)** replace the paragraph with a
+  pointer to the car-pass drift-yaw contract (the only binding consumer).
+- F-11: **A)** annotate the row with its owning module; **B)** move the fog + draw-distance rows into
+  §6 (rendering) where they belong; **C)** leave it (value matches; cosmetic).
+**Recommended branch.** F-02 **A** + F-03 **C** + F-04 **B** + F-05 **A** + F-06 **A** + F-11 **A** —
+the smallest set that makes §5.2 true without duplicating a second normative block.
+**Disposition:** D1 (spec §5.2 amendment, no production byte). GATED BY G-02: the canon branch chosen
+there decides whether this is an in-place rewrite or a new §5.2.1 annex.
+
+#### G-08 — AC ledger rows cite retired / pre-fix code — MED — physics — D1 — P2
+
+**Source gaps:** F-09 (MED), F-10 (LOW).
+**Gap.** AC-079's ledger text still cites three RETIRED literals as if they were live (the `0.7` grip
+floor, `computeGripFalloff`, `effectiveGrip = 4 * gripFalloff`) while the landed proportional-traction
+law is the speed scrub plus the rational grip budget. AC-078's ledger text cites the pre-fix defect
+lines — the landed code parents the wheel chain onto the drift-yawed body matrix, so **the CONTRACT IS
+SATISFIED**; only the citations are stale.
+**References.** plans.md:529 (the AC-079 row), plans.md:528 (the AC-078 row); the retired references
+`drift.model.ts:54` / `:142` / `:224` do not exist; landed `drift.model.ts:1113-1121` /
+`:1044-1060` / `:715-725`, `car.pass.ts:1717-1727` / `:1745-1752` / `:1521`.
+**Options (carried).**
+- F-09: **A)** re-pin the AC-079 row citations to the landed laws; **B)** keep the "before" citations
+  and add a "landed as" column; **C)** leave the charter row untouched and put the re-pin only in the
+  existing AC-087..AC-090 re-derivation subsection.
+- F-10: **A)** refresh the citations to the landed lines; **B)** keep them as the defect record and
+  append the landed reference; **C)** leave the charter row untouched.
+**Recommended branch.** F-09 **A** + F-10 **A** — one two-row re-pin, no behaviour change.
+**Disposition:** D1 (plans.md ledger). F-10 needs NO implementation work at all.
+
+#### G-09 — §7.3.1 G3 T-junction measure absent everywhere — HIGH — voxel — D2 (gated by G-12) — P0
+
+**Source gaps:** X-01.
+**Gap.** §7.3.1 requires the mesher to weld all lattice vertices into a shared indexed buffer AND
+split long quad edges at neighbouring T-points. The mesher returns a flat quad list (`{dims, quads}`)
+with no vertex/index buffer, and every consumer expands each quad into 6 non-indexed vertices drawn
+with `gl.drawArrays(GL_TRIANGLES, …)`. A repo-wide grep for `weld` / `T-junction` / `fan-split` /
+`indexed buffer` under `examples/neatRacing` returns 0 matches, and no test asserts a crack-free seam.
+**References.** spec §7.3.1 "T-junction cracking (G3)" + the merge-contract shading-invariant clause;
+`examples/neatRacing/voxel/greedy-mesher.ts:116-121` (`VoxelMesh` = dims + quads), `:154-158`
+(`meshVoxelModel`); `examples/neatRacing/engine/passes/car.pass.ts:199`
+(`NEATRACING_CAR_VERTICES_PER_QUAD = 6`), `:678-737` (`expandVoxelBinModelToCarMesh`), `:1658`
+(`drawArrays`); `examples/neatRacing/engine/passes/track.pass.ts:114`, `:206`, `:581`.
+**Options (carried).** **A** — implement the two named measures in the mesher (shared indexed buffer +
+T-point fan-split) and add a seam fixture to the AC-009 lane. **B** — amend §7.3.1 to the shipped
+contract ("non-indexed quad expansion on exact lattice vertices; no T-point splitting") and record the
+G3 measures as a future gate tied to the first neighbour-dependent shading feature. **C** — keep the
+clause normative but gate it explicitly: forbid per-vertex lighting / AO until a weld+split slice has
+landed, and add that refusal to the render/lighting AC set.
+**Recommended branch.** **C** as the interim (one spec sentence, closes the in-game risk while the §7
+exit criterion stays open) and **A** as the recorded future gate. **B** is rejected — it silently
+retires a named §7 exit criterion.
+**Disposition:** D2 — a future implementation slice (mesher weld + T-point fan-split + a seam fixture
+on the AC-009 lane). It has NO in-game symptom today only because the runtime never loads a `.bin`
+(see G-12) and the shipped models are tiny — but it IS a §7 exit criterion.
+
+#### G-10 — `npm run voxel:build` does not emit the AC-010 artifact set — HIGH — voxel — D2 (gated by G-12) — P1
+
+**Source gaps:** X-02.
+**Gap.** The script writes exactly one output per model document, always with the hard-coded
+`-lod128.bin` suffix, and never calls the landed LOD builder — so no `lod64` tier exists, the car
+lands as `car-f1-lod128.bin` (the AC names `car-lod128.bin`) and the 32³ wheel lands as
+`wheel-lod128.bin` (a 32³ wheel mislabelled as the 128 tier). The script's own header defers the lod64
+output to "P1-S3-D" — that slice HAS landed (`voxel/lod.builder.ts` exists), so the deferral is stale
+and AC-010's "artifacts exist" validation clause is unmet.
+**References.** spec §7.3.2 ("emits `assets/bins/car-lod128.bin`, `car-lod64.bin`, and the wheel bins"),
+AC-010 (spec:1636-1640); `examples/neatRacing/scripts/build-voxel-bins.mjs:30-34` (the stale deferral
+note), `:59` (`LOD128_SUFFIX`), `:105-140` (the directory scan), `:156-172` (the per-model write path),
+`:158-166` (imports: decoder + mesher + codec only — no LOD builder);
+`examples/neatRacing/assets/models/car-f1.model.json` (128³, symmetric) and `wheel.model.json` (32³,
+symmetric).
+**Options (carried).** **A** — extend the build script to derive the coarse tier through `buildLodModel`
+and emit `<name>-lod64.bin` plus a tier-correct wheel bin, and settle the car file name
+(`car-lod128.bin` vs `car-f1-lod128.bin`) in the same change. **B** — amend AC-010 to the shipped names
+and move the lod64 emission into its own AC owned by the LOD/build-script slice. **C** — keep the AC
+text and mark the artifact clause as an open Step-14E blocker with a named owner and a due step (no
+silent partial pass).
+**Recommended branch.** **A** — the LOD builder already landed, so this is wiring + naming, not new
+machinery. Option C would book the gap as a Step 14E blocker; this consolidation does NOT treat it as
+step-blocking (see the assessment below), so C is recorded but not recommended.
+**Disposition:** D2 — a future implementation slice (`examples/neatRacing/scripts/build-voxel-bins.mjs`).
+
+#### G-11 — Axis-1 tangent mapping diverges from the pinned record layout — MED — voxel — D1 — P1
+
+**Source gaps:** X-03.
+**Gap.** §7.3.1 pins "axis0 → (y,z), axis1 → (z,x), axis2 → (x,y)" (a cyclic next-axis pattern); the
+shipped mapping is axis1 → (x,z), i.e. the width/height roles of the X and Z tangents are transposed
+for every Y-normal face. The in-repo pipeline is self-consistent (mesher, car expansion and track
+expansion all use the shipped rule) so nothing breaks in game — but a spec-conformant reader of a
+`.bin` transposes X and Z extents on every horizontal face (a 40×20 top face reads as 20×40).
+**References.** spec §7.3.1 (tangent-mapping clause); `examples/neatRacing/voxel/greedy-mesher.ts:65-72`
+(`FACE_TANGENT_AXES` = 0:[1,2], 1:[0,2], 2:[0,1]); `examples/neatRacing/engine/passes/car.pass.ts:661-662`
+(JSDoc) and `:738-780` (corner resolvers); `examples/neatRacing/engine/passes/track.pass.ts:386-394`
+(`resolveTangentAxes`).
+**Options (carried).** **A** — make the code match the spec (axis1 → [2,0]) in the mesher plus both
+consumers; mechanical, but it re-cuts every bin and invalidates the golden quad fixtures. **B** — amend
+§7.3.1 to the shipped mapping and state it in the `.bin` format table as the record layout of version
+1. **C** — keep the bytes, add an explicit "record layout v1 = axis1 → (x,z)" clause to §7.3.2 and
+require every reader (including the LOD writer) to use it.
+**Recommended branch.** **B** — the pipeline is self-consistent and the shipped bytes are what the
+shipped readers consume. Option A is a FUTURE IMPLEMENTATION change, not a documentation fix (it
+re-cuts every bin and invalidates the golden quad fixtures).
+**Disposition:** D1 (spec §7.3.1 + the §7.3.2 record-layout table). Interacts with G-10 (the emitted
+bins carry the shipped layout).
+
+#### G-12 — Pipeline topology has two live answers — MED — voxel — D3 — P1
+
+**Source gaps:** X-04 (**marker**).
+**Gap.** §7.1's flow diagram puts the `.bin` between the mesher and the GPU (`JSON → DECODE → MESHER
+→ BIN → GPU`), but the shipped runtime never loads a `.bin`: the browser entry builds its
+`VoxelBinModel` objects in memory from `meshVoxelModel(...)` and the dev server merely serves the bin
+directory. The `.bin` is therefore a build-time artifact whose byte-exact round trip protects a file
+no runtime path reads — which is also why G-09 and G-10 have no in-game symptom today.
+**References.** spec §7.1 (the mermaid flow + "the `.bin` LOD binaries are build-script outputs"),
+§7.3.2 (the round-trip clause); `examples/neatRacing/browser-entry/browser-entry.ts:1210-1227`
+(in-memory `bodyBins` / `wheelBins`); `examples/neatRacing/engine/passes/car.pass.ts:1400-1401`; a
+repo-wide grep for `assets/bins` / a `.bin` fetch returns only the build script and the dev-server
+route test.
+**Marker.** **X-04**.
+**Options (carried).** **A** — make the runtime consume the built `.bin` (`loadVoxelBin` over the server
+route) so the shipped format IS the shipped contract, and let the lod64 tier earn its keep. **B** —
+amend §7.1/§7.3.2 to state that the `.bin` is a build-time interchange artifact and the runtime meshes
+in-browser; scope the round-trip contract to the artifact and drop the BIN → GPU arrow. **C** — keep
+both paths and add a build-time byte-equality check (regenerated `.bin` == runtime-meshed model) so
+format drift fails the build instead of the game.
+**Recommended branch.** **C** — the only branch that makes the format drift fail the BUILD (the cheap,
+deterministic gate) without either re-architecting the runtime or leaving the §7.1 arrow unrealized.
+**Disposition:** D3 (owner decision) → then D1 (options B/C) or D2 (option A). GATES G-09 and G-10.
+
+#### G-13 — Voxel material / LOD rule drift — MED — voxel — D2 — P2
+
+**Source gaps:** X-05, X-06, X-07 (all MED).
+**Gap.** THREE rule-reading drifts in one owner area. (a) X-05 — the black exception is not enforced
+"in the mesher" as §7.2 and §7.3.3 rule 7 state: the mesher exports `resolveVoxelShade` (LD-23) but
+its only caller is the mesher's own unit test, no production module imports it, and the mesher's quad
+records carry no glow field at all, so the mesher cannot enforce the exception in its own output; the
+shipped enforcement lives in `voxel/materials.ts`. (b) X-06 — a partial-alpha authored palette entry
+becomes a partial-alpha BODY quad, violating §7.3.3 rule 8: the fine-tier mesher treats every entry
+with alpha ≥ 1 as an opaque body voxel and the schema validates palette components only as integers in
+0-255, so an authored `a = 128` entry is accepted, meshed into solid body quads and drawn by the body
+pass (never routed to the glass pass), outside the §6.5 two-tier material model; the `{0, 255}` snap
+exists only in the LOD builder. Latent — both shipped models use 0/255 only. (c) X-07 — the §7.3.3 rule 9
+"hard cap 256" is implemented against the TOTAL palette, not against the distinct derived averages: the
+builder seeds the derived palette with a copy of the SOURCE palette and caps `palette.length` at 256,
+so a 256-entry authored palette leaves ZERO headroom and a >256-entry authored palette exceeds the
+hard cap outright.
+**References.** spec §7.2 ("enforced in the mesher and in the LOD builder"), §7.3.3 rules 7/8/9, §6.5,
+AC-011, AC-013; `voxel/greedy-mesher.ts:176-190` (`resolveVoxelShade`, no production caller), `:88-104`
+(`VoxelQuad` has no glow field), `:52` (`VOXEL_OPAQUE_ALPHA_MIN = 1`), `:333-336` (`isVoxelBodyEntry`);
+`voxel/materials.ts:104-125` / `:131-137` (the real owner), consumed by `car.pass.ts:682` and
+`glass.pass.ts:363`; `voxel/lod.builder.ts:358-361` (rule 7), `:93-104` + `:349-355` (the snap that
+exists only here), `:200` / `:385-422` / `:394` / `:424-455` (the cap); `voxel/model.schema.ts:348-360`
+(byte-range-only palette validation); `voxel/lod.builder.test.ts:237-251` (the fixture that locks the
+stricter reading).
+**Options (carried).**
+- X-05: **A** — amend §7.2/§7.3.3 rule 7 to name `voxel/materials.ts` as the single enforcement owner
+  and delete the unused `resolveVoxelShade` export from the mesher module. **B** — keep the helper and
+  make it load-bearing by adding an emissive field to the quad record; this changes the §7.3.2 body
+  layout and needs a format version bump. **C** — keep the helper as the shared implementation and have
+  `materials.ts` delegate to it (one rule, one owner, no format change).
+- X-06: **A** — reject authored alphas outside {0, 255} in the schema (one validator, no format change).
+  **B** — keep authored partial alpha and route alpha ∈ (0,255) body voxels to the glass pass; this is
+  exactly the per-quad routing rule 8 says to avoid. **C** — snap authored partial alpha to {0, 255} at
+  decode time (consistent with rule 8) and amend §7.2 to say the snap covers authored entries too.
+- X-07: **A** — implement the rule as written: cap the number of DISTINCT DERIVED entries at 256
+  (source entries sit outside the cap); the change is one comparison plus a fixture update. **B** — keep
+  the code and amend rule 9 to "the derived palette (source entries + derived entries) is capped at 256
+  entries in total". **C** — bound the authored palette in the schema (e.g. ≤ 64 entries) so derived
+  entries always have headroom, and state that bound in §7.2.
+**Recommended branch.** X-05 **C** (one rule, one owner, no format change, no export deletion needed) +
+X-06 **A** + X-07 **A** (with the X-07 fixture update in the same slice).
+**Disposition:** D2 — one future implementation slice (the schema alpha validator, the distinct-derived
+cap, the X-05 resolution) + the D1 prose half in the same change. Under X-05/A the unused export
+deletion lands in that same slice (no deferred cleanup).
+
+#### G-14 — `.bin` codec hardening gaps — LOW — voxel — D2 — P2
+
+**Source gaps:** X-08, X-09, X-10 (all LOW).
+**Gap.** THREE bounds the codec does not enforce. (a) X-08 — the codec accepts any positive u16 dims
+and never checks the geometry against the declared dims: a quad at position `[60000, 0, 0]` inside a
+`[128, 128, 128]` model writes and loads cleanly. (b) X-09 — the codec does not enforce the 256-entry
+palette ceiling: the palette count is a u16 (up to 65535 entries) while the quad record's
+`paletteIndex` is a u8, so indices above 255 are unreachable. (c) X-10 — the version is an exact-match
+gate: the loader accepts version 1 and rejects everything else with one `VoxelBinVersionError`, so the
+format cannot express a supported range and a future v2 bin is indistinguishable from a corrupt file.
+The clause as written ("loader rejects bad magic/version") IS satisfied; the gap is forward-compatibility
+headroom.
+**References.** spec §7.2 (validation clause), §7.3.2 (header/body layout), AC-010 ("loader rejects
+wrong magic/version"); `examples/neatRacing/voxel/bin.codec.ts:51` (u16 dims / u16 palette count),
+`:75-76` (u8 paletteIndex), `:90` (`VOXEL_BIN_DIMS_COMPONENT_MIN = 1`), `:93`
+(`VOXEL_BIN_PALETTE_ENTRY_MIN = 1`), `:313-330` (`validateBinDims`), `:332-354` (`validateBinPalette`),
+`:411-423` (`validateBinQuadPosition` — u16 range only), `:636-649` (the exact-match rejection),
+`:172-180` (the single version error class), `:774-796` (`readBinQuad` re-validation).
+**Options (carried).**
+- X-08: **A** — add a loader-side coherence check (quad position + extents ≤ dims) raising
+  `VoxelBinFieldError`. **B** — state in §7.3.2 that the codec is dims-agnostic and that the CONSUMER
+  must validate geometry extents. **C** — accept it and record "no geometry-extent validation in the
+  codec" as an explicit risk in §12 (safety).
+- X-09: **A** — enforce `palette.length <= 256` in the writer and the loader with a named error. **B** —
+  document the u16/u8 asymmetry in §7.3.2 ("a palette larger than 256 entries is writable but only
+  indices 0-255 are addressable"). **C** — widen `paletteIndex` to u16 (format v2) if large palettes
+  are a real requirement.
+- X-10: **A** — keep exact-version rejection but split the error into "unsupported version" vs
+  "malformed version" and list the supported set in the message. **B** — define a min/max supported
+  version window so future versions can be additive. **C** — leave as-is and note in §7.3.2 that any
+  format change requires a coordinated rebuild of every consumer.
+**Recommended branch.** X-08 **A** + X-09 **A** + X-10 **B** — one file, three named bounds, no format
+change.
+**Disposition:** D2 — one small hardening slice (all three live in the single file
+`examples/neatRacing/voxel/bin.codec.ts`).
+
+#### G-15 — Build-script seams — LOW — voxel — D2 — P2
+
+**Source gaps:** X-11, X-12 (both LOW).
+**Gap.** TWO build-script seams. (a) X-11 — the server-triggered rebuild passes a model-name argument
+the build script IGNORES: the dev server spawns `node build-voxel-bins.mjs <modelName>` but the script
+never reads `process.argv` — it rescans the models directory and rebuilds EVERY model, so the
+per-model rebuild contract is a fiction a caller cannot rely on. (b) X-12 — the build script keeps a
+DEAD "mesher seam" fallback that would mask a missing-export regression: it falls back to "the
+module's single function export" when `meshVoxelModel` is absent, but the mesher module exports TWO
+functions (`meshVoxelModel`, `resolveVoxelShade`), so the branch can never be taken — the recorded seam
+("union reconciliation with the greedy-mesher slice is an orchestrator follow-up") was never closed.
+**References.** spec §7.3.2 ("run via npm script and server-triggered rebuild"), §8.2 (dev-server
+contract); `examples/neatRacing/server/dev-server.ts:69-74` (the pinned script), `:291-322` (the argv
+builder + spawner), `:1077-1086` (`/api/models/:name/rebuild`);
+`examples/neatRacing/scripts/build-voxel-bins.mjs:105-140` (the directory scan; no argv read), `:27-29`
+(the recorded seam note), `:181-205` (`resolveMesherExport` fallback), `:207-215` (`resolveMeshedQuads`
+shape fallback); `examples/neatRacing/voxel/greedy-mesher.ts:154`, `:176` (the two function exports).
+**Options (carried).**
+- X-11: **A** — make the script accept the model-name argument and build just that model (keeping the
+  no-arg "build everything" mode). **B** — change the dev server to spawn the script without a model
+  name (build-all semantics) and update the route docs. **C** — leave the wiring and record the
+  mismatch in §8.2 as a known limitation.
+- X-12: **A** — delete the fallback and import `meshVoxelModel` directly so a renamed export fails the
+  build loudly. **B** — keep the fallback but turn it into an explicit error and close the recorded seam
+  note. **C** — leave it and record it in §12 as a known build-script seam.
+**Recommended branch.** X-11 **A** + X-12 **A** — the script stops lying about both contracts.
+**Disposition:** D2 — one small cleanup slice (both live in
+`examples/neatRacing/scripts/build-voxel-bins.mjs`).
+
+#### G-16 — §7.3.3 rule-3 cross-reference points at the wrong rule — LOW — voxel — D1 — P2
+
+**Source gaps:** X-13.
+**Gap.** §7.3.3 rule 3 points at the wrong rule for the glow exclusion ("excluded ONLY from multi-color
+averages (rule 5) and from glow (rule 8)") — glow exclusion is RULE 6; rule 8 is the derived-alpha
+policy. The builder implements rule 6's semantics (black excluded from the glow average), so the CODE
+IS RIGHT and the cross-reference is stale.
+**References.** spec §7.3.3 rules 3, 6 and 8; `examples/neatRacing/voxel/lod.builder.ts:307-330` (rule 6
+semantics in `resolveLodBlockIndex`: glow summed over non-black contributors only), `:344-346`.
+**Options (carried).** **A** — fix the cross-reference in §7.3.3 rule 3 ("rule 6"). **B** — renumber the
+rules so rule 8 IS the glow rule (then rule 9/10 shift and AC-011's rule list must follow). **C** — leave
+the prose and record the intended semantics in the consolidated gap inventory so no future implementer
+reads rule 8 as the glow rule.
+**Recommended branch.** **A** — and option C's intent is discharged here regardless: **the glow
+exclusion is rule 6 — the black entry (0,0,0) is excluded from the glow average; rule 8 is the
+derived-alpha policy** (`voxel/lod.builder.ts:307-330`, `:344-346`).
+**Disposition:** D1 (one-word spec fix).
+
+#### G-17 — Spec §5.1 / §5.3 prose drift — LOW + INFO — physics — D1 — P3
+
+**Source gaps:** F-12 (LOW), F-14 (INFO).
+**Gap.** TWO prose drifts, no behaviour gap. (a) F-12 — §5.3's replay tuple is stale in two ways: it
+names a `seed` the physics surface does not have (the surface is RNG-free — no `Math.random` anywhere
+under `examples/neatRacing/physics`) and it does not name the two channels the replay now depends on
+(the optional AI turn-rate percent and the surface band law). (b) F-14 — §5.1's pacing paragraph is
+written for the Phase-2 worker (pull model, latest-wins, one in-flight request) while Phase 1 runs the
+same accumulator on the host; the catch-up contract itself HOLDS, so this is a phase-landing note, not
+a defect.
+**References.** spec.md §5.3 (:355-359); landed `physics.step.service.ts:100-123` (`PhysicsStepInput`,
+the optional `turnRatePercent` at `:117`), `:499` (`stepPhysics` with the optional surface resolver);
+the determinism twin-run `physics.step.service.test.ts:478-484`; spec.md §5.1 (:231-244); landed
+`host/render-loop.utils.ts:41` (`NEATRACING_MAX_CATCHUP_STEPS_PER_FRAME = 4`), `:177-214`,
+`host/race-session.ts:245-260`.
+**Options (carried).**
+- F-12: **A)** amend §5.3 to the real tuple (car state + input incl. the optional turn-rate percent +
+  the track band law); **B)** keep the "seed" wording and add "the physics surface is RNG-free";
+  **C)** leave it (Phase 2 §9.7 owns the full worker tuple).
+- F-14: **A)** annotate §5.1 with the phase landing; **B)** leave it (the spec is phase-agnostic; §9.2
+  owns the landing); **C)** leave it.
+**Recommended branch.** F-12 **A** + F-14 **A** — two sentences, both facts the landed code already
+demonstrates.
+**Disposition:** D1 (spec prose).
+
+#### G-18 — Spec §6 prose superseded + stale JSDoc claims — MED — render — D1 — P1
+
+**Source gaps:** R-03 (MED), R-08 (MED), R-13 (LOW).
+**Gap.** THREE prose drifts in §6, two of which make the spec wrong about its own shipped behaviour.
+(a) R-03 — the neon floor-grid pitch moved from the §6.4.2 "1.0 world unit" to the landed 5.0 m, and
+the spec now CONTRADICTS ITSELF, because its own AC-045 pins the 25 m² / 5.0 m footprint while §6.4.2
+still publishes 1.0; the code follows AC-045, so only the prose is stale. (b) R-08 — the §6.4.1
+starfield table (35 / 28 / 23, the 240 px sky band, "the horizon line sits at the band's bottom edge",
+and the AC-004 flappy-parity clause) is superseded by the landed full-backdrop tile and the ×3 counts
+(105 / 84 / 69), so the flappy-parity clause is FALSE and the parity test still claims to pin the spec
+table verbatim. (c) R-13 — two stale JSDoc claims contradict the shipped constants and the shipped
+strategy (both documentation drift, not behaviour): the "2 m² track-grid pass" docblock (the landed
+footprint is 25 m² with a 5.0 m spacing) and the resize-listener docblock that still claims it
+"re-applies the letterbox strategy from the live viewport (spec §6.2)" while the body applies the
+full-window stretch (the G-05 strategy).
+**References.** spec.md §6.4.2 ("Grid pitch 1.0 world unit"), spec.md:1937-1943 (AC-045 — 25 m² via
+`NEATRACING_TRACK_GRID_CELL_FOOTPRINT_AREA_MULTIPLIER = 25`, "giving a 5.0 m line spacing"), spec.md
+§6.4.1 (the 35/28/23 table, the 240 px band, the flappy-parity clause); landed
+`track/grid.builder.ts:14` / `:17` / `:23-25` / `:32-33`;
+`browser-entry/constants.starfield.ts:63` / `:68-70` / `:139-141`;
+`engine/passes/starfield.pass.ts:549` / `:821` / `:887`; the flappy reference still pins 35/28/23
+(`examples/flappy_bird/constants/constants.starfield.ts:74` / `:84` / `:94`);
+`engine/passes/starfield.pass.test.ts:49` and `:352-355` (the case is still titled "the flappy-parity
+layer table the spec §6.4.1 pins verbatim (AC-004)"); plans.md:495 (the AC-045 row), plans.md:507-508
+(the AC-059 / AC-060 rows — the change IS plan-recorded, the spec prose was never amended);
+`browser-entry/browser-entry.ts:488-491` and `:1346-1348`.
+**Options (carried).**
+- R-03: **A)** amend §6.4.2 to the 25 m² / 5.0 m footprint and delete the "1.0 world unit" clause;
+  **B)** keep §6.4.2 as the intent and add a normative "Step 14C grid-footprint amendment" paragraph;
+  **C)** keep §6.4.2 and add a pointer to AC-045 as the binding pitch.
+- R-08: **A)** amend §6.4.1 to the landed table (105 / 84 / 69 + the backdrop-tile horizon model) and
+  re-title the parity test (or re-point it at the flappy constants); **B)** keep the spec table as the
+  charter and add a normative "full-backdrop tile (AC-059 / AC-060)" clause as the binding model;
+  **C)** keep both and re-state the flappy-parity clause as "the layer RATIOS are parity-preserving
+  (35:28:23 → 105:84:69)" — the only option that keeps the AC-004 wording true without re-titling the
+  test.
+- R-13: **A)** re-author both docblocks to the landed values (25 m² / 5.0 m; full-window stretch);
+  **B)** drop the parenthetical spec citations from the docblocks (they restate §6.2 / §6.4.2 in prose
+  and drift); **C)** keep them and add a "see AC-045 / evidence batch 133" pointer.
+**Recommended branch.** R-03 **A** + R-08 **C** (keeps AC-004 true with NO test-file byte change) +
+R-13 **A** — the only branch set that needs no test-file edit. The R-13(b) letterbox docblock lands
+with G-05, in the same change.
+**Disposition:** D1 (spec §6 amendment + two docblock re-authors). R-03 is a SPEC SELF-CONTRADICTION and
+is the cheapest HIGH-value fix in this inventory.
+
+#### G-19 — Pulse colour hex / decimal mismatch — LOW — render — D1 — P3
+
+**Source gaps:** R-12.
+**Gap.** The spec pins `#B7FF00` (hex 0xB7 = 183) while the implementation keeps the decimal triplet
+(185, 255, 0) authoritative. The implementation ALREADY documents the defect and deliberately did not
+"fix" it.
+**References.** spec.md §6.4.3 (`#B7FF00`, glow alpha 0.42, depth-tested);
+`engine/passes/pulse.pass.ts:28` (`NEATRACING_PULSE_COLOR_HEX = '#B7FF00'`), `:33-43` (the JSDoc: "Spec
+defect (flagged to the spec owner, intentionally not 'fixed' here): the spec pins the hex token
+`#B7FF00` (hex 0xB7 decodes to 183) and the decimal triplet (185, 255, 0) … the decimal pin stays
+authoritative").
+**Options (carried).** **A)** amend the spec to `#B9FF00` (185) so the hex and the decimal agree;
+**B)** amend the implementation to the spec's hex 0xB7 = 183 and drop the decimal pin; **C)** keep both
+and state in §6.4.3 that the DECIMAL triple is normative and the hex is a display alias.
+**Recommended branch.** **A** — it changes no shipped colour and removes a live spec defect.
+**Disposition:** D1 (one spec token fix).
+
+### Cross-domain merge map
+
+| Consolidated row | Source gaps | Merge rule | Why the rows collapse |
+| --- | --- | --- | --- |
+| G-01 | F-01 + R-01 | one defect | The same defect class in two domains: the audit/slice packet names a file that does not exist, so a verification pass pointed at it inspects nothing and reads green. One fix, one re-pin. |
+| G-02 | F-13 + R-07 | one defect (decision row) | The render audit states R-07 is "the render-side twin of the physics sibling's F-13" — one canonicality decision (where the amended contract lives) covers both. F-13 carries the marker; R-07 does not. |
+| G-03 | F-07 + F-08 | one owner | Same AC (AC-081), same owner (Step 14I / `P1-track-road-containment`), same file set. The wiring gap and the stale citations are one change (no deferred cleanup). |
+| G-05 | R-02 + R-09 + R-10 + R-11 | one root cause | ONE cause (the client-size backing store vs the fixed-720 letterbox assumption) with four observed symptoms. R-09/R-10/R-11 are the derived consumers of the R-02 decision, so they are recorded as conditional members, not separate decisions. |
+| G-06 | R-04 + R-05 | one owner | Both are the same registry-drift change in `engine/context.service.ts` + `browser-entry.ts`: the key name, the warmup converter and the live program set must agree. |
+| G-07 | F-02 + F-03 + F-04 + F-05 + F-06 + F-11 | one contract | Six stale rows of ONE spec contract (§5.2). One amendment pass rewrites the contract; splitting them would produce six half-amended contracts. |
+| G-08 | F-09 + F-10 | one contract | Two rows of the same plan-ledger re-pin pass (AC-078, AC-079). Neither needs a production byte. |
+| G-13 | X-05 + X-06 + X-07 | one owner | Three rule-reading drifts in the voxel material/LOD rule area, one owner (`voxel/materials.ts` + `voxel/lod.builder.ts` + `voxel/model.schema.ts`), one slice. |
+| G-14 | X-08 + X-09 + X-10 | one owner | Three bounds of ONE codec file (`voxel/bin.codec.ts`). |
+| G-15 | X-11 + X-12 | one owner | Two seams of ONE build script (`scripts/build-voxel-bins.mjs`). |
+| G-17 | F-12 + F-14 | one contract | Two prose drifts in the same spec section family (§5.1 / §5.3), both facts the landed code already demonstrates. |
+| G-18 | R-03 + R-08 + R-13 | one contract | §6 prose drift (the grid pitch and the starfield table) plus the JSDoc that restates both in code comments. One §6 amendment pass + two docblock re-authors. |
+
+Rows **NOT** merged, on purpose: G-04 (R-06) and G-09 (X-01) are single-source HIGH implementation
+gaps with distinct owners (Step 14I vs the voxel pipeline); G-11 (X-03) stays separate from G-12
+(X-04) because the record-layout mapping and the pipeline topology are different questions; G-16
+(X-13) stays separate because it is a one-word cross-reference with its own "record the semantics
+here" contract; G-19 (R-12) stays separate because it is a single-token colour pin.
+
+### Severity roll-up — consolidated
+
+| Severity | Count | Consolidated rows |
+| --- | --- | --- |
+| HIGH | 7 | G-01, G-03, G-04, G-05, G-07, G-09, G-10 |
+| MED | 7 | G-02, G-06, G-08, G-11, G-12, G-13, G-18 |
+| LOW | 5 | G-14, G-15, G-16, G-17, G-19 |
+| **Total** | **19** | — |
+
+### Reconciliation — 40 raw gaps → 19 consolidated rows
+
+| Domain | Raw gaps | Distinct consolidated rows touched | Reduction |
+| --- | --- | --- | --- |
+| physics | 14 | 6 (G-01, G-02, G-03, G-07, G-08, G-17) | 8 |
+| render | 13 | 7 (G-01, G-02, G-04, G-05, G-06, G-18, G-19) | 6 |
+| voxel | 13 | 8 (G-09, G-10, G-11, G-12, G-13, G-14, G-15, G-16) | 5 |
+| **total (distinct rows)** | **40** | **19** | **21** |
+
+No gap was DROPPED: every one of the 40 raw IDs (F-01..F-14, R-01..R-13, X-01..X-13) appears in
+exactly one consolidated row, and every carried A/B/C option is reproduced above.
+
+### Prioritised disposition recommendation
+
+**D1 — plan-ledger / spec-prose correction (NO production byte):** G-01, G-07, G-08, G-11, G-16, G-17,
+G-18, G-19 (8 rows). Owner: the next 01-planning spec-amendment pass, which must also re-pin
+plans.md AC-002, AC-040, AC-045, AC-078 and AC-079 where the row text itself is stale. G-07 is gated by
+G-02.
+
+**D2 — future implementation slice (production code):** G-03, G-04, G-06, G-09, G-10, G-13, G-14, G-15
+(8 rows). Owner: **Step 14I** for G-03 and G-04 (both are ALREADY-scoped 14I deliverables — do NOT open
+a new slice); a NEW step after Step 15 for G-06, G-09, G-10, G-13, G-14 and G-15.
+
+**D3 — owner decision (the three open markers):** G-02 (F-13), G-05 (R-02), G-12 (X-04). Each has a
+recommended branch recorded above; each unblocks a named set of rows (see the decision set below).
+
+**Priority order:** P0 = G-03, G-04, G-09 (user-visible defects + a §7 exit criterion) → P1 = G-01,
+G-02, G-05, G-06, G-07, G-10, G-11, G-12, G-18 (HIGH rows, the three decisions, and the two spec
+self-contradictions) → P2 = G-08, G-13, G-14, G-15, G-16 → P3 = G-17, G-19 (cosmetic / phase notes).
+
+**Two structural facts the next author needs:**
+- **Step 14E is FULL.** It already carries 5 slices (3 audits + this inventory + `P1-spec-review-green`),
+  so the at-most-5-slices-per-step mandate forbids adding any implementation slice here. G-06, G-09,
+  G-10, G-13, G-14 and G-15 must be registered in a NEW step after Step 15 (or in the coverage backlog),
+  never in this step's packet.
+- **G-03 and G-04 are not newly discovered work.** Step 14I is still `[PLANNED]` (plans.md:693) and its
+  two AC rows (AC-080, AC-081) are exactly these two rows. The 14E audit ran ahead of the scope the
+  packet assumes ("14E audits … 14I last before Step 15") and CONFIRMED that the 14I packet is
+  correctly stated, with the RED contract for the road-edge leg already failing as expected (18 passed /
+  1 failed). No re-plan and no new slice is warranted.
+
+### Step-blocking assessment — NO escalation raised
+
+- The Step 14E **Done** condition is met: the read-only audit is complete, the consolidated gap inventory
+  with A/B/C options is recorded in the log, at most 3 NEEDS CLARIFICATION markers are used (exactly 3,
+  all inherited from the three audits), and unresolved blockers are listed below.
+- The Step 14E **Blocked** condition ("an ambiguity cannot be resolved within the 3-marker / 5-question
+  budget") does NOT fire. The three ambiguities were each expressed with a decidable A/B/C option set
+  INSIDE the budget; the budget caps how many markers may be RAISED, it does not require this read-only
+  slice to RESOLVE them. Nothing in the inventory is unexpressible.
+- G-03 and G-04 (the two user-visible defects) are NOT Step 14E blockers: they belong to Step 14I,
+  which is still `[PLANNED]` and which this step was always meant to audit AFTER it landed.
+- G-09 and G-10 (the §7 exit-criterion gaps) are NOT Step 14E blockers: Step 14E's deliverable is the
+  inventory; they are future implementation work for the voxel pipeline owner.
+- Step 15 (the editor editing-loop composition) depends on NONE of the three open markers, so the
+  routing chain is not blocked either.
+
+→ **NO 00.cross-tier-helper escalation is raised.** The three open markers are recorded as an owner
+decision set below, to be resolved inside this ledger.
+
+### Owner decision set — the three open markers (the step-wide budget is EXHAUSTED)
+
+The clarification discipline allows at most 5 focused questions; three are asked, one per open marker.
+
+- **Q1 (G-02 / F-13) — where does the amended contract canonically live?** (A) amend the spec so it is
+  normative again; (B) declare the plan ledger authoritative and add a spec pointer; (C) dual-track —
+  the spec carries the names + values, the ledger keeps the evidence. **RECOMMENDED: C.**
+  *Unblocks:* G-07 (the shape of the §5.2 rewrite), G-18, G-11 (the record-layout wording), G-08.
+- **Q2 (G-05 / R-02) — which canvas strategy is canonical?** The spec §6.2 / LD-17 fixed-720 letterbox,
+  or the shipped full-window stretch (client-size backing store, 1280×720 fallback, CSS stretch)?
+  **RECOMMENDED: C** (keep the charter, add one binding full-window-stretch clause). Option B (re-land
+  the letterbox ladder) is rejected — it contradicts the 2026-10-05 decision and the visible-window
+  evidence. *Unblocks:* G-05 (the three derived consumers) and the plans.md AC-002 re-pin.
+- **Q3 (G-12 / X-04) — is the `.bin` the runtime input, or a build-time artifact only?** **RECOMMENDED:
+  C** (keep both paths and add a build-time byte-equality check so format drift fails the build).
+  *Unblocks:* G-09 (whether the mesher change is required or the §7.3.1 clause is amended) and G-10
+  (whether the lod64 tier earns a runtime consumer or is only an artifact).
+
+```yaml
+phase: 1
+step: 14E
+slice_id: 'P1-spec-gap-inventory'
+title: 'Compile consolidated gap inventory with A/B/C options'
+status: '[DONE]'
+goal: planning
+tdd_sequence: green-only
+mode: review-only
+source_of_truth: 'plans/neatracing-voxel-racer.plans.md'
+audit_scope: 'the three DONE Step 14E domain audits - physics (logs.md:13362, 14 gaps) + render (logs.md:13499, 13 gaps) + voxel (logs.md:13655, 13 gaps) - consolidated into one deduplicated, prioritised gap inventory, carrying the A/B/C options verbatim from each source audit'
+read_only_mandate: honoured - no production code, no spec prose, no production behaviour changed; no browser / no Chrome DevTools MCP / no CDP; no mutating git (read-only inspection only); no child agents (one slim dispatch)
+files_changed:
+  - 'plans/neatracing-voxel-racer.logs.md'
+  - 'plans/neatracing-voxel-racer.plans.md'
+production_code_changed: false
+spec_prose_changed: false
+raw_gaps_consolidated: 40
+raw_gaps_by_domain:
+  physics: 14
+  render: 13
+  voxel: 13
+consolidated_rows: 19
+consolidated_rows_by_severity:
+  HIGH: 7
+  MED: 7
+  LOW: 5
+consolidated_row_ids:
+  - 'G-01'
+  - 'G-02'
+  - 'G-03'
+  - 'G-04'
+  - 'G-05'
+  - 'G-06'
+  - 'G-07'
+  - 'G-08'
+  - 'G-09'
+  - 'G-10'
+  - 'G-11'
+  - 'G-12'
+  - 'G-13'
+  - 'G-14'
+  - 'G-15'
+  - 'G-16'
+  - 'G-17'
+  - 'G-18'
+  - 'G-19'
+disposition_buckets:
+  D1_plan_ledger_or_spec_prose_correction: 8
+  D2_future_implementation_slice: 8
+  D3_owner_decision: 3
+priority_buckets:
+  P0: 3
+  P1: 9
+  P2: 5
+  P3: 2
+needs_clarification_markers: 0
+needs_clarification_marker_ids: []
+step_wide_marker_budget:
+  allowed: 3
+  used: 3
+  rows:
+    - 'F-13 (P1-spec-audit-physics) - consolidated into G-02'
+    - 'R-02 (P1-spec-audit-render) - consolidated into G-05'
+    - 'X-04 (P1-spec-audit-voxel) - consolidated into G-12'
+owner_decision_set:
+  count: 3
+  rows:
+    - 'Q1 / G-02 / F-13 - where the amended contract canonically lives - RECOMMENDED C (dual-track)'
+    - 'Q2 / G-05 / R-02 - which canvas strategy is canonical - RECOMMENDED C (charter + one binding full-window-stretch clause)'
+    - 'Q3 / G-12 / X-04 - is the .bin the runtime input or a build-time artifact only - RECOMMENDED C (build-time byte-equality check)'
+validation_evidence:
+  - 'Review-only consolidated inventory (19 rows from 40 raw gaps; each row carries domain + severity + file/section reference + the A/B/C options verbatim from its source audit + a disposition and a priority) appended to this log section'
+  - 'neataptic-gate-mcp:run_gate_check gate=slice-advancement slice-id=P1-spec-gap-inventory changed-files=plans/neatracing-voxel-racer.logs.md,plans/neatracing-voxel-racer.plans.md plan=plans/neatracing-voxel-racer.plans.md -> PASS (TRIVIAL; 4/4 sub-gates pass: plan-sync, step-packet, plan-slice-quality, plan-command-lint)'
+  - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/neatracing-voxel-racer.plans.md -> PASS (ok: true, 0 errors, 0 warnings)'
+  - 'No jest/tsc/build run (review-only slice; the contract requires no test execution)'
+risks_or_gaps:
+  - 'P0 / G-03 (F-07 + F-08): the AC-081 containment bound is LANDED as a util but NOT wired into the live drive loop (host/race-session.ts:260 calls stepPhysics only), so the user-reported "the AI-driven car leaves the road" defect is still reproducible on the served page while the AC-085 harness reads green. Owned by Step 14I (still [PLANNED]).'
+  - 'P0 / G-04 (R-06): the AC-080 continuous tri-color road-edge band is NOT implemented - the hard 6 m radial cut-off (track/road-edge.ts:333-351) truncates the red shell at outer corner 2 (-4.00, -136.34); the RED contract is documented failing (18 passed / 1 failed). Owned by Step 14I (still [PLANNED]).'
+  - 'P0 / G-09 (X-01): the §7.3.1 G3 T-junction measure is absent everywhere - the mesher emits a flat quad list and every consumer expands it into 6 non-indexed vertices drawn with drawArrays; no weld, no T-point split, no crack-free-seam test. A §7 exit criterion with no in-game symptom only because the runtime never loads a .bin (G-12).'
+  - 'P1 / G-05 (R-02 + R-09 + R-10 + R-11): the canvas strategy has two live answers and no canonical one, and three downstream constants (the LOD focal, the bloom target, the starfield backdrop) still assume the fixed-720 letterbox while the host stretches to the client size.'
+  - 'P1 / G-10 (X-02): npm run voxel:build never emits the AC-010 artifact set - no lod64 tier, a 32-cubed wheel mislabelled wheel-lod128.bin, and the car written as car-f1-lod128.bin.'
+  - 'P1 / G-07 (F-02 + F-03 + F-04): spec §5.2 still publishes the retired drift constant table, the retired helper list and the retired CENTRIFUGAL row - the spec is actively wrong against the landed model.'
+  - 'P1 / G-18 (R-03): spec §6.4.2 still publishes the retired 1.0 grid pitch while its OWN AC-045 pins the 25 m2 / 5.0 m footprint - the spec contradicts itself.'
+  - 'P2 / G-08 (F-09): the AC-079 ledger row still cites three retired literals as if they were live.'
+handoff_to: '05-green-testing'
+next_agent: '01-planning'
+next_steps:
+  - 'Step 14E remaining slice P1-spec-review-green - the review-only green verdict and the Step 14E status flip to DONE belong to that slice (this slice flips only its own status).'
+  - 'The 3-marker step budget is EXHAUSTED (F-13 / R-02 / X-04): the three open decisions must be resolved by the owner INSIDE this ledger (Q1..Q3 above), NOT by raising a new marker.'
+  - 'Route G-03 + G-04 to Step 14I (both are already-scoped 14I deliverables - do NOT open a new slice); route G-06, G-09, G-10, G-13, G-14, G-15 to a NEW implementation step after Step 15 (Step 14E is FULL at the at-most-5-slices mandate and cannot carry them); route G-01, G-07, G-08, G-11, G-16, G-17, G-18, G-19 to the next spec-amendment pass.'
+  - 'Step 15 (the editor editing-loop composition) depends on NONE of the three open markers, so the routing chain is not blocked.'
+notes: 'Single slim dispatch, no child agents, no browser/CDP, no mutating git, NO new NEEDS CLARIFICATION marker (the 3-marker budget stays exhausted at F-13 / R-02 / X-04). The consolidated table is the deliverable; the slice status flip in the plans file is the only tracker mutation - the three sibling audit sections (logs.md:13362, :13499, :13655) were READ and NOT edited. artifact_naming_deviation: DISCLOSED - the slice packet files_to_change names plans/neatracing-voxel-racer.research.md, but that path is ALREADY OCCUPIED by a different, closed 2026-10-24 Step 14N artifact (the drift-feel integration coupling design), and the dispatch contract for this slice requires the consolidated section in plans/neatracing-voxel-racer.logs.md - so the inventory lives in the log, the same evidence surface the three sibling audit slices used. The plan file section ## Latest validation evidence was NOT touched, matching the sibling precedent: the step-wide green verdict belongs to P1-spec-review-green.'
+```
+
+## EOL-PROBE
+
+```
+

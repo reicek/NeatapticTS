@@ -239,6 +239,7 @@ export const CAR_LIT_UNIFORM_NAMES: readonly string[] = [
   'uTireGradientBrightFactor',
   'uTireGradientDarkFactor',
   'uTireGradientThreshold',
+  'uTireGrip',
 ];
 
 /** Blob-shadow program uniform names. */
@@ -293,6 +294,7 @@ uniform float uTireGradientRadius;
 uniform float uTireGradientBrightFactor;
 uniform float uTireGradientDarkFactor;
 uniform float uTireGradientThreshold;
+uniform float uTireGrip;
 ${NEATRACING_LIGHTING_GLSL_CHUNK}
 in vec3 vWorld;
 in vec3 vAlbedo;
@@ -325,6 +327,13 @@ void main() {
     vec3 wheelCenter = vec3(uModel[3][0], uModel[3][1], uModel[3][2]);
     float t = clamp(dot(vWorld - wheelCenter, uSunDirection) / (2.0 * uTireGradientRadius) + 0.5, 0.0, 1.0);
     float factor = mix(uTireGradientDarkFactor, uTireGradientBrightFactor, t);
+    // AC-088 (the TRACTION term): the per-tire GRIP - derived from the
+    // PUBLISHED traction severity, never from the fixed sun - pulls the
+    // tire toward the dark end of the band. A tire that still hooks keeps
+    // the fixed-space highlight, a tire that is scrubbing is smeared dark,
+    // and because the REAR axle breaks away before the front axle, the two
+    // axles are shaded differently while the car slides (G-V10).
+    factor = mix(uTireGradientDarkFactor, factor, clamp(uTireGrip, 0.0, 1.0));
     albedo *= factor;
   }
   vec3 lit = shadeLitSurface(albedo, worldNormal, vEmissive);
@@ -391,11 +400,55 @@ export const NEATRACING_TIRE_GRADIENT_BRIGHT_FACTOR = 1.7;
 export const NEATRACING_TIRE_GRADIENT_DARK_FACTOR = 0.35;
 
 /**
+ * Minimum non-degenerate spread between the two ends of the fixed-space tire
+ * gradient (AC-088): the bright factor minus the dark factor, in the
+ * dimensionless multiplier units the fragment stage mixes between.
+ *
+ * This is a FLOOR, not a live value: the production spread is
+ * `NEATRACING_TIRE_GRADIENT_BRIGHT_FACTOR - NEATRACING_TIRE_GRADIENT_DARK_FACTOR`
+ * = 1.35 (1.7 - 0.35), which already clears the floor with margin. The named
+ * export exists so the contract is a checkable constant instead of a bare
+ * literal in an assertion: the fragment stage can only differentiate the tire
+ * when the two ends of the gradient differ, and this floor is the minimum
+ * difference that keeps the effect visible.
+ *
+ * The rendered gradient itself is a fragment-stage effect, so it is NOT
+ * measurable from JavaScript; the visible outcome is carried by the AC-090
+ * user visual gate, and this constant pins the seam INPUTS.
+ *
+ * @example 0.5
+ */
+export const NEATRACING_TIRE_GRADIENT_MIN_SPREAD = 0.5;
+
+/**
  * Palette colors at or below this max channel are treated as tire rubber and
  * receive the fixed-space vertical gradient; brighter rim/hub colors are
  * skipped.
  */
 export const NEATRACING_TIRE_GRADIENT_RUBBER_MAX_CHANNEL = 80;
+
+/**
+ * The FRONT axle grip share lost at the FULL published traction severity
+ * (AC-088, Step 14R).
+ *
+ * The front axle keeps most of its grip while the car slides: the driver
+ * still steers it, only the available authority shrinks. The share is a
+ * dimensionless loss per unit of published severity, so the front grip at
+ * severity `s` is `1 - s * NEATRACING_TIRE_GRIP_FRONT_LOSS_PER_SEVERITY`.
+ */
+const NEATRACING_TIRE_GRIP_FRONT_LOSS_PER_SEVERITY = 0.35;
+
+/**
+ * The REAR axle grip share lost at the FULL published traction severity
+ * (AC-088, Step 14R).
+ *
+ * The rear axle breaks away FIRST: the drive tires do the sliding, so the
+ * rear grip at severity `s` is `1 - s * NEATRACING_TIRE_GRIP_REAR_LOSS_PER_SEVERITY`
+ * and reaches zero at the full severity while the front axle still holds a
+ * third of its grip. The two axles therefore NEVER share one grip value,
+ * which is what makes the per-tire differentiation (G-V10) expressible.
+ */
+const NEATRACING_TIRE_GRIP_REAR_LOSS_PER_SEVERITY = 1;
 
 /**
  * Mesh produced by {@link expandVoxelBinModelToCarMesh}: interleaved
@@ -434,8 +487,57 @@ export interface CarPassCarState {
    * plus the car shadow inherit the SAME offset (AC-078), so the tires move
    * and yaw with the body instead of staying on the base yaw. Zero or
    * omitted means no offset.
+   *
+   * DECLARED POSE ENVELOPE (AC-047C, re-derived in Step 14N): the drift
+   * model drives the pose spring toward the target
+   * `slip * NEATRACING_DRIFT_VISUAL_YAW_GAIN_RAD +
+   * NEATRACING_DRIFT_POSE_STEER_YAW_RAD * articulation` (the committed slip,
+   * bounded by NEATRACING_DRIFT_MAX_SLIP_ANGLE_RAD, plus the articulation
+   * term), so the declared envelope of that TARGET is
+   * `NEATRACING_DRIFT_MAX_SLIP_ANGLE_RAD * NEATRACING_DRIFT_VISUAL_YAW_GAIN_RAD
+   * + NEATRACING_DRIFT_POSE_STEER_YAW_RAD` = 0.45 * 0.5 + 0.08 = 0.3050 rad
+   * (the three constants live in examples/neatRacing/physics/drift.model.ts).
+   * The offset this pass renders is the spring OUTPUT, not the target: the
+   * second-order pose spring (NEATRACING_DRIFT_POSE_DAMPING_RAD_PER_S, zeta
+   * 0.35) overshoots its target, so 0.3050 rad bounds the TARGET and the
+   * published offset is bounded by MEASUREMENT - the 14N lane measures the
+   * peak |pose| and pins it against the tighter 0.2250 rad target.
+   *
+   * The slip-only figure 0.2250 rad (0.45 * 0.5) is NOT a pose bound: the
+   * articulation term adds 0.08 rad in the SAME direction during a
+   * countersteer, so the static sum is the declared conservative ENVELOPE -
+   * an UPPER bound on the target, NOT an attainable peak: the two terms are
+   * ANTI-CORRELATED in time (the committed slip unwinds while the
+   * articulation slews), so the reachable |target| peaks lower.
+   * The pose is deliberately NOT clamped to either figure, because a clamp
+   * would fight the pose spring and flatten the far-side pop, which IS the
+   * feature. 0.2250 rad survives only as the FALLBACK re-record target: a
+   * measured peak above 0.2250 rad but at most 0.3050 rad re-records the
+   * ceiling with the MEASURED value (the limit does not move), while a
+   * measured peak above 0.3050 rad means the MODEL is at fault and the limit
+   * is never widened.
+   *
+   * The pass applies the offset verbatim and never re-derives or rescales it.
    */
   readonly driftYawOffsetRad?: number;
+  /**
+   * The PUBLISHED traction severity of this car, in the closed unit
+   * interval `[0, 1]` (AC-088, Step 14R).
+   *
+   * This is the ONE shared scalar the physics state publishes for the
+   * drift presentation (Step 14Q): `0` means the tires are hooked (a
+   * straight line), `1` means the tires are fully sliding. The pass
+   * CONSUMES the published value verbatim - it never re-derives a severity
+   * of its own, and it never re-derives the grip from the sun, the wheel
+   * spin, or the steer input.
+   *
+   * The channel is OPTIONAL (like `steerAngleRad` and
+   * `driftYawOffsetRad`): a car state without the channel renders exactly
+   * as it did before AC-088 (full grip, the raw steer echo), so the
+   * out-of-scope producers of `CarPassCarState` keep compiling and keep
+   * their legacy look.
+   */
+  readonly tractionSeverity?: number;
 }
 
 /** Per-frame draw state accepted by CarPass.draw. */
@@ -468,6 +570,60 @@ export interface CarPassModels {
   readonly body: VoxelBinModel;
   /** Wheel voxel bin (drawn four times via the wheel mount contract). */
   readonly wheel: VoxelBinModel;
+}
+
+/**
+ * Computes the GRIP share of one tire from the PUBLISHED traction severity
+ * (AC-088, Step 14R).
+ *
+ * The severity arrives already published by the physics state; this helper
+ * only turns it into the per-axle grip shares the fragment stage consumes.
+ * The severity itself is NEVER re-derived here - not from the fixed sun,
+ * not from the wheel spin, not from the steer input.
+ *
+ * The two axles never share one grip value: the REAR axle breaks away
+ * first (the drive tires do the sliding) and the FRONT axle keeps most of
+ * its grip, so the four tires are shaded differently while the car slides
+ * (G-V10).
+ *
+ * @param tractionSeverity - The published severity in [0, 1].
+ * @param isFrontWheel - True for the steered front axle, false for the rear.
+ * @returns The grip share in [0, 1] (1 = fully hooked, 0 = fully sliding).
+ */
+function computeTireGrip(
+  tractionSeverity: number,
+  isFrontWheel: boolean,
+): number {
+  const severity = Math.min(Math.max(tractionSeverity, 0), 1);
+  const lossPerSeverity = isFrontWheel
+    ? NEATRACING_TIRE_GRIP_FRONT_LOSS_PER_SEVERITY
+    : NEATRACING_TIRE_GRIP_REAR_LOSS_PER_SEVERITY;
+  return Math.min(Math.max(1 - severity * lossPerSeverity, 0), 1);
+}
+
+/**
+ * Computes the EFFECTIVE front-wheel steer yaw (AC-088, Step 14R).
+ *
+ * G-V5: the tire yaw-follow used to be the RAW steer echo, so a dramatic
+ * turn was rendered even when the physics state never latched a slide. The
+ * rendered yaw is now the angle the front axle can actually HOLD: the raw
+ * request scaled by the front grip share the published severity leaves
+ * behind. On a straight line (severity 0) the front axle still holds the
+ * whole request, so the legacy driving feel is untouched; while the tires
+ * are sliding the authority shrinks and the rendered yaw is no longer the
+ * echo.
+ *
+ * The pass does NOT invent a countersteer angle: the physics state
+ * publishes no wheel angle, so the pass presents the grip-limited request
+ * instead of fabricating a steering angle the simulation never computed.
+ *
+ * @param car - The car being drawn.
+ * @returns The front-wheel steer yaw in radians.
+ */
+function computeFrontWheelSteerYawRad(car: CarPassCarState): number {
+  const echoRad = car.steerAngleRad ?? 0;
+  const frontGrip = computeTireGrip(car.tractionSeverity ?? 0, true);
+  return echoRad * frontGrip;
 }
 
 /**
@@ -1607,9 +1763,20 @@ export function createCarPass(
         const isFrontWheel =
           mount.socketId === 'front-left' ||
           mount.socketId === 'front-right';
+        // AC-088: the front axle is the steered axle, and the angle it
+        // actually holds is the physics-driven EFFECTIVE steer (the raw
+        // request scaled by the front grip), never the raw echo itself.
         rotationYMat4(
           NEATRACING_WHEEL_STEER_YAW_MATRIX,
-          isFrontWheel ? (car.steerAngleRad ?? 0) : 0,
+          isFrontWheel ? computeFrontWheelSteerYawRad(car) : 0,
+        );
+        // AC-088: the grip is fed PER WHEEL (the fronts and the rears do
+        // NOT share one grip), so the fragment stage can shade a scrubbing
+        // tire differently from a hooked one. The body draw never reads it
+        // (the gradient branch is disabled for the body).
+        gl.uniform1f(
+          litUniforms.uTireGrip,
+          computeTireGrip(car.tractionSeverity ?? 0, isFrontWheel),
         );
         multiplyMat4(
           NEATRACING_CAR_MATRIX_SCRATCH_A,

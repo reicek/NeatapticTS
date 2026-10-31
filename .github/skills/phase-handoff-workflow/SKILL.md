@@ -195,7 +195,7 @@ packets, before execution continues.
 | `skills`             | Yes      | List of skill names the agent should load                                                                                                                                                                                                                               |
 | `specialists`        | No       | List of hidden specialist agent names for delegation                                                                                                                                                                                                                    |
 | `validation`         | Yes      | List of validation commands or evidence gates                                                                                                                                                                                                                           |
-| `pre_execute_hook`   | No       | Optional pre-execution hook declaring `{ tool, args }`. The named tool (e.g. `neataptic-workflow-mcp/get_slice_context`) is invoked with the provided args before the RED/IMPLEMENT phase begins, giving the dispatched specialist deterministic context from the plan. |
+| `pre_execute_hook`   | No       | Optional pre-execution hook declaring `{ tool, args }`. The named tool (e.g. `neataptic-workflow-mcp-get_slice_context`) is invoked with the provided args before the RED/IMPLEMENT phase begins, giving the dispatched specialist deterministic context from the plan. |
 | `constitution_check` | No       | Stable principle identifiers from `plans/constitution.md` that this step exercises. Informational; preserved by plan-sync and reported in handoffs.                                                                                                                     |
 
 The orchestrator resolves `goal` to the dispatched agent using the routing
@@ -216,7 +216,7 @@ The canonical use is to fetch a slice context from the workflow MCP server:
 
 ```yaml
 pre_execute_hook:
-  tool: 'neataptic-workflow-mcp/get_slice_context'
+  tool: 'neataptic-workflow-mcp-get_slice_context'
   args:
     slice_id: 'C1-gate-and-skill'
 ```

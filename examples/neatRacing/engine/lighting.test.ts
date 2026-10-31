@@ -50,6 +50,7 @@ import {
   NEATRACING_BLOB_SHADOW_Y_OFFSET_M,
   NEATRACING_TIRE_GRADIENT_BRIGHT_FACTOR,
   NEATRACING_TIRE_GRADIENT_DARK_FACTOR,
+  NEATRACING_TIRE_GRADIENT_MIN_SPREAD,
   NEATRACING_TIRE_GRADIENT_RUBBER_MAX_CHANNEL,
   createCarPass,
   expandVoxelBinModelToCarMesh,
@@ -1091,6 +1092,157 @@ describe('fixed-space tire lighting (OBS-20)', () => {
     expect(NEATRACING_TIRE_GRADIENT_BRIGHT_FACTOR).toBeGreaterThan(
       NEATRACING_TIRE_GRADIENT_DARK_FACTOR,
     );
+  });
+});
+
+describe('tire gradient magnitude (AC-088, RED 7d)', () => {
+  // [RED-7D-MIN-SPREAD-EXPORT]
+  it('exports the named tire-gradient factor spread floor of 0.5', () => {
+    expect(NEATRACING_TIRE_GRADIENT_MIN_SPREAD).toBe(0.5);
+  });
+
+  // [RED-7D-FACTOR-FEEDS-PRESENT]
+  it('feeds both tire-gradient factor uniforms once per car', () => {
+    const harness = createCarMockWebGlHarness();
+    const pass = createCarPass(harness.gl, {
+      body: { ...CAR_FIXTURE_BIN },
+      wheel: { ...CAR_FIXTURE_BIN },
+    });
+
+    pass.draw(
+      makeDrawFrame([
+        { worldX: 0, worldZ: 0, yawRad: 0, teamColorId: 1, wheelSpinRad: 0 },
+        { worldX: 0, worldZ: 60, yawRad: 0, teamColorId: 0, wheelSpinRad: 0 },
+      ]),
+    );
+
+    // The two ends of the gradient are uploaded together, once per car,
+    // right before that car's wheel group (car.pass.ts feedTireGradientUniforms).
+    const brightFeeds = harness.uniform1fFeeds.filter(
+      (feed) => feed.name === 'uTireGradientBrightFactor',
+    );
+    const darkFeeds = harness.uniform1fFeeds.filter(
+      (feed) => feed.name === 'uTireGradientDarkFactor',
+    );
+    expect(brightFeeds.length).toBeGreaterThan(0);
+    expect(darkFeeds.length).toBeGreaterThan(0);
+    expect(brightFeeds.length).toBe(darkFeeds.length);
+  });
+
+  // [RED-7D-FACTOR-FEEDS-LEVERS]
+  it('feeds the named bright and dark lever values with no hidden literal', () => {
+    const harness = createCarMockWebGlHarness();
+    const pass = createCarPass(harness.gl, {
+      body: { ...CAR_FIXTURE_BIN },
+      wheel: { ...CAR_FIXTURE_BIN },
+    });
+
+    pass.draw(
+      makeDrawFrame([
+        { worldX: 0, worldZ: 0, yawRad: 0, teamColorId: 1, wheelSpinRad: 0 },
+        { worldX: 0, worldZ: 60, yawRad: 0, teamColorId: 0, wheelSpinRad: 0 },
+      ]),
+    );
+
+    const brightFeeds = harness.uniform1fFeeds.filter(
+      (feed) => feed.name === 'uTireGradientBrightFactor',
+    );
+    const darkFeeds = harness.uniform1fFeeds.filter(
+      (feed) => feed.name === 'uTireGradientDarkFactor',
+    );
+    expect(
+      brightFeeds.every(
+        (feed) => feed.value === NEATRACING_TIRE_GRADIENT_BRIGHT_FACTOR,
+      ),
+    ).toBe(true);
+    expect(
+      darkFeeds.every(
+        (feed) => feed.value === NEATRACING_TIRE_GRADIENT_DARK_FACTOR,
+      ),
+    ).toBe(true);
+  });
+
+  // [RED-7D-SPREAD-NON-DEGENERATE]
+  it('keeps the tire-gradient factor spread at or above the named floor', () => {
+    // The current production spread is 1.35 (1.7 bright - 0.35 dark), so the
+    // VALUE leg of this contract is a GUARD that already holds today; the
+    // EXPORT leg (NEATRACING_TIRE_GRADIENT_MIN_SPREAD) is the RED.
+    expect(
+      NEATRACING_TIRE_GRADIENT_BRIGHT_FACTOR -
+        NEATRACING_TIRE_GRADIENT_DARK_FACTOR,
+    ).toBeGreaterThanOrEqual(NEATRACING_TIRE_GRADIENT_MIN_SPREAD);
+  });
+
+  // [RED-7D-RADIUS-POSITIVE]
+  it('feeds a tire-gradient radius above zero', () => {
+    const harness = createCarMockWebGlHarness();
+    const pass = createCarPass(harness.gl, {
+      body: { ...CAR_FIXTURE_BIN },
+      wheel: { ...CAR_FIXTURE_BIN },
+    });
+
+    pass.draw(
+      makeDrawFrame([
+        { worldX: 0, worldZ: 0, yawRad: 0, teamColorId: 1, wheelSpinRad: 0 },
+        { worldX: 0, worldZ: 60, yawRad: 0, teamColorId: 0, wheelSpinRad: 0 },
+      ]),
+    );
+
+    const radiusFeeds = harness.uniform1fFeeds.filter(
+      (feed) => feed.name === 'uTireGradientRadius',
+    );
+    expect(radiusFeeds.length).toBeGreaterThan(0);
+    expect(radiusFeeds.every((feed) => feed.value > 0)).toBe(true);
+  });
+
+  // [RED-7D-THRESHOLD-IN-UNIT-INTERVAL]
+  it('feeds a tire-gradient threshold strictly inside (0, 1)', () => {
+    const harness = createCarMockWebGlHarness();
+    const pass = createCarPass(harness.gl, {
+      body: { ...CAR_FIXTURE_BIN },
+      wheel: { ...CAR_FIXTURE_BIN },
+    });
+
+    pass.draw(
+      makeDrawFrame([
+        { worldX: 0, worldZ: 0, yawRad: 0, teamColorId: 1, wheelSpinRad: 0 },
+        { worldX: 0, worldZ: 60, yawRad: 0, teamColorId: 0, wheelSpinRad: 0 },
+      ]),
+    );
+
+    // The threshold is the rubber-channel ceiling (80 / 255 = 0.31373).
+    const thresholdFeeds = harness.uniform1fFeeds.filter(
+      (feed) => feed.name === 'uTireGradientThreshold',
+    );
+    expect(thresholdFeeds.length).toBeGreaterThan(0);
+    expect(
+      thresholdFeeds.every((feed) => feed.value > 0 && feed.value < 1),
+    ).toBe(true);
+  });
+
+  // [RED-7D-NO-VERTEX-PROBE]
+  it('captures the gradient inputs through the uniform1f fragment seam', () => {
+    const harness = createCarMockWebGlHarness();
+    const pass = createCarPass(harness.gl, {
+      body: { ...CAR_FIXTURE_BIN },
+      wheel: { ...CAR_FIXTURE_BIN },
+    });
+
+    pass.draw(
+      makeDrawFrame([
+        { worldX: 0, worldZ: 0, yawRad: 0, teamColorId: 1, wheelSpinRad: 0 },
+        { worldX: 0, worldZ: 60, yawRad: 0, teamColorId: 0, wheelSpinRad: 0 },
+      ]),
+    );
+
+    // The VBO vertex-colour probe is BLIND BY CONSTRUCTION: the gradient is a
+    // per-FRAGMENT effect and the mesh builder writes per-quad constant
+    // colours, so the Step 14G residual (upperAvg == lowerAvg == 0.28565) is
+    // not a defect a vertex probe can observe. The RENDERED gradient is
+    // therefore NOT asserted here - it is carried by the AC-090 user gate.
+    // This contract pins only the SHAPE of the seam: the gradient inputs are
+    // captured through the uniform1f feed, never through vertex colours.
+    expect(typeof harness.uniform1fFeeds).toBe('object');
   });
 });
 

@@ -18,6 +18,16 @@
  * pre-verified by `mode-selector.ts`), and time = `M:SS.d` (unpadded
  * minutes, zero-padded seconds, one tenths digit).
  *
+ * The TRACTION READOUT (AC-088; plan slice `P1-drift-presentation-hud`)
+ * is a DISPLAY of the ONE published traction severity
+ * (`PhysicsCarState.tractionSeverity`, published by the physics step):
+ * the HUD SHOWS the number it is handed and NEVER re-derives it, so the
+ * overlay, the car pass tires and the browser debug seam can never
+ * disagree about how much grip is left. The severity reaches the read
+ * model as an OPTIONAL field (a read model without it paints the idle
+ * zero), so the sibling suites that build the classic speed/lap/time
+ * model keep compiling and keep their legacy look.
+ *
  * The arcade reconciliation is deliberate and documented rather than
  * incidental: spec section 11.1 wants an arcade-speed feel while the
  * physics layer (spec section 5) is intentionally NOT scale-accurate
@@ -125,6 +135,22 @@ const HUD_LAP_LABEL_COLOR: string = NEATRACING_HUD_COLOR_MAGENTA;
 /** Time label accent color: cyan (matches speed as the primary tokens). */
 const HUD_TIME_LABEL_COLOR: string = NEATRACING_HUD_COLOR_CYAN;
 
+/**
+ * Traction label accent color: magenta (the reserved second accent of
+ * the recycled palette, kept distinct so the grip readout is visually
+ * separable from the speed/lap/time readouts).
+ */
+const HUD_TRACTION_LABEL_COLOR: string = NEATRACING_HUD_COLOR_MAGENTA;
+
+/** Traction word prefix for the traction label. */
+const HUD_TRACTION_WORD: string = 'Traction';
+
+/**
+ * Percent scale of the traction severity (the published severity is a
+ * [0, 1] fraction, the readout shows it as a whole percent).
+ */
+const HUD_TRACTION_PERCENT_SCALE: number = 100;
+
 /** Controls-hint accent color: dim slate (a non-readout affordance). */
 const HUD_HINT_LABEL_COLOR: string = 'rgb(140, 160, 175)';
 
@@ -144,6 +170,17 @@ export interface NeatRacingHudState {
   speedUnitsPerS: number;
   /** Authoritative race state the lap/time readouts are derived from. */
   raceState: RaceRulesState;
+  /**
+   * The PUBLISHED traction severity in [0, 1] (AC-088): how much grip
+   * the tires have lost. The HUD SHOWS this number and NEVER re-derives
+   * it — the physics step publishes the ONE shared scalar, so the
+   * overlay, the car pass and the browser seam can never disagree.
+   *
+   * OPTIONAL: a read model without the field paints the IDLE zero (a
+   * straight line), so the classic speed/lap/time model stays valid for
+   * the callers that publish no severity.
+   */
+  tractionSeverity?: number;
 }
 
 /** The constructed HUD controller handed to the host shell. */
@@ -265,6 +302,38 @@ export function formatHudTime(seconds: number): string {
 }
 
 /**
+ * What: formats the PUBLISHED traction severity for the traction
+ * readout as a whole percent (e.g. `'Traction 42%'`).
+ *
+ * Why: the severity is the ONE shared scalar the physics step publishes
+ * (AC-088), so the HUD only CONVERTS it for display — it never
+ * re-derives it from the speed, the slip or any other HUD input, and
+ * the overlay therefore cannot disagree with the car pass tires. A
+ * missing severity (the OPTIONAL read-model field) is the IDLE zero:
+ * the readout is always on screen, so the player never has to guess
+ * whether the overlay lost the value.
+ *
+ * When: called by `NeatRacingHud.update` per frame and by the boot
+ * paint.
+ *
+ * @param tractionSeverity - The published severity in [0, 1];
+ * `undefined` when the read model carries no severity (the idle zero).
+ * @returns The traction readout, e.g. `'Traction 42%'` for 0.42.
+ *
+ * @example
+ * ```ts
+ * formatHudTraction(0.42); // 'Traction 42%'
+ * formatHudTraction(0); // 'Traction 0%'
+ * formatHudTraction(undefined); // 'Traction 0%' (the idle zero)
+ * ```
+ */
+function formatHudTraction(tractionSeverity: number | undefined): string {
+  const severity: number = tractionSeverity ?? 0;
+  const percent: number = Math.round(severity * HUD_TRACTION_PERCENT_SCALE);
+  return `${HUD_TRACTION_WORD} ${String(percent)}%`;
+}
+
+/**
  * What: resolves the reserved host output container by id, matching the
  * Neatenstein `resolveHudContainer` precedent (`hud.dom.utils.ts`)
  * flattened into this slice per the P1-S7-E file contract (no extra
@@ -342,7 +411,7 @@ function createHudLabel(wrapper: HTMLElement, color: string): HTMLElement {
 }
 
 /**
- * What: binds the three HUD labels to a live `RaceRulesState` slice and
+ * What: binds the HUD labels to a live `RaceRulesState` slice and
  * mounts them into the reserved host output container (spec section
  * 10.2 folder layout; AC-024). This is the only place that reads
  * `document` for the HUD display (the selector module resolves its own
@@ -358,8 +427,9 @@ function createHudLabel(wrapper: HTMLElement, color: string): HTMLElement {
  * boot order bugs surface immediately instead of as silent blank HUDs.
  *
  * Allocation contract: this function performs all HUD DOM allocation
- * for the page lifetime (one wrapper + three labels, each once);
- * `update()` then only writes textContent strings per frame.
+ * for the page lifetime (one wrapper + four labels — speed, lap, time
+ * and traction — each once); `update()` then only writes textContent
+ * strings per frame.
  *
  * @param outputId - Reserved host DOM id; `neatracing-hud-output` in
  * the host shell and the slice fixture suite.
@@ -374,7 +444,7 @@ function createHudLabel(wrapper: HTMLElement, color: string): HTMLElement {
  *     raceState: createRaceRulesState(),
  * });
  * // speedLabel.textContent === '72 km/h', lapLabel === 'Lap 1/20',
- * // timeLabel === '0:00.0'
+ * // timeLabel === '0:00.0', traction readout === 'Traction 0%'
  * ```
  */
 export function createHud(outputId: string): NeatRacingHud {
@@ -386,6 +456,14 @@ export function createHud(outputId: string): NeatRacingHud {
   );
   const lapLabel: HTMLElement = createHudLabel(wrapper, HUD_LAP_LABEL_COLOR);
   const timeLabel: HTMLElement = createHudLabel(wrapper, HUD_TIME_LABEL_COLOR);
+  // Traction readout label (AC-088): a live readout that SHOWS the
+  // published traction severity. It is repainted by `update` like the
+  // other readouts, and it is not exposed on the public controller
+  // interface (the read model is the contract, not the label element).
+  const tractionLabel: HTMLElement = createHudLabel(
+    wrapper,
+    HUD_TRACTION_LABEL_COLOR,
+  );
   // Static affordance label (never repainted by `update`): manual mode is
   // static until keyboard input, so the page must tell the viewer the
   // car is drivable or the race reads as broken on first load.
@@ -401,12 +479,15 @@ export function createHud(outputId: string): NeatRacingHud {
       speedLabel.textContent = formatHudSpeed(state.speedUnitsPerS);
       lapLabel.textContent = formatHudLap(state.raceState.lapsCompleted);
       timeLabel.textContent = formatHudTime(state.raceState.elapsedS);
+      tractionLabel.textContent = formatHudTraction(state.tractionSeverity);
     },
   };
 
   // Paint the mount once at boot so the HUD never shows blank labels
   // during the first frame (a zeroed read model is the deterministic
-  // initial state a fresh race also starts from).
+  // initial state a fresh race also starts from). The boot paint
+  // carries no severity, so the traction readout starts at the idle
+  // zero until the first physics tick publishes one.
   hud.update({ speedUnitsPerS: 0, raceState: createRaceRulesState() });
 
   return hud;
