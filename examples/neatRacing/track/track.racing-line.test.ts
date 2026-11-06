@@ -61,16 +61,38 @@
  * rebuilds its own table from the frozen samples, so there is NOTHING to
  * clean up between lanes.
  *
+ * STEP 14V RED CONTRACTS (slice P1-prop-clearance-red, AC-095 / AC-096):
+ * the racing-line lateral clamp must be bounded by the SEAM's ASYMMETRIC
+ * half-width PAIR (the OUTER half-width on the outer side of a corner, the
+ * INNER half-width on the inner side), so the AI line can use the widened
+ * outer corner while the inner side is NOT widened for the AI. The lanes
+ * below are RED BY ASSERTION against the CURRENT clamp (the RETIRED
+ * symmetric `sample.width / 2`), and the ONE-SEAM closure (RED-4) pins
+ * that the clamp is bounded by the SAME edge the containment bound reads.
+ *
  * @module
  */
-
 import { describe, expect, it } from '@jest/globals';
 
 import {
   buildTrackRacingLine,
+  NEATRACING_RACING_LINE_APEX_BIAS_GAIN_M2,
+  NEATRACING_RACING_LINE_STRAIGHT_CURVATURE_PER_M,
   type TrackRacingLinePoint,
 } from './track.racing-line';
-import type { SplineSample } from '../../racing_curriculum/track/track.generator.types';
+import {
+  resolveNearestTrackChord,
+  resolveTrackEdgeHalfWidthM,
+  resolveTrackEdgeProfile,
+  resolveTrackEdgeSideAtWorldZ,
+  resolveTrackSplineEdges,
+} from './track.edge';
+import { generateTrack } from '../../racing_curriculum/track/track.generator';
+import { resolveSplineSampleFrame } from '../../racing_curriculum/track/track.spline.utils';
+import type {
+  SplineSample,
+  TrackSegment,
+} from '../../racing_curriculum/track/track.generator.types';
 
 /** The fixture road width (m) - the same 12 m road the repo fixture uses. */
 const FIXTURE_ROAD_WIDTH_M = 12;
@@ -326,5 +348,490 @@ describe('buildTrackRacingLine (Step 14M, slice P1-ai-centerline-red)', () => {
       expect(cornerTargetSpeed).toBeLessThan(straightTargetSpeed);
       expect(cornerTargetSpeed).toBeGreaterThan(0);
     });
+  });
+});
+
+/**
+ * The hook fixture (Step 14V, RED-5 / RED-4).
+ *
+ * A closed "hook" ring: a long bottom straight, a CONVEX corner, a short
+ * spur, a CONCAVE corner, an outer sweep, a left sweep and the closing
+ * straights. It is built for the Step 14V lanes because it carries BOTH
+ * corner handednesses on ONE counter-clockwise loop, so the seam's OUTER
+ * side and its INNER side are probed by the SAME table:
+ *
+ * - the CONVEX apex is a LEFT turn, so the racing line's offset there
+ *   points to the loop's INNER side and the seam's INNER half-width
+ *   bounds it (the inner side is NOT widened for the AI);
+ * - the CONCAVE apex is a RIGHT turn, so the racing line's offset there
+ *   points to the loop's OUTER side and the seam's OUTER half-width - the
+ *   WIDENED one - bounds it (the drift room the AI may use).
+ *
+ * The road is 3 m wide on purpose: at the concave apex the seam publishes
+ * an outer half-width of 1.625 m (the inner one is 1.5 m), and the
+ * unclamped racing-line offset there is 2.5867 m, so the clamp REALLY
+ * binds and the bound clause is NOT vacuous.
+ */
+interface HookFixture {
+  /** The frozen sample list of the closed hook loop (in travel order). */
+  readonly samples: readonly SplineSample[];
+  /** The raw chord segments of the same closed loop. */
+  readonly segments: readonly TrackSegment[];
+  /** The sample index of the CONVEX apex (the inner-side corner). */
+  readonly convexApexIndex: number;
+  /** The sample index of the CONCAVE apex (the outer-side corner). */
+  readonly concaveApexIndex: number;
+}
+
+/** The hook fixture's road width (m) - narrow, so the seam's outer bound binds. */
+const HOOK_ROAD_WIDTH_M = 3;
+
+/** The hook fixture's corner radius (m). */
+const HOOK_ARC_RADIUS_M = 6;
+
+/** The hook fixture's arc steps per corner - EVEN, so the apex IS a sample. */
+const HOOK_ARC_STEPS = 8;
+
+/** The hook fixture's straight spacing (m). */
+const HOOK_STRAIGHT_SPACING_M = 4;
+
+/**
+ * Builds the closed hook fixture.
+ *
+ * Every sample owns ITS OWN chord (`segmentIndex` is the sample's own
+ * index), so the seam's per-sample edge and its per-chord edge describe
+ * the SAME place of the loop and the two granularities can be compared.
+ *
+ * @returns The frozen hook samples, its raw segments and its two apexes.
+ */
+const buildHookFixture = (): HookFixture => {
+  const radius = HOOK_ARC_RADIUS_M;
+  const points: { x: number; y: number }[] = [];
+  const push = (x: number, y: number): void => {
+    points.push({ x, y });
+  };
+  const pushStraight = (
+    fromX: number,
+    fromY: number,
+    toX: number,
+    toY: number,
+  ): void => {
+    const length = Math.hypot(toX - fromX, toY - fromY);
+    const steps = Math.max(1, Math.round(length / HOOK_STRAIGHT_SPACING_M));
+
+    for (let step = 1; step <= steps; step += 1) {
+      const t = step / steps;
+      push(fromX + (toX - fromX) * t, fromY + (toY - fromY) * t);
+    }
+  };
+  const pushArc = (
+    centreX: number,
+    centreY: number,
+    startAngleRad: number,
+    sweepRad: number,
+    steps: number,
+  ): void => {
+    for (let step = 1; step <= steps; step += 1) {
+      const angle = startAngleRad + (sweepRad * step) / steps;
+      push(
+        centreX + radius * Math.cos(angle),
+        centreY + radius * Math.sin(angle),
+      );
+    }
+  };
+
+  // The bottom straight, travelled along +x.
+  push(-56, -20);
+  pushStraight(-56, -20, 40, -20);
+  // The CONVEX corner (a left turn on this counter-clockwise loop).
+  const convexArcStart = points.length - 1;
+  pushArc(40, -20 + radius, -Math.PI / 2, Math.PI / 2, HOOK_ARC_STEPS);
+  pushStraight(40 + radius, -20 + radius, 40 + radius, 4);
+  // The CONCAVE corner (a right turn - the OUTER side of the loop).
+  const concaveArcStart = points.length - 1;
+  pushArc(40 + 2 * radius, 4, Math.PI, -Math.PI / 2, HOOK_ARC_STEPS);
+  pushStraight(40 + 2 * radius, 4 + radius, 96, 4 + radius);
+  pushArc(96, 4 + 2 * radius, -Math.PI / 2, Math.PI / 2, HOOK_ARC_STEPS);
+  pushStraight(96 + radius, 4 + 2 * radius, 96 + radius, 60);
+  pushArc(96, 60, 0, Math.PI / 2, HOOK_ARC_STEPS);
+  pushStraight(96, 60 + radius, -56, 60 + radius);
+  pushArc(-56, 60, Math.PI / 2, Math.PI / 2, HOOK_ARC_STEPS);
+  pushStraight(-56 - radius, 60, -56 - radius, -20 + radius);
+  pushArc(-56, -20 + radius, Math.PI, Math.PI / 2, HOOK_ARC_STEPS);
+  // The loop closes on its first point, so the last sample is dropped.
+  points.pop();
+
+  const samples: SplineSample[] = points.map((point, index) => ({
+    x: point.x,
+    y: point.y,
+    width: HOOK_ROAD_WIDTH_M,
+    segmentIndex: index,
+    sampleIndexWithinSegment: 0,
+    globalIndex: index,
+  }));
+  const segments: TrackSegment[] = samples.map((sample, index) => {
+    const next = samples[(index + 1) % samples.length]!;
+
+    return {
+      startX: sample.x,
+      startY: sample.y,
+      endX: next.x,
+      endY: next.y,
+      width: HOOK_ROAD_WIDTH_M,
+    };
+  });
+
+  return {
+    samples,
+    segments,
+    convexApexIndex: convexArcStart + HOOK_ARC_STEPS / 2,
+    concaveApexIndex: concaveArcStart + HOOK_ARC_STEPS / 2,
+  };
+};
+
+/** The frozen hook fixture the Step 14V lanes read. */
+const HOOK = buildHookFixture();
+
+/**
+ * Recomputes the UNCLAMPED racing-line offset of one published point.
+ *
+ * The clamp is applied by the module, so the value the offset would have
+ * had WITHOUT the clamp is recomputed here from the PUBLISHED curvature
+ * through the NAMED gain and threshold. The lanes use it to prove that
+ * the probed corner REALLY binds the offset (a corner whose racing line
+ * never reaches its bound would satisfy the bound clause vacuously).
+ *
+ * @param point - The published racing-line point to recompute.
+ * @returns The unclamped signed offset (m).
+ */
+const unclampedOffsetMOf = (point: TrackRacingLinePoint): number => {
+  const excessCurvaturePerM = Math.max(
+    0,
+    Math.abs(point.curvaturePerM) -
+      NEATRACING_RACING_LINE_STRAIGHT_CURVATURE_PER_M,
+  );
+
+  return (
+    Math.sign(point.curvaturePerM) *
+    NEATRACING_RACING_LINE_APEX_BIAS_GAIN_M2 *
+    excessCurvaturePerM
+  );
+};
+
+/**
+ * The Step 14V racing-line contracts (slice `P1-prop-clearance-red`).
+ *
+ * AC-095 (the asymmetric edge - the directive 4): the racing-line lateral
+ * clamp is bounded by the SEAM's ASYMMETRIC half-width PAIR - the OUTER
+ * half-width on the outer side of a corner and the INNER half-width on the
+ * inner side - so the AI line can use the widened outer corner. The INNER
+ * side is NOT widened for the AI.
+ *
+ * AC-095 (the seam is closed - the ONE edge): the bound the racing line
+ * is clamped by is the SAME edge the containment bound reads.
+ */
+describe(
+  'the racing-line clamp reads the SEAM pair (Step 14V, slice P1-prop-clearance-red, AC-095)',
+  () => {
+    describe('RED-5 (the clamp is bounded by the ASYMMETRIC pair)', () => {
+      // [RED-14V-RL-5-OUTER-BOUND]
+      it('AC-095: the outer-side corner is bounded by the seam OUTER half-width (RED-14V-RL-5-OUTER-BOUND)', () => {
+        // Arrange
+        const profile = resolveTrackEdgeProfile(HOOK.segments);
+        const splineEdges = resolveTrackSplineEdges(HOOK.samples, profile);
+        const line = buildTrackRacingLine(HOOK.samples);
+        const apexIndex = HOOK.concaveApexIndex;
+        const apexPoint = line[apexIndex]!;
+        const apexEdge = splineEdges[apexIndex]!;
+
+        // NON-VACUITY GUARD (asserted BEFORE the relational clause): the
+        // probed corner REALLY binds the offset. The UNCLAMPED offset
+        // (recomputed from the PUBLISHED curvature through the NAMED gain
+        // and threshold) must exceed the seam's outer half-width, the seam
+        // must publish an ASYMMETRIC pair there, and the probe's offset
+        // must sit on the loop-global OUTER side - otherwise the bound
+        // clause below would be satisfied vacuously.
+        expect(apexEdge.outerHalfWidthM).toBeGreaterThan(
+          apexEdge.innerHalfWidthM,
+        );
+        expect(
+          Math.abs(unclampedOffsetMOf(apexPoint)),
+        ).toBeGreaterThan(apexEdge.outerHalfWidthM);
+        expect(Math.sign(apexPoint.offsetM)).toBe(profile.outerSideSign);
+
+        // Assert
+        // TODAY the published offset is clamped to the RETIRED symmetric
+        // `sample.width / 2` (1.500000 m), so the AI line can NOT use the
+        // widened outer corner. The seam's published outer half-width at
+        // this corner is 1.625000 m, and THAT is the bound the AI gets
+        // once the clamp is re-based on the seam pair.
+        const boundDeltaM = Math.abs(
+          Math.abs(apexPoint.offsetM) - apexEdge.outerHalfWidthM,
+        );
+        expect(boundDeltaM).toBeLessThanOrEqual(OFFSET_TOLERANCE_M);
+      });
+
+      // [RED-14V-RL-5-SIDE-BOUND]
+      it('AC-095: the published offset never exceeds the bound that applies on ITS side, and the inner side is NOT widened (RED-14V-RL-5-SIDE-BOUND)', () => {
+        // Arrange
+        const profile = resolveTrackEdgeProfile(HOOK.segments);
+        const splineEdges = resolveTrackSplineEdges(HOOK.samples, profile);
+        const line = buildTrackRacingLine(HOOK.samples);
+
+        // Act
+        const violations: string[] = [];
+
+        line.forEach((point, index) => {
+          if (point.offsetM === 0) {
+            return;
+          }
+
+          const edge = splineEdges[index]!;
+          const boundM =
+            Math.sign(point.offsetM) === profile.outerSideSign
+              ? edge.outerHalfWidthM
+              : edge.innerHalfWidthM;
+
+          if (Math.abs(point.offsetM) > boundM + OFFSET_TOLERANCE_M) {
+            violations.push(
+              `index=${index} offset=${point.offsetM.toFixed(9)} bound=${boundM.toFixed(9)}`,
+            );
+          }
+        });
+
+        // Assert - the SAFETY half of RED-5: the offset never leaves the
+        // half-width that applies on its own side (GREEN today and after
+        // the re-base).
+        expect(violations).toEqual([]);
+
+        // And the INNER side is NOT widened for the AI: at the convex
+        // (inner-side) apex the published offset is exactly the seam's
+        // INNER half-width.
+        const innerApexPoint = line[HOOK.convexApexIndex]!;
+        const innerApexEdge = splineEdges[HOOK.convexApexIndex]!;
+        expect(
+          Math.abs(
+            Math.abs(innerApexPoint.offsetM) -
+              innerApexEdge.innerHalfWidthM,
+          ),
+        ).toBeLessThanOrEqual(OFFSET_TOLERANCE_M);
+      });
+    });
+
+    describe('RED-4 (the world reads the SAME edge as the road)', () => {
+      // [RED-14V-RL-4-ONE-SEAM]
+      it('AC-095: the racing line is bounded by the ONE seam edge the CONTAINMENT BOUND reads (RED-14V-RL-4-ONE-SEAM)', () => {
+        // Arrange
+        const profile = resolveTrackEdgeProfile(HOOK.segments);
+        const line = buildTrackRacingLine(HOOK.samples);
+        const apexIndex = HOOK.concaveApexIndex;
+        const apexSample = HOOK.samples[apexIndex]!;
+        const apexFrame = resolveSplineSampleFrame(HOOK.samples, apexIndex);
+        const apexOffsetM = line[apexIndex]!.offsetM;
+
+        // The CONTAINMENT BOUND's own reader of the ONE seam edge: the
+        // NEAREST chord of the published profile, measured with that
+        // chord's PUBLISHED side half-width. The probe is the racing
+        // line's OWN point (the sample offset along the left normal), so
+        // the reader is asked about the very place the clamp bounds.
+        const probeX = apexSample.x + apexOffsetM * apexFrame.normalX;
+        const probeY = apexSample.y + apexOffsetM * apexFrame.normalY;
+        const nearest = resolveNearestTrackChord(profile, probeX, probeY);
+        const nearestChord = profile.chords[nearest.segmentIndex]!;
+        const probeSide = resolveTrackEdgeSideAtWorldZ(
+          profile,
+          nearest.segmentIndex,
+          probeX,
+          -probeY,
+        );
+        const containmentBoundM = resolveTrackEdgeHalfWidthM(
+          nearestChord,
+          probeSide,
+        );
+
+        // NON-VACUITY GUARD (asserted BEFORE the relational clause): the
+        // lane really compares TWO DIFFERENT readers - the racing line's
+        // OWN clamp and the containment bound's reader of the seam - and
+        // the seam really publishes an ASYMMETRIC pair at the probe, so
+        // the bound that applies is a SPECIFIC number and NOT the retired
+        // symmetric `width / 2`.
+        expect(nearestChord.outerHalfWidthM).toBeGreaterThan(
+          nearestChord.innerHalfWidthM,
+        );
+        expect(
+          Math.abs(containmentBoundM - nearestChord.innerHalfWidthM),
+        ).toBeGreaterThan(OFFSET_TOLERANCE_M);
+
+        // Assert
+        // TODAY the racing line's clamp is the RETIRED symmetric
+        // `sample.width / 2` (1.500000 m), so the bound the AI really
+        // gets is NOT the seam edge the road reads (1.625000 m). After the
+        // re-base the two are ONE edge.
+        const boundDeltaM = Math.abs(
+          Math.abs(apexOffsetM) - containmentBoundM,
+        );
+        expect(boundDeltaM).toBeLessThanOrEqual(OFFSET_TOLERANCE_M);
+      });
+    });
+  },
+);
+
+/**
+ * The PRODUCTION layout the CONTROL-ring lane reads.
+ *
+ * The determinism tuple the generator's own documentation uses: seed 42,
+ * layout version 1 and the medium size bucket. The layout carries 126
+ * spline samples over SEVEN control chords.
+ */
+const PRODUCTION_LAYOUT_INPUT = {
+  seed: 42,
+  layoutVersion: 1,
+  sizeBucket: 'medium',
+};
+
+/**
+ * Rebuilds the CONTROL chord ring the racing line reads its seam through.
+ *
+ * THE MIRROR: `track.racing-line.ts` keeps this path PRIVATE (the racing
+ * line is a pure function of the frozen sample list, so the seam is
+ * reconstructed from those samples and never from a second geometry), so
+ * the lane MIRRORS it here: the FIRST sample of every control segment is
+ * that segment's control point (its interpolation factor is ZERO), and
+ * the control chord of segment `k` runs from control point `k` to control
+ * point `k + 1` with the width that control point publishes.
+ *
+ * @param samples - The frozen closed-ring spline samples.
+ * @returns The rebuilt control chords and the samples that name them.
+ */
+const rebuildControlChordRing = (
+  samples: readonly SplineSample[],
+): {
+  readonly segments: TrackSegment[];
+  readonly samples: readonly SplineSample[];
+} => {
+  const controlPointBySegmentIndex = new Map<number, SplineSample>();
+  for (const sample of samples) {
+    if (!controlPointBySegmentIndex.has(sample.segmentIndex)) {
+      controlPointBySegmentIndex.set(sample.segmentIndex, sample);
+    }
+  }
+
+  const chordIndexBySegmentIndex = new Map<number, number>();
+  const controlPoints: SplineSample[] = [];
+  const segmentIndices = [...controlPointBySegmentIndex.keys()].toSorted(
+    (left, right) => left - right,
+  );
+  for (const segmentIndex of segmentIndices) {
+    const controlPoint = controlPointBySegmentIndex.get(segmentIndex);
+    if (controlPoint === undefined) {
+      continue;
+    }
+    chordIndexBySegmentIndex.set(segmentIndex, controlPoints.length);
+    controlPoints.push(controlPoint);
+  }
+
+  const count = controlPoints.length;
+  const segments: TrackSegment[] = [];
+  for (let index = 0; index < count; index += 1) {
+    const controlPoint = controlPoints[index];
+    const nextControlPoint = controlPoints[(index + 1) % count];
+    segments.push({
+      startX: controlPoint.x,
+      startY: controlPoint.y,
+      endX: nextControlPoint.x,
+      endY: nextControlPoint.y,
+      width: controlPoint.width,
+    });
+  }
+
+  return {
+    segments,
+    samples: samples.map((sample) => ({
+      ...sample,
+      segmentIndex: chordIndexBySegmentIndex.get(sample.segmentIndex) ?? 0,
+    })),
+  };
+};
+
+/**
+ * Counts the control segments the samples name.
+ *
+ * @param samples - The frozen closed-ring spline samples.
+ * @returns The number of DISTINCT control segments the samples name.
+ */
+const namedControlSegmentCountOf = (samples: readonly SplineSample[]): number =>
+  new Set(samples.map((sample) => sample.segmentIndex)).size;
+
+/**
+ * Counts the control points that sit at interpolation factor ZERO.
+ *
+ * @param samples - The frozen closed-ring spline samples.
+ * @returns The number of named control segments whose FIRST sample carries
+ *   the interpolation factor ZERO.
+ */
+const zeroFactorControlPointCountOf = (
+  samples: readonly SplineSample[],
+): number => {
+  const firstSampleBySegmentIndex = new Map<number, SplineSample>();
+  for (const sample of samples) {
+    if (!firstSampleBySegmentIndex.has(sample.segmentIndex)) {
+      firstSampleBySegmentIndex.set(sample.segmentIndex, sample);
+    }
+  }
+
+  let count = 0;
+  for (const sample of firstSampleBySegmentIndex.values()) {
+    if (sample.sampleIndexWithinSegment === 0) {
+      count += 1;
+    }
+  }
+
+  return count;
+};
+
+/**
+ * The racing line's CONTROL chord ring (Step 14V fix packet
+ * `fix-packet-P1-prop-clearance-impl-iteration-1`, observation N3).
+ *
+ * THE ONE SEAM, RECONSTRUCTED: `track.racing-line.ts` resolves the seam
+ * it clamps by from the CONTROL chord ring the samples describe, and it
+ * falls back to the samples' OWN ring only for a fixture that names a
+ * SINGLE control segment. The reconstruction is claimed to be
+ * BIT-IDENTICAL to the spec's own chord list, so the racing line's clamp
+ * and the containment bound read ONE edge - a drift in the
+ * reconstruction would silently reopen that seam split.
+ *
+ * THE LANE pins that claim on the PRODUCTION layout (seed 42, layout
+ * version 1, medium), whose samples name MORE THAN ONE control segment,
+ * so the CONTROL branch is the branch IN FORCE and the SAMPLE fallback is
+ * not.
+ */
+describe('the racing line reads the CONTROL chord ring (Step 14V fix packet, N3)', () => {
+  it('AC-095: the CONTROL chord ring the racing line reads is the OWN chord list of the spec, bit-exact (N3)', () => {
+    // Arrange - the PRODUCTION layout.
+    const spec = generateTrack(PRODUCTION_LAYOUT_INPUT);
+    const samples = spec.splineSamples;
+
+    // Act - rebuild the CONTROL chord ring the way the module does.
+    const rebuilt = rebuildControlChordRing(samples);
+
+    // NON-VACUITY GUARD (asserted BEFORE the relational clause): the
+    // CONTROL branch is the branch IN FORCE. The module falls back to the
+    // samples' own ring ONLY for a fixture that names a SINGLE control
+    // segment, so the production layout's named control segments are what
+    // select the reconstruction under test.
+    expect(namedControlSegmentCountOf(samples)).toBeGreaterThan(1);
+
+    // The BIT-EXACTNESS BASIS: every rebuilt chord is anchored on a
+    // control point whose interpolation factor is ZERO, which is why the
+    // reconstruction sits EXACTLY on the spec's control points.
+    expect(zeroFactorControlPointCountOf(samples)).toBe(
+      rebuilt.segments.length,
+    );
+
+    // Assert - the reconstruction IS the spec's own chord list, exactly.
+    // `toEqual` compares the numbers with `Object.is` semantics, so the
+    // match is BIT-EXACT: no tolerance is applied anywhere.
+    expect(rebuilt.segments).toEqual(spec.segments);
   });
 });

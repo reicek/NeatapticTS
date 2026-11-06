@@ -62,6 +62,13 @@ import {
   resolveChaseCameraBasis,
   stepChaseCameraFollow,
 } from './chase-camera';
+// The NAMESPACE import (the drift-camera RED slice): the three names the
+// GREEN slice will publish do NOT exist yet, and a NAMED import of a
+// missing export breaks the COMPILE (ts-jest diagnostics are ON). The
+// namespace import lets the contracts read those names at RUNTIME, so a
+// missing export fails as a legible ASSERTION and never as an import
+// failure.
+import * as chaseCameraModule from './chase-camera';
 import {
   NEATRACING_CAR_SCENE_YAW_OFFSET_RAD,
   carSceneYawRad,
@@ -289,6 +296,291 @@ function measuredStep(
     speedMps,
     tick,
   };
+}
+
+/**
+ * The source of the chase-camera LAW module: the file that will carry the
+ * three named exports the GREEN slice publishes (the cap, the follow gain
+ * and the release smooth fraction) and the JSDoc that states their
+ * measured basis.
+ */
+const CHASE_CAMERA_PATH = resolve(
+  process.cwd(),
+  'examples',
+  'neatRacing',
+  'browser-entry',
+  'chase-camera.ts',
+);
+
+/**
+ * The absolute tolerance (rad) of the camera RELATIONAL comparisons (the
+ * cap, the response and the release offsets).
+ */
+const CAMERA_RAD_TOLERANCE = 1e-9;
+
+/**
+ * The absolute tolerance (fraction) of the camera RELEASE-FRACTION
+ * comparisons.
+ */
+const CAMERA_FRACTION_TOLERANCE = 1e-9;
+
+/**
+ * The MEASURED peak |offset| (rad) of a 1200-tick hold of the measured
+ * tick-61 slide under the PRE-WAVE law: the worst yaw aim offset the
+ * current camera law allows.
+ */
+const MEASURED_PRE_WAVE_PEAK_OFFSET_RAD = 0.34897858999999976;
+
+/**
+ * The RECORDED cap (rad) of the yaw aim offset: EXACTLY HALF of the
+ * measured pre-wave peak (the half is USER-NAMED).
+ */
+const RECORDED_MAX_AIM_OFFSET_RAD = 0.17448929499999988;
+
+/**
+ * The MEASURED pre-wave follow gain: the module-private gain the current
+ * law uses (the GREEN slice promotes it to a NAMED export).
+ */
+const MEASURED_PRE_WAVE_FOLLOW_GAIN = 1;
+
+/**
+ * The MEASURED one-tick response (rad) from the neutral aim under the
+ * pre-wave law.
+ */
+const MEASURED_PRE_WAVE_FIRST_TICK_OFFSET_RAD = 0.0366367775241712;
+
+/**
+ * The MEASURED number of ticks the pre-wave camera needs to first reach
+ * 95% of the recorded cap.
+ */
+const MEASURED_PRE_WAVE_TICKS_TO_CAPPED_OFFSET = 6;
+
+/**
+ * The MEASURED one-tick release close fraction at the PEAK offset: the
+ * pre-wave release closes 10.498% of the offset per tick, so it does NOT
+ * close in a single tick.
+ */
+const MEASURED_PRE_WAVE_PEAK_RELEASE_CLOSE_FRACTION = 0.10498288025082125;
+
+/**
+ * The MEASURED one-tick release close fraction when the release starts
+ * from the tick-2 offset (0.06942732062073578 rad). It is SMALLER than the
+ * peak fraction because the pre-wave release rate is multiplied by the
+ * camera's OWN offset (the snap-back enabler).
+ */
+const MEASURED_PRE_WAVE_EARLY_RELEASE_CLOSE_FRACTION = 0.020885751435015254;
+
+/**
+ * The RECORDED smooth release fraction: the RED-DECIDED one-tick close
+ * fraction of the release (strictly below the measured 0.10498 peak close
+ * fraction).
+ */
+const RECORDED_RELEASE_SMOOTH_FRACTION = 0.05;
+
+/**
+ * The RECORDED cap-reach fraction: the threshold (95% of the cap) used for
+ * the time-to-cap comparison.
+ */
+const RECORDED_CAP_REACH_FRACTION = 0.95;
+
+/**
+ * The RECORDED probe length (ticks) of the measured hold: the
+ * deterministic length of the hold the peak is measured over.
+ */
+const RECORDED_PROBE_TICK_COUNT = 1200;
+
+/**
+ * The observation of ONE release tick applied to a held measured slide.
+ */
+interface MeasuredReleaseObservation {
+  /** The follow offset (rad) BEFORE the release tick. */
+  offsetBeforeRad: number;
+  /** The follow offset (rad) AFTER the release tick. */
+  offsetAfterRad: number;
+  /** The fraction of the offset the release tick closed. */
+  closeFraction: number;
+}
+
+/**
+ * The trace of a measured hold followed by a run of release ticks.
+ */
+interface MeasuredReleaseTrace {
+  /**
+   * The offsets (rad) of the release trace: the hold's last offset first,
+   * then the offset after every release tick.
+   */
+  offsetsRad: number[];
+  /** Whether any |offset| grew against its predecessor. */
+  grew: boolean;
+  /** Whether the offset ever changed sign. */
+  flipped: boolean;
+}
+
+/**
+ * Reads a numeric export of the chase-camera module at RUNTIME.
+ *
+ * WHY: the three names the GREEN slice will publish do NOT exist yet, and
+ * a NAMED import of a missing export breaks the COMPILE. A missing name
+ * must therefore fail as a legible RUNTIME assertion, so this helper reads
+ * the namespace and answers `NaN` for an absent name.
+ *
+ * @param name - The export name to read.
+ * @returns The exported number, or `NaN` when the name is absent.
+ */
+function readNumericExport(name: string): number {
+  const value = (chaseCameraModule as unknown as Record<string, unknown>)[
+    name
+  ];
+  return typeof value === 'number' && Number.isFinite(value)
+    ? value
+    : Number.NaN;
+}
+
+/**
+ * Extracts the JSDoc block that documents ONE named export.
+ *
+ * WHY: the JSDoc guard must bind the "MEASURED" note to the JSDoc of
+ * THAT export - a loose source regex would also be satisfied by a JSDoc
+ * on an EARLIER export, which is weaker than the AC ("a derived JSDoc").
+ *
+ * @param source - The source text of the module.
+ * @param exportName - The name of the exported constant.
+ * @returns The JSDoc block immediately above the export, or an empty
+ *   string when the export or its JSDoc is absent.
+ */
+function jsDocAbove(source: string, exportName: string): string {
+  const exportIndex = source.indexOf(`export const ${exportName}`);
+  if (exportIndex < 0) {
+    return '';
+  }
+  const before = source.slice(0, exportIndex);
+  const start = before.lastIndexOf('/**');
+  const end = before.lastIndexOf('*/');
+  if (start < 0 || end < start) {
+    return '';
+  }
+  return before.slice(start, end + 2);
+}
+
+/**
+ * Runs the MEASURED tick-61 slide as a hold probe and records the follow
+ * offset after EVERY tick (ONE tick per step).
+ *
+ * @param tickCount - The number of ticks the probe holds.
+ * @returns The offset (rad) after each tick, in tick order.
+ */
+function runMeasuredHoldProbe(tickCount: number): number[] {
+  const offsetsRad: number[] = [];
+  let follow = createChaseCameraFollowState();
+  for (let tick = 1; tick <= tickCount; tick += 1) {
+    follow = stepChaseCameraFollow(follow, measuredStep(1, tick));
+    offsetsRad.push(follow.offsetRad);
+  }
+  return offsetsRad;
+}
+
+/**
+ * The largest |offset| of a probe trace.
+ *
+ * @param offsets - The probe trace.
+ * @returns The peak |offset| (rad), or 0 for an empty trace.
+ */
+function peakAbsOffsetRad(offsets: readonly number[]): number {
+  let peakRad = 0;
+  for (const offsetRad of offsets) {
+    const absRad = Math.abs(offsetRad);
+    if (absRad > peakRad) {
+      peakRad = absRad;
+    }
+  }
+  return peakRad;
+}
+
+/**
+ * The 1-based tick index at which a probe trace first reaches a target
+ * |offset|.
+ *
+ * @param offsets - The probe trace.
+ * @param targetRad - The target |offset| (rad).
+ * @returns The 1-based tick index, or `Infinity` when the trace never
+ *   reaches the target.
+ */
+function ticksToReachOffsetRad(
+  offsets: readonly number[],
+  targetRad: number,
+): number {
+  for (let index = 0; index < offsets.length; index += 1) {
+    if (Math.abs(offsets[index]) >= targetRad) {
+      return index + 1;
+    }
+  }
+  return Number.POSITIVE_INFINITY;
+}
+
+/**
+ * Holds the measured slide for a number of ticks and then applies ONE
+ * release tick (the travel heading falls back onto the nose heading).
+ *
+ * @param holdTicks - The number of measured ticks to hold.
+ * @returns The offset before and after the release tick (rad) and the
+ *   one-tick close fraction.
+ */
+function releaseFromMeasuredHold(
+  holdTicks: number,
+): MeasuredReleaseObservation {
+  let follow = createChaseCameraFollowState();
+  for (let tick = 1; tick <= holdTicks; tick += 1) {
+    follow = stepChaseCameraFollow(follow, measuredStep(1, tick));
+  }
+  const offsetBeforeRad = follow.offsetRad;
+  const released = stepChaseCameraFollow(follow, {
+    ...measuredStep(1, holdTicks + 1),
+    travelHeadingRad: MEASURED_NOSE_HEADING_RAD,
+  });
+  const offsetAfterRad = released.offsetRad;
+  const closeFraction = 1 - Math.abs(offsetAfterRad) / Math.abs(offsetBeforeRad);
+  return { offsetBeforeRad, offsetAfterRad, closeFraction };
+}
+
+/**
+ * Holds the measured slide and then runs a number of release ticks (the
+ * tick index keeps running), recording the offsets of the release.
+ *
+ * @param holdTicks - The number of measured ticks to hold.
+ * @param releaseTicks - The number of release ticks to run.
+ * @returns The release offsets (rad), whether any |offset| grew and whether
+ *   the offset ever changed sign.
+ */
+function measuredReleaseTrace(
+  holdTicks: number,
+  releaseTicks: number,
+): MeasuredReleaseTrace {
+  let follow = createChaseCameraFollowState();
+  for (let tick = 1; tick <= holdTicks; tick += 1) {
+    follow = stepChaseCameraFollow(follow, measuredStep(1, tick));
+  }
+  const offsetsRad: number[] = [follow.offsetRad];
+  let grew = false;
+  let flipped = false;
+  let previousAbsRad = Math.abs(follow.offsetRad);
+  let previousSign = Math.sign(follow.offsetRad);
+  for (let index = 0; index < releaseTicks; index += 1) {
+    follow = stepChaseCameraFollow(follow, {
+      ...measuredStep(1, holdTicks + index + 1),
+      travelHeadingRad: MEASURED_NOSE_HEADING_RAD,
+    });
+    offsetsRad.push(follow.offsetRad);
+    const absRad = Math.abs(follow.offsetRad);
+    if (absRad > previousAbsRad) {
+      grew = true;
+    }
+    if (Math.sign(follow.offsetRad) !== previousSign) {
+      flipped = true;
+    }
+    previousAbsRad = absRad;
+    previousSign = Math.sign(follow.offsetRad);
+  }
+  return { offsetsRad, grew, flipped };
 }
 
 describe('chase camera (P1-drift-rewire-red; Step 14P; RED-3 .. RED-7)', () => {
@@ -621,6 +913,336 @@ describe('chase camera (P1-drift-rewire-red; Step 14P; RED-3 .. RED-7)', () => {
       const follow = createChaseCameraFollowState();
       // Assert
       expect(Object.keys(follow).sort()).toEqual(['lastTick', 'offsetRad']);
+    });
+  });
+});
+
+/**
+ * RED-phase contract tests for the DRIFT CAMERA (slice `P1-driftcam-red`;
+ * Step 14X; AC-097).
+ *
+ * WHAT THIS BLOCK IS: the RED contracts of the drift-camera wave. The
+ * camera law (`chase-camera.ts`) currently lets the yaw aim offset run to
+ * 0.34897858999999976 rad (the MEASURED pre-wave peak) and releases it
+ * with a MULTIPLICATIVE snap-back enabler (the release rate is multiplied
+ * by the camera's OWN offset, so the camera snaps back harder the further
+ * it already sits from the nose). The GREEN slice (a later, different
+ * slice) will publish a NAMED cap, a NAMED lower follow gain and a NAMED
+ * smooth release fraction.
+ *
+ * RED FORM (the RUNTIME-fails form): the three names the GREEN slice will
+ * publish do NOT exist yet, so they are read through the NAMESPACE import
+ * at RUNTIME by `readNumericExport` (an absent name reads `NaN` and fails
+ * the guard legibly). The contracts therefore fail at RUNTIME, NEVER at
+ * import time: a NAMED import of a not-yet-existing export would break the
+ * COMPILE and hide the contract behind a module-resolution error.
+ *
+ * THE NUMBERS: every constant in this block is MEASURED (from the pre-wave
+ * law) or DECIDED (by this RED slice); none of them is carried over. The
+ * RED lanes are RED BY ASSERTION against the EXISTING law.
+ *
+ * RED-4 IS A LABELLED PRESERVATION GUARD: it is GREEN today, it is NEVER
+ * counted as a red, and it fences the SCOPE of the camera change (the AIM
+ * only - the BODY presentation stays on the published pose).
+ */
+describe('drift camera (P1-driftcam-red; Step 14X; RED-1 .. RED-4)', () => {
+  describe('RED-1 - the yaw aim offset is CAPPED at at most half of the measured pre-wave peak', () => {
+    // [RED-1-RECORDED-PREMISE]
+    it('records a cap that is exactly half of the measured pre-wave peak', () => {
+      // Arrange: the measured pre-wave peak and the recorded cap.
+      const measuredPeakRad = MEASURED_PRE_WAVE_PEAK_OFFSET_RAD;
+      const recordedCapRad = RECORDED_MAX_AIM_OFFSET_RAD;
+      // Act
+      const doubledCapRad = recordedCapRad * 2;
+      // Assert: the PREMISE of the cap (this lane is a GREEN recorded
+      // premise, never a red): the peak really is above the cap and the cap
+      // really is exactly half of the peak.
+      expect(measuredPeakRad).toBeGreaterThan(recordedCapRad);
+      expect(doubledCapRad).toBeCloseTo(
+        measuredPeakRad,
+        CAMERA_PRECISION_DIGITS,
+      );
+    });
+
+    // [RED-1-AIM-CAP]
+    it('never lets the yaw aim offset exceed the recorded cap', () => {
+      // Arrange: the measured hold probe (the aim really moves).
+      const probe = runMeasuredHoldProbe(RECORDED_PROBE_TICK_COUNT);
+      // Act: the peak of the trace IS the worst-case yaw aim offset.
+      const peakOffsetRad = peakAbsOffsetRad(probe);
+      // Assert: the GUARDS first (the probe must really move the aim and
+      // there must really be something to cap), then the cap itself.
+      expect(peakOffsetRad).toBeGreaterThan(0);
+      expect(MEASURED_PRE_WAVE_PEAK_OFFSET_RAD).toBeGreaterThan(
+        RECORDED_MAX_AIM_OFFSET_RAD,
+      );
+      expect(peakOffsetRad).toBeLessThanOrEqual(
+        RECORDED_MAX_AIM_OFFSET_RAD + CAMERA_RAD_TOLERANCE,
+      );
+    });
+
+    // [RED-1-NAMED-CAP]
+    it('publishes the cap as the named export', () => {
+      // Arrange: the named export is read at RUNTIME (an absent name reads
+      // NaN, so the guard below fails legibly instead of crashing).
+      const capRad = readNumericExport(
+        'NEATRACING_CHASE_CAMERA_MAX_AIM_OFFSET_RAD',
+      );
+      // Act
+      // Assert: the GUARD first (the export must EXIST and be a finite
+      // positive number), then the named value and its relation to the
+      // measured peak.
+      expect(capRad).toBeGreaterThan(0);
+      expect(capRad).toBeCloseTo(RECORDED_MAX_AIM_OFFSET_RAD, 8);
+      expect(capRad).toBeLessThanOrEqual(
+        MEASURED_PRE_WAVE_PEAK_OFFSET_RAD / 2 + CAMERA_RAD_TOLERANCE,
+      );
+    });
+
+    // [RED-1-NAMED-CAP-JSDOC]
+    it('documents the measured basis of the three named exports', () => {
+      // Arrange: the law source (the named exports live there).
+      const chaseCameraSource = readFileSync(CHASE_CAMERA_PATH, 'utf-8');
+      // Act: the JSDoc that documents EACH named export is extracted
+      // (the guard is ANCHORED to the export's OWN JSDoc - a loose source
+      // regex would also be satisfied by a JSDoc on an EARLIER export).
+      // Assert: each of the three named exports is documented by a JSDoc
+      // that states the MEASURED basis of its value.
+      expect(
+        jsDocAbove(
+          chaseCameraSource,
+          'NEATRACING_CHASE_CAMERA_MAX_AIM_OFFSET_RAD',
+        ),
+      ).toMatch(/measur/i);
+      expect(
+        jsDocAbove(chaseCameraSource, 'NEATRACING_CHASE_CAMERA_FOLLOW_GAIN'),
+      ).toMatch(/measur/i);
+      expect(
+        jsDocAbove(
+          chaseCameraSource,
+          'NEATRACING_CHASE_CAMERA_RELEASE_SMOOTH_FRACTION',
+        ),
+      ).toMatch(/measur/i);
+    });
+  });
+
+  describe('RED-2 - the response is DESENSITISED and MUCH SLOWER', () => {
+    // [RED-2-FOLLOW-GAIN]
+    it('publishes a follow gain BELOW the measured pre-wave gain', () => {
+      // Arrange: the named export is read at RUNTIME (an absent name reads
+      // NaN, so the clause below fails legibly).
+      const gain = readNumericExport('NEATRACING_CHASE_CAMERA_FOLLOW_GAIN');
+      // Act
+      // Assert: the GUARD first (the measured pre-wave gain must be a real
+      // positive gain, so the comparison is meaningful), then the clause.
+      expect(MEASURED_PRE_WAVE_FOLLOW_GAIN).toBeGreaterThan(0);
+      expect(gain).toBeLessThan(MEASURED_PRE_WAVE_FOLLOW_GAIN);
+    });
+
+    // [RED-2-DESENSITISED-RESPONSE]
+    it('moves the aim LESS on the first tick than the measured pre-wave response', () => {
+      // Arrange: the neutral follow and the measured tick-61 step.
+      const neutralFollow = createChaseCameraFollowState();
+      // Act
+      const firstTick = stepChaseCameraFollow(
+        neutralFollow,
+        measuredStep(1, 1),
+      );
+      const responseRad = Math.abs(firstTick.offsetRad);
+      // Assert: the GUARDS first (the probe must really move the aim and
+      // the measured pre-wave response must be a real response), then the
+      // clause: the camera must react LESS to the same slide.
+      expect(responseRad).toBeGreaterThan(0);
+      expect(MEASURED_PRE_WAVE_FIRST_TICK_OFFSET_RAD).toBeGreaterThan(0);
+      expect(responseRad).toBeLessThan(
+        MEASURED_PRE_WAVE_FIRST_TICK_OFFSET_RAD,
+      );
+    });
+
+    // [RED-2-SLOWER-TIME-TO-CAP]
+    it('needs MORE ticks to reach the capped offset than the measured pre-wave law', () => {
+      // Arrange: the measured hold probe.
+      const probe = runMeasuredHoldProbe(RECORDED_PROBE_TICK_COUNT);
+      // Act
+      const runtimeTicks = ticksToReachOffsetRad(
+        probe,
+        RECORDED_CAP_REACH_FRACTION * RECORDED_MAX_AIM_OFFSET_RAD,
+      );
+      // Assert: the GUARDS first (the measured pre-wave tick count must be
+      // real and the camera must really reach the capped offset, else there
+      // is no time to compare), then the clause: the response must be MUCH
+      // SLOWER.
+      expect(MEASURED_PRE_WAVE_TICKS_TO_CAPPED_OFFSET).toBeGreaterThan(0);
+      expect(Number.isFinite(runtimeTicks)).toBe(true);
+      expect(runtimeTicks).toBeGreaterThan(
+        MEASURED_PRE_WAVE_TICKS_TO_CAPPED_OFFSET,
+      );
+    });
+  });
+
+  describe('RED-3 - the release is MONOTONIC and SMOOTH (NO SNAP-BACK)', () => {
+    // [RED-3-RECORDED-PREMISE]
+    it('records the measured pre-wave release fractions as the baseline of the release clauses', () => {
+      // Arrange: the RECORDED pre-wave release fractions.
+      const earlyFraction = MEASURED_PRE_WAVE_EARLY_RELEASE_CLOSE_FRACTION;
+      const peakFraction = MEASURED_PRE_WAVE_PEAK_RELEASE_CLOSE_FRACTION;
+      // Act
+      // Assert: the PREMISE (this lane is a GREEN recorded premise, never
+      // a red): the recorded fractions are real and the recorded rate
+      // GROWS with the camera's own offset - that growth IS the
+      // multiplicative snap-back enabler the clause below deletes. The
+      // lane asserts the RECORDED constants only (never the runtime
+      // pre-wave behaviour, which the law change moves by design).
+      expect(earlyFraction).toBeGreaterThan(0);
+      expect(peakFraction).toBeGreaterThan(earlyFraction);
+      expect(RECORDED_RELEASE_SMOOTH_FRACTION).toBeLessThan(peakFraction);
+    });
+
+    // [RED-3-SMOOTH-FRACTION]
+    it('closes the aim by NO MORE than the recorded smooth fraction per release tick', () => {
+      // Arrange: the measured hold and ONE release tick.
+      const release = releaseFromMeasuredHold(240);
+      // Act
+      // Assert: the GUARDS first (the probe must really produce a release
+      // of a real offset and a NON-ZERO close fraction - a zero fraction
+      // would leave nothing to smooth), then the clause.
+      expect(Math.abs(release.offsetBeforeRad)).toBeGreaterThan(0);
+      expect(release.closeFraction).toBeGreaterThan(0);
+      expect(release.closeFraction).toBeLessThanOrEqual(
+        RECORDED_RELEASE_SMOOTH_FRACTION + CAMERA_FRACTION_TOLERANCE,
+      );
+    });
+
+    // [RED-3-NAMED-SMOOTH-FRACTION]
+    it('publishes the release smooth fraction as the named export', () => {
+      // Arrange: the named export is read at RUNTIME (an absent name reads
+      // NaN, so the guard below fails legibly).
+      const fraction = readNumericExport(
+        'NEATRACING_CHASE_CAMERA_RELEASE_SMOOTH_FRACTION',
+      );
+      // Act
+      // Assert: the GUARD first (the export must EXIST and be a finite
+      // positive fraction), then the named value.
+      expect(fraction).toBeGreaterThan(0);
+      expect(fraction).toBeCloseTo(RECORDED_RELEASE_SMOOTH_FRACTION, 8);
+    });
+
+    // [RED-3-NO-MULTIPLICATIVE-ENABLER]
+    it('does NOT close the aim faster the FURTHER the camera already sits from the nose', () => {
+      // Arrange: the release at the peak offset and the release at the
+      // early (tick-2) offset.
+      const atPeak = releaseFromMeasuredHold(240);
+      const atEarly = releaseFromMeasuredHold(2);
+      // Act
+      // Assert: the GUARDS first (BOTH probes must REALLY release a
+      // NON-ZERO fraction - a zero fraction would leave the comparison
+      // vacuous), then the clause: the release rate must NOT grow with
+      // the camera's own offset (the multiplicative enabler is deleted at
+      // its source, so the peak offset may never close faster than the
+      // early one).
+      expect(atPeak.closeFraction).toBeGreaterThan(0);
+      expect(atEarly.closeFraction).toBeGreaterThan(0);
+      expect(atPeak.closeFraction).toBeLessThanOrEqual(
+        atEarly.closeFraction + CAMERA_FRACTION_TOLERANCE,
+      );
+    });
+
+    // [RED-3-MONOTONIC-RELEASE]
+    it('approaches the nose-aligned aim monotonically without overshoot (GREEN RAIL)', () => {
+      // Arrange: the measured hold and the release trace.
+      const trace = measuredReleaseTrace(240, 240);
+      // Act
+      // Assert: this lane is GREEN today and is a RAIL, NEVER a red: the
+      // release must never grow the offset and never flip its sign.
+      expect(trace.grew).toBe(false);
+      expect(trace.flipped).toBe(false);
+      expect(
+        Math.abs(trace.offsetsRad[trace.offsetsRad.length - 1]),
+      ).toBeLessThan(Math.abs(trace.offsetsRad[0]));
+    });
+  });
+
+  describe('RED-4 - LABELLED PRESERVATION GUARD: the camera change touches the AIM ONLY (this lane is GREEN today and is NEVER counted as a red)', () => {
+    // [RED-4-STATE-SHAPE]
+    it('keeps exactly the two named follow-state fields', () => {
+      // Act
+      const follow = createChaseCameraFollowState();
+      // Assert
+      expect(Object.keys(follow).sort()).toEqual(['lastTick', 'offsetRad']);
+    });
+
+    // [RED-4-PUBLISHED-API]
+    it('keeps the four published numeric constants', () => {
+      // Act
+      const publishedTypes = [
+        typeof NEATRACING_CHASE_CAMERA_FOLLOW_DT_S,
+        typeof NEATRACING_CHASE_CAMERA_BACK,
+        typeof NEATRACING_CHASE_CAMERA_HEIGHT,
+        typeof NEATRACING_CHASE_CAMERA_LOOKAHEAD,
+      ];
+      // Assert
+      expect(publishedTypes).toEqual([
+        'number',
+        'number',
+        'number',
+        'number',
+      ]);
+    });
+
+    // [RED-4-PUBLISHED-FUNCTIONS]
+    it('keeps the four published functions', () => {
+      // Act
+      const publishedTypes = [
+        typeof createChaseCameraFollowState,
+        typeof resolveChaseCameraAimRad,
+        typeof resolveChaseCameraBasis,
+        typeof stepChaseCameraFollow,
+      ];
+      // Assert
+      expect(publishedTypes).toEqual([
+        'function',
+        'function',
+        'function',
+        'function',
+      ]);
+    });
+
+    // [RED-4-PUBLISHED-TRAVEL-HEADING]
+    it('still consumes the PUBLISHED travel heading (and holds the aim on a straight lane)', () => {
+      // Arrange: the measured slide and the straight lane.
+      const slid = stepChaseCameraFollow(
+        createChaseCameraFollowState(),
+        measuredStep(1, 1),
+      );
+      const straight = stepChaseCameraFollow(
+        createChaseCameraFollowState(),
+        {
+          ...measuredStep(1, 1),
+          travelHeadingRad: MEASURED_NOSE_HEADING_RAD,
+        },
+      );
+      // Act
+      // Assert
+      expect(slid.offsetRad).not.toBe(0);
+      expect(Math.sign(slid.offsetRad)).toBe(
+        Math.sign(MEASURED_PUBLISHED_SLIP_RAD),
+      );
+      expect(straight.offsetRad).toBe(0);
+    });
+
+    // [RED-4-BODY-PRESENTATION-UNTOUCHED]
+    it('leaves the BODY presentation on the published pose (never on the chase follow)', () => {
+      // Arrange: the browser entry source (the three live call sites).
+      const browserEntrySource = readFileSync(BROWSER_ENTRY_PATH, 'utf-8');
+      // Act: the source is matched against the body presentation.
+      // Assert: the body yaw still comes from the published pose and NO
+      // body field may be assigned from the chase follow.
+      expect(browserEntrySource).toMatch(
+        /carPoseBag\.driftYawOffsetRad = car\.drift\.pose\.pose/,
+      );
+      expect(browserEntrySource).not.toMatch(
+        /carPoseBag\.[A-Za-z]+ = [^;]*chaseFollow/,
+      );
     });
   });
 });

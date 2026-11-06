@@ -35,22 +35,46 @@
  * resolved BEFORE the user softening and never sees it). A PRESENT
  * percent wins; an ABSENT percent keeps the steer-axis law.
  *
+ * THE TURN SUFFICIENCY (Step 14Y, AC-098(a)) lifts the USER channel
+ * inside a speed-localized BAND (the crawl band up to the band's upper
+ * edge), so the channel can HOLD the tightest measured corner instead of
+ * falling short of its kinematic requirement: the sufficiency peaks at
+ * the corner's own target speed and it is exactly `1` outside the band,
+ * so the crawl rate stays BIT-IDENTICAL and the ratified mild reduction
+ * keeps its own full meaning above the band. The sufficiency belongs to
+ * the USER channel alone - the AI channel is untouched by it.
+ *
  * The tuning baseline is the locked javascript-racer adaptation table
  * (spec Â§5.2), transcribed as named constants with their js-racer
  * derivations preserved: `ACCEL = maxSpeed / 5`,
  * `BRAKING = -maxSpeed`, `NATURAL_DECEL = -maxSpeed / 5`,
- * `OFF_ROAD_DECEL = -maxSpeed / 2` with the passive off-road floor at
- * `maxSpeed / 4` (so a coasting off-road car never decelerates to zero),
+ * `OFF_ROAD_DECEL = -maxSpeed / 2` with the USER-named off-track speed
+ * cap at `20 km/h` (AC-090 VERDICT 8 - the off-track limit the USER
+ * named, `20 / 3.6` m/s, so a coasting off-road car never decelerates
+ * to zero and never exceeds the USER-named limit),
  * the `STEERING_RATE = 2` steering rate scaled by the speed percentile
  * (TP-04: `dx = dt Â· 2 Â· speedPercent`, a standing car does not rotate).
  *
  * Determinism (spec Â§5.3): the service is PURE â it calls no `Math.random`,
- * reads the surface at tick start through the resolved resolver, and
+ * reads the surface ONCE from the POST-MOVE pose through the resolved
+ * resolver, and
  * integrates in one fixed documented order, so the same
  * `(seed, control stream, surface stream)` produces byte-identical
  * JSON-serialized states on the same runtime (reproducibility rung
  * Level 2, ordered deterministic; cross-environment byte equality is NOT
  * claimed).
+ *
+ * THE ONE SURFACE ORDER (Step 14W, AC-094 (c)): the surface the physics
+ * integrates against is the surface the car is ON, never the surface it
+ * was on at the tick start. The tick resolves the surface ONCE, from the
+ * POST-MOVE pose (the pose the car reached in this tick), so a car that
+ * has left the road really gets the band surface in the SAME tick and the
+ * EXISTING named off-road law (the off-road deceleration constant and the
+ * off-road speed-floor constant) actually applies. The reach pose itself
+ * depends on the surface, so the reach is computed against the NEUTRAL
+ * (road) surface FIRST and the tick is RE-INTEGRATED against the resolved
+ * surface when that surface is not the neutral one - so the published tick
+ * is always the tick that integrated against the surface the car is on.
  *
  * Scope notes: off-track/ribbon detection is wired by the surface-resolver
  * consumer (P1-S7-C); per-wheel slip channels and the
@@ -66,17 +90,15 @@
  * states are published. The single-car tick (`stepPhysics`) stays the hot
  * path of the live session and never resolves a fleet.
  *
- * The ROAD CONTAINMENT is wired HERE too (AC-081-WIRE): the named seam
- * `applyTrackContainment` is the ONE owner of the drivable-surface bound
- * (`resolveTrackBoundaryCar` in `./collision.utils`), and the single-car
- * tick applies it AFTER the translation and BEFORE the publish, through
- * the OPTIONAL fourth parameter `trackSegments`. Without that geometry
- * (an absent parameter or an empty segment list) the tick is a byte-
- * identical no-op, so every existing caller and every pinned tick stays
- * untouched.
+ * The TRACK BOUND IS GONE (AC-090 VERDICT 8, superseding the AC-081
+ * containment): there is NO invisible wall near the track edge. A car
+ * that leaves the ribbon really goes off track and keeps rolling - the
+ * ONLY limit out there is the USER-named off-track SPEED cap (the named
+ * `20 km/h` constant below), never a geometric bound, so the single-car
+ * tick needs NO geometry seam at all.
  */
 
-import { resolveCarCollisions, resolveTrackBoundaryCar } from './collision.utils';
+import { resolveCarCollisions } from './collision.utils';
 import type { TrackSegment } from '../../racing_curriculum/track/track.generator.types';
 import {
   computeLongitudinalSpeedScrub,
@@ -261,13 +283,30 @@ export const NEATRACING_PHYSICS_OFF_ROAD_DECEL_UNITS_PER_S2 =
   -NEATRACING_PHYSICS_MAX_SPEED_UNITS_PER_S / 2;
 
 /**
- * Off-road speed floor: `maxSpeed / 4` (spec Â§5.2 locked table). While the
- * car enters an off-road tick at/above this speed and is NOT braking, the
- * passive decelerations are floored here so an off-road car coasts down to
- * this cruise floor instead of decelerating to zero.
+ * The USER-named OFF-TRACK SPEED LIMIT, in km/h (AC-090 VERDICT 8).
+ *
+ * THE USER'S OWN NUMBER: "the car should be able to go off track, but
+ * with the speed limited to 20km/h". The off-track limit is therefore
+ * 20 km/h - a NAMED constant, never a magic number, and the ONE place
+ * the off-track limit is authored.
+ */
+export const NEATRACING_PHYSICS_OFF_TRACK_SPEED_LIMIT_KMH = 20;
+
+/**
+ * Off-track speed cap in m/s: the USER-named 20 km/h (`20 / 3.6`).
+ *
+ * While the car enters an off-road tick at/above this speed and is NOT
+ * braking, the passive decelerations are floored here, so an off-road
+ * car coasts down to the USER-named limit and HOLDS it instead of
+ * decelerating to zero - and never runs faster than the USER named.
+ *
+ * THE DECEL LAW STAYS THE SAND MECHANISM: the off-road deceleration
+ * constant above is what actually slows the car down; this cap is the
+ * CEILING the USER named, and it SUPERSEDES the retired `maxSpeed / 4`
+ * floor (22.25 m/s = 80.1 km/h, ~4x the USER-named limit).
  */
 export const NEATRACING_PHYSICS_OFF_ROAD_SPEED_FLOOR_UNITS_PER_S =
-  NEATRACING_PHYSICS_MAX_SPEED_UNITS_PER_S / 4;
+  NEATRACING_PHYSICS_OFF_TRACK_SPEED_LIMIT_KMH / 3.6;
 
 /**
  * Steering rate: `dx = dt Â· 2 Â· speedPercent` (spec Â§5.2 locked table,
@@ -317,6 +356,77 @@ export const NEATRACING_PHYSICS_TURN_RATE_SPEED_FACTOR_FLOOR = 0.75;
 export const NEATRACING_PHYSICS_TURN_RATE_REDUCTION_BAND_UNITS_PER_S = 10;
 
 /**
+ * The tightest holdable corner radius of the USER channel (m) (Step 14Y,
+ * AC-098(a)).
+ *
+ * THE RED-MEASURED VALUE: the tightest MEASURED layout of the repo (the
+ * R = 8 m stadium) is the corner the USER channel has to be able to
+ * HOLD. A corner of curvature `kappa` demands the turn rate `v x kappa`
+ * (the kinematic requirement) at the speed the racing line drives it at,
+ * so the radius is the model-side half of the sufficiency: it turns the
+ * corner into a turn RATE the commanded rate can be compared with.
+ */
+export const NEATRACING_PHYSICS_TURN_RATE_SUFFICIENCY_CORNER_RADIUS_M = 8;
+
+/**
+ * The target speed of that tightest corner (m/s) (Step 14Y, AC-098(a)).
+ *
+ * THE RED-MEASURED VALUE: the published target speed of the tightest
+ * corner of the tightest MEASURED layout of the repo (measured through
+ * the racing line's own curvature-derived target speed). The
+ * sufficiency PEAKS at this speed - it is the speed the corner is
+ * driven at, so it is where the corner's kinematic requirement is
+ * largest and where the USER channel is measured.
+ */
+export const NEATRACING_PHYSICS_TURN_RATE_SUFFICIENCY_CORNER_SPEED_UNITS_PER_S =
+  17.8;
+
+/**
+ * The command-sufficiency margin of the USER channel (1) (Step 14Y,
+ * AC-098(a)).
+ *
+ * THE MARGIN (the same rationale as the AI's own command-sufficiency
+ * margin): a commanded rate that MERELY meets the corner's kinematic
+ * requirement leaves the corner on the boundary, where any float noise
+ * loses it. The margin is the small slack that keeps the commanded rate
+ * STRICTLY above the requirement, so the corner is HOLDABLE rather than
+ * borderline.
+ */
+export const NEATRACING_PHYSICS_TURN_RATE_SUFFICIENCY_MARGIN = 1.1;
+
+/**
+ * The upper edge of the USER turn-rate sufficiency band (m/s) (Step 14Y,
+ * AC-098(a)).
+ *
+ * WHY THE SUFFICIENCY IS A BAND AND NOT A GLOBAL RAISE: the ratified
+ * AC-092 reduction factor is measured against the NOMINAL law of the
+ * SAME speed, so the rate may never grow above the crawl band's rate
+ * (the factor may only FALL with the speed) - a global raise of the
+ * nominal rate would invert that factor at the crawl band. The
+ * sufficiency is therefore a BAND: it is raised inside the band and it
+ * is back at zero at this edge, so the ratified factor stays monotonic
+ * across the ratified speed ladder and the top-speed rate stays
+ * strictly below the nominal law (the AC-092 rails).
+ *
+ * THE VALUE: 18.0 m/s - the first speed above the RED-measured corner
+ * speed where the ratified law's own rate is read again.
+ */
+export const NEATRACING_PHYSICS_TURN_RATE_SUFFICIENCY_BAND_END_UNITS_PER_S = 18.0;
+
+/**
+ * The transition half-width of the USER turn-rate sufficiency window
+ * (m/s) (Step 14Y, AC-098(a)).
+ *
+ * THE SHAPE: the sufficiency is a raised-cosine window that peaks at
+ * the RED-measured corner speed. This constant caps how far from the
+ * peak the window is allowed to open on EITHER side. It keeps the R=8
+ * hold fully boosted at 17.8 m/s while making the boost fade long before
+ * the demo drive reaches the ~18.4 m/s point where the wide original
+ * window pushed the car off the served track.
+ */
+export const NEATRACING_PHYSICS_TURN_RATE_SUFFICIENCY_TRANSITION_HALF_WIDTH_UNITS_PER_S = 0.2;
+
+/**
  * Lateral spawn spread in meters: the seeded spawn lane offset is drawn
  * deterministically from the spawn seed within `Â±spread / 2` so the same
  * seed always spawns on the same lane line.
@@ -334,6 +444,18 @@ const DEFAULT_SURFACE: PhysicsSurfaceType = 'road';
 
 /** Off-road surface label that arms the off-road drag and passive floor. */
 const OFF_ROAD_SURFACE: PhysicsSurfaceType = 'grass';
+
+/**
+ * The NEUTRAL surface of the REACH pass (Step 14W, AC-094 (c)).
+ *
+ * The pose a car reaches in a tick DEPENDS on the surface (the off-road
+ * law slows the car down, so the car covers a shorter distance), so the
+ * reach pose is computed against this NEUTRAL surface FIRST and the
+ * resolver is asked about that pose. It is the ROAD surface because the
+ * road arms NO extra law: the reach must never depend on the surface it
+ * is resolving.
+ */
+const REACH_SURFACE: PhysicsSurfaceType = 'road';
 
 /** Standing-start longitudinal speed (m/s). */
 const INITIAL_SPEED_UNITS_PER_S = 0;
@@ -453,9 +575,14 @@ export function createInitialPhysicsCarState(
  *
  * The tick pipeline is fixed and side-effect free (spec Â§5.1âÂ§5.3):
  *
- * 1. resolve the surface at tick start through the supplied resolver
- *    (omitted means road; the resolver sees the tick-start state, which
- *    is the integration read for an explicit integrator);
+ * 1. resolve the surface ONCE from the POST-MOVE pose (Step 14W,
+ *    AC-094 (c)): the tick integrates against the surface the car is ON,
+ *    never the surface it was on at the tick start. The pose the car
+ *    reaches is computed against the NEUTRAL (road) surface, the resolver
+ *    is asked about THAT pose (omitted means road; the resolver sees the
+ *    pose the car reached, never the tick-start state), and the tick is
+ *    RE-INTEGRATED against the resolved surface when that surface is not
+ *    the neutral one;
  * 2. resolve the DEMANDED turn rate ONCE from the steer axis and the
  *    tick-start speed percentile (TP-04, standing cars do not rotate),
  *    DERIVE the per-tick yaw delta from that one number and integrate
@@ -488,24 +615,34 @@ export function createInitialPhysicsCarState(
  *    (`tractionSeverity`) from the POST-TRACTION speed and the PUBLISHED
  *    slip, so the tires, the HUD, the camera and the debug seam all read
  *    the SAME number and NO consumer re-derives it;
- * 7. apply the TRACK CONTAINMENT (AC-081-WIRE) when the caller supplied
- *    the ribbon geometry: the drivable-surface bound reseats a car that
- *    left the road, and the published scalars are RE-DERIVED from the
- *    POST-containment pose, so the tick never publishes pre-bounce
- *    numbers;
+ * 7. (THE RETIRED SEAM - AC-090 VERDICT 8) the published pose is the
+ *    REACHED pose: the AC-081 TRACK CONTAINMENT is retired with the
+ *    invisible wall it made, so the car that left the ribbon keeps
+ *    rolling under the USER-named off-track speed cap (the ONE named
+ *    `NEATRACING_PHYSICS_OFF_TRACK_SPEED_LIMIT_KMH`) - the geometry
+ *    argument rides the retired NO-OP seam and the SHIPPED 4-arg
+ *    live-tick form is preserved;
  * 8. count the tick.
  *
  * @param state - Current car state (treated read-only; never mutated).
  * @param input - Control sample applied for this single tick.
- * @param surfaceResolver - Optional surface probe; receives the tick-start
- *   state and must return a `PhysicsSurfaceType`. When omitted the tick
+ * @param surfaceResolver - Optional surface probe; receives the POST-MOVE
+ *   pose (the pose the car reached in this tick - never the tick-start
+ *   state) and must return a `PhysicsSurfaceType`. When omitted the tick
  *   behaves as on-road. Off-track detection (which road/curb/grass the
  *   ribbon assigns) is the consumer's job (P1-S7-C).
- * @param trackSegments - Optional TRACK GEOMETRY (the ribbon segments).
- *   When present, the drivable-surface containment (AC-081) is applied
- *   AFTER the translation and BEFORE the publish. An ABSENT parameter and
- *   an EMPTY list are both no-ops: the tick stays byte-identical and
- *   nothing throws (AC-081-WIRE-NOOP).
+ * @param trackSegments - The RETIRED TRACK GEOMETRY parameter (the
+ *   ribbon segments). The AC-081 containment bound was RETIRED with the
+ *   invisible wall it made (AC-090 VERDICT 8: "it's now an invisible
+ *   wall ... the car should be able to go off track, but with the speed
+ *   limited to 20km/h"), so this argument is NEVER READ any more: an
+ *   ABSENT parameter, an EMPTY list and a FULL ribbon all produce THE
+ *   SAME tick (the retired seam is a NO-OP - the AC-081-WIRE-NOOP
+ *   contract re-contracted by the retirement). The parameter STAYS the
+ *   SHIPPED 4-arg live-tick form, so the served closure
+ *   (`browser-entry`), the served lane and the contract lanes keep ONE
+ *   tick form; the off-track limit is only ever the USER-named speed
+ *   cap.
  * @returns A new `PhysicsCarState` (input argument is never mutated).
  *
  * @example
@@ -522,9 +659,72 @@ export function stepPhysics(
   surfaceResolver?: (carState: PhysicsCarState) => PhysicsSurfaceType,
   trackSegments?: readonly TrackSegment[],
 ): PhysicsCarState {
-  // Step 1: Resolve the surface under the car at tick start (explicit read).
-  const surface = resolveSurfaceAtTickStart(surfaceResolver, state);
   const clampedInput = clampStepInput(input);
+
+  // Step 1: THE ONE SURFACE ORDER (Step 14W, AC-094 (c)).
+  //
+  // THE ORDER: the surface the physics integrates against is the surface
+  // the car is ON - never the surface it was on at the tick start. The
+  // resolver is therefore asked ONCE per tick, about the POST-MOVE pose
+  // (the pose the car reached in this tick), so a car that has left the
+  // road really gets the band surface in the SAME tick and the EXISTING
+  // named off-road law (the off-road deceleration constant and the
+  // off-road speed-floor constant) actually applies.
+  //
+  // THE REACH FIRST: the pose a car reaches depends on the surface (the
+  // off-road law slows the car down, so the car covers a shorter
+  // distance), so the reach is computed against the NEUTRAL (road)
+  // surface FIRST and the resolver is asked about THAT pose. When the
+  // resolved surface is not the neutral one, the tick is RE-INTEGRATED
+  // against the resolved surface, so the published tick is always the
+  // tick that integrated against the surface the car is on.
+  const reached = advanceCarState(state, clampedInput, REACH_SURFACE);
+  const surface = resolveSurfaceAtPostMove(surfaceResolver, reached);
+  const advancedCar =
+    surface === REACH_SURFACE
+      ? reached
+      : advanceCarState(state, clampedInput, surface);
+
+  // Step 7: THE RETIRED SEAM (AC-090 VERDICT 8). The published pose is
+  // the REACHED pose - a car that crossed the red edge keeps rolling
+  // under the USER-named off-track speed cap and is NEVER clamped,
+  // stopped or reseated by any bound (the NO-WALL contract the USER
+  // named). The geometry argument rides the retired NO-OP seam, so the
+  // shipped 4-arg live-tick form is preserved byte-identically.
+  return applyTrackContainment(advancedCar, trackSegments);
+}
+
+/**
+ * Advances ONE car by ONE fixed tick against ONE surface.
+ *
+ * THE PIPELINE (the documented order of the tick): the demanded turn rate
+ * is resolved ONCE and drives both the yaw and the drift commitment, the
+ * longitudinal speed is integrated through the locked speed-table rates
+ * (with the surface's off-road law), the drift channel advances in its
+ * load-bearing order, the published slip angle and the ONE shared
+ * traction severity are derived from the POST-scrub speed, and the car is
+ * translated along the velocity direction.
+ *
+ * THE SURFACE IS THE ONLY INPUT THAT CHANGES THE NUMBERS: the off-road
+ * deceleration and the off-road speed floor are the two surface-dependent
+ * reads, so the same call with the same surface always produces the same
+ * numbers. That is what lets the tick resolve the surface from the
+ * POST-MOVE pose and re-integrate against it without changing a single
+ * pinned tick.
+ *
+ * @param state - The tick-start car state (treated read-only; never
+ *   mutated).
+ * @param clampedInput - The clamped control sample applied to this tick.
+ * @param surface - The surface this tick integrates against.
+ * @returns The advanced car state (the published pose - the AC-081
+ *   containment seam is retired, so the reached pose IS the published
+ *   pose; AC-090 VERDICT 8).
+ */
+function advanceCarState(
+  state: PhysicsCarState,
+  clampedInput: PhysicsStepInput,
+  surface: PhysicsSurfaceType,
+): PhysicsCarState {
   const speedPercent = resolveSpeedPercent(state.speed);
 
   // Step 2: Resolve the DEMANDED turn rate of this tick ONCE, derive the
@@ -676,11 +876,7 @@ export function stepPhysics(
     tick: nextTick,
   };
 
-  // Step 7: the TRACK CONTAINMENT (AC-081-WIRE). The containment runs
-  // AFTER the translation and BEFORE the publish, so the published pose is
-  // the CONTAINED one and the rendered frame can never show a car that
-  // the simulation already bounced back onto the road.
-  return applyTrackContainment(advancedCar, trackSegments);
+  return advancedCar;
 }
 
 /**
@@ -698,9 +894,9 @@ export function stepPhysics(
  * velocities along the collision normal (LD-05, the arcade elastic
  * exchange). The seam adds the PUBLISH rule the resolver cannot know about:
  * a separated member is republished with its published scalars re-derived
- * from its BOUNCED pose, because `travelHeadingRad` and `tractionSeverity`
- * are documented as the exact values the integration used - a bounced car
- * must never publish the pre-bounce numbers.
+ * from its RESOLVED pose, because `travelHeadingRad` and `tractionSeverity`
+ * are documented as the exact values the integration used - a resolved car
+ * must never publish the pre-resolution numbers.
  *
  * @param fleet - The advanced fleet states (treated read-only; never
  *   mutated).
@@ -729,13 +925,15 @@ export function resolveLiveCarCollisions(
  * Republishes a resolved car with the published scalars re-derived from
  * its POST-RESOLUTION pose.
  *
- * The car-to-car collision (AC-090) and the road containment (AC-081-WIRE)
- * both recompose the car around a new world velocity (a new heading, a new
- * speed, a zeroed slip and a zeroed drift channel), so the published
- * travel heading and the published traction severity of the
- * pre-resolution tick are STALE. They are re-derived here - from the
- * resolved values ONLY, never from the pre-resolution ones - so the
- * published state and the rendered frame stay one frame of reference.
+ * The car-to-car collision (AC-090) recomposes the car around a new
+ * world velocity (a new heading, a new speed, a zeroed slip and a zeroed
+ * drift channel), so the published travel heading and the published
+ * traction severity of the pre-resolution tick are STALE. They are
+ * re-derived here - from the resolved values ONLY, never from the
+ * pre-resolution ones - so the published state and the rendered frame
+ * stay one frame of reference. (The road containment that shared this
+ * republish path was RETIRED with the AC-081 bound - AC-090 VERDICT 8 -
+ * so this republish now serves the car-to-car resolution ONLY.)
  *
  * @param car - The resolved car state (treated read-only).
  * @returns A fresh state whose published scalars match the resolved pose.
@@ -749,49 +947,55 @@ function republishSeparatedCar(car: PhysicsCarState): PhysicsCarState {
 }
 
 /**
- * The TRACK-CONTAINMENT seam (AC-081-WIRE): the ONE named owner of the
- * road-containment bound inside the live physics tick.
+ * The RETIRED TRACK-CONTAINMENT seam (AC-090 VERDICT 8, superseding the
+ * landed AC-081-WIRE seam of the Step 14I/14W iterations): the ONE named
+ * owner of the ONE track bound - which is now NO BOUND AT ALL.
  *
- * The bound (`resolveTrackBoundaryCar` in `./collision.utils`) is the
- * LANDED AC-081 drivable-surface bound: a car that left the drivable
- * surface is reseated on its edge, and only an APPROACHING car takes the
- * elastic rebound. The seam is the ONLY live call site of the bound, so
- * the bound has a single owner and a single call site - the Step 14I
- * contract "there is ONE bound in the codebase" stays true.
+ * THE RETIREMENT (the USER observable, the 2026-11-05 verdict-8 record):
+ * the landed iteration-2 non-reflecting clamp HELD the pose at the band
+ * outer edge (288/288 post-touch ticks pinned EXACTLY 3.0 m past the
+ * drivable edge while full throttle was applied - the plan's measured W1
+ * record), so the boundary read as an INVISIBLE WALL. The USER named the
+ * next-order defect verbatim: "the car should be able to go off track,
+ * but with the speed limited to 20km/h". The measured classification
+ * recorded the hold as a true pose-hold (NOT a slowdown), the corridor
+ * beyond the bound as geometrically CLEAN (7.0 m to the AC-096 10 m
+ * prop floor), and the published off-track floor as 4.005x the
+ * USER-named limit - so the bound is RETIRED ENTIRELY and the ONLY
+ * limit out there is the USER-named off-track speed cap (the named
+ * `NEATRACING_PHYSICS_OFF_TRACK_SPEED_LIMIT_KMH` constant in this
+ * module; the off-road decel law STAYS the slowdown mechanism).
  *
- * The NO-OP contract (AC-081-WIRE-NOOP): an ABSENT geometry and an EMPTY
- * segment list both leave the tick BYTE-IDENTICAL - the bound is never
- * applied and NOTHING throws (`resolveNearestChordPoint` throws on an
- * empty list, so the empty case is guarded BEFORE the bound is called).
- *
- * The PUBLISH rule (AC-081-WIRE-SCALARS): the bound recomposes the
- * velocity channels of a bounced car, so the published travel heading and
- * the published traction severity of the pre-containment tick are STALE.
- * They are re-derived from the POST-containment pose - exactly as the
- * AC-090 seam does - so the tick never publishes pre-bounce numbers.
+ * THE NO-OP CONTRACT (AC-081-WIRE-NOOP, re-contracted by the
+ * retirement): EVERY input is a no-op - an ABSENT geometry, an EMPTY
+ * segment list and a FULL ribbon all leave the tick byte-identical,
+ * and the returned car IS the reached car. The ONE-BOUND and
+ * SHIPPED-TICK clauses carry over the retirement: this seam stays the
+ * ONE named owner of the (now retired) bound contract, the second
+ * parameter list stays the SHIPPED 4-ARG live-tick form (the served
+ * closure and the contract lanes keep ONE tick form), and the AC-081
+ * pose-independence clause is re-authored to hold TRUE BY
+ * CONSTRUCTION: with no bound at all, no published value depends on
+ * any pose.
  *
  * @param car - The advanced car state (treated read-only; never
  *   mutated).
- * @param trackSegments - The ribbon geometry; an absent or an empty list
- *   is a no-op.
- * @returns A fresh state inside the drivable-surface bound.
+ * @param trackSegments - The RETIRED ribbon geometry; accepted for the
+ *   shipped 4-arg live-tick form and never read (`void` marks the
+ *   intentional non-read of the retirement).
+ * @returns The SAME car state, unchanged.
  */
 function applyTrackContainment(
   car: PhysicsCarState,
   trackSegments: readonly TrackSegment[] | undefined,
 ): PhysicsCarState {
-  // The EMPTY guard comes FIRST: the bound throws on an empty segment
-  // list, so the no-op must never reach it.
-  if (trackSegments === undefined || trackSegments.length === 0) {
-    return car;
-  }
-  const contained = resolveTrackBoundaryCar(car, trackSegments);
-  // A car INSIDE the bound keeps every published value: the bound hands it
-  // back unchanged, so there is nothing stale to re-derive.
-  if (contained.x === car.x && contained.y === car.y) {
-    return contained;
-  }
-  return republishSeparatedCar(contained);
+  // THE RETIRED BOUND: there is NO containment left to apply - no
+  // clamp, no reseat, no hold. The argument is received and retired
+  // (never read); the `void` marks the intentional non-read so the
+  // unused-vars lane stays honest about the retirement instead of
+  // papering over it.
+  void trackSegments;
+  return car;
 }
 
 /**
@@ -812,7 +1016,8 @@ function applyTrackContainment(
  * @param inputs - The control sample of every member, index-aligned with
  *   `fleet` (a missing sample is a caller error).
  * @param surfaceResolver - Optional surface probe, shared by the fleet; it
- *   receives the tick-start state of the probed member.
+ *   receives the POST-MOVE pose the probed member reached in this tick
+ *   (never the tick-start state).
  * @returns Fresh published states in the same order.
  *
  * @example
@@ -832,13 +1037,24 @@ export function stepPhysicsFleet(
   return resolveLiveCarCollisions(advanced);
 }
 
-/** Resolves the tick-start surface, defaulting to road without a resolver. */
-function resolveSurfaceAtTickStart(
+/**
+ * Resolves the surface of the POST-MOVE pose (Step 14W, AC-094 (c)).
+ *
+ * THE ONE READ: the resolver is asked ONCE per tick, about the pose the
+ * car REACHED in this tick (never the tick-start state), so the surface
+ * the physics integrates against is the surface the car is ON. An absent
+ * resolver keeps the tick on the road.
+ *
+ * @param surfaceResolver - The optional surface probe.
+ * @param reached - The pose the car reached in this tick.
+ * @returns The surface under the reached pose; road without a resolver.
+ */
+function resolveSurfaceAtPostMove(
   surfaceResolver:
     ((carState: PhysicsCarState) => PhysicsSurfaceType) | undefined,
-  state: PhysicsCarState,
+  reached: PhysicsCarState,
 ): PhysicsSurfaceType {
-  return surfaceResolver?.(state) ?? DEFAULT_SURFACE;
+  return surfaceResolver?.(reached) ?? DEFAULT_SURFACE;
 }
 
 /** Clamps the three control axes into their contract ranges. */
@@ -896,6 +1112,88 @@ export function resolveTurnRateSpeedFactor(speedPercent: number): number {
 }
 
 /**
+ * Resolves the turn-sufficiency WINDOW of a speed (a unitless factor in
+ * `[0, 1]`).
+ *
+ * THE WINDOW (Step 14Y, AC-098(a)): the window is a raised cosine that is
+ * EXACTLY zero at both edges of the sufficiency band (the crawl band
+ * below, the band's upper edge above) and peaks at the RED-MEASURED
+ * corner speed. The transition half-width caps how far from the peak the
+ * cosine is allowed to open on each side, so the boost is concentrated on
+ * the tight corner and fades before the higher-speed straightaway. The
+ * window is continuous and smooth at the peak and at both edges, so the
+ * commanded rate never steps.
+ *
+ * @param speedPercent - The normalized speed in `[0, 1]`.
+ * @returns The window in `[0, 1]`; `0` outside the sufficiency band.
+ */
+function resolveTurnRateSufficiencyWindow(speedPercent: number): number {
+  const startPercent =
+    NEATRACING_PHYSICS_TURN_RATE_REDUCTION_BAND_UNITS_PER_S /
+    NEATRACING_PHYSICS_MAX_SPEED_UNITS_PER_S;
+  const endPercent =
+    NEATRACING_PHYSICS_TURN_RATE_SUFFICIENCY_BAND_END_UNITS_PER_S /
+    NEATRACING_PHYSICS_MAX_SPEED_UNITS_PER_S;
+  const peakPercent =
+    NEATRACING_PHYSICS_TURN_RATE_SUFFICIENCY_CORNER_SPEED_UNITS_PER_S /
+    NEATRACING_PHYSICS_MAX_SPEED_UNITS_PER_S;
+  if (speedPercent <= startPercent || speedPercent >= endPercent) {
+    return 0;
+  }
+  const transitionHalfWidthPercent =
+    NEATRACING_PHYSICS_TURN_RATE_SUFFICIENCY_TRANSITION_HALF_WIDTH_UNITS_PER_S /
+    NEATRACING_PHYSICS_MAX_SPEED_UNITS_PER_S;
+  const halfWidth =
+    speedPercent < peakPercent
+      ? Math.min(peakPercent - startPercent, transitionHalfWidthPercent)
+      : Math.min(endPercent - peakPercent, transitionHalfWidthPercent);
+  const phase = Math.min(
+    1,
+    Math.max(-1, (speedPercent - peakPercent) / halfWidth),
+  );
+  return 0.5 * (1 + Math.cos(Math.PI * phase));
+}
+
+/**
+ * Resolves the turn-sufficiency FACTOR of a speed (a unitless factor
+ * `>= 1`).
+ *
+ * THE FACTOR (Step 14Y, AC-098(a)): the factor is `1` outside the
+ * sufficiency band, so the ratified rate is left BIT-IDENTICAL there, and
+ * inside the band it scales the ratified rate by the window. At the
+ * RED-MEASURED corner speed the factor lifts the commanded rate to the
+ * corner's kinematic requirement (`speed / radius`) plus the sufficiency
+ * margin, so the USER channel can HOLD that corner instead of falling
+ * short of it.
+ *
+ * THE BASIS: the peak is resolved from the ratified law of the corner
+ * speed itself (the steer-axis law times the ratified mild factor), so
+ * the sufficiency is measured against the very law it lifts and it never
+ * needs its own copy of the reduction factor.
+ *
+ * @param speedPercent - The normalized speed in `[0, 1]`.
+ * @returns The sufficiency factor in `[1, ...]`; exactly `1` outside the band.
+ */
+function resolveTurnRateSufficiencyFactor(speedPercent: number): number {
+  const window = resolveTurnRateSufficiencyWindow(speedPercent);
+  if (window <= 0) {
+    return 1;
+  }
+  const peakPercent =
+    NEATRACING_PHYSICS_TURN_RATE_SUFFICIENCY_CORNER_SPEED_UNITS_PER_S /
+    NEATRACING_PHYSICS_MAX_SPEED_UNITS_PER_S;
+  const peakRequirementRadPerS =
+    NEATRACING_PHYSICS_TURN_RATE_SUFFICIENCY_MARGIN *
+    (NEATRACING_PHYSICS_TURN_RATE_SUFFICIENCY_CORNER_SPEED_UNITS_PER_S /
+      NEATRACING_PHYSICS_TURN_RATE_SUFFICIENCY_CORNER_RADIUS_M);
+  const peakBaseRateRadPerS =
+    NEATRACING_PHYSICS_STEERING_RATE *
+    peakPercent *
+    resolveTurnRateSpeedFactor(peakPercent);
+  return 1 + (peakRequirementRadPerS / peakBaseRateRadPerS - 1) * window;
+}
+
+/**
  * Resolves the DEMANDED turn rate of a tick (radians per SECOND).
  *
  * THE TWO CHANNELS (Step 14T, AC-092/AC-093): the rate is resolved on
@@ -914,6 +1212,16 @@ export function resolveTurnRateSpeedFactor(speedPercent: number): number {
  * the TP-04 form) softened by the MILD speed-proportional factor. The
  * factor is applied LAST, in the SAME product order as the pre-14T law,
  * so every lane below the reduction band stays BIT-IDENTICAL.
+ *
+ * THE TURN SUFFICIENCY (Step 14Y, AC-098(a)): inside the sufficiency band
+ * the user rate is raised by a speed-localized sufficiency factor, so the
+ * channel can HOLD the tightest measured corner instead of falling short
+ * of its kinematic requirement. The factor is exactly `1` outside the
+ * band - below the crawl band (the rate stays BIT-IDENTICAL) and above
+ * the band's upper edge (the ratified mild reduction keeps its own full
+ * meaning) - so the sufficiency never touches a ratified lane's reading.
+ * The sufficiency belongs to the USER channel alone: the AI channel
+ * above is untouched by it.
  *
  * THE RATE is the one turn quantity a tick resolves; the per-tick heading
  * delta is DERIVED from it and the drift commitment CONSUMES it, so the
@@ -938,12 +1246,18 @@ function resolveDemandedTurnRateRadPerS(
   }
   // THE USER CHANNEL: the steer-axis law, softened by the mild
   // speed-proportional factor (the factor is applied LAST, so the
-  // product order of the pre-14T law is preserved).
+  // product order of the pre-14T law is preserved) and raised INSIDE the
+  // turn-sufficiency band (Step 14Y, AC-098(a)).
+  //
+  // THE SUFFICIENCY FACTOR is applied after the mild factor and it is
+  // exactly `1` outside its band, so every lane below the reduction band
+  // (and every lane above the sufficiency band) stays BIT-IDENTICAL.
   return (
     steer *
     NEATRACING_PHYSICS_STEERING_RATE *
     speedPercent *
-    resolveTurnRateSpeedFactor(speedPercent)
+    resolveTurnRateSpeedFactor(speedPercent) *
+    resolveTurnRateSufficiencyFactor(speedPercent)
   );
 }
 
@@ -978,7 +1292,7 @@ function resolveYawRatePerTick(demandedTurnRateRadPerS: number): number {
  * floor was the only read, so the drift scrub pushed an off-road car
  * below the floor and the tick-start gate stopped holding it.
  *
- * @param surface - The tick-start surface under the car.
+ * @param surface - The resolved surface the tick integrates against.
  * @param input - The clamped control sample applied to this tick.
  * @param tickStartSpeed - The tick-start longitudinal speed in m/s.
  * @returns True when the off-road speed floor applies to this tick.

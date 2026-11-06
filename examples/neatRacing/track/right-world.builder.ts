@@ -5,11 +5,12 @@
  * The builder turns one determinism tuple - `{ seed, layoutVersion,
  * sizeBucket }` - into an ordered list of neon props that line the
  * right-hand side of the track: pillars, gantries, signs, and stepped
- * spectator bleachers. Every prop is placed clear of the road and curb
- * ribbon, so the driving line is never obstructed, and the total count stays
- * inside a density budget the render pass can afford.
+ * spectator bleachers. Every prop stands at least
+ * {@link NEATRACING_PROP_CLEARANCE_FLOOR_M} beyond the SEAM EDGE, so the
+ * driving line is never obstructed, and the total count stays inside a
+ * density budget the render pass can afford.
  *
- * Three properties make the output usable by a renderer and by the crowd
+ * Four properties make the output usable by a renderer and by the crowd
  * builder that reads it:
  *
  * - DETERMINISM. The same tuple always produces the same prop list, byte for
@@ -27,6 +28,11 @@
  *   props of the re-populated right world. The pit band sits closer to the
  *   road than the bleachers and at the midpoints between the bleacher
  *   blocks, so the two rings never share a track position.
+ * - A SEAM-RELATIVE PLACEMENT. Every clearance is MEASURED against the
+ *   SEAM EDGE - the published edge profile of the track, read through the
+ *   road's own union reader - and NEVER against the retired
+ *   spline-normal distance model, so the props and the road can never
+ *   disagree about where the edge is.
  *
  * A bleacher is a stepped voxel structure rather than a box: seats, a walking
  * surface, stairs, and a track-facing guardrail, all expressed in the real
@@ -34,11 +40,17 @@
  */
 
 import { generateTrack } from '../../racing_curriculum/track/track.generator';
-import type { SplineSample } from '../../racing_curriculum/track/track.generator.types';
+import type {
+  SplineSample,
+  TrackSegment,
+} from '../../racing_curriculum/track/track.generator.types';
 import {
   resolveSplineSampleFrame,
   type SplineSampleFrame,
 } from '../../racing_curriculum/track/track.spline.utils';
+import { resolveTrackEdgeProfile } from './track.edge';
+import type { TrackEdgeProfile } from './track.edge';
+import { classifyTrackSlabSurfaceAt } from './track.slabs';
 import type { TrackSlabBuildInput } from './track.slabs';
 
 /**
@@ -137,6 +149,55 @@ const INNER_RING_PEOPLE_KINDS: readonly ('mechanic' | 'crew' | 'team-banner')[] 
   'crew',
   'team-banner',
 ];
+
+/**
+ * The USER-NAMED clearance floor of every right-world prop, in meters.
+ *
+ * The floor is the distance EVERY prop stands beyond the SEAM EDGE - the
+ * one edge the road's own readers publish - and it is a USER directive, not
+ * an author decision: it is never lowered, never widened by a tolerance and
+ * never satisfied by dropping a prop. The placement clamps EVERY clearance
+ * target to this floor, so the floor holds for every prop kind, at every
+ * seed and for every track size bucket.
+ *
+ * @example
+ * ```ts
+ * console.log(NEATRACING_PROP_CLEARANCE_FLOOR_M); // 10
+ * ```
+ */
+export const NEATRACING_PROP_CLEARANCE_FLOOR_M = 10;
+
+/**
+ * Radial step of the seam-clearance search, in meters.
+ *
+ * The search walks the outward ray of a track sample in steps of this size
+ * and stops at the FIRST candidate whose measured clearance beyond the seam
+ * edge reaches the target. The step is the RESOLUTION of the measured
+ * placement: a finer step resolves the clearance better and costs one extra
+ * measurement per step.
+ */
+const NEATRACING_SEAM_CLEARANCE_STEP_M = 0.25;
+
+/**
+ * Largest outward offset the seam-clearance search walks, in meters.
+ *
+ * The bound keeps the search finite when the target clearance is not
+ * reachable along the ray: the search then returns the candidate with the
+ * BEST measured clearance, so the placement stays the best effort the world
+ * can offer instead of an unbounded offset.
+ */
+const NEATRACING_SEAM_CLEARANCE_MAX_OFFSET_M = 64;
+
+/**
+ * Local depth of the front seat row of a bleacher, in meters.
+ *
+ * The value is the local `u` coordinate of the front row of the LOWEST
+ * platform of a bleacher - the row closest to the track, and the row the
+ * seated crowd of that platform stands on. It is the PROBE point of a
+ * bleacher: the clearance search places the stand so that row clears the
+ * floor, and the stand's own anchor then sits that many meters further out.
+ */
+const NEATRACING_BLEACHER_FRONT_SEAT_U_M = 3;
 
 /**
  * Width of the bleacher footprint ALONG the track, in meters.
@@ -550,10 +611,10 @@ export interface RightWorldProp {
     | 'crew'
     | 'team-banner';
   /**
-   * Placement band relative to the track ribbon.
+   * Placement band relative to the SEAM edge of the track.
    *
    * `outer` props are the neon scenery and the spectator bleachers, placed
-   * farther from the centerline. `inner` props are the pit props - the
+   * farther from the SEAM edge. `inner` props are the pit props - the
    * mechanic, crew, and team-banner kinds - placed closer to the road than
    * the bleachers. The field is kept because other contracts read it.
    */
@@ -572,7 +633,7 @@ export interface RightWorldProp {
  *
  * The plan is the GEOMETRY of the ring, not its content: how many slots the
  * ring is divided into, which archetypes the slots may draw, how far the
- * ring sits beyond the road edge, and which slot indices are reserved as
+ * ring sits beyond the SEAM edge, and which slot indices are reserved as
  * bleachers. The builder fills the plan, and the emitters only read it.
  *
  * @example
@@ -593,9 +654,16 @@ export interface RightWorldRingPlan {
   readonly slotCount: number;
   /** Candidate archetypes of the ring, in draw order. */
   readonly kinds: readonly RightWorldProp['kind'][];
-  /** Distance in meters from the road edge to the ring's base offset. */
+  /**
+   * Base clearance of the ring beyond the SEAM EDGE, in meters.
+   *
+   * The value is a clearance, NOT a distance from the centreline: the
+   * placement measures it against the published edge of the track. It is
+   * clamped to {@link NEATRACING_PROP_CLEARANCE_FLOOR_M}, so a plan can
+   * never ask for a band that breaks the USER-NAMED floor.
+   */
   readonly baseOffset: number;
-  /** Range in meters covered by the random offset draw. */
+  /** Range in meters covered by the random clearance draw. */
   readonly offsetRange: number;
   /**
    * Slot indices reserved as bleachers BY CONSTRUCTION.
@@ -626,9 +694,16 @@ export interface RightWorldRingPlan {
  * ```
  */
 export interface RightWorldPeopleRingPlan {
-  /** Distance in meters from the road edge to the ring's base offset. */
+  /**
+   * Base clearance of the band beyond the SEAM EDGE, in meters.
+   *
+   * The value is a clearance, NOT a distance from the centreline: the
+   * placement measures it against the published edge of the track. It is
+   * clamped to {@link NEATRACING_PROP_CLEARANCE_FLOOR_M}, so a plan can
+   * never ask for a band that breaks the USER-NAMED floor.
+   */
   readonly baseOffset: number;
-  /** Range in meters covered by the random offset draw. */
+  /** Range in meters covered by the random clearance draw. */
   readonly offsetRange: number;
   /**
    * Track sample index of every people slot, in slot order.
@@ -640,10 +715,171 @@ export interface RightWorldPeopleRingPlan {
 }
 
 /**
+ * The SEAM context of one track: the published edge profile and the raw
+ * chord segments it was resolved from.
+ *
+ * The context is the ONE place where the right world reads the track edge.
+ * Every clearance the builder measures - and every offset it derives from
+ * that measurement - is read through the context, so the props and the road
+ * can never disagree about where the edge is.
+ */
+export interface RightWorldSeamContext {
+  /** The published edge profile of the track. */
+  readonly profile: TrackEdgeProfile;
+  /** The raw closed-loop segments the profile was resolved from. */
+  readonly segments: readonly TrackSegment[];
+}
+
+/**
+ * Resolves the SEAM context of a track from its raw chord segments.
+ *
+ * The profile is the seam's OWN publication for those segments, so the
+ * context carries the same half-widths, corner measures and loop orientation
+ * the road's own readers use.
+ *
+ * @param segments - Ordered closed-loop chord segments of the track.
+ * @returns The seam context of the track.
+ *
+ * @example
+ * ```ts
+ * const spec = generateTrack({ seed: 42, layoutVersion: 1, sizeBucket: 'large' });
+ * const seam = resolveRightWorldSeam(spec.segments);
+ *
+ * console.log(seam.profile.chords.length); // 6 - one published edge per chord
+ * ```
+ */
+export function resolveRightWorldSeam(
+  segments: readonly TrackSegment[],
+): RightWorldSeamContext {
+  const profile = resolveTrackEdgeProfile(segments);
+
+  return { profile, segments: profile.segments };
+}
+
+/**
+ * Measures the clearance of a world point beyond the SEAM edge, in meters.
+ *
+ * The measurement uses the road's OWN union reader: the minimum past-edge
+ * distance over EVERY published chord of the seam profile. A point that
+ * clears the floor through this reader clears it through the nearest-chord
+ * reader too, because the union is never larger than the nearest chord's
+ * own reading.
+ *
+ * @param seam - The seam context of the track.
+ * @param worldX - World-frame x of the measured point.
+ * @param worldZ - World-frame z of the measured point.
+ * @returns The signed clearance beyond the seam edge, in meters.
+ *
+ * @example
+ * ```ts
+ * const spec = generateTrack({ seed: 42, layoutVersion: 1, sizeBucket: 'large' });
+ * const seam = resolveRightWorldSeam(spec.segments);
+ *
+ * // The road centreline sits INSIDE the seam edge.
+ * console.log(measureSeamClearanceM(seam, spec.splineSamples[0]!.x, 0) < 0); // true
+ * ```
+ */
+export function measureSeamClearanceM(
+  seam: RightWorldSeamContext,
+  worldX: number,
+  worldZ: number,
+): number {
+  return classifyTrackSlabSurfaceAt(
+    worldX,
+    worldZ,
+    seam.segments,
+    seam.profile,
+  ).distancePastEdgeM;
+}
+
+/**
+ * Resolves the outward offset that puts a prop's PROBE point at the target
+ * clearance beyond the SEAM edge.
+ *
+ * THE SEARCH: the ray starts at the track sample and walks OUTWARD - the
+ * side the right world is built on - in steps of
+ * {@link NEATRACING_SEAM_CLEARANCE_STEP_M}. The FIRST candidate whose
+ * MEASURED clearance reaches the target wins, so the placement is the
+ * closest one that clears the floor. The clearance along the ray is NOT
+ * assumed to be monotone: the winning candidate is always a MEASURED one,
+ * never an interpolated one, and a target the ray never reaches falls back
+ * to the candidate with the best measured clearance.
+ *
+ * THE PROBE POINT: the clearance is measured at the probe - the prop's own
+ * anchor pulled `probeInsetM` meters TOWARD the track - so a prop whose
+ * body reaches closer to the road than its anchor (a bleacher with its
+ * front seat row) is measured by the part that comes closest to the road.
+ *
+ * @param seam - The seam context of the track.
+ * @param sample - Track sample the prop belongs to.
+ * @param frame - Spline frame of the sample.
+ * @param targetClearanceM - The clearance the probe has to reach, in meters.
+ * @param probeInsetM - Distance from the anchor to the probe point, toward
+ *   the track, in meters.
+ * @returns The outward offset of the prop, in meters.
+ *
+ * @example
+ * ```ts
+ * const spec = generateTrack({ seed: 42, layoutVersion: 1, sizeBucket: 'large' });
+ * const seam = resolveRightWorldSeam(spec.segments);
+ * const sample = spec.splineSamples[0]!;
+ * const frame = resolveSplineSampleFrame(spec.splineSamples, sample.globalIndex);
+ *
+ * const offset = resolveSeamClearanceOffsetM(seam, sample, frame, 10, 0);
+ * console.log(offset > 0); // true - the sample itself is inside the road
+ * ```
+ */
+export function resolveSeamClearanceOffsetM(
+  seam: RightWorldSeamContext,
+  sample: SplineSample,
+  frame: SplineSampleFrame,
+  targetClearanceM: number,
+  probeInsetM: number,
+): number {
+  let bestOffsetM = 0;
+  let bestClearanceM = Number.NEGATIVE_INFINITY;
+
+  for (
+    let offsetM = 0;
+    offsetM <= NEATRACING_SEAM_CLEARANCE_MAX_OFFSET_M;
+    offsetM += NEATRACING_SEAM_CLEARANCE_STEP_M
+  ) {
+    // The outward ray of the sample: the right world is built along the
+    // RIGHT normal of the spline frame, and the world frame mirrors the
+    // generator plane as `worldZ = -generatorY`.
+    const anchorX = sample.x - frame.normalX * offsetM;
+    const anchorZ = -(sample.y - frame.normalY * offsetM);
+    // The probe point: the anchor pulled toward the track along the LEFT
+    // normal, which is the world direction `(normalX, -normalY)`.
+    const probeX = anchorX + frame.normalX * probeInsetM;
+    const probeZ = anchorZ - frame.normalY * probeInsetM;
+    const clearanceM = measureSeamClearanceM(seam, probeX, probeZ);
+
+    if (clearanceM > bestClearanceM) {
+      bestClearanceM = clearanceM;
+      bestOffsetM = offsetM;
+    }
+
+    if (clearanceM >= targetClearanceM) {
+      return offsetM;
+    }
+  }
+
+  return bestOffsetM;
+}
+
+/**
  * Emits one ring of right-world props.
  *
+ * THE PLACEMENT: every slot is placed at the outward offset whose MEASURED
+ * clearance beyond the SEAM edge reaches the clearance band of the slot, so
+ * the ring never relies on the retired spline-normal distance model. A
+ * bleacher is probed at its front seat row, so the row that carries the
+ * seated crowd clears the floor and the stand's own anchor sits further
+ * out.
+ *
  * DRAW CONTRACT: every slot consumes EXACTLY three draws from `random` - the
- * offset, the archetype, and the colour - in that order. A reserved
+ * clearance band, the archetype, and the colour - in that order. A reserved
  * bleacher slot consumes its archetype draw like every other slot and only
  * OVERRIDES the resolved archetype afterwards, so the reservation never
  * shifts the draw sequence and every later prop stays byte-identical to the
@@ -660,7 +896,12 @@ export interface RightWorldPeopleRingPlan {
  *
  * @param samples - Spline samples of the track the ring is placed along.
  * @param random - Seeded PRNG the ring consumes its draws from.
- * @param plan - Slot count, archetypes, offsets, and reserved bleacher slots.
+ * @param plan - Slot count, archetypes, clearances, and reserved bleacher
+ *   slots.
+ * @param seam - Seam context the clearances are measured against. It is
+ *   OPTIONAL: a caller that owns the track segments passes the seam it
+ *   resolved for them, and a caller that only owns the spline samples gets
+ *   the seam recovered from those samples.
  * @returns The props of the ring, in emission order.
  *
  * @throws Error - If the bleacher geometry and the named
@@ -702,6 +943,7 @@ export function emitRightWorldRing(
   samples: readonly SplineSample[],
   random: () => number,
   plan: RightWorldRingPlan,
+  seam: RightWorldSeamContext = recoverRightWorldSeam(samples),
 ): readonly RightWorldProp[] {
   const props: RightWorldProp[] = [];
   const reservedBleacherSlots = new Set(plan.reservedBleacherSlots);
@@ -710,10 +952,10 @@ export function emitRightWorldRing(
     const sampleIndex = Math.floor((index * samples.length) / plan.slotCount);
     const sample = samples[sampleIndex]!;
     const frame = resolveSplineSampleFrame(samples, sample.globalIndex);
-    const offset =
-      sample.width / 2 + plan.baseOffset + random() * plan.offsetRange;
-    const generatorX = sample.x - frame.normalX * offset;
-    const generatorY = sample.y - frame.normalY * offset;
+
+    // The three draws of the slot are consumed in the SAME order as before:
+    // the clearance band, the archetype, and the colour.
+    const clearanceRoll = random();
 
     // The reserved slots are bleachers BY CONSTRUCTION, so the scene always
     // carries the same number of spectator stands. The archetype draw is
@@ -725,7 +967,26 @@ export function emitRightWorldRing(
     const kind = reservedBleacherSlots.has(index)
       ? 'bleacher'
       : plan.kinds[Math.floor(kindRoll * plan.kinds.length)]!;
-    const color = NEON_COLORS[Math.floor(random() * NEON_COLORS.length)]!;
+    const colorRoll = random();
+    const color = NEON_COLORS[Math.floor(colorRoll * NEON_COLORS.length)]!;
+
+    // The band of the slot is a CLEARANCE BEYOND THE SEAM EDGE, clamped to
+    // the USER-NAMED floor: the search returns the closest outward offset
+    // that reaches it. A bleacher is probed at its front seat row - the row
+    // closest to the track, and the row the seated crowd stands on.
+    const targetClearanceM = Math.max(
+      NEATRACING_PROP_CLEARANCE_FLOOR_M,
+      plan.baseOffset + clearanceRoll * plan.offsetRange,
+    );
+    const offset = resolveSeamClearanceOffsetM(
+      seam,
+      sample,
+      frame,
+      targetClearanceM,
+      kind === 'bleacher' ? NEATRACING_BLEACHER_FRONT_SEAT_U_M : 0,
+    );
+    const generatorX = sample.x - frame.normalX * offset;
+    const generatorY = sample.y - frame.normalY * offset;
     const prop: RightWorldProp = {
       position: [generatorX, 0, -generatorY],
       color,
@@ -764,16 +1025,20 @@ export function emitRightWorldRing(
  * of the following slots.
  *
  * The pit band sits closer to the road EDGE than the bleachers - the gap is
- * measured beyond the road + curb ribbon, so the two bands are compared on
- * the same scale - and its slots sit at the midpoints between the reserved
- * bleacher slots, so the two rings never share a track position. The rings
- * are separated ALONG the track: the distance of a prop from the centerline
+ * measured beyond the SEAM EDGE, so the two bands are compared on the same
+ * scale - and its slots sit at the midpoints between the reserved bleacher
+ * slots, so the two rings never share a track position. The rings are
+ * separated ALONG the track: the distance of a prop from the centerline
  * alone does not order the two bands, because the road is wider on one part
  * of the track than on another.
  *
  * @param samples - Spline samples of the track the ring is placed along.
  * @param random - Seeded PRNG the ring consumes its draws from.
- * @param plan - Offsets and the track sample index of every people slot.
+ * @param plan - Clearances and the track sample index of every people slot.
+ * @param seam - Seam context the clearances are measured against. It is
+ *   OPTIONAL: a caller that owns the track segments passes the seam it
+ *   resolved for them, and a caller that only owns the spline samples gets
+ *   the seam recovered from those samples.
  * @returns The props of the inner ring, in emission order.
  *
  * @example
@@ -801,6 +1066,7 @@ export function emitRightWorldPeopleRing(
   samples: readonly SplineSample[],
   random: () => number,
   plan: RightWorldPeopleRingPlan,
+  seam: RightWorldSeamContext = recoverRightWorldSeam(samples),
 ): readonly RightWorldProp[] {
   const props: RightWorldProp[] = [];
 
@@ -817,8 +1083,20 @@ export function emitRightWorldPeopleRing(
       continue;
     }
     const frame = resolveSplineSampleFrame(samples, sample.globalIndex);
-    const offset =
-      sample.width / 2 + plan.baseOffset + offsetRoll * plan.offsetRange;
+    // The band of the slot is a CLEARANCE BEYOND THE SEAM EDGE, clamped to
+    // the USER-NAMED floor: the search returns the closest outward offset
+    // that reaches it.
+    const targetClearanceM = Math.max(
+      NEATRACING_PROP_CLEARANCE_FLOOR_M,
+      plan.baseOffset + offsetRoll * plan.offsetRange,
+    );
+    const offset = resolveSeamClearanceOffsetM(
+      seam,
+      sample,
+      frame,
+      targetClearanceM,
+      0,
+    );
     const generatorX = sample.x - frame.normalX * offset;
     const generatorY = sample.y - frame.normalY * offset;
 
@@ -975,7 +1253,8 @@ export function selectPeopleRingSampleIndices(
  * @param input - Determinism tuple `{ seed, layoutVersion, sizeBucket }`.
  * @returns Ordered list of scenery props ready for the right-world render
  *   pass. Props are placed on the right-hand side of the track centerline,
- *   outside the road + curb ribbon, and never exceed the density budget.
+ *   at least {@link NEATRACING_PROP_CLEARANCE_FLOOR_M} beyond the SEAM edge
+ *   of the road, and never exceed the density budget.
  *   The bleachers keep their reserved slot order, because every scene
  *   carries the same number of equally usable bleachers.
  *
@@ -1005,6 +1284,10 @@ export function buildRightWorldProps(
     return [];
   }
 
+  // The SEAM context of THIS track: every clearance of the rings is
+  // measured against the edge the road's own readers publish, so the props
+  // and the road can never disagree about where the edge is.
+  const seam = resolveRightWorldSeam(spec.segments);
   const random = createDeterministicRandom(resolveRightWorldSeed(input));
   const outerSlotCount = resolveOuterRingSlotCount(samples.length);
   const bleacherSlotIndices = selectBleacherSlotIndices(outerSlotCount);
@@ -1014,28 +1297,63 @@ export function buildRightWorldProps(
   // three draws, and the reserved slots only override the RESOLVED
   // archetype, so the bleacher count never depends on a random draw.
   const props: RightWorldProp[] = [
-    ...emitRightWorldRing(samples, random, {
-      slotCount: outerSlotCount,
-      kinds: OUTER_RING_KINDS,
-      baseOffset: 6,
-      offsetRange: 4,
-      reservedBleacherSlots: bleacherSlotIndices,
-    }),
+    ...emitRightWorldRing(
+      samples,
+      random,
+      {
+        slotCount: outerSlotCount,
+        kinds: OUTER_RING_KINDS,
+        // The band is a CLEARANCE beyond the SEAM edge, and it is RAISED
+        // from the 12 m of the Step 14V anchor-level re-pin: the band is
+        // measured at the bleacher PROBE ROW, so the parts of a prop that
+        // reach closer to the road than the probe - the guardrail voxel
+        // corner of a bleacher, and the 4.8 m placement footprint of a
+        // seated spectator - were still BELOW the USER-NAMED 10 m floor.
+        //
+        // BASIS: the P-PC-R row of the Step 14V CLEARANCE GREEN-slice ledger
+        // in `plans/neatracing-voxel-racer.plans.md` - the NAMED body-level
+        // residual (9 of 400 prop bodies and 371 of 4384 billboard
+        // footprints below the floor, worst 7.2994 m). The MEASURED
+        // body-level reach of the band is 5.9630 m (a bleacher guardrail
+        // corner against its own anchor) plus the 3.3941 m reach of the
+        // seated footprint, so the raised band clears the floor at every
+        // published seed with measured headroom.
+        baseOffset: 15.5,
+        offsetRange: 4,
+        reservedBleacherSlots: bleacherSlotIndices,
+      },
+      seam,
+    ),
   ];
 
   // Inner ring: the pit props - the mechanic, crew, and team-banner kinds -
   // closer to the road EDGE than the bleachers and at the midpoints between
   // the bleacher blocks, so the two rings never share a track position.
   props.push(
-    ...emitRightWorldPeopleRing(samples, random, {
-      baseOffset: 3,
-      offsetRange: 2,
-      sampleIndices: selectPeopleRingSampleIndices(
-        samples,
-        bleacherSlotIndices,
-        outerSlotCount,
-      ),
-    }),
+    ...emitRightWorldPeopleRing(
+      samples,
+      random,
+      {
+        // RAISED from the 10.5 m of the Step 14V anchor-level re-pin, for
+        // the same P-PC-R body-level basis as the outer ring: the pit band
+        // is measured at its own probe, while the mechanic billboard that
+        // stands on a pit pedestal reaches 3.3935 m nearer than the
+        // pedestal anchor, and the team banner body reaches 1.2035 m
+        // nearer than its own anchor.
+        //
+        // BASIS: the P-PC-R row of the Step 14V CLEARANCE GREEN-slice ledger
+        // in `plans/neatracing-voxel-racer.plans.md` (the NAMED body-level
+        // residual), and the MEASURED body-level worst of the band raise.
+        baseOffset: 14,
+        offsetRange: 2,
+        sampleIndices: selectPeopleRingSampleIndices(
+          samples,
+          bleacherSlotIndices,
+          outerSlotCount,
+        ),
+      },
+      seam,
+    ),
   );
 
   return props;
@@ -1098,8 +1416,9 @@ function buildBleacherGeometry(
   // covers the full footprint with one free voxel row on each outer side, and
   // the track-facing guardrail band sits at the front free row.
   const LEVELS: readonly { readonly uStart: number; readonly y: number }[] = [
-    // Level 1 (lowest, nearest the track)
-    { uStart: 3, y: 0.7 },
+    // Level 1 (lowest, nearest the track) - its front row is the PROBE row
+    // of the bleacher, so the depth is the named front-seat depth.
+    { uStart: NEATRACING_BLEACHER_FRONT_SEAT_U_M, y: 0.7 },
     // Level 2
     { uStart: -1, y: 1.8 },
     // Level 3 (highest, farthest from the track)
@@ -1761,6 +2080,52 @@ export function getBleacherSeatAnchors(
   }
 
   return anchors;
+}
+
+/**
+ * Recovers the SEAM context of a track from its spline samples.
+ *
+ * THE RECOVERY IS EXACT: the FIRST sample of every segment strip carries
+ * the segment's own start point and the segment's own width, so the closed
+ * loop of chords can be rebuilt from the samples themselves - the start of
+ * a chord is the start point of its segment strip, and its end is the start
+ * point of the next strip. The recovered context is the DEFAULT seam of the
+ * emitters, so a caller that only owns the spline samples still measures
+ * the clearances against the published edge; a caller that owns the track
+ * segments passes the seam it resolved for them instead.
+ *
+ * @param samples - Spline samples of the track.
+ * @returns The seam context recovered from the samples.
+ */
+function recoverRightWorldSeam(
+  samples: readonly SplineSample[],
+): RightWorldSeamContext {
+  const segmentStarts: { readonly x: number; readonly y: number; readonly width: number }[] =
+    [];
+
+  for (const sample of samples) {
+    if (sample.sampleIndexWithinSegment === 0) {
+      segmentStarts.push({
+        x: sample.x,
+        y: sample.y,
+        width: sample.width,
+      });
+    }
+  }
+
+  const segments: TrackSegment[] = segmentStarts.map((start, index) => {
+    const next = segmentStarts[(index + 1) % segmentStarts.length]!;
+
+    return {
+      startX: start.x,
+      startY: start.y,
+      endX: next.x,
+      endY: next.y,
+      width: start.width,
+    };
+  });
+
+  return resolveRightWorldSeam(segments);
 }
 
 /**

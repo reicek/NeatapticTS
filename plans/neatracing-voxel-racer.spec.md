@@ -126,7 +126,7 @@ be escalated to the repository owner, not relitigated in a slice.
 | LD-02 | Automatic transmission only; no manual transmission.                                                                                                                                                                                                                                                                                                                |
 | LD-03 | **No** pit stops (deliberate complexity cut; AI effort goes to team-work + complex physics).                                                                                                                                                                                                                                                                        |
 | LD-04 | No damage/crash deformation (kept as a documented future option, §14).                                                                                                                                                                                                                                                                                              |
-| LD-05 | Collisions are arcade elastic bounce, including car-vs-car.                                                                                                                                                                                                                                                                                                         |
+| LD-05 | Collisions are arcade elastic bounce for car-vs-car; car-vs-track-boundary handling is **RETIRED** (AC-090 VERDICT 8, fix-packet-P1-sand-red-iteration-3): cars cross the boundary freely, governed only by the drivable-band surface law and the 20 km/h off-track speed cap.                                                              |
 | LD-06 | Single screen only; one track at launch (engine validation first).                                                                                                                                                                                                                                                                                                  |
 | LD-07 | **No audio.**                                                                                                                                                                                                                                                                                                                                                       |
 | LD-08 | Reverse/mirror course variants come later (free — deterministic generator).                                                                                                                                                                                                                                                                                         |
@@ -211,7 +211,12 @@ be escalated to the repository owner, not relitigated in a slice.
 
 ### 4.3 Collisions
 
-- Arcade **elastic bounce** for car-vs-car and car-vs-track-boundary.
+- Arcade **elastic bounce** for car-vs-car. Car-vs-track-boundary has NO
+  mechanism: the non-reflecting containment clamp is **RETIRED**
+  (AC-090 VERDICT 8, fix-packet-P1-sand-red-iteration-3 — it supersedes the
+  earlier AC-094(d) band-edge clamp), so the car rolls past the boundary
+  freely, governed only by the drivable-band surface law and the 20 km/h
+  off-track speed cap.
 - No deformation, no damage state, no crash penalties beyond the bounce
   itself (LD-04).
 
@@ -269,7 +274,7 @@ be escalated to the repository owner, not relitigated in a slice.
 | `ACCEL`                  | `maxSpeed / 5`                                                                                                                                              | javascript-racer                                                                                        |
 | `BRAKING`                | `−maxSpeed`                                                                                                                                                 | javascript-racer                                                                                        |
 | `NATURAL_DECEL`          | `−maxSpeed / 5`                                                                                                                                             | javascript-racer                                                                                        |
-| `OFF_ROAD_DECEL`         | `−maxSpeed / 2`, with off-road speed floor `maxSpeed / 4`                                                                                                   | javascript-racer                                                                                        |
+| `OFF_ROAD_DECEL`         | `−maxSpeed / 2`; the off-road speed floor value was RE-DERIVED by the Step 14W sand work (fix-packet-P1-sand-red-iteration-3): the shipped off-road cruise is the USER-named 20 km/h speed cap ≈ 5.5556 m/s (`NEATRACING_PHYSICS_OFF_TRACK_SPEED_LIMIT_KMH / 3.6`)                             | javascript-racer, USER-named cap                                                                       |
 | `CENTRIFUGAL`            | outward push `0.3 × curvature × speedPercent²` (multiplier 0.3, TP-02)                                                                                      | javascript-racer                                                                                        |
 | `STEERING_RATE`          | `dx = dt · 2 · speedPercent` (cross the road in ~1 s at top speed; TP-04)                                                                                   | javascript-racer                                                                                        |
 | `FOG_DENSITY`            | named constant `FOG_DENSITY_1_PER_M`, default ~0.006 1/m (≈ 1/(half draw distance); see equation below) (TP-05, tuned against `NEATRACING_DRAW_DISTANCE_M`) | NeatRacing-specific (G10: javascript-racer's raw `5` is in segment-length units and is NOT transcribed) |
@@ -277,7 +282,9 @@ be escalated to the repository owner, not relitigated in a slice.
 These constants are adapted into the existing top-down env step service
 pattern (`environment.step.service.ts` shape: named constants, pure step
 function, deterministic). Off-road detection uses the track ribbon lateral
-bounds; the off-road floor prevents decelerating to zero off-track.
+bounds; the off-road speed cap (the USER-named 20 km/h, ≈ 5.5556 m/s)
+keeps the off-track roll slow but never stops it, and no clamp contains a
+car at the boundary (the containment is retired).
 
 **Fog equation (normative, §6.6):** `fogFactor = exp2(−(density · d)²)` with
 `density` in **1/m** and `d` = view distance in meters; the transmittance is
@@ -1375,7 +1382,7 @@ examples/neatRacing/
     track.slabs.ts                # ribbon → voxel-grid slabs → greedy mesh
   physics/
     physics.step.service.ts       # arcade constants, 60 Hz fixed, yawRate/slipAngle
-    collision.utils.ts            # elastic bounce (car-car, car-boundary)
+    collision.utils.ts            # elastic bounce (car-car); surface classifier + band law (the car-boundary containment is RETIRED: AC-090 VERDICT 8)
     race-rules.ts                 # laps, checkpoint extension, levels
   server/
     model-store.utils.ts          # pure read/write/validate (models dir)
@@ -1736,15 +1743,18 @@ without renumbering existing criteria.
   validation: run the script, then jest test that loads the generated JSON and validates schema + non-empty mesh (script dependency created in P1-S6-D).
 - **id: AC-023** — The physics step service implements the §5.2 constants
   (accel maxSpeed/5; braking −maxSpeed; natural decel −maxSpeed/5; off-road
-  −maxSpeed/2 with floor maxSpeed/4; centrifugal 0.3 × curvature ×
+  −maxSpeed/2 with the off-road cruise floored at the USER-named 20 km/h
+  off-track speed cap ≈ 5.5556 m/s; centrifugal 0.3 × curvature ×
   speedPercent²; steering dx = dt·2·speedPercent), runs a 60 Hz fixed
   timestep, targets ~320 km/h feel (~89 units/s), keeps `yawRate` and
   `slipAngle` in car state, and is deterministic (same seed + inputs → same
   states).
   validation: `npm run jest:base -- --testPathPatterns="examples/neatRacing/physics"` (one test per constant + determinism test).
 - **id: AC-024** — Manual driving works end to end: keyboard steer/throttle/
-  brake, auto transmission only, arcade elastic collisions (car-car and
-  car-boundary, no deformation); human mode is a 20-lap race
+  brake, auto transmission only, arcade elastic collisions for car-vs-car
+  and NO car-vs-track-boundary mechanism (the former band-edge containment
+  is RETIRED: AC-090 VERDICT 8)
+  (no deformation); human mode is a 20-lap race
   (`NEATRACING_HUMAN_RACE_LAPS = 20`) with checkpoint time extension
   (`NEATRACING_CHECKPOINT_INITIAL_BUDGET_S = 60` initial +
   `NEATRACING_CHECKPOINT_PER_LAP_EXTENSION_S = 25` per crossing — OQ-001
@@ -2140,7 +2150,9 @@ are the contract each slice must satisfy.
 - P1-S7-B — Physics step service (arcade constants, 60 Hz, yawRate/slipAngle,
   determinism): `physics/physics.step.service.ts` + sibling test. (AC-023)
 - P1-S7-C — Keyboard input (one sample per rAF frame → every catch-up tick,
-  D5) + elastic collisions (named fixed physics constants — D6):
+  D5) + car-vs-car elastic collisions + car-vs-track-boundary surface
+  classification with the band law (the containment is RETIRED since
+  fix-packet-P1-sand-red-iteration-3: named fixed physics constants — D6):
   `host/input.ts`, `physics/collision.utils.ts`, +
   `collision.utils.test.ts`. (AC-024 partial)
 - P1-S7-D — Race rules (laps, checkpoint extension, levels):

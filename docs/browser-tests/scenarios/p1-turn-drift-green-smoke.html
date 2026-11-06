@@ -229,7 +229,8 @@ html, body { margin: 0; padding: 0; height: 100%; background: #05070d; overflow:
   // at seven fields (poseRad, slipAngleRad, speedMps, tickHz, tick,
   // followOffsetRad, tractionSeverity) and cannot carry a constant.
   //
-  // Derivation (RED-DECIDED, 14N-rebaseline-risk.md D1.3 and D3.1, ratified
+  // Derivation (RED-DECIDED, plans/neatracing-voxel-racer.logs.md - the 14N
+  // rebaseline-risk coverage note - D1.3 and D3.1, ratified
   // by the GAP-N4 D1.3 decision):
   //  - the OLD model's deficit at the two comparable capture points was
   //    MEASURED in the jest lane at 112.26 km/h (straight 600 ticks =
@@ -701,19 +702,24 @@ html, body { margin: 0; padding: 0; height: 100%; background: #05070d; overflow:
   // that stayed on the nose (the frozen-camera defect the chase-camera
   // module closes) reports a zero offset and fails here. 0.05 rad is
   // about 2.9 degrees - far under the measured follow offset (the follow
-  // converges on the published travel divergence, which reaches about
-  // 0.45 rad in the hold) and far over the zero.
+  // converges on the published travel divergence AS FAR AS THE NAMED CAP
+  // ALLOWS - the capped law saturates the aim at 0.17448929499999988 rad
+  // while the published slide reaches about 0.45 rad in the hold) and far
+  // over the zero.
   var DRIFT_FEEL_CAMERA_FOLLOW_MIN_RAD = 0.05;
-  // The CEILING tolerance: the camera aim converges on the PUBLISHED
-  // travel direction and never swings past it, so the follow offset can
-  // never exceed the published slip it tracks. The tolerance is the
-  // 0.002 rad render-jitter headroom the other 14N mirrors use.
+  // The CEILING tolerance: the camera aim converges on the SUPPORTED
+  // travel direction (the published slip capped at the named cap) and
+  // never swings past it, so the follow offset can never exceed the
+  // supported aim it tracks (and the capped law can never exceed the
+  // named cap either - the cap has its own named check). The tolerance
+  // is the 0.002 rad render-jitter headroom the other 14N mirrors use.
   var DRIFT_FEEL_CAMERA_FOLLOW_TOLERANCE_RAD = 0.002;
   // The CONVERGENCE tolerance: the camera's aim (the nose heading plus
-  // the follow offset) must CLOSE on the published travel direction
-  // (the nose heading plus the published slip), so the AIM ERROR - the
-  // published slip minus the follow offset - must fall to at or below
-  // this bound at least once during the drift. 0.1 rad is about 5.7
+  // the follow offset) must CLOSE on the SUPPORTED travel direction
+  // (the nose heading plus the published slip CAPPED at the named cap),
+  // so the AIM ERROR - the capped published slip minus the follow offset
+  // - must fall to at or below this bound at least once during the
+  // drift. 0.1 rad is about 5.7
   // degrees: the camera is aimed WITHIN 5.7 degrees of the direction
   // the car is actually travelling. A camera that never tracks (a
   // follow law with no convergence, or a camera that is pinned to the
@@ -721,14 +727,35 @@ html, body { margin: 0; padding: 0; height: 100%; background: #05070d; overflow:
   var DRIFT_FEEL_CAMERA_FOLLOW_CONVERGED_RAD = 0.1;
   // The comparison floors: the convergence and the sign agreement are
   // only asserted where BOTH quantities are unambiguous. The published
-  // slide has to be at least this large (0.2 rad is about 11.5 degrees -
-  // well under the 0.45 rad committed budget and well over the
-  // far-side pop the catch is allowed to produce, which is bounded to
-  // 6.0 degrees), and the follow offset has to have left zero (a camera
-  // that has not started to move yet carries no sign and is never
-  // counted).
-  var DRIFT_FEEL_CAMERA_FOLLOW_SLIP_FLOOR_RAD = 0.2;
+  // slide has to be at least this large - RE-PINNED by the 14X wave from
+  // 0.2 rad to 0.13 rad, because the capped law changed what the floor
+  // has to clear: the SUPPORTED aim (the published slide capped at the
+  // named cap) SATURATES at 0.17448929499999988 rad, so a floor above
+  // the cap pins the comparison operand at the cap for EVERY sample and
+  // the measurement can no longer see the follow TRACKING the slide.
+  // The re-pinned floor sits BETWEEN the two bounds that matter: it
+  // stays ABOVE the far-side pop the catch is allowed to produce (6.0
+  // degrees = 0.10471975511965977 rad - the floor's purpose, so the
+  // published slide is unambiguous) and BELOW the named cap (so the
+  // supported aim VARIES across the comparison window: the sub-cap
+  // samples compare the aim against the RAW slide and the over-cap
+  // samples against the cap). 0.13 rad is about 7.45 degrees - well
+  // under the 0.45 rad committed budget.
+  var DRIFT_FEEL_CAMERA_FOLLOW_SLIP_FLOOR_RAD = 0.13;
   var DRIFT_FEEL_CAMERA_FOLLOW_SIGN_MIN_OFFSET_RAD = 0.01;
+  // The TRACKING GROWTH: the follow offset has to GROW with the slide
+  // it tracks. The convergence clause alone is existential - it is
+  // satisfied by ONE sample whose aim is within the convergence bound
+  // of the supported aim - so a camera that carries a CONSTANT offset
+  // (a camera that ignores the slide) would satisfy it. The growth
+  // clause closes that hole: the aim magnitude at the drift's peak must
+  // EXCEED the aim magnitude at the drift's FIRST sample by at least
+  // this bound, so a camera whose aim never moves with the slide fails.
+  // The bound is 0.02 rad (about 1.15 degrees) - an order of magnitude
+  // under the growth a correct build shows (the aim starts at zero and
+  // saturates at the 0.17448929499999988 rad cap, so it grows by about
+  // 0.17 rad) and far over the zero a constant camera grows by.
+  var DRIFT_FEEL_CAMERA_FOLLOW_TRACK_GROWTH_RAD = 0.02;
 
   // Step 14Q2 (the traction severity): the constants of the ONE new named
   // check, `driftFeelTractionSeverityRatio`. They are declared here, with
@@ -770,10 +797,11 @@ html, body { margin: 0; padding: 0; height: 100%; background: #05070d; overflow:
   // hide a stale, zeroed or re-derived value.
   var DRIFT_FEEL_TRACTION_RATIO_TOLERANCE = 1e-9;
   // The SLIP FLOOR: the ratio is only asserted where the published slide
-  // is unambiguous - the same 0.2 rad floor the camera check uses (well
-  // over the far-side pop the catch is allowed to produce, which is
-  // bounded to 6.0 deg). Below it the severity is legitimately tiny and
-  // a ratio would amplify the float noise.
+  // is unambiguous - a 0.2 rad floor of its OWN (the camera check's own
+  // floor is 0.13 rad, re-pinned by the 14X wave; both sit well over
+  // the far-side pop the catch is allowed to produce, which is bounded
+  // to 6.0 deg). Below it the severity is legitimately tiny and a
+  // ratio would amplify the float noise.
   var DRIFT_FEEL_TRACTION_SLIP_FLOOR_RAD = 0.2;
 
   // Step 14R: the constants of the ONE new named check,
@@ -806,6 +834,71 @@ html, body { margin: 0; padding: 0; height: 100%; background: #05070d; overflow:
   // HUD_TRACTION_PERCENT_SCALE 100). The fixture parses the percent out
   // of the RENDERED text; it never re-derives the severity.
   var HUD_TRACTION_READOUT_PATTERN = /Traction\s+(-?\d+)\s*%/;
+
+  // Step 14X (the drift-camera wave): the constants of the THREE new
+  // named checks - `driftFeelCameraAimOffsetCapped`,
+  // `driftFeelCameraReleaseMonotonicSmooth` and
+  // `driftFeelCameraNoDivergenceSnapBack`. They are declared here, with
+  // the other drift-feel mirrors, and NOT inside the checks, so the
+  // checks read named bounds instead of literals.
+  //
+  // THE NAMED CAP: the production publishes it as
+  // `NEATRACING_CHASE_CAMERA_MAX_AIM_OFFSET_RAD`, and the production
+  // DERIVES it as EXACTLY HALF of the MEASURED pre-wave peak aim offset
+  // (0.34897858999999976 rad, measured over a 1200-tick hold). The
+  // mirror below is a FORMULA over those two named components, not a
+  // literal, so a re-declaration of the named export only needs the
+  // measured peak updated here.
+  var DRIFT_FEEL_CAMERA_MEASURED_PRE_WAVE_PEAK_RAD = 0.34897858999999976;
+  var DRIFT_FEEL_CAMERA_MAX_AIM_OFFSET_RAD =
+    DRIFT_FEEL_CAMERA_MEASURED_PRE_WAVE_PEAK_RAD / 2;
+  // The RELEASE SMOOTH FRACTION: the production publishes it as
+  // `NEATRACING_CHASE_CAMERA_RELEASE_SMOOTH_FRACTION` (0.05). The
+  // fraction is the share of the UNSUPPORTED aim (the residual - the
+  // part of the aim the published slide no longer supports) the release
+  // closes in ONE tick. It is NOT the share of the aim itself: the
+  // follow closes the SUPPORTED aim at its own proportional (speed
+  // dependent) rate, so the two shares are measured apart (see
+  // measureCameraRelease).
+  var DRIFT_FEEL_CAMERA_RELEASE_SMOOTH_FRACTION = 0.05;
+  // The FOLLOW GAIN: the production publishes it as
+  // `NEATRACING_CHASE_CAMERA_FOLLOW_GAIN` (0.5 - HALF of the measured
+  // pre-wave gain of 1). The fixture uses it ONLY to subtract the
+  // follow's OWN pull from the observed residual rate, so the release's
+  // own rate can be read on its own. It is a VERIFICATION MIRROR of the
+  // named rate formula - it is never a substitute for the published
+  // aim.
+  var DRIFT_FEEL_CAMERA_FOLLOW_GAIN = 0.5;
+  // The AIM-MAGNITUDE SPLIT: the two regimes the snap-back check
+  // compares - a LARGE aim (at or above this share of the named cap)
+  // and a SMALL aim (below it). The pre-wave law multiplied its rate by
+  // the camera's OWN divergence, so the pre-wave release rate GREW with
+  // the aim; a correct law releases the residual at the SAME rate
+  // whatever the aim's magnitude is.
+  var DRIFT_FEEL_CAMERA_LARGE_AIM_FRACTION = 0.5;
+  // The RESIDUAL FLOOR: the release is only measured where the aim is
+  // measurably ABOVE the aim the published slide supports. Below this
+  // floor the aim is CATCHING UP with the slide (or is already on it),
+  // which is not a release at all.
+  var DRIFT_FEEL_CAMERA_RESIDUAL_FLOOR_RAD = 1e-4;
+  // The float tolerances: the observed rates are computed from published
+  // seam numbers, so they carry the float round trip of the seam. The
+  // CAP tolerance absorbs the same 1e-9 the traction ratio tolerance
+  // uses; the RATE tolerance absorbs the float noise of the per-tick
+  // rate extraction. Neither is a slack band that could hide a stale,
+  // snapped or re-derived aim: the pre-wave release rate was
+  // 0.10498288025082125 at the peak offset (more than DOUBLE the named
+  // smooth fraction) and the pre-wave peak aim offset was
+  // 0.34897858999999976 rad (EXACTLY TWICE the named cap).
+  var DRIFT_FEEL_CAMERA_CAP_TOLERANCE_RAD = 1e-9;
+  // The GROWTH tolerance: the monotonicity clause compares the aim
+  // magnitude BEFORE and AFTER a release tick, and the two published
+  // numbers carry the float round trip of the seam, so the comparison
+  // needs its OWN named slack. It is the same 1e-9 the cap tolerance
+  // uses - it absorbs the round trip and NOTHING else: a release that
+  // grows the aim by more than 1e-9 rad is a violation.
+  var DRIFT_FEEL_CAMERA_RELEASE_GROWTH_TOLERANCE_RAD = 1e-9;
+  var DRIFT_FEEL_CAMERA_RATE_TOLERANCE = 1e-6;
 
   function sourceOf(program) {
     return programSources.get(program) || '';
@@ -1999,7 +2092,8 @@ html, body { margin: 0; padding: 0; height: 100%; background: #05070d; overflow:
   }
   // Step 14P: the camera follow offset (the SIXTH seam field). The chase
   // camera aims along the PUBLISHED travel direction, so its follow
-  // offset CONVERGES on the published slip and never swings past it.
+  // offset CONVERGES on the published slip AS FAR AS THE NAMED CAP
+  // ALLOWS and never swings past the SUPPORTED aim (the capped slip).
   //
   // THE MEASUREMENT IS A PARITY MEASUREMENT over the seam's OWN two
   // fields - the published slip and the follow offset - so it is
@@ -2008,43 +2102,65 @@ html, body { margin: 0; padding: 0; height: 100%; background: #05070d; overflow:
   // over-rotated past the published travel direction would break the
   // ceiling.
   //
-  // THE AIM ERROR is the published slip minus the follow offset: the
-  // camera's aim is the nose heading plus the follow offset and the
-  // published travel direction is the nose heading plus the published
-  // slip, so their difference is exactly the slip minus the offset. A
+  // THE AIM ERROR is the published slip CAPPED at the named cap minus
+  // the follow offset: the camera's aim is the nose heading plus the
+  // follow offset and the SUPPORTED travel direction is the nose
+  // heading plus the capped published slip, so their difference is
+  // exactly the capped slip minus the offset. Under the capped law the
+  // aim SATURATES at the cap while the published slide grows past it,
+  // so the raw published slip is NOT the direction the camera can
+  // reach - the capped slip is. A
   // camera that TRACKS the travel direction closes that error; a camera
-  // that never tracks keeps it open. The sign agreement is asserted on
-  // the CONVERGED samples only - a camera that has closed the error onto
-  // the travel direction points the SAME WAY as the travel direction by
-  // construction, so a disagreement there is a real defect, while the
-  // samples that are still converging (the follow re-closing after the
-  // mirror) are a legitimate transient and are NOT counted.
+  // that never tracks keeps it open.
+  // The SIGN is read at the PEAK: the sign of the aim where the aim is
+  // LARGEST against the sign of the supported aim there. A PER-SAMPLE
+  // sign comparison is LAG-SENSITIVE (the follow can hold the OLD sign
+  // for several frames after a mirror while it re-converges) and the
+  // sign of a CONVERGED sample is IMPLIED by the convergence arithmetic
+  // (a disagreeing sign can never converge), so the sign is measured
+  // at the ONE sample where the aim is biggest - the saturated peak,
+  // where the aim has long since caught up with the slide's side.
   //
   // The phases are the DRIFT phases only (the two commit/hold pairs).
   // The straight phases carry a zero published slip, so a follow offset
   // measured there would say nothing about the re-wiring. The CEILING
   // bound is taken over the WHOLE run, because the follow is a carried
   // state: it survives the phase boundaries, so its magnitude is bound
-  // by the largest published slip the WHOLE run produced and not by the
-  // largest slip of one phase.
+  // by the largest SUPPORTED aim (the capped published slip) the WHOLE
+  // run produced and not by the largest aim of one phase.
   function measureCameraFollowOffset(phases) {
     var maxAbsRad = 0;
     var maxAbsSlipRad = 0;
+    var maxSupportedAimRad = 0;
     var samples = 0;
     var convergedSamples = 0;
-    var signMismatches = 0;
+    var firstAbsRad = null;
+    var peakAbsRad = 0;
+    var peakFollowSign = 0;
+    var peakSupportedSign = 0;
+    var peakSignMismatches = 0;
     for (var i = 0; i < feelSeamSamples.length; i++) {
       var s = feelSeamSamples[i];
       var slip = s.slipAngleRad;
       if (typeof slip === 'number') {
         var absSlipAll = Math.abs(slip);
         if (absSlipAll > maxAbsSlipRad) maxAbsSlipRad = absSlipAll;
+        // The SUPPORTED aim: the published slide capped at the named
+        // cap. It is the direction the camera can actually reach, so it
+        // is the bound the aim is measured against (the raw slide is
+        // NOT reachable under the capped law).
+        var supportedAll = Math.abs(clampCameraAimOffsetRad(slip));
+        if (supportedAll > maxSupportedAimRad) maxSupportedAimRad = supportedAll;
       }
       if (phases.indexOf(s.phase) === -1) continue;
       var follow = s.followOffsetRad;
       if (typeof follow !== 'number') continue;
       samples += 1;
       var absFollow = Math.abs(follow);
+      // The FIRST aim of the drift: the aim magnitude the camera
+      // carries into the drift (the slide is still zero there), so the
+      // TRACKING growth can be measured against it.
+      if (firstAbsRad === null) firstAbsRad = absFollow;
       if (absFollow > maxAbsRad) maxAbsRad = absFollow;
       if (typeof slip !== 'number') continue;
       var absSlip = Math.abs(slip);
@@ -2054,22 +2170,241 @@ html, body { margin: 0; padding: 0; height: 100%; background: #05070d; overflow:
         absSlip >= DRIFT_FEEL_CAMERA_FOLLOW_SLIP_FLOOR_RAD &&
         absFollow >= DRIFT_FEEL_CAMERA_FOLLOW_SIGN_MIN_OFFSET_RAD
       ) {
-        // The aim error: the published slip minus the follow offset.
-        var aimError = slip - follow;
+        // The aim error against the SUPPORTED aim: the published slip
+        // CAPPED at the named cap, minus the follow offset. Under the
+        // capped law the aim SATURATES at the cap while the published
+        // slide grows past it, so the aim error against the RAW
+        // published slip stays open (about 0.276 rad at the 0.45 rad
+        // slide) even though the camera tracks the direction the car is
+        // travelling AS FAR AS THE CAP ALLOWS. The convergence is
+        // therefore measured against the SUPPORTED aim - the direction
+        // the car is travelling, as far as the named cap allows.
+        var aimError = clampCameraAimOffsetRad(slip) - follow;
         if (Math.abs(aimError) <= DRIFT_FEEL_CAMERA_FOLLOW_CONVERGED_RAD) {
           convergedSamples += 1;
-          var followSign = follow > 0 ? 1 : -1;
-          var slipSign = slip > 0 ? 1 : -1;
-          if (followSign !== slipSign) signMismatches += 1;
+        }
+        // The PEAK SIGN: the aim has to point the SAME WAY as the
+        // supported aim where it is LARGEST. A PER-SAMPLE sign
+        // comparison is LAG-SENSITIVE (the follow can hold the OLD sign
+        // for several frames after a mirror while it re-converges), and
+        // the sign of a CONVERGED sample is IMPLIED by the convergence
+        // arithmetic (a disagreeing sign can never converge), so the
+        // sign is read at the ONE sample where the aim is biggest - the
+        // saturated peak, where the aim has long since caught up with
+        // the slide's side.
+        if (absFollow > peakAbsRad) {
+          peakAbsRad = absFollow;
+          peakFollowSign = follow > 0 ? 1 : (follow < 0 ? -1 : 0);
+          var peakSupported = clampCameraAimOffsetRad(slip);
+          peakSupportedSign = peakSupported > 0 ? 1 : (peakSupported < 0 ? -1 : 0);
+        }
+      }
+    }
+    if (
+      peakFollowSign !== 0 &&
+      peakSupportedSign !== 0 &&
+      peakFollowSign !== peakSupportedSign
+    ) {
+      peakSignMismatches = 1;
+    }
+    // The TRACKING GROWTH: how much the aim grew between the drift's
+    // first sample and the drift's peak. A camera that tracks the slide
+    // grows its aim from zero to the cap; a camera that ignores the
+    // slide (or that carries a constant offset) grows it by nothing.
+    var trackingGrowthRad = 0;
+    if (firstAbsRad !== null) trackingGrowthRad = maxAbsRad - firstAbsRad;
+    return {
+      samples: samples,
+      maxAbsRad: maxAbsRad,
+      maxAbsSlipRad: maxAbsSlipRad,
+      maxSupportedAimRad: maxSupportedAimRad,
+      convergedSamples: convergedSamples,
+      firstAbsRad: firstAbsRad,
+      trackingGrowthRad: trackingGrowthRad,
+      peakAbsRad: peakAbsRad,
+      peakFollowSign: peakFollowSign,
+      peakSupportedSign: peakSupportedSign,
+      peakSignMismatches: peakSignMismatches
+    };
+  }
+
+  // Step 14X: the fixture's mirror of the production's aim clamp
+  // (`clampChaseCameraFollowOffsetRad`). The cap is SYMMETRIC: it
+  // bounds the magnitude of the signed offset, so a left-hand slide and
+  // a right-hand slide are bounded by the SAME value.
+  function clampCameraAimOffsetRad(offsetRad) {
+    var cap = DRIFT_FEEL_CAMERA_MAX_AIM_OFFSET_RAD;
+    if (offsetRad > cap) return cap;
+    if (offsetRad < -cap) return -cap;
+    return offsetRad;
+  }
+  // Step 14X: the AIM CAP measurement. The aim offset is a CARRIED
+  // state (it survives the phase boundaries), so the measurement is
+  // taken over the WHOLE run - not over one phase.
+  function measureCameraAimOffsetCap() {
+    var samples = 0;
+    var maxAbsRad = 0;
+    for (var i = 0; i < feelSeamSamples.length; i++) {
+      var offset = feelSeamSamples[i].followOffsetRad;
+      if (typeof offset !== 'number') continue;
+      samples += 1;
+      var absRad = Math.abs(offset);
+      if (absRad > maxAbsRad) maxAbsRad = absRad;
+    }
+    return { samples: samples, maxAbsRad: maxAbsRad };
+  }
+  // Step 14X: the camera RELEASE measurement - the evidence the THREE
+  // new named checks of this wave read.
+  //
+  // IT MEASURES THE RESIDUAL, NOT THE AIM. The residual is the part of
+  // the aim the PUBLISHED slide no longer supports (the aim minus the
+  // capped published slip). The release law closes the RESIDUAL at the
+  // named smooth fraction, and the follow closes the SUPPORTED aim at
+  // its own proportional rate, so the two are measured apart: the
+  // fixture subtracts the follow's OWN pull (mirrored from the named
+  // rate formula) from the OBSERVED residual rate, and what is left is
+  // the release's own rate.
+  //
+  // THE MIRROR BELOW IS THE FIXTURE'S VERIFICATION MIRROR of the named
+  // rate formula - the same rule the 14Q2 traction severity oracle
+  // follows. It is NOT a consumer: no published number is derived from
+  // it, and the published aim is NEVER substituted for the published
+  // number. It exists so the check can assert a RATE (the release's own
+  // share) instead of a FLOOR.
+  //
+  // THE RELEASE TICKS ARE SELECTED, NOT ASSUMED: a tick counts as a
+  // release tick only where the aim was measurably ABOVE the aim the
+  // published slide supports. That single condition EXCLUDES the
+  // catch-up regime (the aim below the supported aim, where the law is
+  // pulling the aim UP, not easing it back) and the far-side pop (the
+  // aim on the OTHER side of the supported aim).
+  // The measurement never counts a tick it did not measure.
+  //
+  // THE PRECONDITION: a release tick exists ONLY while the published
+  // slide is BELOW the named cap - above the cap the supported aim IS
+  // the cap, so the aim can never sit above it and there is no residual
+  // to release (the residual is the aim minus the supported aim). The
+  // release phases drive the slide down past the cap (the release and
+  // the settle follow the committed hold), so the population exists; the
+  // observed sub-cap slide range is published in the cameraRelease
+  // evidence block so the precondition is EVIDENCED.
+  function measureCameraRelease(phases) {
+    var samples = 0;
+    var releaseTicks = 0;
+    var monotonicViolations = 0;
+    var signFlips = 0;
+    var maxObservedGapRate = 0;
+    var maxReleaseRate = 0;
+    var largeAimTicks = 0;
+    var smallAimTicks = 0;
+    var maxReleaseRateLargeAim = 0;
+    var maxReleaseRateSmallAim = 0;
+    var firstAbsRad = null;
+    var lastAbsRad = null;
+    var minReleaseSlideRad = null;
+    var maxReleaseSlideRad = 0;
+    for (var p = 0; p < phases.length; p++) {
+      var phaseSamples = seamSamplesForPhase(phases[p]);
+      for (var i = 1; i < phaseSamples.length; i++) {
+        var prev = phaseSamples[i - 1];
+        var cur = phaseSamples[i];
+        var prevOffset = prev.followOffsetRad;
+        var curOffset = cur.followOffsetRad;
+        var slip = cur.slipAngleRad;
+        var speed = cur.speedMps;
+        var tickHz = cur.tickHz;
+        var prevTick = prev.tick;
+        var curTick = cur.tick;
+        if (typeof prevOffset !== 'number' || typeof curOffset !== 'number') continue;
+        if (typeof slip !== 'number' || typeof speed !== 'number') continue;
+        if (typeof tickHz !== 'number' || typeof prevTick !== 'number' || typeof curTick !== 'number') continue;
+        var ticks = curTick - prevTick;
+        // A frame that released no tick holds the aim: it is not a
+        // release tick and it is not counted as a sample.
+        if (ticks <= 0) continue;
+        samples += 1;
+        // The REANCHOR guard: the tick-regression reset writes EXACTLY 0
+        // into the aim, and a re-anchor is not a release.
+        if (curOffset === 0) continue;
+        // The SUPPORTED aim: the published slide capped at the named cap.
+        var supported = clampCameraAimOffsetRad(slip);
+        var supportedAbs = Math.abs(supported);
+        var prevAbs = Math.abs(prevOffset);
+        var curAbs = Math.abs(curOffset);
+        // The aim and the supported aim have to be on the SAME side: an
+        // aim on the OTHER side is the far-side pop, not a release.
+        if (supported !== 0 && (prevOffset > 0) !== (supported > 0)) continue;
+        // The RESIDUAL before the advance: the part of the aim the
+        // published slide no longer supports.
+        var residualBefore = prevAbs - supportedAbs;
+        if (residualBefore <= DRIFT_FEEL_CAMERA_RESIDUAL_FLOOR_RAD) continue;
+        releaseTicks += 1;
+        if (firstAbsRad === null) firstAbsRad = prevAbs;
+        lastAbsRad = curAbs;
+        // The PUBLISHED SLIDE the release was measured over: the
+        // release population only exists while the published slide is
+        // BELOW the named cap (above the cap the supported aim IS the
+        // cap and the aim can never be above it, so there is no
+        // residual to release). The observed range is published so the
+        // precondition is EVIDENCED and not merely asserted.
+        var absReleaseSlide = Math.abs(slip);
+        if (minReleaseSlideRad === null || absReleaseSlide < minReleaseSlideRad) minReleaseSlideRad = absReleaseSlide;
+        if (absReleaseSlide > maxReleaseSlideRad) maxReleaseSlideRad = absReleaseSlide;
+        // The MONOTONICITY: a release NEVER grows the aim.
+        if (curAbs > prevAbs + DRIFT_FEEL_CAMERA_RELEASE_GROWTH_TOLERANCE_RAD) monotonicViolations += 1;
+        // The SIGN: a release NEVER flips the side of the aim.
+        if (
+          prevAbs >= DRIFT_FEEL_CAMERA_FOLLOW_SIGN_MIN_OFFSET_RAD &&
+          curAbs >= DRIFT_FEEL_CAMERA_FOLLOW_SIGN_MIN_OFFSET_RAD &&
+          (curOffset > 0) !== (prevOffset > 0)
+        ) signFlips += 1;
+        // The residual after the advance.
+        var residualAfter = curAbs - supportedAbs;
+        if (residualAfter < 0) residualAfter = 0;
+        // The OBSERVED per-tick rate at which the residual closed. The
+        // residual decays geometrically inside a frame (the law applies
+        // the SAME descriptor to every tick of the frame), so the rate
+        // is the N-th root of the measured decay.
+        var observedGapRate = 1 - Math.pow(residualAfter / residualBefore, 1 / ticks);
+        if (observedGapRate < 0) observedGapRate = 0;
+        if (observedGapRate > maxObservedGapRate) maxObservedGapRate = observedGapRate;
+        // The follow's OWN proportional pull: the fixture's verification
+        // MIRROR of the named rate formula (the published slide ONLY -
+        // the camera's own divergence is not part of the rate).
+        var dt = 1 / tickHz;
+        var mirroredFollowRate = Math.min(
+          1,
+          DRIFT_FEEL_CAMERA_FOLLOW_GAIN * speed * Math.abs(slip) * dt
+        );
+        // The RELEASE's own rate: what is left of the observed residual
+        // rate once the follow's own pull is taken out.
+        var releaseRate = observedGapRate - mirroredFollowRate;
+        if (releaseRate > maxReleaseRate) maxReleaseRate = releaseRate;
+        // The two aim-magnitude regimes.
+        if (prevAbs >= DRIFT_FEEL_CAMERA_MAX_AIM_OFFSET_RAD * DRIFT_FEEL_CAMERA_LARGE_AIM_FRACTION) {
+          largeAimTicks += 1;
+          if (releaseRate > maxReleaseRateLargeAim) maxReleaseRateLargeAim = releaseRate;
+        } else {
+          smallAimTicks += 1;
+          if (releaseRate > maxReleaseRateSmallAim) maxReleaseRateSmallAim = releaseRate;
         }
       }
     }
     return {
       samples: samples,
-      maxAbsRad: maxAbsRad,
-      maxAbsSlipRad: maxAbsSlipRad,
-      convergedSamples: convergedSamples,
-      signMismatches: signMismatches
+      releaseTicks: releaseTicks,
+      monotonicViolations: monotonicViolations,
+      signFlips: signFlips,
+      maxObservedGapRate: maxObservedGapRate,
+      maxReleaseRate: maxReleaseRate,
+      largeAimTicks: largeAimTicks,
+      smallAimTicks: smallAimTicks,
+      maxReleaseRateLargeAim: maxReleaseRateLargeAim,
+      maxReleaseRateSmallAim: maxReleaseRateSmallAim,
+      firstAbsRad: firstAbsRad,
+      lastAbsRad: lastAbsRad,
+      minReleaseSlideRad: minReleaseSlideRad,
+      maxReleaseSlideRad: maxReleaseSlideRad
     };
   }
 
@@ -2785,6 +3120,21 @@ html, body { margin: 0; padding: 0; height: 100%; background: #05070d; overflow:
         'P2-COMMIT', 'P2-HOLD', 'P3-MIRROR-COMMIT', 'P3-MIRROR-HOLD'
       ];
       var cameraFollow = measureCameraFollowOffset(FEEL_CAMERA_FOLLOW_PHASES);
+      // Step 14X: the camera RELEASE measurement (the three new named
+      // checks). The RELEASE phases are the two countersteer unwind
+      // windows and the two ring-down phases that follow them, where the
+      // released aim eases back towards the aim the published slide
+      // supports. The commit and hold phases are NOT release phases:
+      // there the aim is still CLOSING ON the slide, so there is no
+      // residual for the release to ease back.
+      var FEEL_CAMERA_RELEASE_PHASES = [
+        'P2-RELEASE', 'P2-SETTLE', 'P3-MIRROR-CATCH', 'P3-MIRROR-SETTLE'
+      ];
+      var cameraRelease = measureCameraRelease(FEEL_CAMERA_RELEASE_PHASES);
+      // Step 14X: the camera AIM CAP measurement (the WHOLE run - the
+      // follow offset is a carried state that survives the phase
+      // boundaries).
+      var cameraAimCap = measureCameraAimOffsetCap();
       // Step 14Q2: the traction severity measurement (the SEVENTH seam
       // field). The SAME DRIFT phases as the camera check - the phases
       // where the published slip is non-zero and the tires have to show
@@ -3196,22 +3546,42 @@ html, body { margin: 0; padding: 0; height: 100%; background: #05070d; overflow:
         // is the BROWSER half of the 14P camera re-wiring; the jest half
         // is the RED-3..RED-7 chase-camera contract set.
         //
-        // THE CONTRACT: the camera aims along the PUBLISHED travel
-        // direction, so its follow offset (a) LEAVES the nose by a
-        // measurable amount, (b) never swings FURTHER than the published
-        // slip it tracks (the follow converges on the travel direction
-        // and never overshoots it), and (c) CLOSES the aim error - the
-        // published slip minus the follow offset - onto the travel
-        // direction, which means the camera points the SAME WAY as the
-        // direction the car is travelling.
+        // THE CONTRACT (RE-PINNED by the 14X wave to the CAPPED law):
+        // the camera aims along the PUBLISHED travel direction, so its
+        // follow offset (a) LEAVES the nose by a measurable amount,
+        // (b) never swings FURTHER than the SUPPORTED aim - the
+        // published slip CAPPED at the named cap - plus the render-
+        // jitter tolerance, (c) CLOSES the aim error against the
+        // SUPPORTED aim - the capped published slip minus the follow
+        // offset - onto the travel direction at least once during the
+        // drift, (d) GROWS with the slide it tracks, and (e) points the
+        // SAME WAY as the supported aim where it is largest.
+        //
+        // THE RE-PIN: under the capped law the aim SATURATES at
+        // 0.17448929499999988 rad while the published slide grows to
+        // about 0.45 rad, so the aim error against the RAW published
+        // slip stays OPEN by design (about 0.276 rad at the 0.45 rad
+        // slide) and the old RAW-slip convergence clause would always
+        // fail a correct build. The convergence is therefore measured
+        // against the SUPPORTED aim - the direction the car is
+        // travelling AS FAR AS THE NAMED CAP ALLOWS. The comparison
+        // FLOOR is re-pinned from 0.2 rad to 0.13 rad so the supported
+        // aim VARIES across the comparison window instead of being
+        // pinned at the cap for every sample, and the CEILING is
+        // re-pinned from the raw published slip to the supported aim
+        // (the raw-slip ceiling is now implied by the cap and cannot be
+        // exceeded).
         //
         // IT IS NON-VACUOUS: a camera pinned to the nose (the frozen-
         // camera defect the chase-camera module closes) reports a zero
         // offset, so the floor fails AND there is no convergence to
-        // count; a camera that over-rotated past the published travel
-        // direction breaks the ceiling; a camera that never tracks the
-        // travel direction keeps the aim error open and the convergence
-        // count stays at zero.
+        // count AND no tracking growth; a camera that over-rotated past
+        // the travel direction breaks the ceiling and the peak sign; a
+        // camera that never tracks the travel direction keeps the aim
+        // error open and the convergence count stays at zero; and a
+        // camera that carries a CONSTANT offset (it ignores the slide)
+        // satisfies the convergence clause but fails the TRACKING GROWTH
+        // clause.
         //
         // The named-check count therefore grows by EXACTLY ONE (43 -> 44).
         // The count is still ASSERTED against the ACTUAL `result.checks`
@@ -3219,9 +3589,10 @@ html, body { margin: 0; padding: 0; height: 100%; background: #05070d; overflow:
         // [14P-CAMERA-FOLLOW-OFFSET]
         driftFeelCameraFollowOffset: cameraFollow.samples > 0 &&
           cameraFollow.maxAbsRad >= DRIFT_FEEL_CAMERA_FOLLOW_MIN_RAD &&
-          cameraFollow.maxAbsRad <= cameraFollow.maxAbsSlipRad + DRIFT_FEEL_CAMERA_FOLLOW_TOLERANCE_RAD &&
+          cameraFollow.maxAbsRad <= cameraFollow.maxSupportedAimRad + DRIFT_FEEL_CAMERA_FOLLOW_TOLERANCE_RAD &&
           cameraFollow.convergedSamples > 0 &&
-          cameraFollow.signMismatches === 0,
+          cameraFollow.trackingGrowthRad >= DRIFT_FEEL_CAMERA_FOLLOW_TRACK_GROWTH_RAD &&
+          cameraFollow.peakSignMismatches === 0,
         // Step 14Q2 - the ONE new named check of this wave: the TRACTION
         // SEVERITY RATIO, read from the SEVENTH seam field
         // (tractionSeverity). This is the BROWSER half of the 14Q
@@ -3294,12 +3665,91 @@ html, body { margin: 0; padding: 0; height: 100%; background: #05070d; overflow:
           hudTractionMeasure.mismatches === 0 &&
           hudTractionMeasure.ratioSamples > 0 &&
           hudTractionMeasure.maxSeverity > 0 &&
-          hudTractionMeasure.maxHudPercent > 0
+          hudTractionMeasure.maxHudPercent > 0,
+        // Step 14X - the FIRST new named check of this wave: the AIM
+        // OFFSET CAP. The chase camera's aim offset is a CARRIED state
+        // (it survives the phase boundaries), so the cap is asserted
+        // over the WHOLE run: the aim never swings further from the
+        // nose than the NAMED cap.
+        //
+        // THE CONTRACT: the production clamps the aim offset to the
+        // named cap (EXACTLY HALF of the measured pre-wave peak of
+        // 0.34897858999999976 rad), so every reader - the HUD reader
+        // and the browser reader - can only ever see the CAPPED aim.
+        //
+        // IT IS NON-VACUOUS: the run has to have sampled the seam, the
+        // measured peak has to be a real aim (above zero - a camera
+        // pinned to the nose reports a zero offset and fails here), and
+        // the peak has to be AT OR BELOW the named cap. The pre-wave
+        // browser peak was 0.18485833843043792 rad - OVER the named cap
+        // - so the pre-wave build FAILS this check.
+        //
+        // The named-check count therefore grows by THREE (46 -> 49) -
+        // this check and the TWO release checks below are the THREE
+        // checks of this wave.
+        // [14X-CAMERA-AIM-OFFSET-CAP]
+        driftFeelCameraAimOffsetCapped: cameraAimCap.samples > 0 &&
+          cameraAimCap.maxAbsRad > 0 &&
+          cameraAimCap.maxAbsRad <= DRIFT_FEEL_CAMERA_MAX_AIM_OFFSET_RAD + DRIFT_FEEL_CAMERA_CAP_TOLERANCE_RAD,
+        // Step 14X - the SECOND new named check of this wave: the
+        // RELEASE MONOTONIC AND SMOOTH. The release eases the aim back
+        // towards the aim the published slide supports, and it does so
+        // (a) MONOTONICALLY - the aim never GROWS while it is being
+        // released and never flips its side, and (b) SMOOTHLY - the
+        // release never closes more than the NAMED smooth fraction of
+        // the residual in ONE tick.
+        //
+        // THE RATE IS THE RELEASE'S OWN RATE, NOT THE AIM'S RATE: the
+        // follow closes the SUPPORTED aim at its own proportional
+        // (speed dependent) rate, so the observed closing rate of the
+        // aim is the sum of the two. The fixture subtracts the follow's
+        // own pull - mirrored from the named rate formula - and asserts
+        // the REMAINDER against the named smooth fraction. The residual
+        // (the part of the aim the published slide no longer supports)
+        // is the quantity the named fraction bounds.
+        //
+        // IT IS NON-VACUOUS: the run has to have measured at least one
+        // release tick (a tick where the aim was measurably above the
+        // supported aim), the release has to be monotonic (no growing
+        // aim, no sign flip) and the measured release rate has to be at
+        // or below the named smooth fraction. The pre-wave release
+        // closed 0.10498288025082125 of the aim in ONE tick at the peak
+        // offset - more than DOUBLE the named smooth fraction - so the
+        // pre-wave build FAILS this check.
+        //
+        // The named-check count therefore grows by THREE (46 -> 49).
+        // [14X-CAMERA-RELEASE-MONOTONIC-SMOOTH]
+        driftFeelCameraReleaseMonotonicSmooth: cameraRelease.releaseTicks > 0 &&
+          cameraRelease.monotonicViolations === 0 &&
+          cameraRelease.signFlips === 0 &&
+          cameraRelease.maxReleaseRate <= DRIFT_FEEL_CAMERA_RELEASE_SMOOTH_FRACTION + DRIFT_FEEL_CAMERA_RATE_TOLERANCE,
+        // Step 14X - the THIRD new named check of this wave: the camera
+        // is NOT SNAPPED BACK BY ITS OWN DIVERGENCE. The release closes
+        // the residual at the SAME rate whatever the aim's magnitude is:
+        // the camera's own divergence may NOT MULTIPLY the release rate.
+        // This is the BROWSER analogue of the jest RED-3
+        // NO-MULTIPLICATIVE-ENABLER contract.
+        //
+        // THE CONTRACT: the release rate measured at a LARGE aim (at or
+        // above half the named cap) is at most the release rate measured
+        // at a SMALL aim (below it). A law that multiplies its rate by
+        // the camera's own divergence releases a large aim FASTER than a
+        // small one and fails this check.
+        //
+        // IT IS NON-VACUOUS: BOTH regimes have to have been measured (a
+        // run that only ever saw one aim magnitude cannot compare the
+        // two, and the check fails rather than passing vacuously).
+        //
+        // The named-check count therefore grows by THREE (46 -> 49).
+        // [14X-CAMERA-NO-DIVERGENCE-SNAP-BACK]
+        driftFeelCameraNoDivergenceSnapBack: cameraRelease.largeAimTicks > 0 &&
+          cameraRelease.smallAimTicks > 0 &&
+          cameraRelease.maxReleaseRateLargeAim <= cameraRelease.maxReleaseRateSmallAim + DRIFT_FEEL_CAMERA_RATE_TOLERANCE
       };
       // The check COUNT is ASSERTED against the ACTUAL result.checks length
-      // and is NEVER assumed: the expected total (the 45 named checks the
-      // 14Q2 re-base left, plus the ONE 14R HUD traction readout check) is
-      // a number the plan carries, not a number this fixture hard-codes.
+      // and is NEVER assumed: the expected total (the 46 named checks the
+      // 14R wave left, plus the THREE 14X drift-camera checks) is a
+      // number the plan carries, not a number this fixture hard-codes.
       // The NAMES are published next to the count, so the gate can assert
       // the exact SET and not only the total.
       var actualCheckCount = Object.keys(result.checks).length;
@@ -3311,8 +3761,8 @@ html, body { margin: 0; padding: 0; height: 100%; background: #05070d; overflow:
       // P1-drift-presentation-car, and the seam READER (this file) is
       // updated in the SAME edit, so the reader COUNTS the fields the
       // seam publishes and the run only passes when the count is EXACTLY
-      // eight. It is NOT a named check: the named-check count grows by
-      // EXACTLY ONE in this wave (45 -> 46), so the field-count
+      // eight. It is NOT a named check: the named-check count grew by
+      // EXACTLY ONE in the 14R wave (45 -> 46), so the field-count
       // assertion is a SEPARATE, PUBLISHED condition of `result.passed`
       // (published as result.seamFieldCount and
       // result.seamFieldCountMatches).
@@ -3344,13 +3794,61 @@ html, body { margin: 0; padding: 0; height: 100%; background: #05070d; overflow:
           samples: cameraFollow.samples,
           maxAbsRad: cameraFollow.maxAbsRad,
           maxAbsSlipRad: cameraFollow.maxAbsSlipRad,
+          maxSupportedAimRad: cameraFollow.maxSupportedAimRad,
           convergedSamples: cameraFollow.convergedSamples,
-          signMismatches: cameraFollow.signMismatches,
+          firstAbsRad: cameraFollow.firstAbsRad,
+          trackingGrowthRad: cameraFollow.trackingGrowthRad,
+          trackGrowthRad: DRIFT_FEEL_CAMERA_FOLLOW_TRACK_GROWTH_RAD,
+          peakAbsRad: cameraFollow.peakAbsRad,
+          peakFollowSign: cameraFollow.peakFollowSign,
+          peakSupportedSign: cameraFollow.peakSupportedSign,
+          peakSignMismatches: cameraFollow.peakSignMismatches,
           minRad: DRIFT_FEEL_CAMERA_FOLLOW_MIN_RAD,
           toleranceRad: DRIFT_FEEL_CAMERA_FOLLOW_TOLERANCE_RAD,
           convergedRad: DRIFT_FEEL_CAMERA_FOLLOW_CONVERGED_RAD,
           slipFloorRad: DRIFT_FEEL_CAMERA_FOLLOW_SLIP_FLOOR_RAD,
+          signMinOffsetRad: DRIFT_FEEL_CAMERA_FOLLOW_SIGN_MIN_OFFSET_RAD,
+          capRad: DRIFT_FEEL_CAMERA_MAX_AIM_OFFSET_RAD,
+          supportedAim: 'the published slip capped at the named cap',
           phases: FEEL_CAMERA_FOLLOW_PHASES
+        },
+        // Step 14X: the camera AIM CAP evidence (the WHOLE run - the
+        // follow offset is a carried state), so the run carries the
+        // MEASURED peak the cap check was decided on.
+        cameraAimCap: {
+          samples: cameraAimCap.samples,
+          maxAbsRad: cameraAimCap.maxAbsRad,
+          maxAimOffsetRad: DRIFT_FEEL_CAMERA_MAX_AIM_OFFSET_RAD,
+          measuredPreWavePeakRad: DRIFT_FEEL_CAMERA_MEASURED_PRE_WAVE_PEAK_RAD,
+          capToleranceRad: DRIFT_FEEL_CAMERA_CAP_TOLERANCE_RAD
+        },
+        // Step 14X: the camera RELEASE evidence (the release ticks, the
+        // monotonicity, the sign, the release's own rate and the two
+        // aim-magnitude regimes), so the run carries the MEASURED values
+        // the two release checks were decided on.
+        cameraRelease: {
+          samples: cameraRelease.samples,
+          releaseTicks: cameraRelease.releaseTicks,
+          monotonicViolations: cameraRelease.monotonicViolations,
+          signFlips: cameraRelease.signFlips,
+          maxObservedGapRate: cameraRelease.maxObservedGapRate,
+          maxReleaseRate: cameraRelease.maxReleaseRate,
+          largeAimTicks: cameraRelease.largeAimTicks,
+          smallAimTicks: cameraRelease.smallAimTicks,
+          maxReleaseRateLargeAim: cameraRelease.maxReleaseRateLargeAim,
+          maxReleaseRateSmallAim: cameraRelease.maxReleaseRateSmallAim,
+          firstAbsRad: cameraRelease.firstAbsRad,
+          lastAbsRad: cameraRelease.lastAbsRad,
+          minReleaseSlideRad: cameraRelease.minReleaseSlideRad,
+          maxReleaseSlideRad: cameraRelease.maxReleaseSlideRad,
+          capRad: DRIFT_FEEL_CAMERA_MAX_AIM_OFFSET_RAD,
+          growthToleranceRad: DRIFT_FEEL_CAMERA_RELEASE_GROWTH_TOLERANCE_RAD,
+          smoothFraction: DRIFT_FEEL_CAMERA_RELEASE_SMOOTH_FRACTION,
+          followGain: DRIFT_FEEL_CAMERA_FOLLOW_GAIN,
+          rateTolerance: DRIFT_FEEL_CAMERA_RATE_TOLERANCE,
+          residualFloorRad: DRIFT_FEEL_CAMERA_RESIDUAL_FLOOR_RAD,
+          largeAimFraction: DRIFT_FEEL_CAMERA_LARGE_AIM_FRACTION,
+          phases: FEEL_CAMERA_RELEASE_PHASES
         },
         // Step 14Q2: the traction severity evidence (the SEVENTH seam
         // field), so the run carries the MEASURED values the new named

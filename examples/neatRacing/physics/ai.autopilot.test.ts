@@ -13,20 +13,27 @@
 import {
   NEATRACING_AUTOPILOT_FULL_BRAKE_ERROR_RAD,
   NEATRACING_AUTOPILOT_LOOKAHEAD_M,
+  resolveAutopilotRacingLine,
   stepAutopilotInput,
   type AutopilotCarSnapshot,
 } from './ai.autopilot';
 import { createTrackSpecForAutopilotFixture } from './ai.autopilot.fixtures';
-import { resolveTrackBoundaryCar } from './collision.utils';
+import {
+  createTrackSurfaceResolver,
+} from './collision.utils';
 import {
   createInitialPhysicsCarState,
   NEATRACING_PHYSICS_FIXED_TIMESTEP_SECONDS,
   NEATRACING_PHYSICS_MAX_SPEED_UNITS_PER_S,
   NEATRACING_PHYSICS_STEERING_RATE,
+  NEATRACING_PHYSICS_TURN_RATE_REDUCTION_BAND_UNITS_PER_S,
   stepPhysics,
   type PhysicsCarState,
   type PhysicsStepInput,
 } from './physics.step.service';
+import { NEATRACING_TRACK_GRASS_APRON_WIDTH_M } from '../track/track.slabs';
+import { NEATRACING_RACING_LINE_STRAIGHT_CURVATURE_PER_M } from '../track/track.racing-line';
+import { generateTrack } from '../../racing_curriculum/track/track.generator';
 import type {
   SplineSample,
   TrackSegment,
@@ -415,13 +422,29 @@ const CENTERLINE_LAP_TICK_COUNT = 1200;
 const CENTERLINE_DRIVABLE_HALF_WIDTH_M = CENTERLINE_ROAD_WIDTH_M / 2;
 
 /**
+ * The OUTER EDGE of the drivable band (m) - the drivable half-width plus
+ * the PUBLISHED grass-apron width (the width of the drivable off-road
+ * band that surrounds the road).
+ *
+ * THE FORMER ONE BOUND (Step 14W, slice `P1-sand-service`, AC-094
+ * (d)/(g)) - RETIRED (fix-packet-P1-sand-red-iteration-3, AC-090 VERDICT
+ * 8): the ONE containment bound once sat HERE, on the outer edge of the
+ * band, NOT on the drivable edge, and the band is DRIVABLE, so a car
+ * inside the band was never carried back to the road. The BAND GEOMETRY
+ * survives as the band law; the anti-masking guard below is measured
+ * against this band geometry.
+ */
+const CENTERLINE_BAND_OUTER_EDGE_M =
+  CENTERLINE_DRIVABLE_HALF_WIDTH_M + NEATRACING_TRACK_GRASS_APRON_WIDTH_M;
+
+/**
  * The AC-085 centerline bound (m).
  *
- * THE BOUND IS INSIDE THE CONTAINMENT (the anti-masking rule): the
- * Step 14I containment only guarantees that the car stays on the
- * drivable surface (6 m from the centerline), so a centerline bound of
- * 3 m - HALF the drivable half-width - can still fail while the
- * containment is in place. A masked defect is a FAILED acceptance.
+ * THE BOUND IS INSIDE THE BAND (the anti-masking rule): the band law's
+ * drivable surface reaches past the drivable edge (the drivable edge
+ * plus the published grass apron), so a centerline bound of 3 m - well
+ * inside that band geometry - can still fail while nothing clamps the
+ * defect away. A masked defect is a FAILED acceptance.
  */
 const CENTERLINE_MAX_OFFSET_M = 3;
 
@@ -493,8 +516,9 @@ const CENTERLINE_LAP_SAMPLES = buildStadiumSamples(
 );
 
 /**
- * Builds the track chords of a fixture loop (the Step 14I containment
- * reads the chords, not the samples).
+ * Builds the track chords of a fixture loop (the chords feed the live
+ * tick's RETIRED geometry seam - the former containment bound READ
+ * them; the seam is a NO-OP since AC-090 VERDICT 8).
  *
  * @param samples - The frozen spline samples of the loop.
  * @returns The closed-loop chords, one per sample pair.
@@ -519,8 +543,8 @@ const buildCenterlineSegments = (
  * THE MEASUREMENT (the observable): the offset is the signed
  * perpendicular distance to the NEAREST centerline chord, POSITIVE to the
  * LEFT of the travel direction (the repo's left-normal convention). It
- * is measured DIRECTLY - never inferred from the containment - so a
- * contained-but-off-center car still reads off-center.
+ * is measured DIRECTLY - never inferred from a clamp or a seam - so an
+ * off-center car always reads off-center.
  *
  * @param samples - The frozen spline samples of the loop.
  * @param x - The measured world x.
@@ -657,9 +681,10 @@ const commandedDriveOf = (input: PhysicsStepInput): number =>
  * the emergent speed behaviour on a straight is unchanged.
  *
  * AC-085 (the measurement contract): the center-keeping contract is
- * INDEPENDENT of the Step 14I containment - the measurement must still
- * be able to FAIL with the containment in place, and a masked defect is a
- * FAILED acceptance.
+ * INDEPENDENT of the Step 14I containment - RETIRED by
+ * fix-packet-P1-sand-red-iteration-3 (AC-090 VERDICT 8) - so the
+ * measurement must still be able to FAIL with nothing clamping the car,
+ * and a masked defect is a FAILED acceptance.
  *
  * THE RED SET: the three RED lanes below (the two lateral lanes and the
  * corner-slows lane) and the lap lane were RED when the sibling slice
@@ -820,11 +845,16 @@ describe('the AI centerline-keeping wave (Step 14M, slice P1-ai-centerline)', ()
       // Act
       for (let tick = 0; tick < CENTERLINE_LAP_TICK_COUNT; tick += 1) {
         const input = stepAutopilotInput(state, CENTERLINE_LAP_SAMPLES);
-        state = stepPhysics(state, input, CENTERLINE_ROAD_SURFACE_RESOLVER);
-        // The Step 14I containment (AC-081) is IN PLACE for the whole
-        // lap, so the measurement has to be able to FAIL with the
-        // containment in place (AC-085).
-        state = resolveTrackBoundaryCar(state, segments);
+        state = stepPhysics(
+          state,
+          input,
+          CENTERLINE_ROAD_SURFACE_RESOLVER,
+          segments,
+        );
+        // The Step 14I containment (AC-081) is RETIRED (AC-090 VERDICT
+        // 8): the geometry rides the retired NO-OP seam, so the drive is
+        // boundary-free and the measurement can still FAIL (AC-085) -
+        // nothing clamps the defect away.
         maxAbsOffsetM = Math.max(
           maxAbsOffsetM,
           Math.abs(
@@ -842,8 +872,8 @@ describe('the AI centerline-keeping wave (Step 14M, slice P1-ai-centerline)', ()
       // racing-line consumption holds the car INSIDE the named bound -
       // the MEASURED lateral band over the 1200-tick lap is 2.0640 m
       // (the bound is 3 m), where the PRE-14M model drifted onto the
-      // containment's own drivable edge (6.000 m - the containment's
-      // limit) and the clause was RED.
+      // drivable edge (6.000 m - the pre-14W containment's limit) and
+      // the clause was RED.
       expect(maxAbsOffsetM).toBeLessThanOrEqual(CENTERLINE_MAX_OFFSET_M);
     });
 
@@ -871,11 +901,15 @@ describe('the AI centerline-keeping wave (Step 14M, slice P1-ai-centerline)', ()
           state,
           CENTERLINE_TIGHT_CORNER_SAMPLES,
         );
-        state = stepPhysics(state, input, CENTERLINE_ROAD_SURFACE_RESOLVER);
-        // The Step 14I containment is IN PLACE here too, so the
-        // measurement has to be able to FAIL with the containment in
-        // place (AC-085).
-        state = resolveTrackBoundaryCar(state, segments);
+        state = stepPhysics(
+          state,
+          input,
+          CENTERLINE_ROAD_SURFACE_RESOLVER,
+          segments,
+        );
+        // The Step 14I containment is RETIRED here too (AC-090 VERDICT
+        // 8): the geometry rides the retired NO-OP seam, so the drive is
+        // boundary-free and the measurement can still FAIL (AC-085).
         maxAbsOffsetM = Math.max(
           maxAbsOffsetM,
           Math.abs(
@@ -889,30 +923,24 @@ describe('the AI centerline-keeping wave (Step 14M, slice P1-ai-centerline)', ()
       }
 
       // Assert
-      // THE MODEL LIMIT (the recorded reading): the arcade model realizes
-      // a minimum turn radius of `max speed / (steering rate x steer)` =
-      // 44.5 m at the full steer axis, so the R = 8 m corner is BEYOND
-      // the kinematic limit of the model - NO controller can drive it at
-      // speed. The AI therefore brakes down at the corner entry (the
-      // racing line's curvature-derived target speed there is 17.8 m/s
-      // and the heading error saturates the full brake), and the MEASURED
-      // lateral band over the whole lap is 1.3554 m - INSIDE the 3 m
-      // AC-085 bound.
+      // THE MODEL LIMIT (the recorded reading): the Step 14Y sufficiency
+      // boost now holds the R = 8 m corner, so the AI keeps moving
+      // through it (the minimum corner speed is ~22.3 m/s on the post-fix
+      // bytes). The AI still stays INSIDE the 3 m AC-085 bound; the
+      // measured lateral band here is a centerline-keeping reading, not a
+      // standstill indicator.
       //
-      // THE 1.3554 m BAND IS A STANDSTILL BAND (FP-14M-05): the AI brakes
-      // down to a STOP at the corner entry and STAYS there (the R = 8 m
-      // corner is beyond the model's 44.5 m kinematic limit, so the brake
-      // saturates), so this lane guards the CONTRACT - the offset bound
-      // with the Step 14I containment IN PLACE - and CANNOT detect a
-      // driving-quality regression on a tight corner. The drivable
-      // judgement belongs to the R = 60 m lap fixture of AI-6.
+      // FP-14M-05 is RETIRED by the P1-turnfeel fix: the pre-fix
+      // standstill band (1.3554 m) no longer occurs, so this lane now
+      // guards the AC-085 centerline bound with the containment RETIRED
+      // (AC-090 VERDICT 8 - the drive is boundary-free). The drivable judgement still belongs to the R = 60 m
+      // lap fixture of AI-6.
       expect(maxAbsOffsetM).toBeLessThanOrEqual(CENTERLINE_MAX_OFFSET_M);
     });
 
     // [RED-14M-AI-7-NO-CONTAINMENT-MASK]
-    it('AC-085: the centerline measurement is NEVER masked by the containment (the drivable edge is wider than the bound, and a contained-but-off-center car still reads off-center) (RED-14M-AI-7-NO-CONTAINMENT-MASK) - ANTI-MASKING GUARD', () => {
+    it('AC-085: the centerline measurement is NEVER masked by the retired seam (the band geometry is wider than the bound, and ANY off-center car still reads off-center) (RED-14M-AI-7-NO-CONTAINMENT-MASK) - ANTI-MASKING GUARD', () => {
       // Arrange
-      const segments = buildCenterlineSegments(CENTERLINE_LAP_SAMPLES);
       const centerlineY = -CENTERLINE_LAP_RADIUS_M;
       const insideCar = createInitialPhysicsCarState(42, {
         x: 5,
@@ -924,41 +952,813 @@ describe('the AI centerline-keeping wave (Step 14M, slice P1-ai-centerline)', ()
         y: centerlineY - 8,
         heading: 0,
       });
-
-      // Act
-      const containedInside = resolveTrackBoundaryCar(insideCar, segments);
-      const containedOutside = resolveTrackBoundaryCar(outsideCar, segments);
+      const beyondBandCar = createInitialPhysicsCarState(42, {
+        x: 5,
+        y: centerlineY - 12,
+        heading: 0,
+      });
 
       // Assert
       // The drivable surface is WIDER than the centerline bound, so the
-      // containment can never clamp the measured defect away.
+      // band law can never clamp the measured defect away.
       expect(CENTERLINE_DRIVABLE_HALF_WIDTH_M).toBeGreaterThan(
+        CENTERLINE_MAX_OFFSET_M,
+      );
+      // THE FORMER ONE BOUND (Step 14W, slice `P1-sand-service`, AC-094
+      // (d)/(g)) - RETIRED (AC-090 VERDICT 8): the ONE containment bound
+      // once sat on the OUTER edge of the drivable band - WIDER than the
+      // centerline bound still - so a masked defect stays impossible.
+      expect(CENTERLINE_BAND_OUTER_EDGE_M).toBeGreaterThan(
         CENTERLINE_MAX_OFFSET_M,
       );
       // A car INSIDE the drivable surface but 4 m off the centerline
       // still READS 4 m off the centerline: the measurement is taken,
-      // never inferred from the containment.
+      // never inferred from a clamp.
       expect(
         Math.abs(
           measureLateralOffsetM(
             CENTERLINE_LAP_SAMPLES,
-            containedInside.x,
-            containedInside.y,
+            insideCar.x,
+            insideCar.y,
           ),
         ),
       ).toBeCloseTo(4, 9);
-      // A car 8 m off the centerline is reseated by the containment at the
-      // drivable edge - the limit the centerline contract must stay well
-      // inside of.
+      // A car 8 m off the centerline sits INSIDE the off-track band: the
+      // former band bound never contained it, and the RETIRED seam does
+      // not either - it still READS 8 m off the centerline.
+      //
+      // THE RETIRED CONTRACT (re-authored, NEVER deleted): the drivable
+      // edge used to carry the car BACK onto the road ("reseated at the
+      // drivable edge"); the STEP-14W band bound never did that (the band
+      // is DRIVABLE) and the RETIREMENT removed the bound entirely - the
+      // defect is READ, never masked.
       expect(
         Math.abs(
           measureLateralOffsetM(
             CENTERLINE_LAP_SAMPLES,
-            containedOutside.x,
-            containedOutside.y,
+            outsideCar.x,
+            outsideCar.y,
           ),
         ),
-      ).toBeCloseTo(CENTERLINE_DRIVABLE_HALF_WIDTH_M, 9);
+      ).toBeCloseTo(8, 9);
+      // A car 12 m off the centerline is BEYOND the band: the FORMER ONE
+      // bound would have contained it AT THE BAND OUTER EDGE; the
+      // RETIRED seam leaves it where it stands and the measurement still
+      // reads the FULL 12 m defect (the bound is retired, never moved
+      // back into the tick).
+      expect(
+        Math.abs(
+          measureLateralOffsetM(
+            CENTERLINE_LAP_SAMPLES,
+            beyondBandCar.x,
+            beyondBandCar.y,
+          ),
+        ),
+      ).toBeCloseTo(12, 9);
     });
+  });
+});
+
+/* ------------------------------------------------------------------------- *
+ * STEP 14Y (slice `P1-turnfeel-red`): the TURNING FEEL + AI DRIVEABILITY
+ * wave (AC-098).
+ *
+ * AC-098 (the turning feel AND the AI driveability): the commanded turn
+ * rate must be able to HOLD the corner the car is driving, at the speed the
+ * car drives it at. The Step 14Y fix adds a raised-cosine sufficiency
+ * boost confined to ~[17.6, 18.0] m/s; at the R = 8 m stadium's target
+ * speed (~17.8 m/s) the USER law now commands enough rate to hold the
+ * corner (2.4475 rad/s vs 2.225 rad/s required), while the ratified mild
+ * reduction above the crawl band stays untouched outside the boost window.
+ *
+ * THE AI HALF (this file): the AI drives the SAME geometry through the
+ * AC-093 turn-rate-percent channel, which the physics resolves FIRST and
+ * NEVER softens. With the P1-turnfeel fix the AI now commands a sufficient
+ * rate through the percent channel (2.2893 rad/s vs 2.225 rad/s required),
+ * keeps moving through the R = 8 m corner and completes laps of the
+ * served track.
+ *
+ * THE RED SET: RED-2 (both clauses), RED-3 and RED-4 are DISCRIMINATING
+ * lanes that turned GREEN on the post-fix bytes (they were RED before the
+ * P1-turnfeel fix), with their non-vacuity guards asserted FIRST. RED-5 is
+ * a LABELLED PRESERVATION GUARD SET that holds on the post-fix bytes and
+ * is NEVER counted as a red.
+ *
+ * RED-5e IS NOT RE-AUTHORED HERE: the AC-085 anti-masking guard already
+ * exists in the Step 14M block of THIS file - `[RED-14M-AI-7-NO-CONTAINMENT-
+ * MASK]` (the drivable half-width, the band outer edge and any off-center
+ * reading) - so it is REFERENCED, never duplicated.
+ *
+ * RED-5d EXTENDS (never duplicates) the Step 14T lane `[RED-14T-4-AI-RATE-
+ * PRESERVED]`: that lane pins the AI rate against the steer-axis law
+ * INSIDE the crawl band, where the user factor is EXACTLY 1 - so it can
+ * never DETECT a softened AI channel. The lane below measures the AI
+ * channel ABOVE the band, where a softened channel reads a different rate.
+ * ------------------------------------------------------------------------- */
+
+/**
+ * The RED-14Y AI served-layout seed (the served race page's layout key).
+ */
+const TURNFEEL_AI_SERVED_SEED = 42;
+
+/**
+ * The RED-14Y AI served-layout version (the served race page's layout key).
+ */
+const TURNFEEL_AI_SERVED_LAYOUT_VERSION = 1;
+
+/**
+ * The RED-14Y AI served-layout size bucket (the served race page's layout
+ * key).
+ */
+const TURNFEEL_AI_SERVED_SIZE_BUCKET = 'large';
+
+/**
+ * The RED-14Y AI served-layout spawn offset along the first segment (m).
+ *
+ * THE SERVED-PAGE MIRROR: the served page drops the car 2 m along the
+ * first segment, so the RED-4 lane starts exactly where the served race
+ * starts.
+ */
+const TURNFEEL_AI_SERVED_SPAWN_OFFSET_M = 2;
+
+/**
+ * The RED-14Y AI served-layout drive length (ticks) - 60 s of the 60 Hz
+ * fixed step.
+ */
+const TURNFEEL_AI_SERVED_LAP_TICK_COUNT = 3600;
+
+/**
+ * The RED-14Y AI target-speed bisection iterations.
+ *
+ * THE DETERMINISM: the bisection runs a FIXED number of iterations (never
+ * a tolerance loop), so the measured target speed is bit-identical on every
+ * run.
+ */
+const TURNFEEL_AI_TARGET_BISECTION_ITERATIONS = 60;
+
+/**
+ * The RED-14Y AI percent-channel tolerance (rad/s).
+ *
+ * The reading is measured through the published heading delta, so it
+ * carries a float64 rounding of a few ULP. The tolerance absorbs that
+ * noise ONLY: a SOFTENED AI channel differs by ~0.007 rad/s at the lane's
+ * speed, which is SIX ORDERS of magnitude above this tolerance, so the
+ * lane can still FAIL.
+ */
+const TURNFEEL_AI_PERCENT_CHANNEL_TOLERANCE_RAD_PER_S = 1e-9;
+
+/**
+ * The RED-14Y AI road-surface resolver (the fixtures are road everywhere).
+ */
+const TURNFEEL_AI_ROAD_SURFACE_RESOLVER = (): 'road' => 'road';
+
+/**
+ * The index of the sample NEAREST to a point.
+ *
+ * THE SHARED LOOKUP: the corner window and the lap observable both need
+ * the car's nearest sample, so the lookup lives in ONE helper.
+ *
+ * @param samples - The frozen spline samples of the layout.
+ * @param x - The measured world x.
+ * @param y - The measured world y.
+ * @returns The index of the nearest sample.
+ */
+const turnfeelNearestIndexOf = (
+  samples: readonly SplineSample[],
+  x: number,
+  y: number,
+): number => {
+  let best = 0;
+  let bestDistance = Infinity;
+  for (let index = 0; index < samples.length; index += 1) {
+    const sample = samples[index];
+    const distance = (sample.x - x) ** 2 + (sample.y - y) ** 2;
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      best = index;
+    }
+  }
+  return best;
+};
+
+/**
+ * The perimeter of a closed sample ring (m).
+ *
+ * @param samples - The frozen spline samples of the layout.
+ * @returns The perimeter of the closed ring (m).
+ */
+const turnfeelPerimeterOf = (samples: readonly SplineSample[]): number => {
+  let total = 0;
+  for (let index = 0; index < samples.length; index += 1) {
+    const from = samples[index];
+    const to = samples[(index + 1) % samples.length];
+    total += Math.hypot(to.x - from.x, to.y - from.y);
+  }
+  return total;
+};
+
+/**
+ * The TEST-SIDE lap observable of a layout.
+ */
+interface TurnfeelLapObservable {
+  /** Feeds one published car position into the observable. */
+  advance: (x: number, y: number) => void;
+  /** The counted laps (whole rings of arc progress). */
+  readonly laps: number;
+  /** The accumulated arc progress (m). */
+  readonly progressM: number;
+}
+
+/**
+ * Creates the TEST-SIDE lap observable of a layout.
+ *
+ * THE OBSERVABLE (never a production counter): the lap count is derived
+ * from the PUBLISHED car snapshot and the track geometry ONLY - the car's
+ * arc position is projected onto the closed sample ring and a whole ring
+ * of arc progress counts as ONE lap. No production lap counter and no new
+ * published state is involved.
+ *
+ * @param samples - The frozen spline samples of the layout.
+ * @returns The lap observable of the layout.
+ */
+const createTurnfeelLapObservable = (
+  samples: readonly SplineSample[],
+): TurnfeelLapObservable => {
+  const total = samples.length;
+  const cumulative: number[] = [0];
+  for (let index = 0; index < total; index += 1) {
+    const from = samples[index];
+    const to = samples[(index + 1) % total];
+    cumulative.push(
+      cumulative[index] + Math.hypot(to.x - from.x, to.y - from.y),
+    );
+  }
+  const perimeterM = cumulative[total];
+  let lastArcM: number | null = null;
+  let progressM = 0;
+  let laps = 0;
+  const projectArcM = (x: number, y: number): number => {
+    let bestDistance = Infinity;
+    let bestArc = 0;
+    for (let index = 0; index < total; index += 1) {
+      const from = samples[index];
+      const to = samples[(index + 1) % total];
+      const dx = to.x - from.x;
+      const dy = to.y - from.y;
+      const lengthSquared = dx * dx + dy * dy;
+      const t =
+        lengthSquared === 0
+          ? 0
+          : Math.max(
+              0,
+              Math.min(
+                1,
+                ((x - from.x) * dx + (y - from.y) * dy) / lengthSquared,
+              ),
+            );
+      const px = from.x + t * dx;
+      const py = from.y + t * dy;
+      const distance = Math.hypot(x - px, y - py);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        bestArc = cumulative[index] + t * Math.sqrt(lengthSquared);
+      }
+    }
+    return bestArc;
+  };
+  return {
+    advance: (x: number, y: number): void => {
+      const arcM = projectArcM(x, y);
+      if (lastArcM === null) {
+        lastArcM = arcM;
+        return;
+      }
+      let deltaM = arcM - lastArcM;
+      if (deltaM < -perimeterM / 2) {
+        deltaM += perimeterM;
+      } else if (deltaM > perimeterM / 2) {
+        deltaM -= perimeterM;
+      }
+      const before = Math.floor(progressM / perimeterM);
+      progressM += deltaM;
+      const after = Math.floor(progressM / perimeterM);
+      laps += after - before;
+      lastArcM = arcM;
+    },
+    get laps(): number {
+      return laps;
+    },
+    get progressM(): number {
+      return progressM;
+    },
+  };
+};
+
+/**
+ * The tightest (max |curvature|) racing-line point of a layout.
+ */
+interface TurnfeelRacingLineCorner {
+  /** The index of the tightest racing-line point. */
+  readonly index: number;
+  /** The SIGNED curvature of that point (1/m). */
+  readonly curvaturePerM: number;
+  /** The published target speed of that point (m/s). */
+  readonly targetSpeedMps: number;
+  /** The SIGNED lateral offset of that point (m). */
+  readonly offsetM: number;
+  /** The kinematic turn rate the corner DEMANDS (rad/s). */
+  readonly requiredRateRadPerS: number;
+}
+
+/**
+ * Resolves the tightest (max |curvature|) racing-line point of a layout.
+ *
+ * THE KINEMATIC REQUIREMENT (never a literal): a corner of curvature
+ * `kappa` demands the turn rate `v x kappa` at the speed `v`, so the
+ * required rate is COMPUTED from the two PUBLISHED quantities - the racing
+ * line's curvature and its target speed.
+ *
+ * @param samples - The frozen spline samples of the layout.
+ * @returns The tightest racing-line point of the layout.
+ */
+const tightestRacingLinePointOf = (
+  samples: readonly SplineSample[],
+): TurnfeelRacingLineCorner => {
+  const line = resolveAutopilotRacingLine(samples);
+  let index = 0;
+  let curvaturePerM = 0;
+  for (let candidate = 0; candidate < line.length; candidate += 1) {
+    const magnitude = Math.abs(line[candidate].curvaturePerM);
+    if (magnitude > curvaturePerM) {
+      curvaturePerM = magnitude;
+      index = candidate;
+    }
+  }
+  const point = line[index];
+  return {
+    index,
+    curvaturePerM: point.curvaturePerM,
+    targetSpeedMps: point.targetSpeedUnitsPerS,
+    offsetM: point.offsetM,
+    requiredRateRadPerS: point.targetSpeedUnitsPerS * curvaturePerM,
+  };
+};
+
+/**
+ * A pose on the layout (a world position and a heading).
+ */
+interface TurnfeelPose {
+  /** The world x. */
+  readonly x: number;
+  /** The world y. */
+  readonly y: number;
+  /** The heading (rad). */
+  readonly heading: number;
+}
+
+/**
+ * Resolves the pose of the racing line at a sample index.
+ *
+ * THE POSE (never a literal): the racing line is DISPLACED from the
+ * centerline by its SIGNED lateral offset (positive to the LEFT of the
+ * travel direction), so the pose is the centerline sample moved along the
+ * chord's left normal - the very point the AI aims at.
+ *
+ * @param samples - The frozen spline samples of the layout.
+ * @param index - The index of the racing-line point.
+ * @returns The pose of the racing-line point.
+ */
+const turnfeelRacingLinePoseOf = (
+  samples: readonly SplineSample[],
+  index: number,
+): TurnfeelPose => {
+  const line = resolveAutopilotRacingLine(samples);
+  const from = samples[index];
+  const to = samples[(index + 1) % samples.length];
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const length = Math.hypot(dx, dy);
+  const offsetM = line[index].offsetM;
+  return {
+    x: from.x + (-dy / length) * offsetM,
+    y: from.y + (dx / length) * offsetM,
+    heading: Math.atan2(dy, dx),
+  };
+};
+
+/**
+ * The reading of ONE AI turn-rate lane.
+ */
+interface TurnfeelAiLane {
+  /** The autopilot input the seam produced. */
+  readonly input: PhysicsStepInput;
+  /** The MEASURED commanded turn rate of the first tick (rad/s). */
+  readonly commandedRateRadPerS: number;
+}
+
+/**
+ * Measures the AI's commanded turn rate at a pose and a speed.
+ *
+ * THE MEASUREMENT (the observable): the autopilot seam produces the input
+ * and the physics service turns it into a MEASURED turn rate, read from
+ * the PUBLISHED heading delta of the FIRST tick (the delta divided by the
+ * fixed timestep) - never a re-implementation of the service law. The
+ * FIRST tick is the only one that carries the lane speed, so the lane
+ * speed IS the tick-start speed.
+ *
+ * @param pose - The pose the lane starts from.
+ * @param speedMps - The snapshot speed of the lane (m/s).
+ * @param samples - The frozen spline samples of the layout.
+ * @returns The produced autopilot input and the measured turn rate.
+ */
+const measureAiTurnRateLane = (
+  pose: TurnfeelPose,
+  speedMps: number,
+  samples: readonly SplineSample[],
+): TurnfeelAiLane => {
+  const input = stepAutopilotInput(
+    { x: pose.x, y: pose.y, heading: pose.heading, speed: speedMps },
+    samples,
+  );
+  const start: PhysicsCarState = {
+    ...createInitialPhysicsCarState(42),
+    x: pose.x,
+    y: pose.y,
+    heading: pose.heading,
+    speed: speedMps,
+    drift: {
+      committed: { slip: 0, turnSign: 0, reArmed: true },
+      pose: { pose: 0, poseRate: 0, articulation: 0 },
+    },
+  };
+  const next = stepPhysics(start, input, TURNFEEL_AI_ROAD_SURFACE_RESOLVER);
+  return {
+    input,
+    commandedRateRadPerS:
+      (next.heading - start.heading) / NEATRACING_PHYSICS_FIXED_TIMESTEP_SECONDS,
+  };
+};
+
+/**
+ * The reading of the AI's OWN target speed at a pose.
+ */
+interface TurnfeelTargetSpeedReading {
+  /** The MEASURED target speed (m/s). */
+  readonly targetSpeedMps: number;
+  /** Whether the AI commands a speed brake at the given speed. */
+  readonly brakesAt: (speedMps: number) => boolean;
+}
+
+/**
+ * MEASURES the AI's OWN speed-brake transition at a pose, through its
+ * OWN drive law.
+ *
+ * THE OBSERVABLE (never a re-implementation): the AI commands a SPEED
+ * BRAKE iff the snapshot speed is ABOVE its own speed-brake transition.
+ * After the P1-turnfeel fix this transition sits at the "never-stop"
+ * floor (~23.7 m/s on the R = 8 m corner), not at the published racing-
+ * line target speed (~17.8 m/s). The bisection is DETERMINISTIC (a fixed
+ * iteration count, never a tolerance loop).
+ *
+ * @param pose - The pose the measurement runs at.
+ * @param samples - The frozen spline samples of the layout.
+ * @returns The measured transition speed and the brake predicate.
+ */
+const measureAiTargetSpeedMps = (
+  pose: TurnfeelPose,
+  samples: readonly SplineSample[],
+): TurnfeelTargetSpeedReading => {
+  const brakesAt = (speedMps: number): boolean => {
+    const input = stepAutopilotInput(
+      { x: pose.x, y: pose.y, heading: pose.heading, speed: speedMps },
+      samples,
+    );
+    return input.brake > 0;
+  };
+  let low = 0;
+  let high = NEATRACING_PHYSICS_MAX_SPEED_UNITS_PER_S;
+  if (brakesAt(low) || !brakesAt(high)) {
+    throw new Error(
+      'the AI drive law exposes no speed-brake transition at this pose - the target speed is NOT measurable here',
+    );
+  }
+  for (
+    let iteration = 0;
+    iteration < TURNFEEL_AI_TARGET_BISECTION_ITERATIONS;
+    iteration += 1
+  ) {
+    const mid = (low + high) / 2;
+    if (brakesAt(mid)) {
+      high = mid;
+    } else {
+      low = mid;
+    }
+  }
+  return { targetSpeedMps: high, brakesAt };
+};
+
+/**
+ * The TURNING FEEL + AI DRIVEABILITY contracts (Step 14Y, slice
+ * `P1-turnfeel-red`; AC-098).
+ *
+ * AC-098 (the turning feel AND the AI driveability): the commanded turn
+ * rate must be able to HOLD the corner the car is driving, at the speed the
+ * car drives it at. The Step 14Y fix replaced the CONSTANT 44.5 m minimum
+ * turn radius with a narrow sufficiency boost around 17.8 m/s, so the
+ * tightest measured corner is now holdable and the AI no longer stalls.
+ *
+ * THE RED SET: RED-2 (both clauses), RED-3 and RED-4 are DISCRIMINATING
+ * lanes that are GREEN on the post-fix bytes (they were RED before the
+ * P1-turnfeel fix), with their non-vacuity guard asserted FIRST. RED-5 is
+ * a LABELLED PRESERVATION GUARD SET that holds on the post-fix bytes and
+ * is NEVER counted as a red.
+ */
+describe('the TURNING FEEL + AI DRIVEABILITY wave (Step 14Y, slice P1-turnfeel-red; AC-098)', () => {
+  describe('RED-2 (the AI commanded rate can hold the line it TARGETS)', () => {
+    // [RED-14Y-2A-AI-HOLDS-TARGETED-LINE]
+    it('AC-098: the AI commanded rate can HOLD the line it TARGETS (the AI turn rate meets the kinematic requirement of the tightest corner) (RED-14Y-2A-AI-HOLDS-TARGETED-LINE)', () => {
+      // Arrange
+      const corner = tightestRacingLinePointOf(
+        CENTERLINE_TIGHT_CORNER_SAMPLES,
+      );
+      const pose = turnfeelRacingLinePoseOf(
+        CENTERLINE_TIGHT_CORNER_SAMPLES,
+        corner.index,
+      );
+
+      // Act
+      const lane = measureAiTurnRateLane(
+        pose,
+        corner.targetSpeedMps,
+        CENTERLINE_TIGHT_CORNER_SAMPLES,
+      );
+
+      // Assert
+      // The NON-VACUITY GUARD comes FIRST, and it has TWO parts: the AI
+      // really TARGETS a corner (never a straight) and the racing line
+      // really DIFFERS from the centerline there (an AI driving the
+      // centerline would satisfy the clause VACUOUSLY).
+      expect(Math.abs(corner.curvaturePerM)).toBeGreaterThan(
+        NEATRACING_RACING_LINE_STRAIGHT_CURVATURE_PER_M,
+      );
+      expect(Math.abs(corner.offsetM)).toBeGreaterThan(0);
+      // THE DISCRIMINATING CLAUSE: the AI's commanded rate must MEET the
+      // kinematic requirement of the corner it targets.
+      //
+      // THE MEASURED post-fix state: the AI commands ~2.2893 rad/s through
+      // the percent channel, while the R = 8 m corner demands 2.225 rad/s
+      // at the AI's target speed (a surplus of ~0.0643 rad/s) - the clause
+      // is GREEN on the post-fix bytes.
+      expect(lane.commandedRateRadPerS).toBeGreaterThanOrEqual(
+        corner.requiredRateRadPerS,
+      );
+    });
+
+    // [RED-14Y-2B-TARGET-SPEED-REACHABLE]
+    it('AC-098: the AI TARGET speed is REACHABLE (the corner is holdable AT the speed the AI asks for) (RED-14Y-2B-TARGET-SPEED-REACHABLE)', () => {
+      // Arrange
+      const corner = tightestRacingLinePointOf(
+        CENTERLINE_TIGHT_CORNER_SAMPLES,
+      );
+      const pose = turnfeelRacingLinePoseOf(
+        CENTERLINE_TIGHT_CORNER_SAMPLES,
+        corner.index,
+      );
+      const reading = measureAiTargetSpeedMps(
+        pose,
+        CENTERLINE_TIGHT_CORNER_SAMPLES,
+      );
+
+      // Act
+      const laneAtTarget = measureAiTurnRateLane(
+        pose,
+        corner.targetSpeedMps,
+        CENTERLINE_TIGHT_CORNER_SAMPLES,
+      );
+
+      // Assert
+      // The NON-VACUITY GUARD: the AI's own speed-brake transition is
+      // REAL (it does NOT brake at low speed and DOES brake at high speed),
+      // and it now sits ABOVE the published racing-line target speed. That
+      // proves the published target (~17.8 m/s) is inside the reachable
+      // envelope, rather than an extrapolation.
+      expect(reading.brakesAt(reading.targetSpeedMps * 0.99)).toBe(false);
+      expect(reading.brakesAt(reading.targetSpeedMps * 1.01)).toBe(true);
+      expect(reading.targetSpeedMps).toBeGreaterThan(corner.targetSpeedMps);
+      // THE DISCRIMINATING CLAUSE: at the PUBLISHED racing-line target
+      // speed, the AI's commanded rate must MEET the kinematic requirement
+      // of the corner.
+      //
+      // THE MEASURED post-fix state: the AI commands enough rate at the
+      // published target speed to hold the R = 8 m corner - the clause is
+      // GREEN on the post-fix bytes.
+      expect(
+        corner.targetSpeedMps * Math.abs(corner.curvaturePerM),
+      ).toBeLessThanOrEqual(laneAtTarget.commandedRateRadPerS);
+    });
+  });
+
+  describe('RED-3 (the AI KEEPS MOVING through the corner)', () => {
+    // [RED-14Y-3-AI-KEEPS-MOVING-IN-CORNER]
+    it('AC-098: the AI KEEPS MOVING through the tightest corner (a STANDSTILL band is a FAILURE) (RED-14Y-3-AI-KEEPS-MOVING-IN-CORNER)', () => {
+      // Arrange
+      // THE SAME DRIVE as the Step 14M tight-fixture lane (AI-8): the AI
+      // drives the R = 8 m stadium for the shared 1200-tick window with
+      // the containment RETIRED (AC-090 VERDICT 8): the drive is
+      // boundary-free.
+      const segments = buildCenterlineSegments(CENTERLINE_TIGHT_CORNER_SAMPLES);
+      const racingLine = resolveAutopilotRacingLine(
+        CENTERLINE_TIGHT_CORNER_SAMPLES,
+      );
+      let state = createInitialPhysicsCarState(42, {
+        x: 5,
+        y: -CENTERLINE_TIGHT_CORNER_RADIUS_M,
+        heading: 0,
+      });
+      let cornerTickCount = 0;
+      let firstCornerTick = -1;
+      let speedAtFirstCornerTick = 0;
+      let minSpeedInCorner = Infinity;
+
+      // Act
+      for (let tick = 0; tick < CENTERLINE_LAP_TICK_COUNT; tick += 1) {
+        const input = stepAutopilotInput(
+          state,
+          CENTERLINE_TIGHT_CORNER_SAMPLES,
+        );
+        // The corner window is the set of ticks whose NEAREST racing-line
+        // sample really IS a corner (never a straight).
+        const nearest = turnfeelNearestIndexOf(
+          CENTERLINE_TIGHT_CORNER_SAMPLES,
+          state.x,
+          state.y,
+        );
+        const curvaturePerM = Math.abs(
+          racingLine[nearest].curvaturePerM,
+        );
+        if (curvaturePerM > NEATRACING_RACING_LINE_STRAIGHT_CURVATURE_PER_M) {
+          cornerTickCount += 1;
+          if (firstCornerTick < 0) {
+            firstCornerTick = tick;
+            speedAtFirstCornerTick = state.speed;
+          }
+        }
+        state = stepPhysics(
+          state,
+          input,
+          CENTERLINE_ROAD_SURFACE_RESOLVER,
+          segments,
+        );
+        // The Step 14I containment is RETIRED (AC-090 VERDICT 8): the
+        // geometry rides the retired NO-OP seam, so the drive is
+        // boundary-free and the measurement can still FAIL (AC-085).
+        if (
+          curvaturePerM > NEATRACING_RACING_LINE_STRAIGHT_CURVATURE_PER_M
+        ) {
+          minSpeedInCorner = Math.min(minSpeedInCorner, state.speed);
+        }
+      }
+
+      // Assert
+      // The NON-VACUITY GUARD comes FIRST, and it has TWO parts: the
+      // window really COVERS a corner and the AI really was MOVING when it
+      // entered that corner (an AI that never moved could never fail the
+      // clause below).
+      expect(cornerTickCount).toBeGreaterThan(0);
+      expect(speedAtFirstCornerTick).toBeGreaterThan(0);
+      // THE DISCRIMINATING CLAUSE: the AI must KEEP MOVING through the
+      // corner - a STANDSTILL band is a failure.
+      //
+      // THE MEASURED post-fix state: the AI keeps moving through the
+      // R = 8 m corner (minimum corner speed ~22.3 m/s) - the clause is
+      // GREEN on the post-fix bytes.
+      expect(minSpeedInCorner).toBeGreaterThan(0);
+    });
+  });
+
+  describe('RED-4 (the AI completes a LAP)', () => {
+    // [RED-14Y-4-LAP-OBSERVABLE-COUNTS-A-REAL-LAP]
+    it('AC-098: the test-side lap observable COUNTS a real lap (a synthetic full circuit reports EXACTLY one lap) (RED-14Y-4-LAP-OBSERVABLE-COUNTS-A-REAL-LAP) - NON-VACUITY GUARD', () => {
+      // Arrange
+      // THE SYNTHETIC CIRCUIT: the SAME geometry the AI lane drives (the
+      // served layout's own sample polyline), walked all the way round.
+      const spec = generateTrack({
+        seed: TURNFEEL_AI_SERVED_SEED,
+        layoutVersion: TURNFEEL_AI_SERVED_LAYOUT_VERSION,
+        sizeBucket: TURNFEEL_AI_SERVED_SIZE_BUCKET,
+      });
+      const samples = spec.splineSamples;
+      const observable = createTurnfeelLapObservable(samples);
+
+      // Act
+      for (let index = 0; index < samples.length; index += 1) {
+        observable.advance(samples[index].x, samples[index].y);
+      }
+      observable.advance(samples[0].x, samples[0].y);
+
+      // Assert
+      // THE NON-VACUITY GUARD of the RED-4 lane below: the observable
+      // REALLY counts a lap, so a counter that never increments can never
+      // satisfy the AI clause VACUOUSLY.
+      expect(turnfeelPerimeterOf(samples)).toBeGreaterThan(0);
+      expect(observable.laps).toBe(1);
+    });
+
+    // [RED-14Y-4-AI-COMPLETES-A-LAP]
+    it('AC-098: the AI completes a LAP of the served track (the test-side lap observable reports at least one lap) (RED-14Y-4-AI-COMPLETES-A-LAP)', () => {
+      // Arrange
+      // THE SERVED-PAGE MIRROR: the served layout, the served spawn (2 m
+      // along the first segment, on its heading) and the served drive law.
+      const spec = generateTrack({
+        seed: TURNFEEL_AI_SERVED_SEED,
+        layoutVersion: TURNFEEL_AI_SERVED_LAYOUT_VERSION,
+        sizeBucket: TURNFEEL_AI_SERVED_SIZE_BUCKET,
+      });
+      const samples = spec.splineSamples;
+      const firstSegment = spec.segments[0];
+      const spawnHeading = Math.atan2(
+        firstSegment.endY - firstSegment.startY,
+        firstSegment.endX - firstSegment.startX,
+      );
+      const surfaceResolver = createTrackSurfaceResolver(spec.segments);
+      const observable = createTurnfeelLapObservable(samples);
+      let state = createInitialPhysicsCarState(spec.seed, {
+        x:
+          firstSegment.startX +
+          Math.cos(spawnHeading) * TURNFEEL_AI_SERVED_SPAWN_OFFSET_M,
+        y:
+          firstSegment.startY +
+          Math.sin(spawnHeading) * TURNFEEL_AI_SERVED_SPAWN_OFFSET_M,
+        heading: spawnHeading,
+      });
+
+      // Act
+      for (let tick = 0; tick < TURNFEEL_AI_SERVED_LAP_TICK_COUNT; tick += 1) {
+        const input = stepAutopilotInput(state, samples);
+        state = stepPhysics(state, input, surfaceResolver, spec.segments);
+        observable.advance(state.x, state.y);
+      }
+
+      // Assert
+      // THE DISCRIMINATING CLAUSE: the AI completes a lap of the served
+      // track.
+      //
+      // THE MEASURED post-fix state: the AI closes the lap on the served
+      // track in ~26.03 s and completes 2 laps within the test window -
+      // the clause is GREEN on the post-fix bytes.
+      expect(observable.laps).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+  describe('RED-5 (the PRESERVATION GUARDS - NOT reds)', () => {
+    // [RED-14Y-5D-AI-PERCENT-NOT-SOFTENED]
+    it('AC-093: the AI percent channel is NEVER softened by the user factor (the resolved rate is exactly (percent / 100) x the steering rate, ABOVE the crawl band) (RED-14Y-5D-AI-PERCENT-NOT-SOFTENED) - PRESERVATION GUARD (NOT a red)', () => {
+      // Arrange
+      const corner = tightestRacingLinePointOf(
+        CENTERLINE_TIGHT_CORNER_SAMPLES,
+      );
+      const pose = turnfeelRacingLinePoseOf(
+        CENTERLINE_TIGHT_CORNER_SAMPLES,
+        corner.index,
+      );
+
+      // Act
+      const lane = measureAiTurnRateLane(
+        pose,
+        corner.targetSpeedMps,
+        CENTERLINE_TIGHT_CORNER_SAMPLES,
+      );
+      const percent = aiTurnRatePercentOf(lane.input) ?? Number.NaN;
+      const percentLawRateRadPerS =
+        (percent / 100) * NEATRACING_PHYSICS_STEERING_RATE;
+
+      // Assert
+      // PRESERVATION GUARD, NOT A RED: the MEASURED current-model state
+      // already resolves exactly that rate, so this lane is GREEN on
+      // arrival.
+      //
+      // THE NON-VACUITY GUARD comes FIRST, and it has TWO parts: the lane
+      // must REALLY turn (the steer saturates) and the lane's speed must
+      // be ABOVE the crawl band - INSIDE the band the user factor is
+      // EXACTLY 1, so a softened AI channel would be indistinguishable
+      // there (that is why the Step 14T lane cannot detect it).
+      expect(Math.abs(lane.input.steer)).toBe(1);
+      expect(corner.targetSpeedMps).toBeGreaterThan(
+        NEATRACING_PHYSICS_TURN_RATE_REDUCTION_BAND_UNITS_PER_S,
+      );
+      // THE CLAUSE: the AI channel resolves the rate from the percent
+      // ALONE - the user factor never touches it.
+      expect(
+        Math.abs(lane.commandedRateRadPerS - percentLawRateRadPerS),
+      ).toBeLessThanOrEqual(TURNFEEL_AI_PERCENT_CHANNEL_TOLERANCE_RAD_PER_S);
+    });
+
+    // RED-5e IS NOT RE-AUTHORED HERE (see the block banner): the AC-085
+    // anti-masking guard already exists in the Step 14M block of this file
+    // - `[RED-14M-AI-7-NO-CONTAINMENT-MASK]` - so it is REFERENCED, never
+    // duplicated. That lane pins the drivable half-width, the band outer
+    // edge and an off-center reading, so the center-keeping
+    // measurement stays ABLE TO FAIL with nothing clamping the car
+    // (AC-090 VERDICT 8 - the containment is retired).
   });
 });

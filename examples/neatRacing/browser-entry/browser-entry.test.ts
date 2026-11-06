@@ -96,6 +96,18 @@ import { computeTractionSeverity } from '../physics/drift.model';
 // (`pose = prev.pose + rate * dt`), so the published pose rate is the
 // crab's own rate and not a re-derived number.
 import { NEATRACING_PHYSICS_FIXED_TIMESTEP_SECONDS } from '../physics/physics.step.service';
+// The chase-camera law, used here as the ORACLE for the drift-camera
+// READER contract (Step 14X, RED-5): the browser entry publishes the
+// follow offset the law computed, so the published offset MUST equal the
+// law replayed from the seam's OWN published drift inputs. The separation
+// is NOT a separate module instance (Jest gives ONE module registry per
+// test file): the reader's path is the browser entry's OWN call into the
+// law, and the oracle's path is THIS TEST's own replay from the seam's
+// published drift inputs - two independent code paths over one module.
+import {
+  createChaseCameraFollowState,
+  stepChaseCameraFollow,
+} from './chase-camera';
 // Side-effect import: evaluating the boot stub registers
 // `window.neatRacingStart` on the jsdom host.
 import './browser-entry';
@@ -878,6 +890,206 @@ describe('Neat Racing browser entry boot wiring (Step 13, P1-boot-glue)', () => 
       // ... and exactly one more for the second driven frame.
       scheduledRafCallbacks[1]?.(DRIVEN_FRAME_TIMESTAMP_MS);
       expect(assignments.count()).toBe(2);
+    });
+  });
+
+  /**
+   * Step 14X (P1-driftcam-red) drift-camera READER contract.
+   *
+   * RED while the camera law has NO aim-offset cap: the browser entry
+   * publishes the chase-camera follow offset on the live drift seam
+   * (`followOffsetRad`), so the reader publishes the UNCAPPED offset.
+   *
+   * WHY TWO CLAUSES:
+   *
+   * 1. [RED-5-PUBLISHED-CAP] (RED) - the published |followOffsetRad| NEVER
+   *    exceeds the RECORDED cap. The cap is enforced AT THE SOURCE (inside
+   *    the camera law), so EVERY reader - the HUD reader and this browser
+   *    reader - can only ever see the CAPPED offset. The reader can never
+   *    re-derive a bigger offset of its own.
+   * 2. [RED-5-PUBLISHED-AGREES-WITH-THE-LAW] (GREEN rail) - the published
+   *    offset EQUALS the offset the camera law computes from the seam's OWN
+   *    published drift inputs. The physics publishes
+   *    `travelHeadingRad = wrap(heading + slipAngle)`, so the law's
+   *    divergence IS the published slip.
+   *
+   * WHY THE RAIL IS NOT VACUOUS: the published offset is READ from the live
+   * seam (the browser's own reader) while the law's value is REPLAYED by
+   * the test from the seam's published drift inputs - two independent code
+   * paths. A replay that ignored the published drift would answer 0, and
+   * the guards below prove the probe really drifted.
+   */
+  describe('drift camera reader (Step 14X, P1-driftcam-red; RED-5)', () => {
+    /**
+     * The probe length (frames) of the drift-camera reader probe.
+     *
+     * MEASURED (the post-14X re-pin by `P1-driftcam-repin`): the probe
+     * drives ONE simulation tick per frame with the throttle and a
+     * steering key held. The published |followOffsetRad| peaks at
+     * 0.0992038678428377 rad after 120 frames (ledger row RP-1) and at
+     * 0.14962536105320104 rad after 240 frames (ledger row RP-2); the
+     * slide saturates there (the same peak is measured after 360, 480
+     * and 600 frames - ledger row RP-3).
+     * BOTH peaks are BELOW the RECORDED cap: the desensitised law follows
+     * the slide SLOWER, and the cap itself is enforced AT THE SOURCE
+     * inside the camera law, so EVERY reader can only ever publish the
+     * CAPPED offset. The cap clause still discriminates: the SAME
+     * 240-frame probe published a peak ABOVE the RECORDED cap under the
+     * pre-14X law (the pre-wave measurement of the Step 14X re-baseline
+     * ledger, row R-2), so dropping the source cap breaks the clause.
+     */
+    const DRIFT_CAMERA_PROBE_FRAME_COUNT = 240;
+    /** The RECORDED aim-offset cap (rad) of the drift-camera wave. */
+    const RECORDED_MAX_AIM_OFFSET_RAD = 0.17448929499999988;
+    /** The tolerance of the reader comparison (rad). */
+    const CAMERA_RAD_TOLERANCE = 1e-9;
+
+    /** One live seam sample of the drift-camera reader. */
+    interface DriftSeamCameraSample {
+      /** The published physics tick. */
+      readonly tick: number;
+      /** The published slip angle (rad). */
+      readonly slipAngleRad: number;
+      /** The published speed (m/s). */
+      readonly speedMps: number;
+      /** The published chase-camera follow offset (rad). */
+      readonly followOffsetRad: number;
+    }
+
+    /**
+     * Drives a REAL slide (one simulation step per frame, the throttle and
+     * a steering key held) and records the live seam after EVERY frame.
+     *
+     * @returns The per-frame seam samples, in frame order.
+     */
+    function driveSlidingSeamTrace(
+      frameCount: number = DRIFT_CAMERA_PROBE_FRAME_COUNT,
+    ): DriftSeamCameraSample[] {
+      mockedAdvanceFrameSteps.mockReturnValue(1);
+      getBootStart()('neatracing-output');
+      window.dispatchEvent(
+        new KeyboardEvent('keydown', { code: 'ArrowUp', cancelable: true }),
+      );
+      window.dispatchEvent(
+        new KeyboardEvent('keydown', { code: 'ArrowRight', cancelable: true }),
+      );
+      const samples: DriftSeamCameraSample[] = [];
+      for (let frame = 0; frame < frameCount; frame += 1) {
+        scheduledRafCallbacks[frame]?.(
+          DRIVEN_FRAME_TIMESTAMP_MS + frame * SLIDING_SEAM_FRAME_STEP_MS,
+        );
+        const seam = readDriftSeam();
+        samples.push({
+          tick: readSeamNumber(seam, 'tick'),
+          slipAngleRad: readSeamNumber(seam, 'slipAngleRad'),
+          speedMps: readSeamNumber(seam, 'speedMps'),
+          followOffsetRad: readSeamNumber(seam, 'followOffsetRad'),
+        });
+      }
+      return samples;
+    }
+
+    /**
+     * Replays the camera law from the seam's OWN published drift inputs.
+     *
+     * The law's divergence is `signedShortestDeltaRad(heading, travel)` and
+     * the physics publishes `travelHeadingRad = wrap(heading + slipAngle)`,
+     * so the divergence IS the published slip; the heading cancels out of
+     * the shortest-delta, so the replay runs with a zero heading.
+     *
+     * @param samples - The per-frame seam samples.
+     * @returns The replayed offset after every sample, in frame order.
+     */
+    function replayLawFromSeamTrace(
+      samples: readonly DriftSeamCameraSample[],
+    ): number[] {
+      let follow = createChaseCameraFollowState();
+      const offsetsRad: number[] = [];
+      for (const sample of samples) {
+        follow = stepChaseCameraFollow(follow, {
+          ticks: Math.max(0, sample.tick - follow.lastTick),
+          headingRad: 0,
+          travelHeadingRad: sample.slipAngleRad,
+          speedMps: sample.speedMps,
+          tick: sample.tick,
+        });
+        offsetsRad.push(follow.offsetRad);
+      }
+      return offsetsRad;
+    }
+
+    // [RED-5-PUBLISHED-CAP]
+    it('never publishes a follow offset above the recorded aim-offset cap', () => {
+      // Arrange: drive a REAL slide and record the live seam per frame.
+      const trace = driveSlidingSeamTrace();
+
+      // Act: the worst-case published offset.
+      let publishedPeakRad = 0;
+      for (const sample of trace) {
+        publishedPeakRad = Math.max(
+          publishedPeakRad,
+          Math.abs(sample.followOffsetRad),
+        );
+      }
+
+      // GUARDS first: the probe MUST REALLY have slid (a probe that never
+      // drifted would satisfy the cap clause vacuously) ...
+      expect(publishedPeakRad).toBeGreaterThan(0);
+      // ... and the reader MUST REALLY be live: the published offset MUST
+      // CHANGE across the frames (a constant reader could never be caught
+      // by the agreement clause).
+      expect(trace[trace.length - 1].followOffsetRad).not.toBe(
+        trace[0].followOffsetRad,
+      );
+
+      // THEN the relational clause: the published |offset| NEVER exceeds
+      // the RECORDED cap. MEASURED today: the 240-frame probe publishes a
+      // peak of 0.14962536105320104 rad (ledger row RP-2), which is BELOW
+      // the cap - the cap is enforced AT THE SOURCE inside the camera
+      // law, so EVERY reader can only ever publish the CAPPED offset.
+      expect(publishedPeakRad).toBeLessThanOrEqual(
+        RECORDED_MAX_AIM_OFFSET_RAD + CAMERA_RAD_TOLERANCE,
+      );
+    });
+
+    // [RED-5-PUBLISHED-AGREES-WITH-THE-LAW]
+    it('publishes exactly the follow offset the camera law computes from the seam drift inputs', () => {
+      // Arrange
+      const trace = driveSlidingSeamTrace();
+
+      // Act: replay the law from the seam's OWN published drift inputs.
+      const replayedOffsetsRad = replayLawFromSeamTrace(trace);
+      let worstDifferenceRad = 0;
+      for (let index = 0; index < trace.length; index += 1) {
+        worstDifferenceRad = Math.max(
+          worstDifferenceRad,
+          Math.abs(trace[index].followOffsetRad - replayedOffsetsRad[index]),
+        );
+      }
+
+      // GUARDS first: the seam MUST REALLY have published a slide (the
+      // replay is driven by the published slip and speed, so a probe that
+      // never drifted would replay 0) ...
+      let publishedSlipPeakRad = 0;
+      let publishedOffsetPeakRad = 0;
+      for (const sample of trace) {
+        publishedSlipPeakRad = Math.max(
+          publishedSlipPeakRad,
+          Math.abs(sample.slipAngleRad),
+        );
+        publishedOffsetPeakRad = Math.max(
+          publishedOffsetPeakRad,
+          Math.abs(sample.followOffsetRad),
+        );
+      }
+      expect(publishedSlipPeakRad).toBeGreaterThan(0);
+      expect(publishedOffsetPeakRad).toBeGreaterThan(0);
+
+      // THEN the relational clause: EVERY published frame agrees with the
+      // law's replay of the seam's own drift inputs. MEASURED today: the
+      // worst difference over the probe is 4.163336342344337e-17 rad
+      // (ledger row RP-5) - the reader is a READER, not a second law.
+      expect(worstDifferenceRad).toBeLessThan(CAMERA_RAD_TOLERANCE);
     });
   });
 });

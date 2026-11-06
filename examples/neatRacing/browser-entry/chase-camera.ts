@@ -1,6 +1,7 @@
 /**
  * The Neat Racing chase camera (Step 14P, slice
- * `P1-drift-rewire-travel-camera`).
+ * `P1-drift-rewire-travel-camera`; the DRIFT-CAMERA law of Step 14X, slice
+ * `P1-driftcam-law`).
  *
  * THE DEFECT THIS MODULE CLOSES: the chase camera was a pure function of the
  * car NOSE heading. The camera eye, the look target and the starfield yaw
@@ -17,6 +18,21 @@
  * violation the retired `NEATRACING_CHASE_CAMERA_FOLLOW_TAU_S` and
  * `NEATRACING_CHASE_CAMERA_TRAVEL_AIM_GAIN` names stood for; those names
  * are FORBIDDEN and do not exist).
+ *
+ * THE DRIFT-CAMERA LAW (Step 14X, AC-097): the yaw aim offset is CAPPED
+ * at the NAMED `NEATRACING_CHASE_CAMERA_MAX_AIM_OFFSET_RAD` - EXACTLY HALF
+ * of the MEASURED pre-wave peak offset - and the cap is enforced AT THE
+ * SOURCE (inside this law), so EVERY reader can only ever see the CAPPED
+ * offset. The follow is DESENSITISED by the NAMED
+ * `NEATRACING_CHASE_CAMERA_FOLLOW_GAIN` (HALF of the MEASURED pre-wave
+ * gain), so the camera reacts LESS to the same published slide and drifts
+ * into it instead of snapping onto it. The RELEASE is a CONSTANT fraction
+ * of the aim (`NEATRACING_CHASE_CAMERA_RELEASE_SMOOTH_FRACTION`), so the
+ * RELEASE term never closes more than that fraction of the aim's value in
+ * ONE tick: the MULTIPLICATIVE snap-back enabler (the pre-wave release
+ * rate was MULTIPLIED by the camera's OWN offset, so the camera snapped
+ * back harder the further it already sat from the nose) is DELETED at its
+ * source.
  *
  * THE OWNERSHIP: this module owns the chase GEOMETRY (the eye, the look
  * target, the forward vector) and the follow LAW. The browser entry owns
@@ -49,18 +65,57 @@ export const NEATRACING_CHASE_CAMERA_HEIGHT = 2.4;
 export const NEATRACING_CHASE_CAMERA_LOOKAHEAD = 8;
 
 /**
+ * The chase-camera MAXIMUM aim offset (rad): the NAMED CAP on the yaw aim
+ * offset the camera may carry away from the nose heading.
+ *
+ * UNIT: rad (an angle). SIDE: the cap is SYMMETRIC - it bounds the
+ * magnitude of the signed offset, so a left-hand slide (negative offset,
+ * the camera aiming below the nose) and a right-hand slide (positive
+ * offset) are bounded by the SAME value.
+ *
+ * MEASURED: the RED slice (P1-driftcam-red) MEASURED the pre-wave peak
+ * aim offset of 0.34897858999999976 rad over a 1200-tick hold and
+ * RECORDED this cap as EXACTLY HALF of that measured peak (the half is
+ * the only USER-NAMED number of the wave). The cap is enforced AT THE
+ * SOURCE (inside this law), so every reader - the HUD reader and the
+ * browser reader - can only ever see the CAPPED offset.
+ */
+export const NEATRACING_CHASE_CAMERA_MAX_AIM_OFFSET_RAD = 0.17448929499999988;
+
+/**
  * The chase-camera follow gain: how fast the camera aim closes on the
  * PUBLISHED travel direction, in rad/s per (m/s of car speed) per rad of
  * shared drift amount.
  *
- * WHY 1: the follow rate scales with the SPEED times the shared drift
- * amount (the user law S-1/S-4), so the camera eases onto the slide at low
- * speed and locks onto it at speed - the drift reads as a MOTION, not as a
- * cut. The bound is never reached inside the physics envelope: the fastest
- * possible step is `89 m/s * 0.452 rad / 60 Hz = 0.67` of the remaining
- * divergence per tick, so the follow NEVER snaps onto the target.
+ * UNIT: rad/s per (m/s * rad). SIDE: SIGNLESS - the gain scales the
+ * magnitude of the published drift amount and never flips the side of the
+ * slide.
+ *
+ * MEASURED: the RED slice (P1-driftcam-red) MEASURED the pre-wave gain
+ * as 1 and RECORDED the pre-wave peak aim offset of 0.34897858999999976
+ * rad; this gain is HALF of that MEASURED pre-wave gain, so the camera
+ * responds DESENSITISED (a weaker pull on the published slide). The
+ * follow stays PROPORTIONAL to the speed times the shared drift amount
+ * (the user law S-1/S-4), never a fixed time constant.
  */
-const NEATRACING_CHASE_CAMERA_FOLLOW_GAIN = 1;
+export const NEATRACING_CHASE_CAMERA_FOLLOW_GAIN = 0.5;
+
+/**
+ * The chase-camera release smooth fraction: the maximum fraction of its
+ * own value the aim may close in ONE release tick.
+ *
+ * UNIT: a dimensionless fraction (0..1) of the aim offset. SIDE:
+ * SIGNLESS - it bounds the MAGNITUDE of the release step, and the release
+ * never flips the side of the aim.
+ *
+ * MEASURED: the RED slice (P1-driftcam-red) MEASURED the pre-wave
+ * one-tick release close fraction as 0.10498288025082125 at the peak
+ * offset (the pre-wave rate was MULTIPLIED by the camera's own offset -
+ * the multiplicative snap-back enabler this law deletes) and DECIDED
+ * this RECORDED smooth fraction below it, so the one-tick snap-back is
+ * impossible.
+ */
+export const NEATRACING_CHASE_CAMERA_RELEASE_SMOOTH_FRACTION = 0.05;
 
 /**
  * The chase-camera follow state: the camera's slide offset from the nose
@@ -136,6 +191,25 @@ function signedShortestDeltaRad(fromRad: number, toRad: number): number {
 }
 
 /**
+ * Clamps a chase-camera aim offset to the NAMED symmetric cap.
+ *
+ * WHY: the cap is a PUBLISHED invariant (the cap is enforced AT THE
+ * SOURCE, so EVERY reader can only ever see the CAPPED offset), so every
+ * path that publishes an offset - the supported aim, the next aim and the
+ * HOLD path - clamps through this ONE helper and no reader can ever see an
+ * over-cap offset.
+ *
+ * @param offsetRad - The aim offset to clamp (rad).
+ * @returns The offset clamped to the NAMED cap (rad).
+ */
+function clampChaseCameraFollowOffsetRad(offsetRad: number): number {
+  return Math.min(
+    NEATRACING_CHASE_CAMERA_MAX_AIM_OFFSET_RAD,
+    Math.max(-NEATRACING_CHASE_CAMERA_MAX_AIM_OFFSET_RAD, offsetRad),
+  );
+}
+
+/**
  * Creates the neutral chase-camera follow state: the camera aims along the
  * nose heading and the follow has not advanced yet.
  *
@@ -170,10 +244,13 @@ export function resolveChaseCameraAimRad(
  * THE LAW (RED-5, the user law S-1/S-4): the per-tick aim change is
  * PROPORTIONAL to the car speed times the shared drift amount, so the
  * follow is a slight ANIMATION with no snap: it eases onto the published
- * slide at low speed, locks onto it at speed, and it holds with ZERO
- * steady-state error against the travel divergence. A fixed time constant
- * (the retired, FORBIDDEN `NEATRACING_CHASE_CAMERA_FOLLOW_TAU_S`) would
- * leave the rate unchanged when the speed doubles - the S-1 violation.
+ * slide at low speed and locks onto the CAPPED slide at speed. The
+ * steady-state error against the travel divergence is ZERO only while the
+ * published divergence stays INSIDE the cap; when the divergence is WIDER
+ * the aim HOLDS AT THE CAP and the residual steady-state error is the
+ * divergence MAGNITUDE minus the cap. A fixed time constant (the retired,
+ * FORBIDDEN `NEATRACING_CHASE_CAMERA_FOLLOW_TAU_S`) would leave the rate
+ * unchanged when the speed doubles - the S-1 violation.
  *
  * THE MECHANICS:
  *
@@ -211,7 +288,7 @@ export function stepChaseCameraFollow(
   if (step.ticks <= 0) {
     return writeChaseCameraFollowState(
       out,
-      follow.offsetRad,
+      clampChaseCameraFollowOffsetRad(follow.offsetRad),
       follow.lastTick,
     );
   }
@@ -225,10 +302,23 @@ export function stepChaseCameraFollow(
 /**
  * Resolves the ONE per-tick follow step of the camera aim.
  *
- * The step is the PROPORTIONAL law: the rate scales with the car SPEED
- * times the shared drift amount, the per-tick change is bounded (no snap)
- * and the aim is approached along the shortest path (no overshoot, no
- * discontinuity).
+ * THE LAW (Step 14X, AC-097): the aim is pulled toward the SUPPORTED aim
+ * - the PUBLISHED travel divergence CAPPED at the NAMED
+ * `NEATRACING_CHASE_CAMERA_MAX_AIM_OFFSET_RAD` - by a PROPORTIONAL rate
+ * (the car SPEED times the shared drift amount, scaled by the DESENSITISED
+ * named gain, never a fixed time constant), and the part of the aim the
+ * published slide no longer supports is RELEASED at a CONSTANT fraction of
+ * the aim.
+ *
+ * THE MULTIPLICATIVE SNAP-BACK ENABLER IS DELETED AT ITS SOURCE: the
+ * pre-wave law fed the camera's OWN remaining divergence into the follow
+ * rate (`max(|published slip|, |aim error|)`), so the release closed
+ * FASTER the further the camera already sat from the nose. The rate here
+ * reads the PUBLISHED slide ONLY, so the release never accelerates and the
+ * one-tick snap-back is impossible.
+ *
+ * The per-tick change is bounded (no snap) and the aim is approached along
+ * the shortest path (no overshoot, no discontinuity).
  *
  * @param offsetRad - The current camera aim offset from the nose (rad).
  * @param step - The step descriptor.
@@ -245,32 +335,44 @@ function resolveChaseCameraFollowStepRad(
     step.headingRad,
     step.travelHeadingRad,
   );
-  // What is LEFT to close: the remaining divergence between the camera aim
-  // and the published travel direction.
-  const aimErrorRad = signedShortestDeltaRad(
-    step.headingRad + offsetRad,
-    step.travelHeadingRad,
-  );
-  // The shared drift amount: the published slide, or the camera's own
-  // remaining divergence, whichever is larger. The maximum keeps the follow
-  // closing the slide after the physics has already RELEASED it, so a
-  // release decays back to the nose-aligned aim instead of sticking.
-  const driftAmountRad = Math.max(
-    Math.abs(divergenceRad),
-    Math.abs(aimErrorRad),
-  );
-  // The PROPORTIONAL rate: the speed times the shared drift amount.
+  // The SUPPORTED aim: the published divergence, CAPPED at the NAMED cap.
+  // The cap is enforced HERE, at the source, so no reader can ever see an
+  // uncapped offset.
+  const targetOffsetRad = clampChaseCameraFollowOffsetRad(divergenceRad);
+  // The PROPORTIONAL follow rate: the speed times the shared drift amount
+  // (the published slide ONLY - the camera's own divergence is NOT part
+  // of the rate, so the release is never multiplied by it).
   const followRateRadPerSecond =
     NEATRACING_CHASE_CAMERA_FOLLOW_GAIN *
     step.speedMps *
-    driftAmountRad;
-  // The bounded per-tick step (no snap): the aim never jumps the whole
-  // remaining divergence in a single tick.
-  const alpha = Math.min(
+    Math.abs(divergenceRad);
+  // The bounded per-tick follow fraction (no snap): the aim never jumps
+  // the whole remaining gap in a single tick.
+  const followFraction = Math.min(
     1,
     followRateRadPerSecond * NEATRACING_CHASE_CAMERA_FOLLOW_DT_S,
   );
-  return aimErrorRad * alpha;
+  // The FOLLOW step: the aim eases toward the supported aim.
+  const followStepRad = (targetOffsetRad - offsetRad) * followFraction;
+  // The RESIDUAL: the part of the aim the published slide no longer
+  // supports (the release). While the slide holds, the residual is zero.
+  const residualRad =
+    Math.sign(offsetRad) *
+    Math.max(0, Math.abs(offsetRad) - Math.abs(targetOffsetRad));
+  // The RELEASE step: the residual eases back at the RECORDED smooth
+  // fraction - a CONSTANT fraction of the aim, so the release never
+  // accelerates the further the aim already sits from the nose.
+  const releaseStepRad =
+    -residualRad * NEATRACING_CHASE_CAMERA_RELEASE_SMOOTH_FRACTION;
+  // The next aim: the follow plus the release, CLAMPED at the NAMED cap.
+  const nextOffsetRad = clampChaseCameraFollowOffsetRad(
+    offsetRad + followStepRad + releaseStepRad,
+  );
+  // The step the caller applies: the CHANGE of the aim. The caller
+  // ADVANCES the aim by the returned delta, so the aim it ends up with is
+  // the CLAMPED next aim above - the cap is enforced AT THE SOURCE and no
+  // reader can ever see an uncapped offset.
+  return nextOffsetRad - offsetRad;
 }
 
 /**

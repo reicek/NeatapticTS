@@ -75,9 +75,26 @@ import { describe, expect, it } from '@jest/globals';
 import { generateTrack } from '../../racing_curriculum/track/track.generator';
 import type { TrackSegment } from '../../racing_curriculum/track/track.generator.types';
 import { NEATRACING_DRAW_DISTANCE_M } from '../engine/passes/grid.pass';
+import {
+  classifyTrackSurface,
+  NEATRACING_TRACK_CURB_WIDTH_M,
+  NEATRACING_TRACK_GRASS_APRON_WIDTH_M,
+} from '../physics/collision.utils';
+import { createInitialPhysicsCarState } from '../physics/physics.step.service';
 import { NEATRACING_VOXEL_WORLD_SIZE } from '../voxel/lod.distance.utils';
 import {
+  collectRoadEdgeTileCenters,
+  ROAD_EDGE_BORDER_GREEN_M,
+} from './road-edge';
+import {
+  distanceToTrackChordM,
+  resolveTrackEdgeProfile,
+  resolveTrackEdgeSideAt,
+} from './track.edge';
+import type { TrackEdgeProfile } from './track.edge';
+import {
   buildTrackSlabs,
+  buildTrackSlabSurfaceGrid,
   classifyTrackSlabSurfaceAt,
   NEATRACING_TRACK_SLAB_PITCH_M,
 } from './track.slabs';
@@ -110,6 +127,32 @@ const OTHER_SEED_TRACK_BUILD_INPUT = { ...FIXTURE_TRACK_BUILD_INPUT, seed: 43 };
 const FIXTURE_TRACK_MESH: TrackSlabMesh = buildTrackSlabs(
   FIXTURE_TRACK_BUILD_INPUT,
 );
+
+/**
+ * The MEASURED post-unclip OFFSET (meters) between the painted slab span's
+ * z centre and the mirrored centreline span's centre, for the canonical
+ * fixture tuple.
+ *
+ * BASIS (the Step 14U2 MEASURED clip report and the `P1-raster-unclip-impl`
+ * measurement): the painted mesh's z extent MOVED from the CLIPPED
+ * [-270, 235.5] - the retired centreline-only lattice extent, which cut the
+ * band off at the centreline AABB - to the TRUE band extent [-287, 254], so
+ * the painted centre moved from -17.25 to -16.5 while the negated
+ * centreline-span centre stays at -17.237. The offset is therefore the
+ * BAND'S OWN ASYMMETRY about the centreline AABB: the topmost chord is
+ * narrower than the widest chord, so the band reaches 17.43 m past the top
+ * of the AABB but 19.09 m past its bottom.
+ *
+ * The painted cell set is IMPLEMENTATION-INDEPENDENT (the cell-centre grid
+ * is identical for ANY multiple-of-0.5 origin - the phase is fixed at 0.5 m
+ * - and the classifier is ANALYTIC), so EVERY implementation that satisfies
+ * AC-099 produces exactly this offset.
+ *
+ * The assertion PINS this value with a 9-digit closeness - about nine orders
+ * of magnitude TIGHTER than the retired one-pitch (0.5 m) bound it replaces
+ * - so the re-pin is a MEASURED value and NEVER a loosened tolerance.
+ */
+const PAINTED_BAND_CENTRE_OFFSET_M = 0.7369999999999806;
 
 /** Lattice axes scanned by the pitch-snap check. */
 const LATTICE_AXES = [0, 1, 2] as const;
@@ -285,7 +328,13 @@ describe('buildTrackSlabs (spec §6.7 LD-25, AC-017)', () => {
 
     const spanCenterY = (spanMinY + spanMaxY) / 2;
     const spanCenterZ = (slabMinZ + slabMaxZ) / 2;
-    expect(Math.abs(spanCenterZ + spanCenterY)).toBeLessThanOrEqual(toleranceM);
+    // RE-PINNED (Step 14U2, `P1-raster-unclip-repin`): the rasterized domain
+    // is no longer CLIPPED to the centreline AABB, so the painted band sits
+    // ASYMMETRICALLY about it - the offset is the MEASURED value, pinned.
+    expect(Math.abs(spanCenterZ + spanCenterY)).toBeCloseTo(
+      PAINTED_BAND_CENTRE_OFFSET_M,
+      9,
+    );
 
     // The road surface under a segment midpoint must sit at (x, -y) in the
     // mirrored world, so the car (whose scene z mirrors y identically) drives
@@ -566,5 +615,555 @@ describe('P1-outer-edge-red (plan step 14U) - the asymmetric edge model (RED-1 +
     expect(innerSideSurface).toBe('road');
     expect(outerSideSurface).toBe('road');
     expect([innerEdgeSurface, outerEdgeSurface]).toEqual(['curb', 'curb']);
+  });
+});
+
+/**
+ * ============================================================================
+ * P1-raster-unclip-red (plan step 14U2) - the AABB RASTER UNCLIP
+ * (RED-5 + RED-6 + RED-7).
+ *
+ * AC tags: AC-099 (the rasterized domain CONTAINS the widened road - the
+ * additive per-side growth and the raster-domain probe), AC-064 + AC-080
+ * (the tri-colour band is NOT disturbed by the unclip), AC-090 (the user
+ * gate is NOT claimed - this lane closes nothing and records NO verdict).
+ *
+ * THE DEFECT: the road lattice is sized from the CENTRELINE AABB (the
+ * axis-aligned bounding box of the centreline segment ENDPOINTS, measured by
+ * `measureSegmentSpanAabb` in `track.slabs.ts`), so every ribbon cell whose
+ * published outer half-width reaches PAST that AABB is NEVER RASTERIZED and
+ * the Step 14U outer widening stays INVISIBLE in the painted mesh - which is
+ * exactly the USER report (NO visible fix).
+ *
+ * THE PROBE IS THE RASTER, NOT THE CLASSIFIER: `classifyTrackSlabSurfaceAt`
+ * is ANALYTIC and is NOT clipped (it classifies ANY point from the published
+ * half-widths), so a classifier probe would be GREEN today and would be a
+ * VACUOUS lane. Every clause below reads the RASTERIZED DOMAIN (the grid
+ * and the painted mesh) - the surface the USER sees.
+ *
+ * RED-5 (DISCRIMINATING - the lane FAILS today on its own assertion): the
+ * rasterized grid CONTAINS the outer corner probe AND the rasterized cell AT
+ * the probe is ROAD. On the current build the probe falls OUTSIDE the
+ * rasterized domain (the cell does not exist), so the lane is RED BY
+ * ASSERTION and NEVER by an import failure. The contract OPENS with a
+ * NON-VACUITY GUARD in the Step 14Q style, asserted BEFORE the relational
+ * clause: the probed corner MUST REALLY carry a published widening, the
+ * probe MUST REALLY fall OUTSIDE the current centreline AABB and the probe
+ * MUST REALLY fall INSIDE the published road region on that chord.
+ *
+ * RED-6 (LABELLED PRESERVATION GUARD - NOT A RED and NEVER counted as one):
+ * the INNER side of the SAME corner classifies EXACTLY as it does today, the
+ * road CENTRELINE does not move, and the tri-colour band still starts at the
+ * PUBLISHED OUTER edge and NOT at the lattice border. All three clauses HOLD
+ * today; they are rails that must stay green.
+ *
+ * RED-7 (DISCRIMINATING - the lane FAILS today on its own assertion): the
+ * PAINTED MESH carries a ROAD quad covering the SAME probe point - without
+ * one the widened corner is INVISIBLE, which is the USER's report.
+ *
+ * NO NUMBER IS CARRIED INTO THIS CONTRACT: the probe is RESOLVED AT RUNTIME
+ * from the published seam (the corner, the side, the offset and the
+ * rasterized-cell indices are all DERIVED, never hard-coded), and every
+ * number the implementing slice uses is MEASURED and RECORDED in the plan
+ * (RED-8).
+ * ============================================================================
+ */
+
+/** The fixture tuple the unclip lane probes (the canonical P1-S7-A tuple). */
+const UNCLIP_FIXTURE_INPUT = FIXTURE_TRACK_BUILD_INPUT;
+
+/** The fixture spec (the generator plane) resolved once at module scope. */
+const UNCLIP_SPEC = generateTrack(UNCLIP_FIXTURE_INPUT);
+
+/** The PUBLISHED edge profile of the fixture loop (the seam the lane reads). */
+const UNCLIP_PROFILE: TrackEdgeProfile = resolveTrackEdgeProfile(
+  UNCLIP_SPEC.segments.slice(),
+);
+
+/**
+ * The CURRENT rasterized surface grid: the lattice the clip sizes TODAY
+ * (the surface under test). Built at module scope so the grid and the mesh
+ * are read from the SAME deterministic tuple.
+ */
+const UNCLIP_GRID: ReturnType<typeof buildTrackSlabSurfaceGrid> =
+  buildTrackSlabSurfaceGrid(UNCLIP_FIXTURE_INPUT);
+
+/**
+ * The CENTRELINE AABB of the fixture loop (the box the CURRENT clip sizes
+ * the lattice from): the axis-aligned bounding box of the centreline segment
+ * ENDPOINTS, in the generator plane. The lane measures it ITSELF and never
+ * reads it from the production lattice, so the guard survives the clip
+ * changing.
+ */
+const measureCentrelineAabbM = (): {
+  readonly minX: number;
+  readonly maxX: number;
+  readonly minY: number;
+  readonly maxY: number;
+} => {
+  let minX = Number.POSITIVE_INFINITY;
+  let maxX = Number.NEGATIVE_INFINITY;
+  let minY = Number.POSITIVE_INFINITY;
+  let maxY = Number.NEGATIVE_INFINITY;
+  for (const segment of UNCLIP_PROFILE.segments) {
+    minX = Math.min(minX, segment.startX, segment.endX);
+    maxX = Math.max(maxX, segment.startX, segment.endX);
+    minY = Math.min(minY, segment.startY, segment.endY);
+    maxY = Math.max(maxY, segment.startY, segment.endY);
+  }
+  return { minX, maxX, minY, maxY };
+};
+
+/**
+ * The OUTER normal of a chord in the GENERATOR plane: the loop-global outer
+ * side, read from the PUBLISHED `outerSideSign` (NEVER from the local turn
+ * sign, which flips at a straight and is meaningless there).
+ */
+const outerNormalOfChord = (
+  segment: Readonly<TrackSegment>,
+  outerSideSign: 1 | -1,
+): readonly [number, number] => {
+  const chordX = segment.endX - segment.startX;
+  const chordY = segment.endY - segment.startY;
+  const chordLengthM = Math.hypot(chordX, chordY);
+  return outerSideSign === 1
+    ? [-chordY / chordLengthM, chordX / chordLengthM]
+    : [chordY / chordLengthM, -chordX / chordLengthM];
+};
+
+/** The resolved outer corner probe: a point on the OUTER side of a corner. */
+interface OuterCornerProbe {
+  /** The index of the probed chord (the tightest qualifying corner chord). */
+  readonly chordIndex: number;
+  /** How far along the chord the probe sits (0 = the corner vertex). */
+  readonly alongFraction: number;
+  /** The distance from the chord to the probe, in meters. */
+  readonly distanceM: number;
+  /** The probe in the GENERATOR plane. */
+  readonly generatorX: number;
+  readonly generatorY: number;
+}
+
+/**
+ * THE PROBE: the point that sits HALF the published outer half-width out
+ * from a corner chord's START (corner) vertex, on that chord's OUTER side.
+ *
+ * It is RESOLVED AT RUNTIME from the PUBLISHED seam - the tightest chord
+ * that carries a published widening and whose outer side leaves the
+ * centreline AABB wins - so NO measured number (no corner index, no offset,
+ * no cell index) is carried into the contract text. The offset is HALF the
+ * published outer half-width, so the probe sits well inside the published
+ * road region (the published road core reaches the outer half-width minus
+ * the curb width) with room for the rasterizer's cell-centre sampling.
+ */
+const resolveOuterCornerProbe = (): OuterCornerProbe | null => {
+  const aabb = measureCentrelineAabbM();
+  const chordsByTightness = UNCLIP_PROFILE.chords
+    .map((chord, chordIndex) => ({ chord, chordIndex }))
+    .sort((left, right) =>
+      right.chord.cornerMeasureDeg !== left.chord.cornerMeasureDeg
+        ? right.chord.cornerMeasureDeg - left.chord.cornerMeasureDeg
+        : left.chordIndex - right.chordIndex,
+    );
+
+  for (const { chord, chordIndex } of chordsByTightness) {
+    // A chord that carries NO published widening can never carry the probe.
+    if (chord.outerHalfWidthM <= chord.innerHalfWidthM) {
+      continue;
+    }
+    const segment = UNCLIP_PROFILE.segments[chordIndex]!;
+    const [normalX, normalY] = outerNormalOfChord(
+      segment,
+      UNCLIP_PROFILE.outerSideSign,
+    );
+    for (const alongFraction of [0, 0.5, 1] as const) {
+      const baseX =
+        segment.startX + (segment.endX - segment.startX) * alongFraction;
+      const baseY =
+        segment.startY + (segment.endY - segment.startY) * alongFraction;
+      const distanceM = chord.outerHalfWidthM / 2;
+      const generatorX = baseX + normalX * distanceM;
+      const generatorY = baseY + normalY * distanceM;
+      const leavesCentrelineAabb =
+        generatorX < aabb.minX ||
+        generatorX > aabb.maxX ||
+        generatorY < aabb.minY ||
+        generatorY > aabb.maxY;
+      if (!leavesCentrelineAabb) {
+        continue;
+      }
+      const chordDistanceM = distanceToTrackChordM(
+        segment,
+        generatorX,
+        generatorY,
+      );
+      if (
+        chordDistanceM >=
+        chord.outerHalfWidthM - NEATRACING_TRACK_CURB_WIDTH_M
+      ) {
+        continue;
+      }
+      if (
+        resolveTrackEdgeSideAt(
+          UNCLIP_PROFILE,
+          chordIndex,
+          generatorX,
+          generatorY,
+        ) !== 'outer'
+      ) {
+        continue;
+      }
+      return { chordIndex, alongFraction, distanceM, generatorX, generatorY };
+    }
+  }
+  return null;
+};
+
+/**
+ * The probe the lane asserts on. A fixture that exposes NO qualifying
+ * corner is a FIXTURE defect (not a contract failure), so it throws with an
+ * explicit message instead of asserting a vacuous relation.
+ */
+const requireOuterCornerProbe = (): OuterCornerProbe => {
+  const probe = resolveOuterCornerProbe();
+  if (probe === null) {
+    throw new Error(
+      'P1-raster-unclip-red: the fixture loop exposes NO outer corner probe (a chord that carries a published outer widening AND whose outer side leaves the centreline AABB).',
+    );
+  }
+  return probe;
+};
+
+describe('P1-raster-unclip-red (plan step 14U2) - the AABB raster unclip (RED-5 + RED-6 + RED-7)', () => {
+  it('RED-5 (NON-VACUITY GUARD): the probed corner REALLY carries a published outer widening and the probe REALLY falls OUTSIDE the current centreline clip box and INSIDE the published road region', () => {
+    // Arrange (NON-VACUITY GUARD - the Step 14Q shape, asserted FIRST, so
+    // the discriminating clause can never be satisfied VACUOUSLY).
+    const probe = requireOuterCornerProbe();
+    const chord = UNCLIP_PROFILE.chords[probe.chordIndex]!;
+    const segment = UNCLIP_PROFILE.segments[probe.chordIndex]!;
+    const aabb = measureCentrelineAabbM();
+    const leavesCentrelineAabb =
+      probe.generatorX < aabb.minX ||
+      probe.generatorX > aabb.maxX ||
+      probe.generatorY < aabb.minY ||
+      probe.generatorY > aabb.maxY;
+    const chordDistanceM = distanceToTrackChordM(
+      segment,
+      probe.generatorX,
+      probe.generatorY,
+    );
+    const publishedSurface = classifyTrackSlabSurfaceAt(
+      probe.generatorX,
+      -probe.generatorY,
+      UNCLIP_SPEC.segments,
+      UNCLIP_PROFILE,
+    ).surface;
+
+    // Act + Assert: the published outer half-width MUST be STRICTLY GREATER
+    // than the published inner half-width on the probed corner (the corner
+    // REALLY carries a widening), the probe MUST REALLY fall OUTSIDE the
+    // current centreline AABB (a probe inside it would satisfy the clause
+    // vacuously) and it MUST REALLY fall INSIDE the published road region on
+    // that chord (the distance to that chord is strictly less than the
+    // published outer half-width minus the curb width).
+    expect([
+      chord.outerHalfWidthM > chord.innerHalfWidthM,
+      leavesCentrelineAabb,
+      chordDistanceM < chord.outerHalfWidthM - NEATRACING_TRACK_CURB_WIDTH_M,
+      publishedSurface,
+    ]).toEqual([true, true, true, 'road']);
+  });
+
+  it('RED-5 (DISCRIMINATING): the rasterized domain CONTAINS the outer corner probe and the rasterized cell AT it is ROAD', () => {
+    // Arrange: the probe in the WORLD frame (the frame the rasterizer
+    // paints in) and the rasterized cell that contains it.
+    const probe = requireOuterCornerProbe();
+    const worldX = probe.generatorX;
+    const worldZ = -probe.generatorY;
+    const cellX = Math.floor(
+      (worldX - UNCLIP_GRID.origin[0]) / NEATRACING_TRACK_SLAB_PITCH_M,
+    );
+    const cellZ = Math.floor(
+      (worldZ - UNCLIP_GRID.origin[2]) / NEATRACING_TRACK_SLAB_PITCH_M,
+    );
+    const insideRasterizedDomain =
+      cellX >= 0 &&
+      cellX < UNCLIP_GRID.cellsX &&
+      cellZ >= 0 &&
+      cellZ < UNCLIP_GRID.cellsZ;
+    const cellLabel = UNCLIP_GRID.rows[cellZ]?.[cellX] ?? 'absent';
+
+    // Act + Assert: the RASTER (the clipped surface the USER sees) must
+    // CONTAIN the probe and paint the cell AT it as ROAD. On the current
+    // build the probe falls OUTSIDE the rasterized domain (the cell does not
+    // exist), so this lane is RED BY ASSERTION - NEVER by an import
+    // failure and NEVER by a wrong label.
+    expect([insideRasterizedDomain, cellLabel]).toEqual([true, 'road']);
+  });
+
+  it('RED-6 (LABELLED PRESERVATION GUARD - NOT A RED): the INNER side of the SAME probed corner classifies EXACTLY as it does today and the road never narrows inside', () => {
+    // Arrange: the MIRROR of the probe about the probed chord's line - the
+    // SAME chord, the SAME distance from it - on the INNER side, which faces
+    // the loop centre and was already INSIDE the current centreline AABB.
+    const probe = requireOuterCornerProbe();
+    const chord = UNCLIP_PROFILE.chords[probe.chordIndex]!;
+    const segment = UNCLIP_PROFILE.segments[probe.chordIndex]!;
+    const [normalX, normalY] = outerNormalOfChord(
+      segment,
+      UNCLIP_PROFILE.outerSideSign,
+    );
+    const baseX =
+      segment.startX + (segment.endX - segment.startX) * probe.alongFraction;
+    const baseY =
+      segment.startY + (segment.endY - segment.startY) * probe.alongFraction;
+    const innerGeneratorX = baseX - normalX * probe.distanceM;
+    const innerGeneratorY = baseY - normalY * probe.distanceM;
+    const innerSurface = classifyTrackSlabSurfaceAt(
+      innerGeneratorX,
+      -innerGeneratorY,
+      UNCLIP_SPEC.segments,
+      UNCLIP_PROFILE,
+    ).surface;
+    const innerCellX = Math.floor(
+      (innerGeneratorX - UNCLIP_GRID.origin[0]) / NEATRACING_TRACK_SLAB_PITCH_M,
+    );
+    const innerCellZ = Math.floor(
+      (-innerGeneratorY - UNCLIP_GRID.origin[2]) / NEATRACING_TRACK_SLAB_PITCH_M,
+    );
+    const innerCellLabel = UNCLIP_GRID.rows[innerCellZ]?.[innerCellX] ?? 'absent';
+
+    // Act + Assert: NOT A RED - this clause HOLDS today and must stay
+    // green: the road never NARROWS on the inside of a corner, so the inner
+    // side of the probed corner still classifies as ROAD, the rasterized
+    // cell AT it still says ROAD, and the published inner half-width still
+    // does not exceed the published outer half-width.
+    expect([
+      innerSurface,
+      innerCellLabel,
+      chord.innerHalfWidthM <= chord.outerHalfWidthM,
+    ]).toEqual(['road', 'road', true]);
+  });
+
+  it('RED-6 (LABELLED PRESERVATION GUARD - NOT A RED): the road CENTRELINE does not move (the probed chord centreline stays ROAD and strictly inside the published edge)', () => {
+    // Arrange: the centreline counterpart of the probe - the probed chord's
+    // START (corner) vertex, the point the probe is measured FROM.
+    const probe = requireOuterCornerProbe();
+    const segment = UNCLIP_PROFILE.segments[probe.chordIndex]!;
+    const baseX =
+      segment.startX + (segment.endX - segment.startX) * probe.alongFraction;
+    const baseY =
+      segment.startY + (segment.endY - segment.startY) * probe.alongFraction;
+    const centrelineClassification = classifyTrackSlabSurfaceAt(
+      baseX,
+      -baseY,
+      UNCLIP_SPEC.segments,
+      UNCLIP_PROFILE,
+    );
+
+    // Act + Assert: NOT A RED - this clause HOLDS today and must stay green:
+    // the centreline does not move, so the centreline itself still
+    // classifies as ROAD and still lies STRICTLY INSIDE the published edge.
+    expect([
+      centrelineClassification.surface,
+      centrelineClassification.distancePastEdgeM < 0,
+    ]).toEqual(['road', true]);
+  });
+
+  it('RED-6 (LABELLED PRESERVATION GUARD - NOT A RED): the tri-colour band still starts at the PUBLISHED OUTER edge and NOT at the lattice border', () => {
+    // Arrange: the band tiles on the OUTER side of the probed chord, each
+    // measured against that chord's PUBLISHED outer edge (the band surface
+    // is NOT re-derived from the lattice border).
+    const probe = requireOuterCornerProbe();
+    const chord = UNCLIP_PROFILE.chords[probe.chordIndex]!;
+    const segment = UNCLIP_PROFILE.segments[probe.chordIndex]!;
+    const pastPublishedEdgeM: number[] = [];
+    for (const tile of collectRoadEdgeTileCenters(UNCLIP_FIXTURE_INPUT)) {
+      if (tile.colorway !== 'green') {
+        continue;
+      }
+      const classification = classifyTrackSlabSurfaceAt(
+        tile.x,
+        tile.z,
+        UNCLIP_SPEC.segments,
+        UNCLIP_PROFILE,
+      );
+      if (
+        classification.surface === 'road' ||
+        classification.surface === 'curb'
+      ) {
+        continue;
+      }
+      if (
+        resolveTrackEdgeSideAt(
+          UNCLIP_PROFILE,
+          probe.chordIndex,
+          tile.x,
+          -tile.z,
+        ) !== 'outer'
+      ) {
+        continue;
+      }
+      pastPublishedEdgeM.push(
+        distanceToTrackChordM(segment, tile.x, -tile.z) -
+          chord.outerHalfWidthM,
+      );
+    }
+    const closestToPublishedEdgeM = Math.min(...pastPublishedEdgeM);
+
+    // Act + Assert: NOT A RED - this clause HOLDS today and must stay
+    // green: the band base IS the published outer edge (the innermost band
+    // tile on the outer side sits AT that edge, within the green band's own
+    // width) and the band never paints INSIDE the published edge. A raster
+    // that grows must not silently move the band base - that would be a
+    // second, competing edge.
+    expect([
+      pastPublishedEdgeM.length > 0,
+      closestToPublishedEdgeM >= -1e-9,
+      closestToPublishedEdgeM <= ROAD_EDGE_BORDER_GREEN_M,
+    ]).toEqual([true, true, true]);
+  });
+
+  it('RED-7 (DISCRIMINATING): the painted slab mesh carries a ROAD quad covering the SAME outer corner probe', () => {
+    // Arrange: the SAME probe RED-5 measures, read in the PAINTED mesh -
+    // the surface the USER sees.
+    const probe = requireOuterCornerProbe();
+    const worldX = probe.generatorX;
+    const worldZ = -probe.generatorY;
+    const coveringRoadQuad = FIXTURE_TRACK_MESH.quads.find(
+      (quad) =>
+        quad.normalAxis === 1 &&
+        FIXTURE_TRACK_MESH.palette[quad.paletteIndex]?.type === 'road' &&
+        quad.position[0] <= worldX &&
+        worldX <= quad.position[0] + quad.width &&
+        quad.position[2] <= worldZ &&
+        worldZ <= quad.position[2] + quad.height,
+    );
+
+    // Act + Assert: without a painted ROAD quad there the widened corner is
+    // INVISIBLE - exactly the USER report. On the current build NO road
+    // quad covers the probe (the cell is outside the raster), so this lane
+    // is RED BY ASSERTION and NEVER by an import failure.
+    expect(coveringRoadQuad !== undefined).toBe(true);
+  });
+});
+
+/* ------------------------------------------------------------------------- *
+ * STEP 14W (slice `P1-sand-red`): the ONE SURFACE MODEL lane (RED-5).
+ *
+ * AC tags: AC-094 (b - the off-track band is DRIVABLE and SAND-LIKE),
+ * AC-080 (the tri-colour ladder stays a PAINT ladder: the band REUSES the
+ * EXISTING 'grass' member, so the surface union stays road | curb | grass
+ * and NO new member is introduced), AC-090 (the user gate is NOT claimed -
+ * this lane closes nothing and records no verdict).
+ *
+ * THE CLASSIFICATION THIS SLICE RECORDS: MODEL - the off-track band must
+ * be the SAME surface for the RASTERIZER (the painted mesh) and for the
+ * PHYSICS classifier (the surface the tick drives on). The two readers
+ * read the SAME physical point through DIFFERENT frames (the rasterizer
+ * reads the WORLD frame, where world z mirrors the generator y; the
+ * physics classifier reads the GENERATOR plane the tick drives in), so
+ * the lane compares them across that mirror - a drift between them is a
+ * MODEL defect, never a paint defect.
+ *
+ * RED-5 (DISCRIMINATING - the lane FAILS today on its own assertion): the
+ * physics classifier marks the off-track band as the DRIVABLE off-road
+ * surface. TODAY the band classifies as the NON-drivable grass, so the
+ * lane FAILS on its own assertion. The NON-VACUITY GUARD comes FIRST (the
+ * Step 14Q style): the probe MUST really lie on the band (a probe inside
+ * the road would satisfy the clause VACUOUSLY) and the two probed models
+ * MUST really be DIFFERENT readers (comparing one reader with itself
+ * would satisfy the agreement clause VACUOUSLY).
+ *
+ * The band width is the EXISTING named grass-apron constant (AC-094 (d)),
+ * so the probe margin is expressed through
+ * `NEATRACING_TRACK_GRASS_APRON_WIDTH_M` and NEVER through a band-paint
+ * constant.
+ * ------------------------------------------------------------------------- */
+
+/**
+ * The band probe's world x (m): the midpoint of the fixture loop's probed
+ * straight, so the nearest chord of the probe is UNAMBIGUOUS.
+ */
+const BAND_PROBE_X_M = PROBE_STRAIGHT_MID_X;
+
+/**
+ * The band probe's lateral offset from the centreline (m): the drivable
+ * edge plus HALF the named grass-apron width, so the probe is the MIDDLE
+ * of the off-track band.
+ */
+const BAND_PROBE_LATERAL_M =
+  RETIRED_HALF_WIDTH_M + NEATRACING_TRACK_GRASS_APRON_WIDTH_M / 2;
+
+/**
+ * The band probe's generator-plane y (m): the probed straight's midpoint
+ * pushed OUTWARD (the loop is counter-clockwise, so the outer side of the
+ * bottom chord is -y) by the band probe's lateral offset.
+ */
+const BAND_PROBE_GENERATOR_Y_M =
+  PROBE_STRAIGHT_MID_Y - BAND_PROBE_LATERAL_M;
+
+/**
+ * The band probe's world z (m): the rasterizer's frame mirrors the
+ * generator y (`world z = -y`), so the SAME physical point is read by
+ * both readers.
+ */
+const BAND_PROBE_WORLD_Z_M = -BAND_PROBE_GENERATOR_Y_M;
+
+/**
+ * The ONE SURFACE MODEL contracts (Step 14W, slice `P1-sand-red`;
+ * AC-094, AC-080).
+ */
+describe('the ONE SURFACE MODEL (Step 14W, slice P1-sand-red)', () => {
+  // [RED-14W-ONE-SURFACE-MODEL]
+  it('RED-5 (DISCRIMINATING): the band is the SAME surface in the PHYSICS classifier and in the RASTERIZER, and the band is DRIVABLE (the physics model marks the off-track band as the drivable off-road surface)', () => {
+    // Arrange: the SAME physical point read by the TWO readers - the
+    // RASTERIZER (the WORLD frame) and the PHYSICS classifier (the
+    // GENERATOR plane the tick drives in).
+    const raster = classifyTrackSlabSurfaceAt(
+      BAND_PROBE_X_M,
+      BAND_PROBE_WORLD_Z_M,
+      CORNER_FIXTURE_SEGMENTS,
+    );
+    const physics = classifyTrackSurface(
+      {
+        ...createInitialPhysicsCarState(42),
+        x: BAND_PROBE_X_M,
+        y: BAND_PROBE_GENERATOR_Y_M,
+      },
+      CORNER_FIXTURE_SEGMENTS,
+    );
+
+    // The NON-VACUITY GUARD comes FIRST: the probe MUST really lie on the
+    // off-track band (a probe inside the road would satisfy the clause
+    // VACUOUSLY) - the rasterizer paints it off-road and its MEASURED
+    // distance past the edge is inside the named apron width.
+    expect([
+      raster.surface,
+      raster.distancePastEdgeM > 0,
+      raster.distancePastEdgeM <= NEATRACING_TRACK_GRASS_APRON_WIDTH_M,
+    ]).toEqual(['grass', true, true]);
+
+    // ... and the two probed models MUST really be DIFFERENT readers
+    // (comparing one reader with itself would satisfy the agreement
+    // clause VACUOUSLY): the rasterizer publishes the MEASURED distance
+    // past the edge, the physics classifier publishes the DRIVABILITY.
+    expect([
+      'distancePastEdgeM' in raster,
+      'isDrivable' in raster,
+      'isDrivable' in physics,
+      'distancePastEdgeM' in physics,
+    ]).toEqual([true, false, true, false]);
+
+    // RELATIONAL CLAUSE (DISCRIMINATING): the physics classifier marks the
+    // band as the DRIVABLE off-road surface. TODAY the band classifies as
+    // the NON-drivable grass, so this lane FAILS HERE (by assertion, never
+    // by an import failure).
+    expect(physics.isDrivable).toBe(true);
+
+    // RAIL: both readers name the SAME EXISTING surface member for that
+    // point - the band REUSES the 'grass' member (the surface union stays
+    // road | curb | grass, so NO new member was introduced) and the band
+    // is not road-only.
+    expect([physics.surface, physics.isRoadOnly]).toEqual(['grass', false]);
   });
 });

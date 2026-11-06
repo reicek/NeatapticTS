@@ -26,6 +26,26 @@
  * rasterizer, the tri-colour band paint and the containment bound can never
  * disagree about how WIDE the road is.
  *
+ * THE RASTERIZED DOMAIN FOLLOWS THE PUBLISHED WIDTHS: the lattice the
+ * ribbon is painted on is the CENTRELINE AABB grown by the WIDEST PUBLISHED
+ * half-width on EVERY side plus the NAMED grass-apron width, so the widened
+ * corner is rasterized instead of being clipped away by a centreline-only
+ * rectangle. The growth is ADDITIVE and DOMAIN-ONLY: it moves no road edge,
+ * no centreline and no band, and it is resolved ONCE per build.
+ *
+ * THE BAND GEOMETRY IS PUBLISHED HERE, NOT MIRRORED: this module owns the
+ * two band widths of the tri-colour band - the curb band
+ * ({@link NEATRACING_TRACK_CURB_WIDTH_M}) and the grass apron
+ * ({@link NEATRACING_TRACK_GRASS_APRON_WIDTH_M}) - and the physics surface
+ * classifier and the ONE containment bound read them from HERE (through the
+ * re-export in `../physics/collision.utils`), so the rasterizer and the
+ * physics model share ONE band boundary (AC-094 (e)) instead of mirroring a
+ * value that could drift apart. The apron width is the width of the
+ * OFF-TRACK BAND: the band stays PAINTED as off-road (the paint ladder is
+ * unchanged - the palette values, their order and their cumulative
+ * semantics are untouched) and only the PHYSICAL meaning of the drivable
+ * edge changes.
+ *
  * Determinism: {@link buildTrackSlabs} is a pure function of
  * `{ seed, layoutVersion, sizeBucket }` — two calls with the same input
  * produce byte-identical `JSON.stringify` output in the same runtime
@@ -70,11 +90,32 @@ const TRACK_SLAB_STACK_ROWS = 1;
  */
 const TRACK_SLAB_ORIGIN_Y_M = -0.5;
 
-/** Width of the curb band on each side of the road core, in meters. */
-const TRACK_SLAB_CURB_WIDTH_M = 1.0;
+/**
+ * Width of the curb band on each side of the road core, in meters - the
+ * PUBLISHED curb-band width of the tri-colour band.
+ *
+ * THE BAND GEOMETRY IS PUBLISHED HERE, NOT MIRRORED: this module owns the
+ * two band widths of the tri-colour band (the curb band and the grass
+ * apron), and the physics surface classifier and the ONE containment bound
+ * read them from HERE (through the re-export in
+ * `../physics/collision.utils`), so the rasterizer and the physics model
+ * can never disagree about where a band ends.
+ */
+export const NEATRACING_TRACK_CURB_WIDTH_M = 1.0;
 
-/** Width of the grass apron beyond the curb on each side, in meters. */
-const TRACK_SLAB_GRASS_APRON_WIDTH_M = 3.0;
+/**
+ * Width of the grass apron beyond the curb on each side, in meters - the
+ * PUBLISHED width of the OFF-TRACK BAND (AC-094 (e)).
+ *
+ * The apron IS the off-track band: it stays PAINTED as off-road (the paint
+ * ladder is unchanged - the palette values, their order and their
+ * cumulative semantics are untouched), and it is also the band the physics
+ * surface classifier reads as the DRIVABLE off-road surface and the ONE
+ * containment bound measures to (the band outer edge). Both read THIS
+ * constant through the re-export in `../physics/collision.utils`, so the
+ * rasterizer and the physics model share ONE band boundary.
+ */
+export const NEATRACING_TRACK_GRASS_APRON_WIDTH_M = 3.0;
 
 /** Internal model name for the synthesized slab lattice. */
 const TRACK_SLAB_MODEL_NAME = 'neatracing-track-slabs';
@@ -158,11 +199,19 @@ interface TrackSlabLattice {
   readonly origin: TrackSlabWorldOrigin;
 }
 
-/** Closed interval span of the track segments in the ground plane. */
-interface TrackSpanAabb {
+/**
+ * Closed interval span of the RASTERIZED track domain on the world ground
+ * plane: the world x axis and the MIRRORED world z axis (the scene
+ * handedness the rasterizer paints in).
+ */
+interface TrackDomainAabb {
+  /** Minimum world-meter x of the rasterized domain. */
   readonly minX: number;
+  /** Maximum world-meter x of the rasterized domain. */
   readonly maxX: number;
+  /** Minimum mirrored world-meter z of the rasterized domain. */
   readonly minZ: number;
+  /** Maximum mirrored world-meter z of the rasterized domain. */
   readonly maxZ: number;
 }
 
@@ -211,11 +260,11 @@ function resolveSurfaceIndexAt(
     );
     const distance = distanceToTrackChordMAtWorldZ(segment, pointX, worldZ);
 
-    if (distance <= halfWidthM - TRACK_SLAB_CURB_WIDTH_M) {
+    if (distance <= halfWidthM - NEATRACING_TRACK_CURB_WIDTH_M) {
       inRoadCore = true;
     } else if (distance <= halfWidthM) {
       inCurbBand = true;
-    } else if (distance <= halfWidthM + TRACK_SLAB_GRASS_APRON_WIDTH_M) {
+    } else if (distance <= halfWidthM + NEATRACING_TRACK_GRASS_APRON_WIDTH_M) {
       inGrassApron = true;
     }
   }
@@ -285,32 +334,93 @@ function paintTrackSlabSlices(
 }
 
 /**
- * Measures the ground-plane AABB spanned by every segment endpoint, in
- * generator ground coordinates (x, generator y).
+ * Resolves the WIDEST PUBLISHED half-width of the ribbon: the largest
+ * published OUTER half-width over every chord of the edge profile.
  *
- * @param spec - Generated track spec.
- * @returns Span over all segment start/end corners (`minZ`/`maxZ` are the
- *   generator y-axis span; the scene mirror negates these at the origin).
+ * The outer half-width of a corner is the widest one, and the inner
+ * half-width never exceeds it (the road never widens inwards), so this
+ * value bounds the width of EVERY chord band on BOTH sides.
+ *
+ * @param edgeProfile - The edge profile published by the edge seam.
+ * @returns The widest published half-width, in meters (0 for an empty loop).
  *
  * @example
  * ```ts
- * const { minX, maxX } = measureSegmentSpanAabb(spec);
+ * resolveWidestPublishedHalfWidthM(resolveTrackEdgeProfile(spec.segments));
  * ```
  */
-function measureSegmentSpanAabb(spec: TrackSpec): TrackSpanAabb {
+function resolveWidestPublishedHalfWidthM(
+  edgeProfile: TrackEdgeProfile,
+): number {
+  let widestHalfWidthM = 0;
+
+  for (const chord of edgeProfile.chords) {
+    widestHalfWidthM = Math.max(widestHalfWidthM, chord.outerHalfWidthM);
+  }
+
+  return widestHalfWidthM;
+}
+
+/**
+ * Measures the RASTERIZED DOMAIN of the closed loop: the CENTRELINE AABB
+ * grown by the WIDEST PUBLISHED half-width on EVERY side, plus the NAMED
+ * grass-apron width.
+ *
+ * THE GROWTH IS ADDITIVE AND DOMAIN-ONLY: the road itself is NOT widened
+ * here - the CENTRELINE, the chord count, the spline samples and the
+ * published half-widths are untouched - only the RECTANGLE the rasterizer
+ * samples is grown, so the widened corner (the published outer half-width)
+ * is rasterized instead of being clipped away.
+ *
+ * THE GROWTH IS AXIS-ALIGNED: a lattice rectangle cannot grow on ONE side
+ * of a chord, so the outer/inner distinction is NOT applied to this
+ * rectangle - it is applied to the PROBE and to the WIDENING MEASUREMENT
+ * (the loop-global outer side), never to the lattice bounds.
+ *
+ * The apron width is the SAME constant the band policy measures from
+ * ({@link NEATRACING_TRACK_GRASS_APRON_WIDTH_M}), so the rasterized domain
+ * contains every cell the band policy can classify: no classified surface
+ * cell is dropped at the border.
+ *
+ * @param spec - Generated track spec.
+ * @param edgeProfile - The edge profile published by the edge seam for the
+ *   ribbon being rasterized.
+ * @returns World-space bounds of the rasterized domain, in meters (the z
+ *   bounds are MIRRORED world z, the scene handedness the rasterizer
+ *   paints in).
+ *
+ * @example
+ * ```ts
+ * const domain = measureRasterizedDomainAabb(spec, resolveTrackEdgeProfile(spec.segments));
+ * domain.maxX - domain.minX; // the rasterized width, in meters
+ * ```
+ */
+function measureRasterizedDomainAabb(
+  spec: TrackSpec,
+  edgeProfile: TrackEdgeProfile,
+): TrackDomainAabb {
   let minX = Number.POSITIVE_INFINITY;
   let maxX = Number.NEGATIVE_INFINITY;
-  let minZ = Number.POSITIVE_INFINITY;
-  let maxZ = Number.NEGATIVE_INFINITY;
+  let minY = Number.POSITIVE_INFINITY;
+  let maxY = Number.NEGATIVE_INFINITY;
 
   for (const segment of spec.segments) {
     minX = Math.min(minX, segment.startX, segment.endX);
     maxX = Math.max(maxX, segment.startX, segment.endX);
-    minZ = Math.min(minZ, segment.startY, segment.endY);
-    maxZ = Math.max(maxZ, segment.startY, segment.endY);
+    minY = Math.min(minY, segment.startY, segment.endY);
+    maxY = Math.max(maxY, segment.startY, segment.endY);
   }
 
-  return { minX, maxX, minZ, maxZ };
+  const growthM =
+    resolveWidestPublishedHalfWidthM(edgeProfile) +
+    NEATRACING_TRACK_GRASS_APRON_WIDTH_M;
+
+  return {
+    minX: minX - growthM,
+    maxX: maxX + growthM,
+    minZ: -(maxY + growthM),
+    maxZ: -(minY - growthM),
+  };
 }
 
 /**
@@ -343,6 +453,11 @@ function buildTrackSlabLatticePalette(): VoxelPaletteEntry[] {
  * the scene handedness the frame composer applies to the car pose and the
  * chase camera.
  *
+ * The sampled rectangle is the RASTERIZED DOMAIN (the centreline AABB grown
+ * by the widest published half-width plus the grass apron), so the widened
+ * corner is inside the lattice instead of being clipped away by a
+ * centreline-only rectangle.
+ *
  * @param spec - Generated track spec (already validated by the generator).
  * @returns Lattice model ready for {@link meshVoxelModel}, plus origin.
  *
@@ -353,17 +468,17 @@ function buildTrackSlabLatticePalette(): VoxelPaletteEntry[] {
  * ```
  */
 function synthesizeTrackSlabLattice(spec: TrackSpec): TrackSlabLattice {
-  const span = measureSegmentSpanAabb(spec);
-  const pitch = NEATRACING_TRACK_SLAB_PITCH_M;
-  const originX = Math.floor(span.minX / pitch) * pitch;
-  const mirroredMinZ = -span.maxZ;
-  const mirroredMaxZ = -span.minZ;
-  const originZ = Math.floor(mirroredMinZ / pitch) * pitch;
-  const cellsX = Math.max(1, Math.ceil((span.maxX - originX) / pitch));
-  const cellsZ = Math.max(1, Math.ceil((mirroredMaxZ - originZ) / pitch));
   // The edge profile is resolved ONCE for the whole lattice: it is the
-  // published width profile every cell measures the road through.
+  // published width profile every cell measures the road through AND the
+  // source of the WIDEST published half-width the rasterized domain is
+  // grown by. Nothing here is resolved per cell or per tick.
   const edgeProfile = resolveTrackEdgeProfile(spec.segments.slice());
+  const domain = measureRasterizedDomainAabb(spec, edgeProfile);
+  const pitch = NEATRACING_TRACK_SLAB_PITCH_M;
+  const originX = Math.floor(domain.minX / pitch) * pitch;
+  const originZ = Math.floor(domain.minZ / pitch) * pitch;
+  const cellsX = Math.max(1, Math.ceil((domain.maxX - originX) / pitch));
+  const cellsZ = Math.max(1, Math.ceil((domain.maxZ - originZ) / pitch));
 
   const model: DecodedVoxelModel = {
     name: TRACK_SLAB_MODEL_NAME,
@@ -513,11 +628,11 @@ export function classifyTrackSlabSurfaceAt(
       minDistancePastEdgeM = pastEdge;
     }
 
-    if (distance <= halfWidthM - TRACK_SLAB_CURB_WIDTH_M) {
+    if (distance <= halfWidthM - NEATRACING_TRACK_CURB_WIDTH_M) {
       inRoadCore = true;
     } else if (distance <= halfWidthM) {
       inCurbBand = true;
-    } else if (distance <= halfWidthM + TRACK_SLAB_GRASS_APRON_WIDTH_M) {
+    } else if (distance <= halfWidthM + NEATRACING_TRACK_GRASS_APRON_WIDTH_M) {
       inGrassApron = true;
     }
   }

@@ -26,13 +26,13 @@ goal: research
 expansion: none
 auto_expand: false
 mode: one-shot
-source_of_truth: plans/racing-curriculum-parallel-variant-gap.plans.md
+source_of_truth: plans/completed/racing-curriculum-parallel-variant-gap.plans.md
 copy_paste: true
 skills:
   - research-methodology
   - subagent-delegation-patterns
 validation:
-  - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/racing-curriculum-parallel-variant-gap.plans.md'
+  - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/completed/racing-curriculum-parallel-variant-gap.plans.md'
 acceptance_criteria:
   - 'Trace from browser-entry config through createRuntimeAdaptationEngine to live adaptation loop completed.'
   - 'Research artifact materialized at docs/research/racing-curriculum-parallel-variant-gap.md.'
@@ -50,7 +50,7 @@ goal: research
 expansion: none
 auto_expand: false
 mode: one-shot
-source_of_truth: plans/racing-curriculum-parallel-variant-gap.plans.md
+source_of_truth: plans/completed/racing-curriculum-parallel-variant-gap.plans.md
 copy_paste: true
 skills:
   - research-methodology
@@ -58,7 +58,7 @@ skills:
 research_artifact: docs/research/racing-curriculum-parallel-variant-gap.md
 next_step: 'Phase 2 Step 01 — Design integration strategy and red tests'
 validation:
-  - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/racing-curriculum-parallel-variant-gap.plans.md'
+  - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/completed/racing-curriculum-parallel-variant-gap.plans.md'
 acceptance_criteria:
   - 'Confirm 1024 values are config/display-only in the live loop.'
   - 'Confirm variant evaluator is defined but unwired.'
@@ -90,14 +90,14 @@ goal: planning
 expansion: steps
 auto_expand: false
 mode: fresh-session
-source_of_truth: plans/racing-curriculum-parallel-variant-gap.plans.md
+source_of_truth: plans/completed/racing-curriculum-parallel-variant-gap.plans.md
 copy_paste: true
 skills:
   - plan-alignment
   - test-design
   - execute
 validation:
-  - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/racing-curriculum-parallel-variant-gap.plans.md'
+  - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/completed/racing-curriculum-parallel-variant-gap.plans.md'
 acceptance_criteria:
   - 'Integration strategy chosen and documented in plan.'
   - 'Red tests fail before implementation and pass after.'
@@ -114,7 +114,7 @@ goal: planning
 expansion: none
 auto_expand: false
 mode: fresh-session
-source_of_truth: plans/racing-curriculum-parallel-variant-gap.plans.md
+source_of_truth: plans/completed/racing-curriculum-parallel-variant-gap.plans.md
 copy_paste: true
 skills:
   - plan-alignment
@@ -123,7 +123,7 @@ skills:
 research_artifact: docs/research/racing-curriculum-parallel-variant-gap.md
 next_step: 'Phase 3 Step 01 — Implement chosen wiring or config cleanup'
 validation:
-  - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/racing-curriculum-parallel-variant-gap.plans.md'
+  - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/completed/racing-curriculum-parallel-variant-gap.plans.md'
   - 'npx jest examples/racing_curriculum/controller/runtime.adaptation.test.ts examples/racing_curriculum/__tests__/runtime.adaptation.test.ts --silent'
 acceptance_criteria:
   - 'Decide between wiring variant evaluator, adding opt-in mode, or removing misleading config/HUD.'
@@ -174,7 +174,7 @@ The 6 new red contracts target the exact behaviors the Phase 3 implementation
 must add. The original 90 tests remain green, confirming the default trend
 path is unchanged.
 
-### Phase 3 � Implementation [DONE]
+### Phase 3 — Implementation [DONE]
 
 ```yaml
 phase: 3
@@ -186,15 +186,15 @@ tdd_sequence: green-only
 expansion: slices
 auto_expand: true
 mode: fresh-session
-source_of_truth: plans/racing-curriculum-parallel-variant-gap.plans.md
+source_of_truth: plans/completed/racing-curriculum-parallel-variant-gap.plans.md
 copy_paste: true
 skills:
   - implementation-standards
   - coverage-guard
 research_artifact: docs/research/racing-curriculum-parallel-variant-gap.md
-next_step: 'Phase 4 Step 01 � Green validation and coverage guard'
+next_step: 'Phase 4 Step 01 — Green validation and coverage guard'
 validation:
-  - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/racing-curriculum-parallel-variant-gap.plans.md'
+  - 'node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/completed/racing-curriculum-parallel-variant-gap.plans.md'
   - 'npx jest --config=jest.config.mjs --no-cache --testPathPattern=src/neat/nge-juvenile'
 acceptance_criteria:
   - id: AC-301
@@ -214,7 +214,7 @@ constitution_check:
   - principle-5-unique-ids
 ```
 
-[DONE] Phase 3 complete. Slices 03A�03E passed green validation: 135/135 tests across 5 suites, 100% coverage on `neat.nge-juvenile.variants.ts` and `neat.nge-juvenile.grow-stabilize.ts`, TypeScript/lint/build/plan-sync passed, browser smoke test showed `GPU (1024 variants)` green chip with no TypeError crashes. Detailed slice logs, PlanUpdate records, and follow-up fix notes moved to `plans/racing-curriculum-parallel-variant-gap.logs.md`.
+[DONE] Phase 3 complete. Slices 03A–03E passed green validation: 135/135 tests across 5 suites, 100% coverage on `neat.nge-juvenile.variants.ts` and `neat.nge-juvenile.grow-stabilize.ts`, TypeScript/lint/build/plan-sync passed, browser smoke test showed `GPU (1024 variants)` green chip with no TypeError crashes. Detailed slice logs, PlanUpdate records, and follow-up fix notes moved to `plans/completed/racing-curriculum-parallel-variant-gap.logs.md`.
 
 Implement library-default variant evaluation. The stabilization phase of
 `runNgeGrowStabilizeCycle` now calls `evaluateNgeWeightVariants` whenever the
@@ -235,7 +235,7 @@ tdd_sequence: green-only
 expansion: none
 auto_expand: false
 mode: fresh-session
-source_of_truth: plans/racing-curriculum-parallel-variant-gap.plans.md
+source_of_truth: plans/completed/racing-curriculum-parallel-variant-gap.plans.md
 copy_paste: true
 skills:
   - coverage-guard

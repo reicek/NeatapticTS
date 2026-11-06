@@ -24,19 +24,44 @@
  * NEATRACING_BILLBOARD_WORLD_PIXEL_SCALE_M is exported, and a 192 x 192 px
  * crowd frame reports a 4.8 m world footprint (a 2.4 m half-extent) instead
  * of the pre-14L 9.6 m.
+ *
+ * STEP 14V RED CONTRACTS (slice P1-prop-clearance-red, AC-096 / AC-095):
+ * the PUBLIC BILLBOARDS are right-world props too, so the USER-NAMED 10 m
+ * floor from the track edge applies to them: EVERY billboard - the seated
+ * spectators, the mechanics, the standing spectators and the walkers -
+ * stands at least the USER-NAMED 10 m from the TRACK EDGE, and the edge is
+ * the SEAM EDGE (the same edge the containment bound and the rasterizer
+ * read, published by Step 14U) - NEVER the retired spline-normal distance
+ * model. The floor is USER-NAMED: it is never lowered, never widened by a
+ * tolerance and never satisfied by dropping a billboard, so a residual
+ * violation is a NAMED, MEASURED violation reported per runtime role.
  */
 
 import { describe, expect, it } from '@jest/globals';
 import { generateTrack } from '../../racing_curriculum/track/track.generator';
-import type { SplineSample } from '../../racing_curriculum/track/track.generator.types';
+import type {
+  SplineSample,
+  TrackSpec,
+} from '../../racing_curriculum/track/track.generator.types';
 import { resolveSplineSampleFrame } from '../../racing_curriculum/track/track.spline.utils';
 import {
   buildRightWorldProps,
   getBleacherAxisAlignedHalfSize,
   getBleacherSeatTopY,
+  NEATRACING_RIGHT_WORLD_BLEACHER_COUNT,
 } from './right-world.builder';
 import { resolvePropHalfSize } from './right-world.prop-sizes';
-import type { TrackSlabBuildInput } from './track.slabs';
+import {
+  classifyTrackSlabSurfaceAt,
+  type TrackSlabBuildInput,
+} from './track.slabs';
+import {
+  resolveNearestTrackChord,
+  resolveTrackEdgeHalfWidthM,
+  resolveTrackEdgeProfile,
+  resolveTrackEdgeSideAtWorldZ,
+  type TrackEdgeProfile,
+} from './track.edge';
 import {
   buildPublicBillboards,
   computeBillboardScale,
@@ -44,6 +69,7 @@ import {
   DIRECTION_ORDER,
   loadPublicSpriteAtlas,
   NEATRACING_BILLBOARD_WORLD_PIXEL_SCALE_M,
+  NEATRACING_PUBLIC_BILLBOARD_SEATED_PER_BLEACHER,
   NEATRACING_PUBLIC_BILLBOARD_WORLD_SCALE,
   PUBLIC_POSE_COUNT,
   PUBLIC_POSE_INDEX_STAND,
@@ -52,6 +78,7 @@ import {
   resolvePublicRuntimeRole,
   selectPublicSpriteFrame,
   selectPublicWalkFrame,
+  type PublicBillboard,
 } from './public.sprite';
 import * as publicSprite from './public.sprite';
 
@@ -1644,3 +1671,613 @@ describe(
     });
   },
 );
+
+/**
+ * The USER-NAMED public-clearance floor (Step 14V, AC-096).
+ *
+ * The 10 m floor is a USER-NAMED number, not an author decision: it is
+ * never lowered, never widened by a tolerance and never satisfied by
+ * dropping a billboard. A residual violation is a NAMED, MEASURED
+ * violation.
+ */
+const NEATRACING_PUBLIC_CLEARANCE_FLOOR_M = 10;
+
+/**
+ * The float tolerance of the clearance comparisons (m).
+ *
+ * The house float tolerance (cf. the AC-072 "within 1e-9 m" precedent): it
+ * covers the double-precision residue of the geometry only.
+ */
+const PUBLIC_CLEARANCE_TOLERANCE_M = 1e-9;
+
+/** One measured billboard clearance against the SEAM edge. */
+interface BillboardClearanceReading {
+  /** The runtime role of the billboard (seated, mechanic, standing, walker). */
+  readonly role: string;
+  /** The billboard's index inside the built list. */
+  readonly index: number;
+  /** The clearance beyond the seam edge (m) - the UNION reader. */
+  readonly unionM: number;
+  /** The clearance beyond the seam edge (m) - the nearest-chord reader. */
+  readonly nearestChordM: number;
+}
+
+/**
+ * Measures the clearance of every built billboard beyond the SEAM edge.
+ *
+ * TWO READERS of the ONE seam edge are measured for every billboard:
+ *
+ * - `unionM` - the road's OWN union reader ({@link
+ *   classifyTrackSlabSurfaceAt}): the MINIMUM past-edge distance over
+ *   EVERY chord of the published profile.
+ * - `nearestChordM` - the CONTAINMENT BOUND's reader: the distance to the
+ *   NEAREST chord of the same published profile, minus that chord's
+ *   PUBLISHED side half-width.
+ *
+ * The MEASURED POINT is the billboard's published FOOT ANCHOR (its world
+ * x/z), which is the point the placement module publishes for every
+ * billboard - the standing point of the agent.
+ *
+ * @param spec - The generated track the billboards belong to.
+ * @param profile - The seam profile published for that track.
+ * @param billboards - The built billboards to measure.
+ * @returns One reading per billboard, in the built order.
+ */
+const measureBillboardClearances = (
+  spec: TrackSpec,
+  profile: TrackEdgeProfile,
+  billboards: readonly PublicBillboard[],
+): BillboardClearanceReading[] =>
+  billboards.map((billboard, index) => {
+    const worldX = billboard.position[0];
+    const worldZ = billboard.position[2];
+
+    const unionM = classifyTrackSlabSurfaceAt(
+      worldX,
+      worldZ,
+      spec.segments,
+      profile,
+    ).distancePastEdgeM;
+
+    const nearest = resolveNearestTrackChord(
+      profile,
+      worldX,
+      sceneZToGeneratorY(worldZ),
+    );
+    const nearestChord = profile.chords[nearest.segmentIndex]!;
+    const nearestSide = resolveTrackEdgeSideAtWorldZ(
+      profile,
+      nearest.segmentIndex,
+      worldX,
+      worldZ,
+    );
+    const nearestChordM =
+      nearest.distanceM -
+      resolveTrackEdgeHalfWidthM(nearestChord, nearestSide);
+
+    return {
+      role: resolvePublicRuntimeRole(billboard),
+      index,
+      unionM,
+      nearestChordM,
+    };
+  });
+
+/**
+ * Summarises the billboards of ONE runtime role that sit below the
+ * USER-NAMED floor.
+ *
+ * A residual violation is a NAMED, MEASURED violation: the line names the
+ * role, how many of its billboards sit below the floor and the WORST
+ * measured clearance of the role.
+ *
+ * @param label - The group label (a runtime role).
+ * @param rows - The group's measured clearances with their labels.
+ * @returns The summary line, or `null` when the whole group clears.
+ */
+const summarizeRoleViolations = (
+  label: string,
+  rows: readonly {
+    readonly clearanceM: number;
+    readonly propLabel: string;
+  }[],
+): string | null => {
+  const violations = rows.filter(
+    (row) => row.clearanceM < NEATRACING_PUBLIC_CLEARANCE_FLOOR_M,
+  );
+
+  if (violations.length === 0) {
+    return null;
+  }
+
+  let worst = violations[0]!;
+
+  for (const row of violations) {
+    if (row.clearanceM < worst.clearanceM) {
+      worst = row;
+    }
+  }
+
+  return `${label}: ${violations.length}/${rows.length} below the ${NEATRACING_PUBLIC_CLEARANCE_FLOOR_M} m floor, worst ${worst.clearanceM.toFixed(3)} m (${worst.propLabel})`;
+};
+
+/**
+ * The published clearance fixtures of the Step 14V sweep (seeds).
+ *
+ * The body-level lane reads EVERY published fixture: these eight crowd
+ * seeds, each in both published size buckets - the SAME 16-fixture scope
+ * the Step 14V CLEARANCE REPORT measured.
+ *
+ * BASIS: the Step 14V CLEARANCE REPORT of
+ * `plans/neatracing-voxel-racer.plans.md` (the eight published crowd seeds
+ * x the two published size buckets).
+ */
+const NEATRACING_PUBLIC_CLEARANCE_FIXTURE_SEEDS: readonly number[] = [
+  0, 7, 42, 61, 123, 1337, 2777, 4242,
+];
+
+/**
+ * The published size buckets of the Step 14V sweep.
+ *
+ * The body-level lane reads EVERY published fixture: the two published
+ * size buckets - the SAME 16-fixture scope the Step 14V CLEARANCE REPORT
+ * measured (eight crowd seeds x two size buckets).
+ */
+const NEATRACING_PUBLIC_CLEARANCE_SIZE_BUCKETS = ['small', 'large'] as const;
+
+/**
+ * The footprint-level sampling step of the billboard reading (m).
+ *
+ * The FOOTPRINT reading samples the boundary of the published placement
+ * footprint at this step and keeps the MINIMUM measured clearance over the
+ * sampled points. The step is the READING RESOLUTION of the footprint
+ * surface, NOT a tolerance on the floor.
+ *
+ * BASIS: the P-PC-R row of the Step 14V CLEARANCE GREEN-slice ledger of
+ * `plans/neatracing-voxel-racer.plans.md` - the footprint-level residual
+ * was MEASURED with this sampling step.
+ */
+const NEATRACING_PUBLIC_FOOTPRINT_SAMPLE_STEP_M = 0.25;
+
+/**
+ * The margin the footprint reading has to be nearer than its anchor (m).
+ *
+ * NON-VACUITY GUARD of the footprint lane: a lane that read the ANCHOR
+ * instead of the FOOTPRINT would satisfy the floor with the very same
+ * numbers the anchor-level lanes already pin, so the lane proves that it
+ * really reads a NEARER surface - the published placement footprint.
+ */
+const NEATRACING_PUBLIC_FOOTPRINT_SURFACE_MARGIN_M = 0.5;
+
+/** One measured billboard FOOTPRINT clearance against the SEAM edge. */
+interface BillboardFootprintClearanceReading {
+  /** The runtime role of the billboard (seated, mechanic, standing, walker). */
+  readonly role: string;
+  /** The billboard's index inside the built list. */
+  readonly index: number;
+  /** The clearance beyond the seam edge (m) of the footprint's edge. */
+  readonly footprintM: number;
+  /** The number of footprint boundary points sampled for this billboard. */
+  readonly sampledPoints: number;
+}
+
+/**
+ * Samples the boundary of one axis-aligned box in the XZ plane.
+ *
+ * @param minX - Lower x bound of the box (m).
+ * @param maxX - Upper x bound of the box (m).
+ * @param minZ - Lower z bound of the box (m).
+ * @param maxZ - Upper z bound of the box (m).
+ * @returns The sampled boundary points of the box, in world meters.
+ */
+const sampleAxisAlignedBoxBoundary = (
+  minX: number,
+  maxX: number,
+  minZ: number,
+  maxZ: number,
+): readonly (readonly [number, number])[] => {
+  const points: (readonly [number, number])[] = [];
+  const spanX = maxX - minX;
+  const spanZ = maxZ - minZ;
+  const stepsX = Math.max(
+    1,
+    Math.ceil(spanX / NEATRACING_PUBLIC_FOOTPRINT_SAMPLE_STEP_M),
+  );
+  const stepsZ = Math.max(
+    1,
+    Math.ceil(spanZ / NEATRACING_PUBLIC_FOOTPRINT_SAMPLE_STEP_M),
+  );
+
+  for (let step = 0; step <= stepsX; step += 1) {
+    const x = minX + (spanX * step) / stepsX;
+
+    points.push([x, minZ], [x, maxZ]);
+  }
+
+  for (let step = 0; step <= stepsZ; step += 1) {
+    const z = minZ + (spanZ * step) / stepsZ;
+
+    points.push([minX, z], [maxX, z]);
+  }
+
+  return points;
+};
+
+/**
+ * Resolves the published world half-size of a billboard's placement
+ * footprint.
+ *
+ * The footprint reads the SAME named levers as the rendered quad - the
+ * NEATRACING_PUBLIC_BILLBOARD_WORLD_SCALE lever and the shared
+ * NEATRACING_BILLBOARD_WORLD_PIXEL_SCALE_M meter scale - so the measured
+ * footprint and the rendered quad can never disagree. The frame is resolved
+ * from the atlas by the billboard's published frame id, with the same
+ * first-frame fallback the placement uses.
+ *
+ * @param atlas - The loaded sprite atlas.
+ * @param billboard - The built billboard.
+ * @returns Half-width and half-depth of the placement footprint (m).
+ */
+const resolveBillboardFootprintHalfSize = (
+  atlas: ReturnType<typeof loadPublicSpriteAtlas>,
+  billboard: PublicBillboard,
+): readonly [number, number] => {
+  const frame =
+    atlas.frames.find((candidate) => candidate.id === billboard.frameId) ??
+    atlas.frames[0];
+
+  if (!frame) {
+    throw new Error(
+      'resolveBillboardFootprintHalfSize called with an empty sprite atlas',
+    );
+  }
+
+  const worldScale =
+    NEATRACING_PUBLIC_BILLBOARD_WORLD_SCALE *
+    NEATRACING_BILLBOARD_WORLD_PIXEL_SCALE_M;
+
+  return [(frame.width * worldScale) / 2, (frame.height * worldScale) / 2];
+};
+
+/**
+ * Measures the FOOTPRINT-level clearance of every built billboard beyond
+ * the SEAM edge.
+ *
+ * The MEASURED POINT is the published placement FOOTPRINT - the billboard's
+ * own world quad - and the reading is the MINIMUM clearance over the
+ * SAMPLED footprint boundary. The reader is the road's OWN union reader
+ * ({@link classifyTrackSlabSurfaceAt}) - the ONE edge the rasterizer and
+ * the band paint use - so the footprint and the anchor are read on the
+ * SAME scale.
+ *
+ * @param spec - The generated track the billboards belong to.
+ * @param profile - The seam profile published for that track.
+ * @param atlas - The loaded sprite atlas.
+ * @param billboards - The built billboards to measure.
+ * @returns One reading per billboard, in the built order.
+ */
+const measureBillboardFootprintClearances = (
+  spec: TrackSpec,
+  profile: TrackEdgeProfile,
+  atlas: ReturnType<typeof loadPublicSpriteAtlas>,
+  billboards: readonly PublicBillboard[],
+): BillboardFootprintClearanceReading[] =>
+  billboards.map((billboard, index) => {
+    const [halfWidth, halfDepth] = resolveBillboardFootprintHalfSize(
+      atlas,
+      billboard,
+    );
+    let footprintM = Number.POSITIVE_INFINITY;
+    let sampledPoints = 0;
+
+    for (const [x, z] of sampleAxisAlignedBoxBoundary(
+      billboard.position[0] - halfWidth,
+      billboard.position[0] + halfWidth,
+      billboard.position[2] - halfDepth,
+      billboard.position[2] + halfDepth,
+    )) {
+      const clearanceM = classifyTrackSlabSurfaceAt(
+        x,
+        z,
+        spec.segments,
+        profile,
+      ).distancePastEdgeM;
+
+      if (clearanceM < footprintM) {
+        footprintM = clearanceM;
+      }
+
+      sampledPoints += 1;
+    }
+
+    return {
+      role: resolvePublicRuntimeRole(billboard),
+      index,
+      footprintM,
+      sampledPoints,
+    };
+  });
+
+/**
+ * The Step 14V public-billboard clearance contracts (slice
+ * `P1-prop-clearance-red`).
+ *
+ * AC-096 (the 10 m floor - the USER directive 1): EVERY public billboard
+ * stands at least the USER-NAMED 10 m from the TRACK EDGE, and the edge is
+ * the SEAM EDGE - the same edge the containment bound and the rasterizer
+ * read - NEVER the retired spline-normal distance model.
+ *
+ * AC-095 (the seam is closed - the ONE edge): the billboard placement and
+ * the road resolve the edge through the SAME seam, read through BOTH of
+ * the road's own readers of it.
+ */
+describe(
+  'public billboard clearance beyond the SEAM edge (Step 14V, slice P1-prop-clearance-red, AC-096)',
+  () => {
+    describe(
+      'RED-3 share (the guaranteed crowd and the determinism are PRESERVED - a LABELLED PRESERVATION GUARD, NEVER counted as a RED)',
+      () => {
+        // [RED-14V-PUBLIC-3-CROWD-PRESERVED]
+        it('AC-096: every bleacher of the ring still carries its full share of seated spectators (RED-14V-PUBLIC-3-CROWD-PRESERVED)', () => {
+          // Arrange
+          const atlas = loadPublicSpriteAtlas();
+          const billboards = buildPublicBillboards(
+            FIXTURE,
+            FIXTURE_CAMERA,
+            atlas,
+          );
+          const seated = billboards.filter(
+            (billboard) => resolvePublicRuntimeRole(billboard) === 'seated',
+          );
+
+          // NON-VACUITY GUARD (asserted BEFORE the relational clause): the
+          // lane MUST really build a crowd - an empty billboard list would
+          // satisfy the crowd clause vacuously.
+          expect(billboards.length).toBeGreaterThan(0);
+          expect(seated.length).toBeGreaterThan(0);
+
+          // Assert - the guaranteed crowd is preserved: NO bleacher is left
+          // empty by a clearance change.
+          expect(seated.length).toBe(
+            NEATRACING_RIGHT_WORLD_BLEACHER_COUNT *
+              NEATRACING_PUBLIC_BILLBOARD_SEATED_PER_BLEACHER,
+          );
+        });
+
+        // [RED-14V-PUBLIC-3-DETERMINISM-PRESERVED]
+        it('AC-096: the same determinism tuple still yields the same billboard list, byte for byte (RED-14V-PUBLIC-3-DETERMINISM-PRESERVED)', () => {
+          // Arrange
+          const atlas = loadPublicSpriteAtlas();
+
+          // Act
+          const first = buildPublicBillboards(
+            FIXTURE,
+            FIXTURE_CAMERA,
+            atlas,
+          );
+          const second = buildPublicBillboards(
+            FIXTURE,
+            FIXTURE_CAMERA,
+            atlas,
+          );
+
+          // Assert
+          expect(JSON.stringify(second)).toBe(JSON.stringify(first));
+        });
+      },
+    );
+
+    describe('RED-4 share (the billboards read the SAME edge as the road)', () => {
+      // [RED-14V-PUBLIC-4-ONE-SEAM]
+      it('AC-095: the public billboards clear the floor through BOTH of the road\'s own readers of the ONE seam edge (RED-14V-PUBLIC-4-ONE-SEAM)', () => {
+        // Arrange
+        const atlas = loadPublicSpriteAtlas();
+        const billboards = buildPublicBillboards(
+          FIXTURE,
+          FIXTURE_CAMERA,
+          atlas,
+        );
+        const spec = generateTrack(FIXTURE);
+        const profile = resolveTrackEdgeProfile(spec.segments);
+        const readings = measureBillboardClearances(spec, profile, billboards);
+
+        // NON-VACUITY GUARD (asserted BEFORE the relational clause): the
+        // lane MUST really compare TWO DIFFERENT readers of the ONE seam
+        // edge. The union reader is a MINIMUM over EVERY published chord,
+        // so it can never report MORE clearance than the nearest-chord
+        // reader, and the seam publishes more than one chord - so the two
+        // readers consult DIFFERENT chord sets and comparing one reader
+        // with itself would satisfy the clause below vacuously.
+        expect(profile.chords.length).toBeGreaterThan(1);
+
+        for (const row of readings) {
+          expect(row.unionM).toBeLessThanOrEqual(
+            row.nearestChordM + PUBLIC_CLEARANCE_TOLERANCE_M,
+          );
+        }
+
+        // Assert - BOTH readers of the ONE seam edge must clear the
+        // USER-NAMED floor, so the crowd and the road can never disagree
+        // about where the edge is.
+        const roles = [...new Set(readings.map((row) => row.role))];
+        const violationLines = roles
+          .map((role) =>
+            summarizeRoleViolations(
+              `role=${role}`,
+              readings
+                .filter((row) => row.role === role)
+                .map((row) => ({
+                  clearanceM: Math.min(row.unionM, row.nearestChordM),
+                  propLabel: `${row.role}#${row.index}`,
+                })),
+            ),
+          )
+          .filter((line): line is string => line !== null);
+
+        expect(violationLines).toEqual([]);
+      });
+    });
+
+    describe('RED-1/RED-2 share (the 10 m floor on the SEAM edge)', () => {
+      // [RED-14V-PUBLIC-1-SEAM-FLOOR]
+      it('AC-096: EVERY public billboard stands at least 10 m beyond the SEAM edge, and the residual is reported per runtime role (RED-14V-PUBLIC-1-SEAM-FLOOR)', () => {
+        // Arrange
+        const atlas = loadPublicSpriteAtlas();
+        const billboards = buildPublicBillboards(
+          FIXTURE,
+          FIXTURE_CAMERA,
+          atlas,
+        );
+        const spec = generateTrack(FIXTURE);
+        const profile = resolveTrackEdgeProfile(spec.segments);
+
+        // NON-VACUITY GUARD (asserted BEFORE the relational clause): the
+        // lane MUST really build a crowd (an empty billboard list would
+        // satisfy the floor vacuously) and it MUST really measure a
+        // distance (a zero reading would satisfy the floor vacuously).
+        expect(billboards.length).toBeGreaterThan(0);
+        expect(profile.chords.length).toBeGreaterThan(0);
+
+        // Act
+        const readings = measureBillboardClearances(spec, profile, billboards);
+
+        expect(readings.length).toBe(billboards.length);
+        expect(
+          readings.every(
+            (row) =>
+              Number.isFinite(row.unionM) &&
+              Number.isFinite(row.nearestChordM),
+          ),
+        ).toBe(true);
+
+        // Assert
+        // The floor is the USER-NAMED 10 m and is NEVER widened by a
+        // tolerance: a residual violation is a NAMED, MEASURED violation.
+        const roles = [...new Set(readings.map((row) => row.role))];
+        const violationLines = roles
+          .map((role) =>
+            summarizeRoleViolations(
+              `role=${role}`,
+              readings
+                .filter((row) => row.role === role)
+                .map((row) => ({
+                  clearanceM: row.unionM,
+                  propLabel: `${row.role}#${row.index}`,
+                })),
+            ),
+          )
+          .filter((line): line is string => line !== null);
+
+        expect(violationLines).toEqual([]);
+      });
+    });
+
+    describe(
+      'RED-5 share (the BODY-LEVEL floor - the P-PC-R body-level lane)',
+      () => {
+        // [RED-14V-PUBLIC-5-BODY-LEVEL]
+        it('AC-096: EVERY public billboard FOOTPRINT clears the USER-NAMED 10 m floor, read at the placed footprint\'s nearest surface toward the road (RED-14V-PUBLIC-5-BODY-LEVEL)', () => {
+          // Arrange
+          const atlas = loadPublicSpriteAtlas();
+          const fixtureLines: string[] = [];
+          const roleRows = new Map<
+            string,
+            { clearanceM: number; propLabel: string }[]
+          >();
+          let sampledPoints = 0;
+          let nearestSurfaceGapM = Number.POSITIVE_INFINITY;
+          let fixtureCount = 0;
+          let billboardCount = 0;
+
+          // Act - the whole published fixture set, NOT one hand-picked
+          // fixture: EVERY published seed in BOTH published size buckets.
+          for (const sizeBucket of NEATRACING_PUBLIC_CLEARANCE_SIZE_BUCKETS) {
+            for (const seed of NEATRACING_PUBLIC_CLEARANCE_FIXTURE_SEEDS) {
+              const input = { seed, layoutVersion: 1, sizeBucket };
+              const spec = generateTrack(input);
+              const profile = resolveTrackEdgeProfile(spec.segments);
+              const billboards = buildPublicBillboards(
+                input,
+                FIXTURE_CAMERA,
+                atlas,
+              );
+              const anchorReadings = measureBillboardClearances(
+                spec,
+                profile,
+                billboards,
+              );
+              const footprintReadings = measureBillboardFootprintClearances(
+                spec,
+                profile,
+                atlas,
+                billboards,
+              );
+
+              fixtureCount += 1;
+              billboardCount += billboards.length;
+
+              for (const [position, footprint] of footprintReadings.entries()) {
+                const anchor = anchorReadings[position]!;
+
+                nearestSurfaceGapM = Math.min(
+                  nearestSurfaceGapM,
+                  anchor.unionM - footprint.footprintM,
+                );
+                sampledPoints += footprint.sampledPoints;
+              }
+
+              const fixtureLine = summarizeRoleViolations(
+                `seed=${seed}/${sizeBucket}`,
+                footprintReadings.map((row) => ({
+                  clearanceM: row.footprintM,
+                  propLabel: `${row.role}#${row.index}`,
+                })),
+              );
+
+              if (fixtureLine !== null) {
+                fixtureLines.push(fixtureLine);
+              }
+
+              for (const row of footprintReadings) {
+                const rows = roleRows.get(row.role) ?? [];
+
+                rows.push({
+                  clearanceM: row.footprintM,
+                  propLabel: `${row.role}#${row.index}@seed${seed}/${sizeBucket}`,
+                });
+                roleRows.set(row.role, rows);
+              }
+            }
+          }
+
+          // NON-VACUITY GUARDS (asserted BEFORE the relational clause): the
+          // sweep MUST really build the published crowd over more than one
+          // fixture, the atlas MUST really carry frames, the lane MUST
+          // really SAMPLE the footprints, and it MUST really read a surface
+          // NEARER than the anchor - a lane that measured the anchor would
+          // satisfy the floor with the numbers the anchor-level lanes
+          // already pin.
+          expect(atlas.frames.length).toBeGreaterThan(0);
+          expect(fixtureCount).toBeGreaterThan(1);
+          expect(billboardCount).toBeGreaterThan(0);
+          expect(sampledPoints).toBeGreaterThan(0);
+          expect(nearestSurfaceGapM).toBeGreaterThan(
+            NEATRACING_PUBLIC_FOOTPRINT_SURFACE_MARGIN_M,
+          );
+
+          // Assert - the FOOTPRINT of every billboard clears the
+          // USER-NAMED floor. The floor is NEVER widened by a tolerance and
+          // NO billboard is ever dropped to satisfy it.
+          const roleLines = [...roleRows.entries()]
+            .map(([role, rows]) =>
+              summarizeRoleViolations(`role=${role}`, rows),
+            )
+            .filter((line): line is string => line !== null);
+
+          expect([...fixtureLines, ...roleLines]).toEqual([]);
+        });
+      },
+    );
+  },
+);
+

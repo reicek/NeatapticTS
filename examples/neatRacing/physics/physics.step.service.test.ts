@@ -117,24 +117,51 @@ import {
   NEATRACING_PHYSICS_NATURAL_DECEL_UNITS_PER_S2,
   NEATRACING_PHYSICS_OFF_ROAD_DECEL_UNITS_PER_S2,
   NEATRACING_PHYSICS_OFF_ROAD_SPEED_FLOOR_UNITS_PER_S,
+  NEATRACING_PHYSICS_OFF_TRACK_SPEED_LIMIT_KMH,
   NEATRACING_PHYSICS_STEERING_RATE,
   stepPhysics,
 } from './physics.step.service';
 import * as physicsStepService from './physics.step.service';
-import { NEATRACING_CAR_COLLISION_RADIUS_M } from './collision.utils';
 import {
+  classifyTrackSurface,
+  createTrackSurfaceResolver,
+  NEATRACING_CAR_COLLISION_RADIUS_M,
+  NEATRACING_TRACK_GRASS_APRON_WIDTH_M,
+} from './collision.utils';
+import {
+  NEATRACING_DRIFT_COUNTERSTEER_MIN_STEER,
   NEATRACING_DRIFT_MAX_SLIP_ANGLE_RAD,
   NEATRACING_DRIFT_MIN_SPEED_DEFICIT_KMH,
   NEATRACING_DRIFT_PUBLISHED_SLIP_MAX_RAD,
   NEATRACING_DRIFT_PUBLISHED_SLIP_OFFROAD_MAX_RAD,
   NEATRACING_DRIFT_PUBLISHED_SLIP_OVERSHOOT_RAD,
   NEATRACING_DRIFT_SPEED_SCRUB_COEFF_PER_S,
+  NEATRACING_DRIFT_STEER_ENGAGE_THRESHOLD,
+  NEATRACING_DRIFT_STEER_NEUTRAL_THRESHOLD,
   NEATRACING_DRIFT_VISUAL_YAW_GAIN_RAD,
 } from './drift.model';
 import * as driftModelModule from './drift.model';
 import type { DriftStepInput } from './drift.model';
-import type { PhysicsCarState, PhysicsStepInput } from './physics.step.service';
-import type { TrackSegment } from '../../racing_curriculum/track/track.generator.types';
+import type {
+  PhysicsCarState,
+  PhysicsStepInput,
+  PhysicsSurfaceType,
+} from './physics.step.service';
+import type {
+  SplineSample,
+  TrackSegment,
+} from '../../racing_curriculum/track/track.generator.types';
+import { generateTrack } from '../../racing_curriculum/track/track.generator';
+import {
+  buildTrackRacingLine,
+  NEATRACING_RACING_LINE_STRAIGHT_CURVATURE_PER_M,
+} from '../track/track.racing-line';
+import {
+  resolveNearestTrackChord,
+  resolveTrackEdgeHalfWidthM,
+  resolveTrackEdgeProfile,
+  resolveTrackEdgeSideAt,
+} from '../track/track.edge';
 
 /** Minimal surface labels used by the fixture resolver. */
 type FixtureSurface = 'road' | 'curb' | 'grass';
@@ -192,7 +219,8 @@ const GRASS_STRAIGHT_INPUT: PhysicsStepInput = {
 /**
  * Float tolerance for the off-road floor comparisons (RC-1).
  *
- * The floor is an exact named export (89 / 4), so the tolerance only
+ * The floor is an exact named export (the USER-named off-track limit,
+ * 20 km/h / 3.6, the iteration-3 re-derivation), so the tolerance only
  * absorbs the float64 noise of the tick arithmetic - it never widens the
  * contract by a meaningful amount (the trapped speed is exactly 0).
  */
@@ -452,12 +480,18 @@ describe('physics step service constants (spec §5.2, AC-023)', () => {
   });
 
   // [RED-PRESERVE-OFF-ROAD-CONSTANTS]
-  it('derives off-road decel and speed floor from maxSpeed (§5.2)', () => {
+  it('derives the off-road decel from maxSpeed and the off-road speed cap from the USER-named 20 km/h limit (§5.2, AC-090 VERDICT 8)', () => {
     expect(NEATRACING_PHYSICS_OFF_ROAD_DECEL_UNITS_PER_S2).toBe(
       -NEATRACING_PHYSICS_MAX_SPEED_UNITS_PER_S / 2,
     );
+    // THE RE-AUTHOR (fix-packet-P1-sand-red-iteration-3): the off-track
+    // FLOOR part of AC-094(c) was USER-SUPERSEDED - the floor constant
+    // re-derives as the USER-named off-track speed cap (20 km/h / 3.6
+    // m/s, the named verbatim USER constant), never the retired
+    // `maxSpeed / 4` = 22.25 m/s floor that measured 4.005x the USER
+    // value; the off-road decel law itself is UNCHANGED.
     expect(NEATRACING_PHYSICS_OFF_ROAD_SPEED_FLOOR_UNITS_PER_S).toBe(
-      NEATRACING_PHYSICS_MAX_SPEED_UNITS_PER_S / 4,
+      NEATRACING_PHYSICS_OFF_TRACK_SPEED_LIMIT_KMH / 3.6,
     );
   });
 
@@ -913,7 +947,8 @@ describe('physics step service off-road floor under drift (RC-1)', () => {
     );
     const minSpeed = Math.min(...samples);
 
-    // The floor is the NAMED export (maxSpeed / 4), never a literal.
+    // The floor is the NAMED export (the USER-named off-track limit,
+    // 20 km/h / 3.6, the iteration-3 re-derivation), never a literal.
     expect(minSpeed).toBeGreaterThanOrEqual(
       NEATRACING_PHYSICS_OFF_ROAD_SPEED_FLOOR_UNITS_PER_S -
         OFF_ROAD_FLOOR_TOLERANCE,
@@ -956,8 +991,10 @@ describe('physics step service off-road floor under drift (RC-1)', () => {
     );
 
     // The control lane is a CHARACTERIZATION pin: the recorded behavior
-    // is that the no-drift off-road car holds the floor EXACTLY (22.25).
-    // A W2 fix must not re-derive that equilibrium.
+    // is that the no-drift off-road car settles EXACTLY at the floor
+    // (the CURRENT floor is the USER-named 20 km/h cap; the RC-1-era
+    // record measured the same exact-settle at the then-floor 22.25).
+    // A later fix must not re-derive that equilibrium.
     expect(withoutDrift.speed).toBeCloseTo(
       NEATRACING_PHYSICS_OFF_ROAD_SPEED_FLOOR_UNITS_PER_S,
       6,
@@ -1062,13 +1099,15 @@ const peakPublishedSlip = (phases: SurfaceSchedule): number =>
  *
  * WHAT THE RC-1 FIX MOVED: before the fix the off-road envelope peaked
  * at 0.503962 rad and breached the single 0.452 rad ceiling from the
- * FIRST off-road tick (tick 17, 77.53 m/s - far ABOVE the 22.25 m/s
- * floor), because the collapsing denominator drove the chase lag on its
- * own. After the fix the car no longer decays into the 0 m/s trap, so
+ * FIRST off-road tick (tick 17, 77.53 m/s - far above the then-floor
+ * 22.25 m/s), because the collapsing denominator drove the chase lag on
+ * its own. After the fix the car no longer decays into the 0 m/s trap, so
  * the denominator stops collapsing and the peak MOVES into the
- * floor-holding regime: every per-lane peak now lands just above the
- * floor (22.42-22.64 m/s, except the road -> grass -> road lane at
- * 31.11 m/s). The lane SET and the lane tick budgets are UNCHANGED
+ * floor-holding regime (a RC-1-era record: the per-lane peaks landed
+ * just above the then-floor at 22.42-22.64 m/s, except the road ->
+ * grass -> road lane at 31.11 m/s; under the iteration-3 USER cap the
+ * regime STARTS at the 5.5556 m/s settle). The lane SET and the lane
+ * tick budgets are UNCHANGED
  * (seven off-road lanes, three controls); only the recorded peak values
  * and the peak ticks moved, and both are re-pinned above.
  */
@@ -2293,13 +2332,14 @@ const runTurnRateLane = (
  *
  * AC-092 (the turn rate follows the speed, S-6): the commanded turn
  * rate REDUCES slightly and PROPORTIONALLY with the speed - the factor
- * is 1 at a standstill and the MEASURED mild value at the top speed,
- * it is MONOTONIC in the speed and it is MILD (the top-speed turn rate
- * is never 0 and never below the RED-measured fraction of the nominal
- * rate, so turning AND drifting remain possible at every speed). The
- * COMPARISON AXIS IS THE NOMINAL RATE, NEVER THE LOW-SPEED RATE: the
- * existing speed-percent scaling is KEPT, so the high-speed turn rate
- * stays ABOVE the low-speed one.
+ * is 1 at a standstill and the MEASURED mild value at the top speed.
+ * Outside the Step 14Y sufficiency boost band the mild law is unchanged;
+ * inside the band the factor is lifted to hold the tightest corner. The
+ * mild relation is MILD (the top-speed turn rate is never 0 and never below
+ * the RED-measured fraction of the nominal rate, so turning AND drifting
+ * remain possible at every speed). The COMPARISON AXIS IS THE NOMINAL
+ * RATE, NEVER THE LOW-SPEED RATE: the existing speed-percent scaling is
+ * KEPT, so the high-speed turn rate stays ABOVE the low-speed one.
  *
  * AC-093 (two separate laws on the same steer axis, S-7): the physics
  * input grows an OPTIONAL named turn-rate-percent channel - the AI
@@ -2365,7 +2405,7 @@ describe('the TURN-RATE laws (Step 14T, slice P1-turnrate-red)', () => {
     });
 
     // [RED-14T-1-FACTOR-MONOTONIC]
-    it('AC-092: the speed-proportional reduction FACTOR is MONOTONIC in the speed (RED-1)', () => {
+    it('AC-092: the speed-proportional reduction FACTOR stays NON-INCREASING outside the sufficiency boost band (RED-1)', () => {
       // Arrange
       const ladder = TURN_RATE_SPEED_LADDER_MPS.map((speed) => {
         const lane = runTurnRateLane(speed, TURN_RATE_USER_INPUT);
@@ -2383,12 +2423,17 @@ describe('the TURN-RATE laws (Step 14T, slice P1-turnrate-red)', () => {
       expect(
         Math.min(...ladder.map((entry) => entry.rateRadPerS)),
       ).toBeGreaterThan(0);
-      // The factor NEVER grows with the speed (the law only reduces the
-      // rate, and it reduces it MORE the faster the car goes).
+      // The factor NEVER grows with the speed across the ladder (the mild
+      // law only reduces the rate, and it reduces it MORE the faster the
+      // car goes). Every ladder speed lies OUTSIDE the Step 14Y
+      // sufficiency boost band (~[17.6, 18.0] m/s), so this lane scopes
+      // the monotonicity claim to the region where the mild law still
+      // applies; the global monotonicity claim is retired because the
+      // sufficiency boost lifts the factor inside the band.
       //
-      // The MEASURED current-model state: the factor is 1.0 at every
-      // speed (within a float64 ULP), so the relation holds on arrival -
-      // it is the RAIL the new law must keep.
+      // The MEASURED post-fix state: the factor does not grow across the
+      // ladder (within a float64 ULP) - the clause is GREEN on the
+      // post-fix bytes.
       expect(
         Math.max(
           ...ladder
@@ -2699,20 +2744,20 @@ describe('the TURN-RATE laws (Step 14T, slice P1-turnrate-red)', () => {
 
 /* ------------------------------------------------------------------------- *
  * STEP 14I (slice `P1-track-road-containment`): the AC-081 road-containment
- * bound in the LIVE tick.
+ * seam in the LIVE tick - and its RETIREMENT.
  *
- * The AC-081 BOUND is LANDED (Step 14P): `resolveTrackBoundaryCar` in
- * `./collision.utils` reseats a car that left the drivable surface back
- * onto the drivable-surface edge (the nearest chord half width). But the
- * bound was TEST-ONLY (audit row F-07): its only callers were the harness
- * lanes, so the SHIPPED tick never applied it and the served page let the
- * car drive off the road.
+ * The AC-081 BOUND was LANDED (Step 14P) and WIRED (Step 14I) through the
+ * FOURTH optional track-geometry parameter of `stepPhysics`. The AC-090
+ * VERDICT-8 round (fix-packet-P1-sand-red-iteration-3) then RETIRED the
+ * bound ENTIRELY: NO track-boundary containment at all - the road edge is
+ * an INNER boundary, the ONLY off-track limit is the sand speed cap
+ * (AC-094), and EVERY geometry input is a byte-identical NO-OP.
  *
- * This block is the RED contract of the WIRING: the bound must be applied
- * by the LIVE tick through the FOURTH optional track-geometry parameter of
- * `stepPhysics`. The four lanes are the plan's RED lanes: (a)
- * CONTAINMENT, (b) NO-OP, (c) POSE-INDEPENDENCE and (d) PUBLISHED
- * SCALARS.
+ * This block is the RE-AUTHORED contract of the RETIREMENT (the retired
+ * seam stays the ONE named owner of the shipped 4-arg form): the four
+ * lanes measure (a) NO CONTAINMENT, (b) the ALL-inputs NO-OP, (c)
+ * POSE-INDEPENDENCE (true by construction) and (d) PUBLISHED SCALARS
+ * (the model law on the tick's own final state).
  * ------------------------------------------------------------------------- */
 
 /**
@@ -2742,14 +2787,40 @@ const CONTAINMENT_RIBBON: readonly TrackSegment[] = [
 /** The drivable half width of the containment ribbon (m): 8 m / 2. */
 const CONTAINMENT_DRIVABLE_HALF_WIDTH_M = 4;
 
+/**
+ * The OUTER edge of the off-track band on the containment ribbon (m):
+ * the drivable half width plus the EXISTING named grass-apron width
+ * (AC-094 (d) - the band width is an EXISTING published constant, never
+ * a band-paint constant). With the bound RETIRED this anchor names the
+ * pull-back horizon the lanes prove ABSENT: nothing ever clamps a car
+ * back to it (the AC-090 VERDICT-8 observable: the road edge is an INNER
+ * boundary, never a wall).
+ */
+const CONTAINMENT_BAND_OUTER_EDGE_M =
+  CONTAINMENT_DRIVABLE_HALF_WIDTH_M + NEATRACING_TRACK_GRASS_APRON_WIDTH_M;
+
 /** The world x of the containment fixture car (m): mid-ribbon. */
 const CONTAINMENT_CAR_X_M = 25;
 
 /** The lateral offset of the containment fixture car (m): ON the ribbon. */
 const CONTAINMENT_CAR_ON_RIBBON_Y_M = 3.5;
 
-/** The lateral offset of the pose-independence fixture car (m): OFF it. */
-const CONTAINMENT_CAR_OFF_RIBBON_Y_M = 5;
+/**
+ * The lateral offset of the crossing containment fixture car (m): HALF a
+ * metre INSIDE the band outer edge, so ONE tick at the fixture speed
+ * really crosses the band outer edge (the crossing is the NON-VACUITY
+ * GUARD of the lanes below; with the bound retired the car simply keeps
+ * rolling outward - nothing clamps it back).
+ */
+const CONTAINMENT_CAR_IN_BAND_Y_M = CONTAINMENT_BAND_OUTER_EDGE_M - 0.5;
+
+/**
+ * The lateral offset of the pose-independence fixture car (m): BEYOND the
+ * band outer edge - far from any pull-back horizon, so the lanes can
+ * measure that the RETIRED seam moves NOTHING (the retired seam is a
+ * byte-identical NO-OP: the car stands where it stood).
+ */
+const CONTAINMENT_CAR_OFF_RIBBON_Y_M = CONTAINMENT_BAND_OUTER_EDGE_M + 1;
 
 /** The tick-start speed of the containment fixture car (m/s). */
 const CONTAINMENT_CAR_SPEED_MPS = 50;
@@ -2819,9 +2890,10 @@ const buildContainmentFixtureCar = (
 /**
  * Builds a SLIDING tick-start car: the drift channel is already latched, so
  * the tick publishes a NON-ZERO slip and a NON-ZERO traction severity
- * BEFORE the containment runs. The bounce then recomposes the car (which
- * zeroes the slip), so the published scalars can only be right if they are
- * re-derived from the POST-containment pose.
+ * BEFORE the retired seam runs. With the containment RETIRED the seam
+ * recomposes NOTHING, so the published scalars must already be the model
+ * law on the tick's own final state (no second, post-seam reference
+ * state exists).
  *
  * @param x - The world x position of the car at tick start (m).
  * @param y - The world y position of the car at tick start (m).
@@ -2856,16 +2928,19 @@ const buildSlidingContainmentFixtureCar = (
 describe('the LIVE road containment (Step 14I, slice P1-track-road-containment)', () => {
   describe('RED (the live containment wiring)', () => {
     // [RED-14I-CONTAINMENT]
-    it('CONTAINMENT: a car driven off the drivable surface comes back INSIDE it (the bound is applied by the LIVE tick)', () => {
-      // Arrange: a car driving ACROSS the ribbon, so ONE tick takes it off
-      // the drivable surface.
+    it('NO CONTAINMENT (AC-090 VERDICT 8): a car driven off the band KEEPS ROLLING past the band outer edge - the seam is a retired NO-OP', () => {
+      // Arrange: a car driving ACROSS the ribbon from INSIDE the band, so
+      // ONE tick really takes it past the band outer edge. The AC-081
+      // wall this seam used to apply ("a car driven off the band comes
+      // back ON the band outer edge") is RETIRED: the ONE off-track
+      // limit is the sand speed cap (AC-094), never geometry.
       const car = buildContainmentFixtureCar(
         CONTAINMENT_CAR_X_M,
-        CONTAINMENT_CAR_ON_RIBBON_Y_M,
+        CONTAINMENT_CAR_IN_BAND_Y_M,
         Math.PI / 2,
         CONTAINMENT_CAR_SPEED_MPS,
       );
-      // The SAME tick WITHOUT the geometry: the unbounded baseline.
+      // The SAME tick WITHOUT the geometry: the free, unbounded roll.
       const unbounded = stepPhysics(car, NEUTRAL_INPUT);
 
       // Act
@@ -2878,32 +2953,30 @@ describe('the LIVE road containment (Step 14I, slice P1-track-road-containment)'
 
       // Assert
       // The NON-VACUITY GUARD comes FIRST: the seam must be callable, and
-      // the unbounded tick must REALLY leave the drivable surface, so the
-      // containment below can never pass on a baseline that never left.
+      // the unbounded tick must REALLY leave the band, so the clauses
+      // below can never pass on a baseline that never left.
       expect(typeof stepPhysicsWithGeometryOf).toBe('function');
       expect(
         containmentCenterlineDistance(unbounded.x, unbounded.y),
-      ).toBeGreaterThan(CONTAINMENT_DRIVABLE_HALF_WIDTH_M);
-      // The contained car is INSIDE the drivable surface: its lateral
-      // distance to the nearest chord is AT MOST the drivable half width.
+      ).toBeGreaterThan(CONTAINMENT_BAND_OUTER_EDGE_M);
+      // THE RETIREMENT (byte-identity): the published pose with the
+      // geometry is EXACTLY the free roll - the retired seam is a NO-OP
+      // for this input too.
+      expect(JSON.stringify(published)).toBe(JSON.stringify(unbounded));
+      // ... and the car keeps rolling OUTWARD: nothing clamps it back to
+      // the band outer edge (the AC-090 VERDICT-8 observable: no
+      // invisible wall anywhere near the track edge, the published pose
+      // is the REACHED pose).
       expect(
         containmentCenterlineDistance(
           published?.x ?? Number.NaN,
           published?.y ?? Number.NaN,
         ),
-      ).toBeLessThanOrEqual(CONTAINMENT_DRIVABLE_HALF_WIDTH_M);
-      // ... and it is EXACTLY on the drivable-surface edge (the bound is a
-      // hard edge, not a soft zone).
-      expect(
-        containmentCenterlineDistance(
-          published?.x ?? Number.NaN,
-          published?.y ?? Number.NaN,
-        ),
-      ).toBeCloseTo(CONTAINMENT_DRIVABLE_HALF_WIDTH_M, 9);
+      ).toBeGreaterThan(CONTAINMENT_BAND_OUTER_EDGE_M);
     });
 
     // [RED-14I-NOOP]
-    it('NO-OP: an ABSENT geometry and an EMPTY segment list leave the tick BYTE-IDENTICAL (and NOTHING throws)', () => {
+    it('NO-OP: an ABSENT geometry, an EMPTY segment list and a FULL ribbon leave the tick BYTE-IDENTICAL (and NOTHING throws)', () => {
       // Arrange
       const car = buildContainmentFixtureCar(
         CONTAINMENT_CAR_X_M,
@@ -2928,11 +3001,20 @@ describe('the LIVE road containment (Step 14I, slice P1-track-road-containment)'
         ROAD_SURFACE_RESOLVER,
         [],
       );
+      // The SAME tick with a FULL ribbon (the retired seam reads
+      // NOTHING, so even the geometry it "could" read changes nothing).
+      const fullGeometry = stepPhysicsWithGeometryOf?.(
+        car,
+        NEUTRAL_INPUT,
+        ROAD_SURFACE_RESOLVER,
+        CONTAINMENT_RIBBON,
+      );
 
       // Assert
       expect(typeof stepPhysicsWithGeometryOf).toBe('function');
-      // NOTHING throws: the empty list is guarded BEFORE the bound is
-      // called (`resolveNearestChordPoint` throws on an empty list).
+      // NOTHING throws: the retired seam owns EVERY input and reads
+      // NOTHING from it - an empty list, a full ribbon and an absent
+      // geometry all produce THE SAME tick.
       expect(() =>
         stepPhysicsWithGeometryOf?.(
           car,
@@ -2941,23 +3023,37 @@ describe('the LIVE road containment (Step 14I, slice P1-track-road-containment)'
           [],
         ),
       ).not.toThrow();
+      expect(() =>
+        stepPhysicsWithGeometryOf?.(
+          car,
+          NEUTRAL_INPUT,
+          ROAD_SURFACE_RESOLVER,
+          CONTAINMENT_RIBBON,
+        ),
+      ).not.toThrow();
       // The empty list is a BYTE-IDENTICAL no-op...
       expect(JSON.stringify(emptyGeometry)).toBe(JSON.stringify(unbounded));
-      // ... and so is the absent geometry.
+      // ... so is the absent geometry...
       expect(JSON.stringify(withoutGeometry)).toBe(JSON.stringify(unbounded));
+      // ... and so is the FULL ribbon (the ALL-inputs NO-OP: the
+      // retirement's pose-independence, true by construction).
+      expect(JSON.stringify(fullGeometry)).toBe(JSON.stringify(unbounded));
     });
 
     // [RED-14I-POSE-INDEPENDENCE]
-    it('POSE-INDEPENDENCE: the SAME car pose reaches the SAME reseated position for EVERY heading and EVERY slip angle', () => {
-      // Arrange: a STANDING car OFF the drivable surface. A standing car
-      // does not translate, so the pose the containment sees is the SAME
-      // world position for every heading and every slip angle - the lane
-      // then measures the bound alone.
+    it('POSE-INDEPENDENCE: the SAME car pose reaches the SAME position for EVERY heading and EVERY slip angle - and NOTHING moves it (the retired seam is a NO-OP)', () => {
+      // Arrange: a STANDING car BEYOND the band outer edge. A standing car
+      // does not translate, so the pose the (retired) seam sees is the
+      // SAME world position for every heading and every slip angle - the
+      // lane then measures that NOTHING moves the car (the AC-081
+      // pose-independence clause carries over: with the bound retired it
+      // is true BY CONSTRUCTION, and a bound that creeps back would
+      // break the second clause).
       const headings = [0, Math.PI / 4, Math.PI / 2, Math.PI, -Math.PI / 2];
       const slipAngles = [0, 0.1, -0.1];
 
       // Act
-      const reseated = headings.flatMap((heading) =>
+      const contained = headings.flatMap((heading) =>
         slipAngles.map((slipAngle) => {
           const car: PhysicsCarState = {
             ...buildContainmentFixtureCar(
@@ -2982,40 +3078,39 @@ describe('the LIVE road containment (Step 14I, slice P1-track-road-containment)'
       expect(typeof stepPhysicsWithGeometryOf).toBe('function');
       // The lane really covered the matrix (a vacuous matrix would make
       // the equality below a tautology).
-      expect(reseated).toHaveLength(headings.length * slipAngles.length);
-      // EVERY pose reaches the SAME point: the bound is derived from the
-      // ribbon geometry ONLY, so it can never mask the AI steering defect
-      // owned by Step 14M (AC-085).
-      const first = reseated[0];
-      for (const pose of reseated) {
+      expect(contained).toHaveLength(headings.length * slipAngles.length);
+      // EVERY pose reaches the SAME point - the car stands where it
+      // stood for EVERY heading and EVERY slip angle.
+      const first = contained[0];
+      for (const pose of contained) {
         expect(pose.x).toBe(first.x);
         expect(pose.y).toBe(first.y);
       }
-      // The reseat IS the drivable-surface edge of the ribbon: the lateral
-      // distance to the centerline is the drivable half width...
+      // And the position is WHERE THE CAR STOOD: the retired seam moves
+      // NOTHING, so the standing car stays BEYOND the band outer edge
+      // (the centerline distance is STILL the standing offset - no wall
+      // pulled it to the bound; the AC-090 VERDICT-8 observable).
+      expect(first.x).toBeCloseTo(CONTAINMENT_CAR_X_M, 9);
+      expect(first.y).toBeCloseTo(CONTAINMENT_CAR_OFF_RIBBON_Y_M, 9);
       expect(
         containmentCenterlineDistance(
           first.x ?? Number.NaN,
           first.y ?? Number.NaN,
         ),
-      ).toBeCloseTo(CONTAINMENT_DRIVABLE_HALF_WIDTH_M, 9);
-      // ... and the car keeps the chord it was standing on.
-      expect(first.x).toBeCloseTo(CONTAINMENT_CAR_X_M, 9);
+      ).toBeCloseTo(CONTAINMENT_CAR_OFF_RIBBON_Y_M, 9);
     });
 
     // [RED-14I-PUBLISHED-SCALARS]
-    it('PUBLISHED SCALARS: after a containment bounce the travel heading and the traction severity are RE-DERIVED from the POST-containment pose', () => {
-      // Arrange: a SLIDING car that leaves the drivable surface, so the
-      // pre-containment tick publishes a NON-ZERO slip and a NON-ZERO
-      // traction severity.
+    it('PUBLISHED SCALARS: the published scalars are THE MODEL LAW on the tick\'s own final state, byte-identical with and without the geometry (the containment is retired)', () => {
+      // Arrange: a SLIDING car that leaves the band, so the tick
+      // publishes a NON-ZERO slip and a NON-ZERO traction severity.
       const car = buildSlidingContainmentFixtureCar(
         CONTAINMENT_CAR_X_M,
-        CONTAINMENT_CAR_ON_RIBBON_Y_M,
+        CONTAINMENT_CAR_IN_BAND_Y_M,
         Math.PI / 2,
         CONTAINMENT_CAR_SPEED_MPS,
       );
-      // The SAME tick WITHOUT the geometry: the unbounded baseline, whose
-      // published scalars are the PRE-containment ones.
+      // The SAME tick WITHOUT the geometry: the free, unbounded roll.
       const unbounded = stepPhysics(car, CONTAINMENT_SLIP_INPUT);
 
       // Act
@@ -3027,21 +3122,20 @@ describe('the LIVE road containment (Step 14I, slice P1-track-road-containment)'
       );
 
       // Assert
-      // The NON-VACUITY GUARD comes FIRST: the unbounded tick really does
-      // publish a slip and a severity, so the "never the pre-bounce
-      // numbers" assertions below can never pass vacuously.
+      // The NON-VACUITY GUARD comes FIRST: the tick really does publish a
+      // slip and a severity, so the invariants below can never pass
+      // vacuously.
       expect(typeof stepPhysicsWithGeometryOf).toBe('function');
       expect(Math.abs(unbounded.slipAngle)).toBeGreaterThan(0);
       expect(unbounded.tractionSeverity).toBeGreaterThan(0);
-      // The bounce really happened (the car is back on the edge).
-      expect(
-        containmentCenterlineDistance(
-          published?.x ?? Number.NaN,
-          published?.y ?? Number.NaN,
-        ),
-      ).toBeCloseTo(CONTAINMENT_DRIVABLE_HALF_WIDTH_M, 9);
-      // The published travel heading is the POST-containment one: it is
-      // the wrapped sum of the published heading and the published slip.
+      // THE RETIREMENT (byte-identity): the geometry changes NOTHING -
+      // with the containment retired there is no second, post-seam
+      // reference state, so the published scalars can only be the
+      // integration's own numbers.
+      expect(JSON.stringify(published)).toBe(JSON.stringify(unbounded));
+      // The published travel heading is the model law on the published
+      // state: the wrapped sum of the published heading and the
+      // published slip.
       expect(published?.travelHeadingRad).toBeCloseTo(
         wrapFixtureHeading(
           (published?.heading ?? Number.NaN) +
@@ -3049,13 +3143,8 @@ describe('the LIVE road containment (Step 14I, slice P1-track-road-containment)'
         ),
         12,
       );
-      // ... and it is NOT the pre-containment travel heading.
-      expect(published?.travelHeadingRad).not.toBeCloseTo(
-        unbounded.travelHeadingRad,
-        6,
-      );
-      // The published traction severity is the POST-containment one: it is
-      // the model law on the published slip and the published speed.
+      // The published traction severity is the model law on the
+      // published slip and the published speed.
       expect(published?.tractionSeverity).toBeCloseTo(
         computeTractionSeverityOf?.(
           published?.slipAngle ?? Number.NaN,
@@ -3063,10 +3152,1711 @@ describe('the LIVE road containment (Step 14I, slice P1-track-road-containment)'
         ) ?? Number.NaN,
         12,
       );
-      // ... and it is NOT the pre-containment severity.
-      expect(published?.tractionSeverity).not.toBeCloseTo(
-        unbounded.tractionSeverity,
-        9,
+    });
+  });
+});
+
+/* ------------------------------------------------------------------------- *
+ * STEP 14W (slice `P1-sand-red`): the BOUNDARY RE-CONTRACT (AC-094).
+ *
+ * THE USER DIRECTIVE: "touching the edge teleports you to the middle of the
+ * track" must STOP, and the off-track surface must be drivable and
+ * SAND-LIKE instead of a wall that throws the car back onto the ribbon.
+ *
+ * THE CLASSIFICATION THIS SLICE RECORDS: BOUNDARY/MODEL - the LIVE TICK
+ * and the BOUNDARY LAW own the pose, and the defect is NEVER a visual or
+ * a presentation defect.
+ *
+ * AC tags: AC-094 (a - the road edge is an INNER boundary: a car that
+ * crossed it really ends up off the road), AC-094 (b - the off-track band
+ * is DRIVABLE and SAND-LIKE: the band speed is strictly lower than the
+ * road speed for the same input, and the car KEEPS ROLLING),
+ * AC-094 (d - the ONE bound moves to the outer edge of the band, whose
+ * width is the EXISTING named grass-apron constant), AC-081 (RECONCILED -
+ * the RETAINED half: the ONE-BOUND and the SHIPPED-TICK clauses; the
+ * SUPERSEDED half: "leaving the track is no longer allowed"),
+ * AC-090 (the user gate is NOT claimed - this lane closes nothing and
+ * records no verdict).
+ *
+ * RED-2 (DISCRIMINATING - the lane FAILS today on its own assertion):
+ * after the crossing tick the published lateral distance EXCEEDS the
+ * drivable half-width. The NON-VACUITY GUARD comes FIRST (the Step 14Q
+ * style): the probe MUST really cross the drivable edge inside ONE tick
+ * (a probe that stays on the road would satisfy the clause VACUOUSLY) and
+ * the LIVE tick MUST really apply the containment seam (the positive
+ * control below). The lane deliberately does NOT assert "the bound
+ * changed the pose": that clause BREAKS in the green state, where the
+ * car legitimately crosses the edge and is no longer reseated.
+ *
+ * RED-3 (DISCRIMINATING - the lane FAILS today on its own assertion):
+ * the band is SAND-LIKE in the LIVE tick: (a) the surface is resolved
+ * from the POST-MOVE pose (so the off-road machinery is REACHABLE in the
+ * live tick), (b) the band speed is STRICTLY LOWER than the road speed
+ * for the SAME deterministic input, and (c) the car KEEPS ROLLING. The
+ * A/B pair shares the SAME start speed, the SAME heading and the SAME
+ * input - ONLY the lateral offset differs, so the road lane ends ON the
+ * road and the band lane ends ON the band. The NON-VACUITY GUARD comes
+ * FIRST: neither lane may be a standstill and the two setups must really
+ * differ (comparing a standstill with a roll would satisfy the speed
+ * clause VACUOUSLY).
+ *
+ * The lanes are RUNTIME-ONLY: they drive the EXISTING live tick, so every
+ * red is a NAMED RUNTIME failure and NEVER an import failure.
+ * ------------------------------------------------------------------------- */
+
+/** One recorded surface question of the recording resolver. */
+interface BandSurfaceProbe {
+  /** The world x of the probed pose (m). */
+  readonly x: number;
+  /** The world y of the probed pose (m). */
+  readonly y: number;
+  /** The surface the production classifier resolved for that pose. */
+  readonly surface: PhysicsSurfaceType;
+}
+
+/**
+ * The drivable half width of the band ribbon (m): the 8 m ribbon's half.
+ */
+const BAND_DRIVABLE_HALF_WIDTH_M = CONTAINMENT_DRIVABLE_HALF_WIDTH_M;
+
+/**
+ * The OUTER edge of the off-track band (m): the drivable edge plus the
+ * EXISTING named grass-apron width (AC-094 (d) - the band width is an
+ * EXISTING published constant, never a band-paint constant).
+ */
+const BAND_OUTER_EDGE_M =
+  BAND_DRIVABLE_HALF_WIDTH_M + NEATRACING_TRACK_GRASS_APRON_WIDTH_M;
+
+/**
+ * The crossing probe's tick-start lateral offset (m): INSIDE the
+ * drivable surface, close enough to the edge that ONE tick crosses it.
+ */
+const BAND_CROSSING_START_LATERAL_M = BAND_DRIVABLE_HALF_WIDTH_M - 0.6;
+
+/**
+ * The tick-start speed of the crossing probe (m/s).
+ */
+const BAND_CROSSING_SPEED_MPS = 60;
+
+/**
+ * The crossing input: full throttle, straight.
+ *
+ * DELIBERATELY NOT aliased to the shared `STRAIGHT_INPUT`: the band
+ * contract only holds while the throttle is applied (a passive tick would
+ * make the off-road speed law indistinguishable from the road law), so a
+ * future edit of the shared fixture must not be able to silently
+ * de-vacuum this contract.
+ */
+const BAND_CROSSING_INPUT: PhysicsStepInput = {
+  throttle: 1,
+  brake: 0,
+  steer: 0,
+};
+
+/**
+ * Builds a tick-start car at a known lateral offset, heading and speed.
+ *
+ * @param lateralM - The world y of the car at tick start (m).
+ * @param heading - The nose heading of the car at tick start (rad).
+ * @param speed - The tick-start speed of the car (m/s).
+ * @returns The tick-start car state.
+ */
+const buildBandFixtureCar = (
+  lateralM: number,
+  heading: number,
+  speed: number,
+): PhysicsCarState => ({
+  ...createInitialPhysicsCarState(42, {
+    x: CONTAINMENT_CAR_X_M,
+    y: lateralM,
+    heading,
+  }),
+  speed,
+});
+
+/**
+ * Creates a recording surface resolver over the PRODUCTION classifier:
+ * it answers exactly what the production classifier answers and RECORDS
+ * every question, so the lane can observe WHICH pose the live tick asked
+ * about (the state carries no surface field of its own).
+ *
+ * @param segments - The ribbon the classifier reads (read only).
+ * @returns The recording resolver and its recorded probes.
+ */
+const createRecordingSurfaceResolver = (
+  segments: readonly TrackSegment[],
+): {
+  readonly resolver: (car: PhysicsCarState) => PhysicsSurfaceType;
+  readonly probes: BandSurfaceProbe[];
+} => {
+  const resolve = createTrackSurfaceResolver(segments);
+  const probes: BandSurfaceProbe[] = [];
+  return {
+    resolver: (car: PhysicsCarState): PhysicsSurfaceType => {
+      const surface = resolve(car);
+      probes.push({ x: car.x, y: car.y, surface });
+      return surface;
+    },
+    probes,
+  };
+};
+
+/**
+ * The BOUNDARY RE-CONTRACT contracts (Step 14W, slice `P1-sand-red`;
+ * AC-094).
+ */
+describe('the BOUNDARY RE-CONTRACT (Step 14W, slice P1-sand-red)', () => {
+  // [RED-14W-CROSSING]
+  it('RED-2 (DISCRIMINATING): a car that has crossed the drivable edge REALLY ends up off the road (the published lateral distance EXCEEDS the drivable half-width after the crossing tick)', () => {
+    // Arrange: the crossing probe - INSIDE the drivable surface, heading
+    // OUTWARD, at a speed that crosses the edge inside ONE tick.
+    const start = buildBandFixtureCar(
+      BAND_CROSSING_START_LATERAL_M,
+      Math.PI / 2,
+      BAND_CROSSING_SPEED_MPS,
+    );
+    const surfaceResolver = createTrackSurfaceResolver(CONTAINMENT_RIBBON);
+
+    // Act: the UNBOUNDED tick (the pose the car REALLY reached) and the
+    // LIVE tick with the ribbon geometry (the shipped containment seam).
+    const unbounded = stepPhysics(
+      start,
+      BAND_CROSSING_INPUT,
+      surfaceResolver,
+    );
+    const published = stepPhysics(
+      start,
+      BAND_CROSSING_INPUT,
+      surfaceResolver,
+      CONTAINMENT_RIBBON,
+    );
+
+    // The NON-VACUITY GUARD comes FIRST: the probe MUST really cross the
+    // drivable edge inside ONE tick (a probe that stays inside it would
+    // satisfy the clause VACUOUSLY) ...
+    expect([
+      Math.abs(unbounded.y) > BAND_DRIVABLE_HALF_WIDTH_M,
+      Math.abs(unbounded.y) <= BAND_OUTER_EDGE_M,
+      Math.abs(start.y) <= BAND_DRIVABLE_HALF_WIDTH_M,
+    ]).toEqual([true, true, true]);
+
+    // ... and the LIVE tick really runs the RETIRED seam as a NO-OP (the
+    // positive control, RE-AUTHORED by fix-packet-P1-sand-red-iteration-3:
+    // a probe FAR beyond the band outer edge is NEVER pulled back to the
+    // bound - the published pose is BYTE-IDENTICAL to the free roll, so
+    // there is NO wall anywhere near the track edge: the AC-090
+    // VERDICT-8 observable. The RETIRING positive control also proves the
+    // seam really runs in this tick: a re-landed bound would clamp the
+    // far probe to BAND_OUTER_EDGE_M and FAIL this clause).
+    const farProbe = buildBandFixtureCar(
+      BAND_OUTER_EDGE_M + 10,
+      Math.PI / 2,
+      BAND_CROSSING_SPEED_MPS,
+    );
+    const farPublished = stepPhysics(
+      farProbe,
+      BAND_CROSSING_INPUT,
+      surfaceResolver,
+      CONTAINMENT_RIBBON,
+    );
+    expect(JSON.stringify(farPublished)).toBe(
+      JSON.stringify(
+        stepPhysics(farProbe, BAND_CROSSING_INPUT, surfaceResolver),
+      ),
+    );
+    expect(Math.abs(farPublished.y)).toBeGreaterThan(BAND_OUTER_EDGE_M);
+
+    // RELATIONAL CLAUSE (DISCRIMINATING): the published lateral distance
+    // from the centreline EXCEEDS the drivable half-width - the road edge
+    // is an INNER boundary, never a wall that teleports the car back onto
+    // the ribbon (RED-2, the USER-named observable: the car REALLY ends
+    // up off the road, where the sand law now governs it).
+    expect(Math.abs(published.y)).toBeGreaterThan(BAND_DRIVABLE_HALF_WIDTH_M);
+  });
+
+  // [RED-14W-SAND]
+  it('RED-3 (DISCRIMINATING): the band is SAND-LIKE in the LIVE tick (the surface is resolved from the POST-MOVE pose, the band speed is STRICTLY LOWER than the road speed for the SAME input, and the car KEEPS ROLLING)', () => {
+    // Arrange: TWO lanes with the SAME start speed, the SAME heading and
+    // the SAME input - ONLY the lateral offset differs, so the road lane
+    // ends ON the road and the band lane ends ON the band.
+    const roadStart = buildBandFixtureCar(
+      0,
+      Math.PI / 2,
+      BAND_CROSSING_SPEED_MPS,
+    );
+    const bandStart = buildBandFixtureCar(
+      BAND_CROSSING_START_LATERAL_M,
+      Math.PI / 2,
+      BAND_CROSSING_SPEED_MPS,
+    );
+    const surfaceResolver = createTrackSurfaceResolver(CONTAINMENT_RIBBON);
+    const roadLane = createRecordingSurfaceResolver(CONTAINMENT_RIBBON);
+    const bandLane = createRecordingSurfaceResolver(CONTAINMENT_RIBBON);
+
+    // Act: the two lanes (with the geometry, so the LIVE tick applies the
+    // containment seam) and the UNBOUNDED baselines (the poses the cars
+    // REALLY reached).
+    const roadPublished = stepPhysics(
+      roadStart,
+      BAND_CROSSING_INPUT,
+      roadLane.resolver,
+      CONTAINMENT_RIBBON,
+    );
+    const bandPublished = stepPhysics(
+      bandStart,
+      BAND_CROSSING_INPUT,
+      bandLane.resolver,
+      CONTAINMENT_RIBBON,
+    );
+    const roadReached = stepPhysics(
+      roadStart,
+      BAND_CROSSING_INPUT,
+      surfaceResolver,
+    );
+    const bandReached = stepPhysics(
+      bandStart,
+      BAND_CROSSING_INPUT,
+      surfaceResolver,
+    );
+
+    // The NON-VACUITY GUARD comes FIRST: the band lane MUST really reach
+    // the band inside ONE tick and the road lane MUST really stay on the
+    // road (a probe that never reached the band would satisfy the
+    // clauses VACUOUSLY) ...
+    expect([
+      Math.abs(bandReached.y) > BAND_DRIVABLE_HALF_WIDTH_M,
+      Math.abs(bandReached.y) <= BAND_OUTER_EDGE_M,
+      Math.abs(roadReached.y) <= BAND_DRIVABLE_HALF_WIDTH_M,
+    ]).toEqual([true, true, true]);
+
+    // ... the surface model MUST really resolve a NON-ROAD surface for the
+    // pose the band lane reached (a probe whose surface is the road would
+    // satisfy the surface clause VACUOUSLY) ...
+    const bandReachedClassification = classifyTrackSurface(
+      { ...bandStart, x: bandReached.x, y: bandReached.y },
+      CONTAINMENT_RIBBON,
+    );
+    expect(bandReachedClassification.surface).toBe('grass');
+
+    // ... the two lanes MUST really share the SAME start speed, the SAME
+    // heading and the SAME input, and NEITHER may be a standstill
+    // (comparing a standstill with a roll would satisfy the speed clause
+    // VACUOUSLY).
+    expect([
+      bandStart.speed === roadStart.speed,
+      bandStart.heading === roadStart.heading,
+      roadPublished.speed > 0,
+      bandPublished.speed > 0,
+    ]).toEqual([true, true, true, true]);
+
+    // RELATIONAL CLAUSE (a) (DISCRIMINATING): the LIVE tick resolved the
+    // surface for the pose the car REACHED (the POST-MOVE pose), so the
+    // off-road machinery is REACHABLE in the live tick. TODAY the live
+    // tick resolves the surface at the TICK START, so it never asks about
+    // a band pose and this lane FAILS HERE.
+    const bandProbes = bandLane.probes.filter(
+      (probe) => Math.abs(probe.y) > BAND_DRIVABLE_HALF_WIDTH_M,
+    );
+    expect(bandProbes.length).toBeGreaterThan(0);
+    expect(bandProbes.every((probe) => probe.surface === 'grass')).toBe(true);
+
+    // RELATIONAL CLAUSE (b) (DISCRIMINATING): the band speed is STRICTLY
+    // LOWER than the road speed for the SAME deterministic input. TODAY
+    // the live tick resolves the surface at the tick start (the road), so
+    // the off-road law never applies and the two speeds are EQUAL - this
+    // lane FAILS HERE.
+    expect(bandPublished.speed).toBeLessThan(roadPublished.speed);
+
+    // RELATIONAL CLAUSE (c) (the RAIL): the car KEEPS ROLLING on the
+    // band - the band is drivable sand, never a standstill.
+    expect(bandPublished.speed).toBeGreaterThan(0);
+  });
+});
+
+/* ------------------------------------------------------------------------- *
+ * STEP 14W (slice `P1-sand-red`, ITERATION 2): the RED-I2 lanes - the
+ * SAND-BAND OUTER-EDGE REBOUND.
+ *
+ * THE MEASURED DEFECT (the 2026-11-04 RED MEASUREMENT ROUND of the plan's
+ * `fix-packet-P1-sand-red-iteration-2`, BEFORE any production edit): the
+ * "teleport" that survived the iteration-1 band contract is NOT a visual
+ * defect and NOT the iteration-1 bound LOCATION - it is the ELASTIC
+ * REBOUND of the sand-band OUTER EDGE (the former
+ * `reboundPastBandOuterEdge` in `./collision.utils`, REMOVED WITH the
+ * bound by iteration 3): a car that crosses the band outer edge had its
+ * OUTWARD velocity component REFLECTED and was RECOMPOSED around the
+ * reflected velocity, so the published heading SNAPPED (the MEASURED
+ * one-tick snap was 1.2870 rad) and the reflected velocity carried the
+ * car BACK onto the ribbon (the MEASURED lateral distance fell from
+ * 17.64 m to 13.59 m - straight back over the drivable edge), which
+ * destroyed the sand-like slow roll (the MEASURED off-road speed never
+ * came near the then-floor 22.25 m/s: it bottomed out at 57.18 m/s).
+ *
+ * THE RETIREMENT (fix-packet-P1-sand-red-iteration-3, AC-090 VERDICT 8):
+ * the bound AND its rebound are RETIRED ENTIRELY - the track boundary
+ * contains NOTHING, the published pose is the reached pose, and the ONE
+ * off-track limit is the USER-named sand cap (AC-094). The lanes below
+ * are RE-AUTHORED IN-STEP onto the retirement: their anchors are the
+ * poses the car REALLY reaches (the band-outer-edge excess and the first
+ * grass tick), never the retired touch.
+ *
+ * THE LANES BELOW (the served lane lives in
+ * `./host/race-session.sand-red.test.ts`):
+ *
+ * RED-I2-a (DISCRIMINATING, RE-AUTHORED BY ITERATION 3): the published
+ *   heading delta never SNAPS - for EVERY tick the published heading
+ *   change stays inside the yaw-rate channel (`abs(yawRate) * dt`); the
+ *   retired seam leaves the yaw to the model (the OLD measured snap was
+ *   1.2870 rad).
+ * RED-I2-b (DISCRIMINATING, RE-AUTHORED BY ITERATION 3): once the car is
+ *   off the ribbon it NEVER reenters the drivable surface on its own
+ *   (measured from the FIRST GRASS tick on).
+ * RED-I2-c (DISCRIMINATING, RE-AUTHORED BY ITERATION 3 against the
+ *   USER-named off-track speed): the sand roll SETTLES AT THE USER-NAMED
+ *   OFF-TRACK LIMIT 20 km/h = 5.5556 m/s (the USER's OWN number); the
+ *   published 22.25 m/s floor is MEASURED 4.005x the USER value and was
+ *   SUPERSEDED by the 2026-11-05 verdict-8 record.
+ * RED-I2-preserve (PRESERVATION GUARD - GREEN today, able to fail): the
+ *   per-tick displacement stays inside ONE integration envelope on EVERY
+ *   tick (re-authored by iteration 3: the envelope is measured on the
+ *   WHOLE lane and no mechanism may regress into a hard position
+ *   teleport).
+ *
+ * THE LANES ARE RUNTIME-ONLY: they drive the EXISTING live tick, so every
+ * red is a NAMED RUNTIME failure and NEVER an import failure.
+ *
+ * RED-I3-wall / RED-I3-cap (ITERATION 3, the describe block right below
+ * the RED-I2 one): the band-outer-edge WALL + the USER-named off-track
+ * speed CAP contracts. The MEASURED classification (W1 the pose hold vs
+ * W2 the clean corridor vs S1 the speed-law contradiction vs S2 the
+ * settle window) and its numbers live in the plan's 2026-11-05 RED
+ * MEASUREMENT ROUND record (fix-packet-P1-sand-red-iteration-3), which
+ * was written BEFORE any production or contract edit, per AC-094.
+ * ------------------------------------------------------------------------- */
+
+/**
+ * The served demo-track fixture (the browser-entry generation input: the
+ * REAL served geometry the defect was measured on).
+ */
+const SAND_I2_TRACK_FIXTURE = {
+  seed: 42,
+  layoutVersion: 1,
+  sizeBucket: 'large',
+} as const;
+
+/**
+ * The outward heading bias of the sharp-exit probe (rad): the car leaves
+ * the ribbon across the sand band with a wide, pose-controlled bias.
+ */
+const SAND_I2_OUTWARD_BIAS_RAD = 0.6;
+
+/** The sharp-exit probe's tick-start speed (m/s). */
+const SAND_I2_EXIT_SPEED_MPS = 60;
+
+/**
+ * The sharp-exit probe's input: full throttle and NO steer.
+ *
+ * DELIBERATELY NOT aliased to a shared fixture: the yaw contract of
+ * RED-I2-a is only observable while the steer axis stays DISENGAGED (a
+ * steered tick publishes a non-zero yaw rate, so the yaw envelope would be
+ * satisfied by the driver and never by the bound).
+ */
+const SAND_I2_EXIT_INPUT: PhysicsStepInput = {
+  throttle: 1,
+  brake: 0,
+  steer: 0,
+};
+
+/** The live tick's fixed step (s). */
+const SAND_I2_TICK_SECONDS = NEATRACING_PHYSICS_FIXED_TIMESTEP_SECONDS;
+
+/** The float64 epsilon of the heading arithmetic (rad). */
+const SAND_I2_YAW_EPSILON_RAD = 1e-9;
+
+/** The float64 epsilon of the displacement arithmetic (m). */
+const SAND_I2_MOVE_EPSILON_M = 1e-6;
+
+/* NOTE: the iteration-2 speed epsilon (`SAND_I2_SPEED_EPSILON_MPS`) was
+ * removed in-step by the iteration-3 re-author: the speed clause reads the
+ * NAMED off-road speed export now, so no raw speed epsilon is asserted. */
+
+/**
+ * The observation window of the anchor lanes (ticks): long enough to span
+ * the band-outer-edge anchor with margin (the lane's pre-anchor ticks and
+ * the anchor itself both live inside it).
+ */
+const SAND_I2_TOUCH_WINDOW_TICKS = 32;
+
+/**
+ * The sand-roll observation budget (ticks): the plan's fixed budget for
+ * the RED-I2-c window.
+ */
+const SAND_I2_ROLL_BUDGET_TICKS = 300;
+
+/* ------------------------------------------------------------------------- *
+ * STEP 14W (slice `P1-sand-red`, ITERATION 3): the USER-NAMED OFF-TRACK
+ * SPEED + THE WALL PROBES (fix-packet-P1-sand-red-iteration-3).
+ *
+ * THE MEASURED CLASSIFICATION (the plan's 2026-11-05 RED MEASUREMENT
+ * ROUND, recorded BEFORE any production edit): (W1) the landed
+ * iteration-2 clamp HOLDS the pose EXACTLY on the band outer edge -
+ * 288/288 post-touch ticks read 3.0 m past the drivable edge to 1e-9
+ * while full throttle is applied (max published excess 0.0 vs the
+ * free-rolling twin at 79.52 m) - the hold IS the wall the USER named;
+ * (W2) the corridor beyond the bound is CLEAN (7.0 m to the AC-096
+ * 10 m prop floor, 9.3342 m to the AC-096 ledger's worst measured prop
+ * body 12.3342 m); (S1) the published off-road floor 22.25 m/s
+ * = 80.1 km/h is 4.005x the USER-named limit; (S2) under the EXISTING
+ * off-road decel law the settle to the USER value takes ~38 ticks from
+ * the stall speed and ~127 ticks from the lane's measured 61.63 m/s
+ * grass entry - inside the existing roll budget either way.
+ * ------------------------------------------------------------------------- */
+
+/**
+ * THE USER-NAMED OFF-TRACK SPEED LIMIT (m/s): 20 km/h = 5.5556 m/s
+ * (20 / 3.6). THE USER's OWN NUMBER, recorded verbatim in the plan's
+ * 2026-11-05 VERDICT 8 record ("...with the speed limited to 20km/h").
+ * This SUPERSEDES the off-track floor part of AC-094(c)
+ * (`NEATRACING_PHYSICS_OFF_ROAD_SPEED_FLOOR_UNITS_PER_S`, 22.25 m/s,
+ * measured 4.005x the USER value); the EXISTING off-road decel law
+ * (`NEATRACING_PHYSICS_OFF_ROAD_DECEL_UNITS_PER_S2`) STAYS the slowdown
+ * mechanism, so the sand feel survives.
+ */
+const SAND_I3_USER_OFF_TRACK_LIMIT_MPS = 5.5556;
+
+/**
+ * The enforce window of the USER-named limit (m/s): wide enough to accept
+ * both the exact 20/3.6 expansion (5.555555...) and a 5.5556 named
+ * literal (both ARE the USER's named value), narrow enough to reject any
+ * slack above ~20.02 km/h (the published 22.25 m/s floor sits 16,694 of
+ * these windows above the USER value).
+ */
+const SAND_I3_CAP_EPSILON_MPS = 1e-3;
+
+/**
+ * The wall excess epsilon (m): the published past-edge excess at the band
+ * outer edge is MEASURED EXACTLY 0.0 today (the clamp lands the pose at
+ * exactly the bound, residual <= 1e-9), so 1e-4 separates "the car left
+ * the bound behind" from "the car was held at it" - a resolved fix grows
+ * the excess by ~0.06 m per tick ALREADY at the USER cap (the 5.5556 m/s
+ * roll through the lane's outward bias), ~600x the window.
+ */
+const SAND_I3_WALL_EXCESS_EPSILON_M = 1e-4;
+
+/**
+ * The hold epsilon of the band-outer-edge pin (m): the MEASURED clamp
+ * residual at the bound is <= 1e-9, so 1e-9 is the float boundary of
+ * "pinned on the bound" (NEVER a slowdown - a slowdown would show a
+ * growing excess).
+ */
+const SAND_I3_PIN_EPSILON_M = 1e-9;
+
+/**
+ * The genuine road-speed entry margin over the USER-named limit (m/s):
+ * the cap contract is non-vacuous only when the car ENTERS the grass
+ * ABOVE a road-speed reading (the MEASURED live-tick entry is
+ * 61.6317 m/s and the MEASURED served entry is 38.8273 m/s - both far
+ * above 6.0556), never when it crawls onto the sand already inside the
+ * cap (a cap enforced at the cap's own entry speed would prove nothing).
+ */
+const SAND_I3_ENTRY_MARGIN_MPS = 0.5;
+
+/** One recorded tick of the sharp-exit lane. */
+interface SandI2Tick {
+  /** The tick index (0 is the first tick after the start pose). */
+  readonly index: number;
+  /** The published pose of the tick (the pose the world sees). */
+  readonly published: PhysicsCarState;
+  /** The surface the PRODUCTION classifier resolved for the published pose. */
+  readonly surface: PhysicsSurfaceType;
+  /** The published displacement of the tick (m). */
+  readonly moveM: number;
+  /** The wrapped published heading delta of the tick (rad). */
+  readonly yawDeltaRad: number;
+  /** The published speed of the tick (m/s). */
+  readonly speedMps: number;
+  /** TRUE when the published pose diverged from the free-rolling twin. */
+  readonly boundMovedPose: boolean;
+}
+
+/** The recorded sharp-exit lane and its MEASURED summary. */
+interface SandI2Lane {
+  /** The recorded ticks. */
+  readonly ticks: readonly SandI2Tick[];
+  /**
+   * The index of the tick in which the published pose diverged from the
+   * free-rolling twin. MEASURED under the RETIRED seam (iteration 3): -1
+   * for EVERY tick (the byte-identical NO-OP); a re-landed bound would
+   * set it at the touch.
+   */
+  readonly touchIndex: number;
+  /** The consecutive distinct surfaces the lane crossed. */
+  readonly surfaceLadder: readonly PhysicsSurfaceType[];
+  /**
+   * The surface of the tick right BEFORE the band-outer-edge anchor (the
+   * drivable-edge crossing; RE-AUTHORED BY ITERATION 3 - the OLD touch
+   * anchor is retired WITH the bound).
+   */
+  readonly preAnchorSurface: PhysicsSurfaceType;
+  /** The largest heading delta OVER the yaw-rate envelope (rad). */
+  readonly maxYawViolationRad: number;
+  /** The largest displacement OVER the integration envelope (m). */
+  readonly maxMoveViolationM: number;
+  /** The smallest displacement of the lane (m). */
+  readonly minMoveM: number;
+  /**
+   * The smallest displacement BEFORE the band-outer-edge anchor (m;
+   * RE-AUTHORED BY ITERATION 3 - the OLD pre-touch anchor is retired
+   * WITH the bound).
+   */
+  readonly minPreAnchorMoveM: number;
+  /** The smallest published speed of the lane (m/s). */
+  readonly minSpeedMps: number;
+  /** The published speed of the last tick of the lane (m/s). */
+  readonly finalSpeedMps: number;
+  /**
+   * The tick indices (from the FIRST GRASS tick on) on which the car was
+   * back on the ribbon (RE-AUTHORED BY ITERATION 3 - the OLD touch
+   * anchor is retired WITH the bound, and a vacuous -1 anchor would make
+   * this clause EMPTY forever).
+   */
+  readonly reentryTickIndices: readonly number[];
+  /** The tick indices of the FIRST continuous off-road run (the sand roll). */
+  readonly offRoadRunTickIndices: readonly number[];
+  /** The speed of the LAST off-road tick of the sand roll (m/s). */
+  readonly lastOffRoadSpeedMps: number;
+  /**
+   * THE RE-AUTHORED ANCHOR (iteration 3): the first published tick whose
+   * past-edge distance reaches the band outer edge (the 3.0 m apron), or
+   * -1 when the lane never reaches it. THE OLD touch anchor is RETIRED
+   * WITH the bound (the retired seam never diverges the poses, so a
+   * touch anchor would sit at -1 forever and every lane built on it
+   * would be VACUOUS). FIX-NEUTRAL: the car reaches that distance when
+   * the bound HOLDS it AND when the bound is moved farther away or
+   * retired (the free roll crosses 3.0 m on the way out) - the anchor
+   * alone claims nothing about the wall.
+   */
+  readonly firstBoundEdgeExcessTickIndex: number;
+  /**
+   * THE ITERATION-3 PROBE: the count of post-anchor ticks whose published
+   * past-edge distance sits EXACTLY on today's band outer edge
+   * (`|pastEdge - 3.0| <= 1e-9`) - THE MEASURED WALL HOLD. MEASURED
+   * today: 288/288 post-touch ticks (ticks 12..299 of the roll budget).
+   */
+  readonly pinnedExcessTickCount: number;
+  /**
+   * THE ITERATION-3 PROBE: the LARGEST published past-edge distance
+   * BEYOND today's band outer edge over the post-anchor window (m).
+   * MEASURED today: 0.0 (the clamp never lets the car one epsilon past
+   * its own bound). -Infinity when the anchor never fires (the reaching
+   * guard of the wall lane fails first, so this is never asserted on).
+   */
+  readonly maxPublishedExcessM: number;
+  /**
+   * THE ITERATION-3 PROBE: the LARGEST free-rolling past-edge distance
+   * BEYOND the band outer edge over the post-anchor window (m; measured
+   * data only - it is NEVER asserted on, because a moved bound also
+   * leaves the two trajectories apart and only the USER observable
+   * decides). MEASURED today: 79.5197 m by tick 299.
+   */
+  readonly maxUnboundedExcessM: number;
+  /**
+   * THE ITERATION-3 PROBE: the LARGEST free-rolling MINUS published
+   * past-edge deficit over the post-anchor window (m; THE MEASURED WALL
+   * HOLD DISTANCE - measured data only, never asserted on, for the same
+   * fix-neutrality reason as `maxUnboundedExcessM`). MEASURED today:
+   * 79.5197 m at the end of the roll budget.
+   */
+  readonly maxWallDeficitM: number;
+  /**
+   * THE ITERATION-3 PROBE: the published speed at the FIRST grass tick
+   * (m/s; the genuine road-speed entry guard of the cap lane). MEASURED
+   * today: 61.6317 m/s (served wiring: 38.8273 m/s) - both far above
+   * the USER limit + margin.
+   */
+  readonly speedAtFirstGrassMps: number;
+  /**
+   * THE ITERATION-3 PROBE: the first OFF-ROAD tick whose speed is at or
+   * below the USER-named limit + cap window (m/s), or -1 when the lane
+   * never settles. Under the RETIRED seam + the AC-094 USER cap a settled
+   * lane reports the settle tick (the floor gate decays into the 5.5556
+   * m/s settlement); the PRE-FIX measurement recorded -1 - the then-
+   * published floor gate pinned 22.25 m/s forever (4.005x the USER
+   * value).
+   */
+  readonly firstSettleTickIndex: number;
+  /**
+   * THE ITERATION-3 PROBE: the max published speed from the settle tick
+   * on, measured over the CONTINUING off-road run (m/s). SENTINEL RULE:
+   * a lane that never settles reports the MAX off-road speed of the
+   * whole run (a truthful "the cap never held", never a vacuous pass),
+   * and a lane with no grass tick reports NaN.
+   */
+  readonly postSettleMaxSpeedMps: number;
+  /**
+   * THE ITERATION-3 PROBE: the min published speed from the settle tick
+   * on over the continuing off-road run (m/s; THE CAR STILL ROLLS - the
+   * cap is a roll, never a trap). SENTINEL RULE: NaN when the lane never
+   * settles (the settle clause fails first, so this is never asserted
+   * on) or when the lane has no grass tick at all.
+   */
+  readonly postSettleMinSpeedMps: number;
+}
+
+/**
+ * Runs the sharp-exit lane on the REAL served geometry: the car leaves the
+ * ribbon through the sand band with a wide outward heading bias, so the
+ * live tick really crosses the band outer edge.
+ *
+ * The lane runs the PUBLISHED tick (the live tick WITH the ribbon
+ * geometry) and the UNBOUNDED tick (the pose the car REALLY reached)
+ * side by side: the first tick in which the two poses differ is the TOUCH
+ * - the tick in which the ONE bound moved the published pose.
+ *
+ * @param tickBudget - The number of ticks the lane runs.
+ * @returns The recorded lane and its measured summary.
+ */
+const buildSandI2Lane = (tickBudget: number): SandI2Lane => {
+  const trackSpec = generateTrack(SAND_I2_TRACK_FIXTURE);
+  const segments = trackSpec.segments;
+  const surfaceResolver = createTrackSurfaceResolver(segments);
+
+  // The LONGEST chord is the straightest ribbon, so the outward exit is a
+  // clean straight-line crossing of the sand band.
+  let longest = segments[0];
+  let longestLengthM = 0;
+  for (const segment of segments) {
+    const lengthM = Math.hypot(
+      segment.endX - segment.startX,
+      segment.endY - segment.startY,
+    );
+    if (lengthM > longestLengthM) {
+      longestLengthM = lengthM;
+      longest = segment;
+    }
+  }
+  const unitX = (longest.endX - longest.startX) / longestLengthM;
+  const unitY = (longest.endY - longest.startY) / longestLengthM;
+  const midX = (longest.startX + longest.endX) / 2;
+  const midY = (longest.startY + longest.endY) / 2;
+  const normalX = -unitY;
+  const normalY = unitX;
+  // The OUTWARD side: the side whose normal points AWAY from the ring
+  // centre (the ribbon is a closed loop, so the midpoint radius decides).
+  const midRadiusM = Math.hypot(midX, midY);
+  const exitSide =
+    Math.hypot(midX + normalX, midY + normalY) > midRadiusM ? 1 : -1;
+  const chordHeadingRad = Math.atan2(unitY, unitX);
+  const outwardAngleRad =
+    exitSide === 1
+      ? Math.asin(SAND_I2_OUTWARD_BIAS_RAD)
+      : Math.asin(-SAND_I2_OUTWARD_BIAS_RAD);
+  const startCar: PhysicsCarState = {
+    ...createInitialPhysicsCarState(trackSpec.seed, {
+      x: midX + exitSide * normalX * 10 - unitX * 6,
+      y: midY + exitSide * normalY * 10 - unitY * 6,
+      heading: chordHeadingRad + outwardAngleRad,
+    }),
+    speed: SAND_I2_EXIT_SPEED_MPS,
+  };
+
+  const ticks: SandI2Tick[] = [];
+  // THE ITERATION-3 PROBE LEDGER: the free-rolling twin's poses, recorded
+  // IN LOCKSTEP with the published ticks (same array index) so the wall
+  // deficit can be measured post-loop WITHOUT touching the loop below.
+  const unboundedPoses: PhysicsCarState[] = [];
+  let published = startCar;
+  let unbounded = startCar;
+  let previousYawRate = 0;
+  let touchIndex = -1;
+  let maxYawViolationRad = Number.NEGATIVE_INFINITY;
+  let maxMoveViolationM = Number.NEGATIVE_INFINITY;
+  let minMoveM = Number.POSITIVE_INFINITY;
+  let minSpeedMps = Number.POSITIVE_INFINITY;
+  for (let index = 0; index < tickBudget; index += 1) {
+    const poseBefore = published;
+    const nextPublished = stepPhysics(
+      published,
+      SAND_I2_EXIT_INPUT,
+      surfaceResolver,
+      segments,
+    );
+    const nextUnbounded = stepPhysics(
+      unbounded,
+      SAND_I2_EXIT_INPUT,
+      surfaceResolver,
+    );
+    const boundMovedPose =
+      nextPublished.x !== nextUnbounded.x || nextPublished.y !== nextUnbounded.y;
+    if (boundMovedPose && touchIndex < 0) {
+      touchIndex = index;
+    }
+    const moveM = Math.hypot(
+      nextPublished.x - poseBefore.x,
+      nextPublished.y - poseBefore.y,
+    );
+    const yawDeltaRad = Math.abs(
+      Math.atan2(
+        Math.sin(nextPublished.heading - poseBefore.heading),
+        Math.cos(nextPublished.heading - poseBefore.heading),
+      ),
+    );
+    if (touchIndex < 0 || index >= touchIndex) {
+      // THE YAW ENVELOPE (the plan's law): the published heading delta
+      // never exceeds the yaw-rate channel of the PREVIOUS tick.
+      maxYawViolationRad = Math.max(
+        maxYawViolationRad,
+        yawDeltaRad - Math.abs(previousYawRate) * SAND_I2_TICK_SECONDS,
+      );
+    }
+    maxMoveViolationM = Math.max(
+      maxMoveViolationM,
+      moveM - nextPublished.speed * SAND_I2_TICK_SECONDS,
+    );
+    minMoveM = Math.min(minMoveM, moveM);
+    minSpeedMps = Math.min(minSpeedMps, nextPublished.speed);
+    ticks.push({
+      index,
+      published: nextPublished,
+      surface: classifyTrackSurface(nextPublished, segments).surface,
+      moveM,
+      yawDeltaRad,
+      speedMps: nextPublished.speed,
+      boundMovedPose,
+    });
+    unboundedPoses.push(nextUnbounded);
+    published = nextPublished;
+    unbounded = nextUnbounded;
+    previousYawRate = nextPublished.yawRate;
+  }
+
+  // The consecutive distinct surfaces the lane crossed.
+  const surfaceLadder: PhysicsSurfaceType[] = [];
+  for (const tick of ticks) {
+    if (surfaceLadder[surfaceLadder.length - 1] !== tick.surface) {
+      surfaceLadder.push(tick.surface);
+    }
+  }
+
+  // -----------------------------------------------------------------
+  // THE RE-AUTHORED ANCHORS (fix-packet-P1-sand-red-iteration-3): the
+  // OLD "touch" anchor moved WITH the bound (the retired seam can never
+  // diverge the published pose from the free roll, so a touch-index
+  // anchor would sit at -1 forever and every lane built on it would be
+  // VACUOUS). The anchors are now poses the car REALLY reaches: the
+  // first past-edge excess at the band outer edge and the first grass
+  // tick.
+  //
+  // THE PAST-EDGE READER is the AC-096 nearest-chord reader
+  // (resolveNearestTrackChord + resolveTrackEdgeHalfWidthM +
+  // resolveTrackEdgeSideAt) - the same reader the AC-096 clearance rows
+  // were measured with, so the LANED measurement record and the
+  // contracts can never disagree about which band-outer-edge distance
+  // the wall hold sits at.
+  // -----------------------------------------------------------------
+  const edgeProfile = resolveTrackEdgeProfile(segments);
+  const pastEdgeMOf = (car: PhysicsCarState): number => {
+    const nearest = resolveNearestTrackChord(edgeProfile, car.x, car.y);
+    const chord = edgeProfile.chords[nearest.segmentIndex];
+    if (chord === undefined) {
+      throw new Error(
+        'buildSandI2Lane: the edge profile does not own the nearest chord',
+      );
+    }
+    const side = resolveTrackEdgeSideAt(
+      edgeProfile,
+      nearest.segmentIndex,
+      car.x,
+      car.y,
+    );
+    return nearest.distanceM - resolveTrackEdgeHalfWidthM(chord, side);
+  };
+  const publishedPastEdgeSeriesM = ticks.map((tick) =>
+    pastEdgeMOf(tick.published),
+  );
+  const unboundedPastEdgeSeriesM = unboundedPoses.map((pose) =>
+    pastEdgeMOf(pose),
+  );
+
+  // The band-outer-edge anchor: the FIRST published tick whose past-edge
+  // distance reaches today's bound (the 3.0 m apron). FIX-NEUTRAL: it
+  // fires whether the bound HOLDS the car there or the car ROLLS THROUGH
+  // it - the anchor alone claims nothing about the wall.
+  const firstBoundEdgeExcessTickIndex = publishedPastEdgeSeriesM.findIndex(
+    (pastEdgeM) =>
+      pastEdgeM >=
+      NEATRACING_TRACK_GRASS_APRON_WIDTH_M - SAND_I3_WALL_EXCESS_EPSILON_M,
+  );
+
+  // The FIRST GRASS tick anchor: the first tick the PRODUCTION classifier
+  // resolves as the off-road band. FIX-NEUTRAL: it fires for any
+  // off-road trajectory, whatever the off-road mechanism is.
+  const firstGrassIndex = ticks.findIndex((tick) => tick.surface === 'grass');
+
+  // The reentry ticks (RE-AUTHORED): from the FIRST GRASS tick on (the
+  // car is REALLY off the ribbon from there), every later tick whose
+  // surface is drivable again (the road core or the curb band). The OLD
+  // anchor (the touch) is retired WITH the bound - from the vacuous -1
+  // on, that clause would be EMPTY forever. Under the RETIRED seam the
+  // outward roll never reenters; a re-landed bound that reflects the
+  // outward velocity (the OLD MEASURED rebound) carries the car back
+  // over the drivable edge and FAILS this clause.
+  const reentryTickIndices = ticks
+    .filter((tick) => firstGrassIndex >= 0 && tick.index >= firstGrassIndex)
+    .filter((tick) => tick.surface !== 'grass')
+    .map((tick) => tick.index);
+
+  // The FIRST continuous off-road run: THE sand roll the lane measures.
+  // It ends at the reentry (today: the rebound interrupts the roll), at
+  // the USER-named off-track limit (THE ITERATION-3 RE-AUTHOR of the
+  // stop condition - the published 22.25 m/s floor is SUPERSEDED), or
+  // at the tick budget.
+  const offRoadRunTickIndices: number[] = [];
+  let lastOffRoadSpeedMps = Number.NaN;
+  const firstOffRoadIndex = ticks.findIndex((tick) => tick.surface === 'grass');
+  if (firstOffRoadIndex >= 0) {
+    for (let index = firstOffRoadIndex; index < ticks.length; index += 1) {
+      const tick = ticks[index];
+      if (tick.surface !== 'grass') {
+        break;
+      }
+      offRoadRunTickIndices.push(tick.index);
+      lastOffRoadSpeedMps = tick.speedMps;
+      // THE ITERATION-3 RE-AUTHOR of the run's stop condition (the packet
+      // orders every floor-supersession site re-authored in-step): the
+      // roll now ends at the USER-named off-track limit, so the settle
+      // is measured AT the USER value - never at the published 22.25 m/s
+      // floor the USER superseded (22.25 = 4.005x the USER value).
+      if (
+        tick.speedMps <=
+        SAND_I3_USER_OFF_TRACK_LIMIT_MPS + SAND_I3_CAP_EPSILON_MPS
+      ) {
+        break;
+      }
+    }
+  }
+
+  // The smallest displacement BEFORE the band-outer-edge anchor (the
+  // non-vacuity guard of RED-I2-a and RED-I3-wall, RE-AUTHORED BY
+  // ITERATION 3: the car REALLY moved on every pre-anchor tick; the OLD
+  // pre-touch anchor is retired WITH the bound).
+  let minPreAnchorMoveM = Number.POSITIVE_INFINITY;
+  if (firstBoundEdgeExcessTickIndex >= 0) {
+    for (const tick of ticks) {
+      if (tick.index < firstBoundEdgeExcessTickIndex) {
+        minPreAnchorMoveM = Math.min(minPreAnchorMoveM, tick.moveM);
+      }
+    }
+  }
+
+  // The surface right before the band-outer-edge anchor (the re-authored
+  // drivable-edge crossing record of RED-I2-a).
+  const preAnchorTick =
+    firstBoundEdgeExcessTickIndex > 0
+      ? ticks[firstBoundEdgeExcessTickIndex - 1]
+      : undefined;
+
+  // -----------------------------------------------------------------
+  // THE ITERATION-3 PROBES (fix-packet-P1-sand-red-iteration-3): the
+  // wall/cap measurements, computed post-loop from the RECORDED ticks.
+  // The PAST-EDGE READER and the two anchors (the band-outer-edge excess
+  // and the first grass tick) live directly after the record loop above.
+  // -----------------------------------------------------------------
+
+  // The wall hold: every post-anchor tick whose published past-edge
+  // distance sits EXACTLY on today's bound (|excess - 3.0| <= 1e-9).
+  // MEASURED today: 288/288 post-anchor ticks pinned, max excess 0.0,
+  // the free-rolling twin 79.5197 m past the bound by tick 299.
+  let pinnedExcessTickCount = 0;
+  let maxPublishedExcessM = Number.NEGATIVE_INFINITY;
+  let maxUnboundedExcessM = Number.NEGATIVE_INFINITY;
+  let maxWallDeficitM = Number.NEGATIVE_INFINITY;
+  if (firstBoundEdgeExcessTickIndex >= 0) {
+    for (
+      let tickIndex = firstBoundEdgeExcessTickIndex;
+      tickIndex < ticks.length;
+      tickIndex += 1
+    ) {
+      const publishedExcessM =
+        (publishedPastEdgeSeriesM[tickIndex] ?? Number.NaN) -
+        NEATRACING_TRACK_GRASS_APRON_WIDTH_M;
+      const unboundedExcessM =
+        (unboundedPastEdgeSeriesM[tickIndex] ?? Number.NaN) -
+        NEATRACING_TRACK_GRASS_APRON_WIDTH_M;
+      if (Math.abs(publishedExcessM) <= SAND_I3_PIN_EPSILON_M) {
+        pinnedExcessTickCount += 1;
+      }
+      maxPublishedExcessM = Math.max(maxPublishedExcessM, publishedExcessM);
+      maxUnboundedExcessM = Math.max(maxUnboundedExcessM, unboundedExcessM);
+      maxWallDeficitM = Math.max(
+        maxWallDeficitM,
+        unboundedExcessM - publishedExcessM,
+      );
+    }
+  }
+
+  // The cap: the settle to the USER-named limit, measured ONLY over the
+  // off-road ticks (the on-road opening ticks run far under the cap and
+  // would read a VACUOUS settle). firstGrassIndex is the moved-up first
+  // grass tick anchor.
+  const speedAtFirstGrassMps =
+    firstGrassIndex >= 0
+      ? (ticks[firstGrassIndex]?.speedMps ?? Number.NaN)
+      : Number.NaN;
+  let firstSettleTickIndex = -1;
+  let settleOffsetInTicks = -1;
+  if (firstGrassIndex >= 0) {
+    for (let tickIndex = firstGrassIndex; tickIndex < ticks.length; tickIndex += 1) {
+      const tick = ticks[tickIndex];
+      if (
+        tick === undefined ||
+        tick.speedMps >
+          SAND_I3_USER_OFF_TRACK_LIMIT_MPS + SAND_I3_CAP_EPSILON_MPS
+      ) {
+        continue;
+      }
+      firstSettleTickIndex = tick.index;
+      settleOffsetInTicks = tickIndex;
+      break;
+    }
+  }
+
+  // THE SENTINEL RULES (mirrored in the interface JSDoc): a lane that
+  // never settles reports firstSettleTickIndex = -1, postSettleMaxSpeedMps
+  // = the MAX off-road speed of the whole run (a truthful "the cap never
+  // held", never a vacuous pass) and postSettleMinSpeedMps = NaN (the
+  // settle clause fails FIRST, so the rolling clause is never asserted
+  // on). A settled lane reports the max/min over the CONTINUING off-road
+  // run from the settle tick on (the cap is an OFF-TRACK cap).
+  let postSettleMaxSpeedMps = Number.NaN;
+  let postSettleMinSpeedMps = Number.NaN;
+  if (firstGrassIndex >= 0) {
+    if (settleOffsetInTicks < 0) {
+      for (let tickIndex = firstGrassIndex; tickIndex < ticks.length; tickIndex += 1) {
+        const tick = ticks[tickIndex];
+        if (tick === undefined || tick.surface !== 'grass') {
+          break;
+        }
+        postSettleMaxSpeedMps = Number.isNaN(postSettleMaxSpeedMps)
+          ? tick.speedMps
+          : Math.max(postSettleMaxSpeedMps, tick.speedMps);
+      }
+    } else {
+      for (let tickIndex = settleOffsetInTicks; tickIndex < ticks.length; tickIndex += 1) {
+        const tick = ticks[tickIndex];
+        if (tick === undefined || tick.surface !== 'grass') {
+          break;
+        }
+        postSettleMaxSpeedMps = Number.isNaN(postSettleMaxSpeedMps)
+          ? tick.speedMps
+          : Math.max(postSettleMaxSpeedMps, tick.speedMps);
+        postSettleMinSpeedMps = Number.isNaN(postSettleMinSpeedMps)
+          ? tick.speedMps
+          : Math.min(postSettleMinSpeedMps, tick.speedMps);
+      }
+    }
+  }
+
+  const lastTick = ticks[ticks.length - 1];
+  return {
+    ticks,
+    touchIndex,
+    surfaceLadder,
+    preAnchorSurface: preAnchorTick?.surface ?? 'road',
+    maxYawViolationRad,
+    maxMoveViolationM,
+    minMoveM,
+    minPreAnchorMoveM,
+    minSpeedMps,
+    finalSpeedMps: lastTick?.speedMps ?? Number.NaN,
+    reentryTickIndices,
+    offRoadRunTickIndices,
+    lastOffRoadSpeedMps,
+    firstBoundEdgeExcessTickIndex,
+    pinnedExcessTickCount,
+    maxPublishedExcessM,
+    maxUnboundedExcessM,
+    maxWallDeficitM,
+    speedAtFirstGrassMps,
+    firstSettleTickIndex,
+    postSettleMaxSpeedMps,
+    postSettleMinSpeedMps,
+  };
+};
+
+/**
+ * The RED-I2 contracts (slice `P1-sand-red`, ITERATION 2; the plan's
+ * `fix-packet-P1-sand-red-iteration-2`).
+ */
+describe('the SAND-BAND OUTER-EDGE REBOUND (Step 14W iteration 2, slice P1-sand-red)', () => {
+  // [RED-I2-A]
+  it('RED-I2-a (DISCRIMINATING, RE-AUTHORED BY ITERATION 3): the published heading delta NEVER snaps - for EVERY tick the published heading change stays inside the yaw-rate channel (the OLD clamp snapped 1.2870 rad in one tick; the retired seam leaves the yaw to the model)', () => {
+    // Arrange: the sharp-exit lane on the REAL served geometry.
+    const lane = buildSandI2Lane(SAND_I2_TOUCH_WINDOW_TICKS);
+
+    // The NON-VACUITY GUARDS come FIRST (they PASS today and are able to
+    // fail): the lane REALLY crosses the ribbon (road -> curb -> grass) ...
+    expect(lane.surfaceLadder.slice(0, 3)).toEqual(['road', 'curb', 'grass']);
+    // ... the pose right before the band-outer-edge anchor is REALLY past
+    // the drivable edge (the crossing record, RE-AUTHORED BY ITERATION 3:
+    // the anchor is the reaching of the band outer edge, not the retired
+    // touch) ...
+    expect(lane.preAnchorSurface).toBe('grass');
+    expect(lane.firstBoundEdgeExcessTickIndex).toBeGreaterThanOrEqual(0);
+    // ... and the car REALLY moved on EVERY pre-anchor tick (a standstill
+    // would satisfy the yaw clause VACUOUSLY).
+    expect(lane.minPreAnchorMoveM).toBeGreaterThan(0);
+
+    // THE DISCRIMINATING CLAUSE: the published heading delta NEVER exceeds
+    // the yaw-rate channel (`abs(yawRate) * dt + 1e-9`). TODAY the seam is
+    // RETIRED (it recomposes NOTHING), so the yaw is pure integration and
+    // the clause measures the WHOLE lane; a RE-LANDED bound that
+    // recomposes the car around a reflected velocity would still fail it
+    // (the OLD MEASURED one-tick snap was 1.2870 rad).
+    expect(lane.maxYawViolationRad).toBeLessThanOrEqual(
+      SAND_I2_YAW_EPSILON_RAD,
+    );
+  });
+
+  // [RED-I2-B]
+  it('RED-I2-b (DISCRIMINATING, RE-AUTHORED BY ITERATION 3): once the car is off the ribbon it NEVER reenters the drivable surface on its own (the retired seam: the outward roll keeps going; the OLD clamp carried the car back over the drivable edge)', () => {
+    // Arrange: the sharp-exit lane on the REAL served geometry.
+    const lane = buildSandI2Lane(SAND_I2_TOUCH_WINDOW_TICKS);
+
+    // The NON-VACUITY GUARDS come FIRST (they PASS today and are able to
+    // fail): the lane REALLY left the ribbon (the off-road band is a real
+    // surface of this lane) ...
+    expect(lane.offRoadRunTickIndices.length).toBeGreaterThan(0);
+    // ... the car REALLY left the WHOLE band behind (the re-authored
+    // anchor: the past-edge excess reaches today\'s band outer edge; the
+    // OLD touch anchor is retired WITH the bound) ...
+    expect(lane.firstBoundEdgeExcessTickIndex).toBeGreaterThanOrEqual(0);
+    // ... and the car REALLY moved on EVERY tick (a standstill would
+    // satisfy the reentry clause VACUOUSLY).
+    expect(lane.minMoveM).toBeGreaterThan(0);
+
+    // THE DISCRIMINATING CLAUSE: NO tick from the first grass tick on may
+    // report a drivable surface again - the off-road band is drivable
+    // sand, so the car must NEVER be carried back onto the ribbon without
+    // user steer. TODAY the seam is RETIRED and the outward roll keeps
+    // going (the clause measures the WHOLE post-grass lane); a RE-LANDED
+    // bound that reflects the outward velocity would still fail it (the
+    // OLD MEASURED reentry: the curb at tick 18 and the road at tick 19).
+    expect(lane.reentryTickIndices).toEqual([]);
+  });
+
+  // [RED-I2-C]
+  it('RED-I2-c (DISCRIMINATING, RE-AUTHORED BY ITERATION 3 against the USER-named off-track speed): the sand roll SETTLES AT THE USER-NAMED LIMIT 20 km/h = 5.5556 m/s - the then-published 22.25 m/s floor measured 4.005x the USER value and is SUPERSEDED (the PRE-FIX stall was the 22.25 floor; this lane discriminated the USER-named value)', () => {
+    // Arrange: the sharp-exit lane on the REAL served geometry, observed
+    // over the plan's fixed roll budget.
+    const lane = buildSandI2Lane(SAND_I2_ROLL_BUDGET_TICKS);
+
+    // The NON-VACUITY GUARDS come FIRST (they PASS today and are able to
+    // fail): the lane REALLY left the ribbon (a lane that never reached
+    // the off-road band would satisfy the speed clause VACUOUSLY) ...
+    expect(lane.offRoadRunTickIndices.length).toBeGreaterThan(0);
+    // ... the lane REALLY ran the sand roll (the roll is a measured run of
+    // off-road ticks, never a single tick) ...
+    expect(lane.offRoadRunTickIndices.length).toBeGreaterThan(1);
+    // ... and the car NEVER came to a standstill (the "stopped" state must
+    // NOT be entered: the off-track cap is a roll, never a trap).
+    expect(lane.minSpeedMps).toBeGreaterThan(0);
+
+    // THE DISCRIMINATING CLAUSE (THE ITERATION-3 RE-AUTHOR): the sand roll
+    // ends at the USER-NAMED off-track limit - the measured window's last
+    // off-road speed must be at (or below) 5.5556 m/s (the exact 20/3.6
+    // expansion and a 5.5556 named literal BOTH pass; any slack above
+    // ~20.02 km/h fails). The PRE-FIX floor gate held the speed at
+    // exactly 22.25 m/s = 4.005x the USER value (MEASURED 2026-11-05:
+    // min = final = 22.25 across the whole 300-tick window) - that was
+    // the discriminating failure this lane was authored against. This
+    // lane still DISCRIMINATES the sand-law preservation INDEPENDENTLY of
+    // RED-I2-b: a change that retires the bound but breaks the off-road
+    // deceleration still fails here.
+    expect(lane.lastOffRoadSpeedMps).toBeLessThanOrEqual(
+      SAND_I3_USER_OFF_TRACK_LIMIT_MPS + SAND_I3_CAP_EPSILON_MPS,
+    );
+  });
+
+  // [RED-I2-PRESERVE]
+  it('RED-I2-preserve (PRESERVATION GUARD - GREEN today, able to fail): the per-tick displacement stays inside ONE integration envelope on EVERY tick (no mechanism ever TELEPORTS the position; the OLD touch anchor is retired WITH the bound and the envelope is measured on the WHOLE lane)', () => {
+    // Arrange: the sharp-exit lane on the REAL served geometry.
+    const lane = buildSandI2Lane(SAND_I2_TOUCH_WINDOW_TICKS);
+
+    // The NON-VACUITY GUARDS come FIRST (they PASS today and are able to
+    // fail): the car REALLY moved (a standstill would satisfy the
+    // envelope clause VACUOUSLY) ...
+    expect(lane.minMoveM).toBeGreaterThan(0);
+    // ... the retired seam NEVER diverged the published pose from the
+    // free roll (THE RETIREMENT PROOF: the touch stays at -1 for EVERY
+    // tick - the NEGATIVE guard is able to fail the moment a bound
+    // creeps back) ...
+    expect(lane.touchIndex).toBe(-1);
+    // ... and the lane REALLY ran past the WHOLE band (the re-authored
+    // anchor; the OLD touch anchor is retired WITH the bound).
+    expect(lane.firstBoundEdgeExcessTickIndex).toBeGreaterThanOrEqual(0);
+
+    // THE PRESERVATION CLAUSE: EVERY tick's displacement stays inside the
+    // integration envelope of the tick that produced it
+    // (`move_t <= speed_t * dt + 1e-6`; the clause measures the WHOLE
+    // lane and FAILS the moment a mechanism truly teleports the pose -
+    // a re-landed clamp snapping the pose farther than its own tick
+    // speed would violate it).
+    expect(lane.maxMoveViolationM).toBeLessThanOrEqual(SAND_I2_MOVE_EPSILON_M);
+  });
+});
+
+/**
+ * The RED-I3 contracts (slice `P1-sand-red`, ITERATION 3; the plan's
+ * `fix-packet-P1-sand-red-iteration-3`). TWO discriminating contracts
+ * probe the TWO measured defects the USER named after the iteration-2
+ * verdict: the band-outer-edge reads as an INVISIBLE WALL (the car is
+ * HELD at today's bound while the throttle is applied - W1) and the
+ * off-track speed is read as UNLIMITED-at-80.1-km/h instead of the
+ * USER-named 20 km/h (S1). The lanes are RUNTIME-ONLY and FIX-NEUTRAL
+ * (a retired bound and a moved bound BOTH pass them; only a held
+ * band-edge bound and any slack above the USER value fail).
+ */
+describe('the SAND-BAND OUTER-EDGE WALL + THE USER-NAMED OFF-TRACK SPEED CAP (Step 14W iteration 3, slice P1-sand-red)', () => {
+  // [RED-I3-WALL]
+  it('RED-I3-wall (DISCRIMINATING): NO INVISIBLE WALL at the band outer edge - the car LEAVES today\'s bound location behind and is NEVER held there while the throttle is applied (MEASURED 2026-11-05: 288/288 post-anchor ticks pinned at exactly 3.0 m past the drivable edge, max published excess 0.0 vs the free-rolling twin at 79.52 m)', () => {
+    // Arrange: the sharp-exit lane over the FULL roll budget (the
+    // MEASURED hold spans ticks 12..299 of this window).
+    const lane = buildSandI2Lane(SAND_I2_ROLL_BUDGET_TICKS);
+
+    // The NON-VACUITY GUARDS come FIRST (they PASS today and are able to
+    // fail): the lane REALLY crosses the ribbon (road -> curb -> grass;
+    // a lane that never leaves the ribbon would satisfy the excess
+    // clauses VACUOUSLY) ...
+    expect(lane.surfaceLadder.slice(0, 3)).toEqual(['road', 'curb', 'grass']);
+    // ... the car REALLY moved on every pre-anchor tick (a standstill
+    // would satisfy the excess clauses VACUOUSLY) ...
+    expect(lane.minPreAnchorMoveM).toBeGreaterThan(0);
+    // ... and the car REALLY reaches today's band outer edge (the
+    // reaching guard MEASURED today: the anchor fires at tick 12; a
+    // lane that never reaches the bound would satisfy the excess
+    // clauses VACUOUSLY).
+    expect(lane.firstBoundEdgeExcessTickIndex).toBeGreaterThanOrEqual(0);
+
+    // THE DISCRIMINATING CLAUSE 1: the pose is NOT held at today's
+    // bound - the published past-edge distance MUST grow BEYOND the
+    // bound (excess > 1e-4 m). The PRE-FIX clamp pinned the pose at
+    // EXACTLY the bound forever (MEASURED 2026-11-05 max published
+    // excess: 0.0, the residual <= 1e-9) - that was the discriminating
+    // failure this lane was authored against.
+    expect(lane.maxPublishedExcessM).toBeGreaterThan(
+      SAND_I3_WALL_EXCESS_EPSILON_M,
+    );
+
+    // THE DISCRIMINATING CLAUSE 2: NO post-anchor tick sits EXACTLY on
+    // today's bound (|excess - 3.0| <= 1e-9 is the MEASURED clamp
+    // residual). The PRE-FIX run pinned 288/288 post-anchor ticks there
+    // - that was the discriminating failure. FIX-NEUTRAL: a retired
+    // bound and a bound moved farther away BOTH leave this count at 0
+    // (only a HELD band-edge bound fails).
+    expect(lane.pinnedExcessTickCount).toBe(0);
+
+    // THE PRESERVATION CLAUSE: the wall defect must NEVER be "resolved"
+    // by a position teleport - the per-tick displacement stays inside
+    // ONE integration envelope on EVERY tick (the SAME preservation law
+    // RED-I2-preserve guards; the MEASURED worst case today is 0 m
+    // against the 1e-6 envelope, so this clause is GREEN today and
+    // constrains the fix: the car must GROW past the bound tick by
+    // tick, never SNAP past it).
+    expect(lane.maxMoveViolationM).toBeLessThanOrEqual(SAND_I2_MOVE_EPSILON_M);
+  });
+
+  // [RED-I3-CAP]
+  it('RED-I3-cap (DISCRIMINATING): the off-track roll SETTLES AT the USER-named 20 km/h = 5.5556 m/s limit and HOLDS it while the car keeps rolling (MEASURED 2026-11-05: the then-published 22.25 m/s floor = 4.005x the USER value; the settle never happened under the pre-fix floor gate)', () => {
+    // Arrange: the sharp-exit lane over the FULL roll budget (the
+    // MEASURED settle window: ~38 ticks from the 22.25 stall, ~127
+    // ticks from the 61.63 m/s grass entry - both inside this budget).
+    const lane = buildSandI2Lane(SAND_I2_ROLL_BUDGET_TICKS);
+
+    // The NON-VACUITY GUARDS come FIRST (they PASS today and are able to
+    // fail): the lane REALLY ran the sand roll (a lane that never left
+    // the ribbon would satisfy the settle clauses VACUOUSLY) ...
+    expect(lane.offRoadRunTickIndices.length).toBeGreaterThan(1);
+    // ... and the car REALLY entered the grass at a road-speed reading,
+    // far ABOVE the USER-named limit (MEASURED today: 61.6317 m/s at
+    // the first grass tick; a crawl already inside the cap would
+    // satisfy the settle clause VACUOUSLY - THE CAP MUST BE EARNED BY
+    // THE DECAY LAW, never by the entry speed).
+    expect(lane.speedAtFirstGrassMps).toBeGreaterThan(
+      SAND_I3_USER_OFF_TRACK_LIMIT_MPS + SAND_I3_ENTRY_MARGIN_MPS,
+    );
+
+    // THE DISCRIMINATING CLAUSE 1: the roll SETTLES within the roll
+    // budget - some off-road tick reaches the USER-named limit (speed
+    // <= 5.5556 + 1e-3). The PRE-FIX floor gate pinned the speed at
+    // EXACTLY 22.25 m/s forever (MEASURED 2026-11-05: min = final =
+    // 22.25, ratio 4.005x the USER value) - that was the discriminating
+    // failure this lane was authored against.
+    expect(lane.firstSettleTickIndex).toBeGreaterThanOrEqual(0);
+
+    // THE DISCRIMINATING CLAUSE 2: the settle HOLDS - the max speed
+    // from the settle tick on stays inside the USER-named limit window
+    // (<= 5.5556 + 1e-3; both the exact 20/3.6 expansion and a 5.5556
+    // literal pass, any slack above ~20.02 km/h fails).
+    expect(lane.postSettleMaxSpeedMps).toBeLessThanOrEqual(
+      SAND_I3_USER_OFF_TRACK_LIMIT_MPS + SAND_I3_CAP_EPSILON_MPS,
+    );
+
+    // THE PRESERVATION CLAUSE: the car STILL ROLLS at the cap (the min
+    // speed from the settle tick on stays > 0 m/s - the cap is a slow
+    // sand roll, never a trap; the USER still names it a speed
+    // LIMIT, not a stop).
+    expect(lane.postSettleMinSpeedMps).toBeGreaterThan(0);
+  });
+});
+
+/* ------------------------------------------------------------------------- *
+ * STEP 14Y (slice `P1-turnfeel-red`): the TURNING FEEL + AI DRIVEABILITY
+ * wave (AC-098).
+ *
+ * THE POST-FIX LAW THIS BLOCK RECORDS: the USER turn-rate law keeps the
+ * ratified mild reduction above the crawl band and adds a raised-cosine
+ * sufficiency boost confined to ~[17.6, 18.0] m/s. At the R = 8 m stadium's
+ * target speed (~17.8 m/s) the law commands 2.4475 rad/s against the 2.225
+ * rad/s kinematic requirement (a 1.1x margin), while the mild reduction
+ * remains untouched outside the boost band. The AI - which drives the SAME
+ * geometry - now keeps moving and completes laps.
+ *
+ * RED-1 (DISCRIMINATING) probes the hold on the tightest MEASURED layout
+ * of the repo (the R = 8 m stadium), NOT on the served layout: the served
+ * layout's tightest corner (R = 116.5 m) is ALREADY holdable - the second,
+ * LABELLED lane below is the GREEN record of that fact - so a served-track
+ * reading of RED-1 would be VACUOUS, and RED-1's own non-vacuity guard
+ * forbids a vacuous contract.
+ *
+ * RED-5 IS NOT A RED: every RED-5 lane in this file is a LABELLED
+ * PRESERVATION GUARD that holds today and is NEVER counted as a red.
+ * ------------------------------------------------------------------------- */
+
+/**
+ * The RED-14Y stadium road width (m) - the same 12 m road the shared repo
+ * fixture uses.
+ */
+const TURNFEEL_ROAD_WIDTH_M = 12;
+
+/**
+ * The RED-14Y tight-corner radius (m).
+ *
+ * THE TIGHTEST MEASURED LAYOUT of the repo: an R = 8 m corner is far
+ * tighter than the nominal-law turn radius, so the lane measures a REAL
+ * corner and never a straight. The post-fix sufficiency boost is what
+ * makes this corner holdable.
+ */
+const TURNFEEL_TIGHT_CORNER_RADIUS_M = 8;
+
+/** The RED-14Y tight-corner straight length (m). */
+const TURNFEEL_TIGHT_CORNER_STRAIGHT_M = 40;
+
+/**
+ * The RED-14Y crawl-band ABSOLUTE near-standstill rate (rad/s).
+ *
+ * THE N-7 CARRY-FORWARD (the load-bearing pin): the rate the USER channel
+ * commands at the crawl-band speed with the full steer axis, MEASURED
+ * through the published heading delta. It is an ABSOLUTE pin (never a
+ * derived one), so a global raise of the nominal turn rate can NEVER reach
+ * the crawl band - the near-standstill feel stays ratifiable.
+ */
+const TURNFEEL_CRAWL_BAND_ABSOLUTE_RAD_PER_S = 0.2247191011235955;
+
+/**
+ * The RED-14Y drift-ENGAGE lane speed (m/s).
+ *
+ * The lane runs above the drift's own minimum-speed gate (15 m/s), so the
+ * engagement decision the lane measures is really the STEER gate and never
+ * a speed gate.
+ */
+const TURNFEEL_DRIFT_ENGAGE_SPEED_MPS = 40;
+
+/**
+ * The RED-14Y drift ENGAGE threshold steer (the engaging side of the
+ * boundary).
+ */
+const TURNFEEL_DRIFT_ENGAGE_STEER = 0.5;
+
+/**
+ * The RED-14Y drift NON-ENGAGE threshold steer (the holding side of the
+ * boundary): just BELOW the engage gate, so the boundary is really probed
+ * and never assumed.
+ */
+const TURNFEEL_DRIFT_NO_ENGAGE_STEER = 0.49;
+
+/**
+ * Builds the RED-14Y stadium fixture: a straight along +x, a right
+ * half-circle, a straight along -x and a left half-circle, all traversed
+ * COUNTER-CLOCKWISE.
+ *
+ * THE LOCAL FIXTURE (owned by this red slice): the builder is PORTED from
+ * the sibling AI test file's fixture (a test file never imports another
+ * test file), so the two blocks measure the SAME geometry.
+ *
+ * @param radiusM - The corner radius (m).
+ * @param straightM - The straight length (m).
+ * @returns The frozen spline samples of the closed loop.
+ */
+const buildTurnfeelStadiumSamples = (
+  radiusM: number,
+  straightM: number,
+): readonly SplineSample[] => {
+  const samples: SplineSample[] = [];
+  const straightSteps = Math.round(straightM);
+  const arcSteps = Math.max(4, Math.round(Math.PI * radiusM));
+  const push = (x: number, y: number): void => {
+    samples.push({
+      x,
+      y,
+      width: TURNFEEL_ROAD_WIDTH_M,
+      segmentIndex: 0,
+      sampleIndexWithinSegment: samples.length,
+      globalIndex: samples.length,
+    });
+  };
+  for (let index = 0; index < straightSteps; index += 1) {
+    push(index, -radiusM);
+  }
+  for (let step = 0; step < arcSteps; step += 1) {
+    const angle = -Math.PI / 2 + (step / arcSteps) * Math.PI;
+    push(straightM + radiusM * Math.cos(angle), radiusM * Math.sin(angle));
+  }
+  for (let index = 0; index < straightSteps; index += 1) {
+    push(straightM - index, radiusM);
+  }
+  for (let step = 0; step < arcSteps; step += 1) {
+    const angle = Math.PI / 2 + (step / arcSteps) * Math.PI;
+    push(radiusM * Math.cos(angle), radiusM * Math.sin(angle));
+  }
+  return samples;
+};
+
+/**
+ * The frozen tight-corner fixture (the R = 8 m stadium - the tightest
+ * MEASURED layout of the repo).
+ */
+const TURNFEEL_TIGHT_SAMPLES = buildTurnfeelStadiumSamples(
+  TURNFEEL_TIGHT_CORNER_RADIUS_M,
+  TURNFEEL_TIGHT_CORNER_STRAIGHT_M,
+);
+
+/**
+ * The tightest (max |curvature|) racing-line point of a layout.
+ */
+interface TurnfeelCorner {
+  /** The index of the tightest racing-line point. */
+  readonly index: number;
+  /** The SIGNED curvature of that point (1/m). */
+  readonly curvaturePerM: number;
+  /** The published target speed of that point (m/s). */
+  readonly targetSpeedMps: number;
+  /** The SIGNED lateral offset of that point (m). */
+  readonly offsetM: number;
+  /** The kinematic turn rate the corner DEMANDS (rad/s). */
+  readonly requiredRateRadPerS: number;
+}
+
+/**
+ * Resolves the tightest (max |curvature|) racing-line point of a layout.
+ *
+ * THE KINEMATIC REQUIREMENT (never a literal): a corner of curvature
+ * `kappa` demands the turn rate `v x kappa` at the speed `v`, so the
+ * required rate is COMPUTED from the two PUBLISHED quantities - the
+ * racing line's curvature and its target speed.
+ *
+ * @param samples - The frozen spline samples of the layout.
+ * @returns The tightest racing-line point of the layout.
+ */
+const tightestCornerOf = (
+  samples: readonly SplineSample[],
+): TurnfeelCorner => {
+  const line = buildTrackRacingLine(samples);
+  let index = 0;
+  let curvaturePerM = 0;
+  for (let candidate = 0; candidate < line.length; candidate += 1) {
+    const magnitude = Math.abs(line[candidate].curvaturePerM);
+    if (magnitude > curvaturePerM) {
+      curvaturePerM = magnitude;
+      index = candidate;
+    }
+  }
+  const point = line[index];
+  return {
+    index,
+    curvaturePerM: point.curvaturePerM,
+    targetSpeedMps: point.targetSpeedUnitsPerS,
+    offsetM: point.offsetM,
+    requiredRateRadPerS: point.targetSpeedUnitsPerS * curvaturePerM,
+  };
+};
+
+/**
+ * The reading of the drift ENGAGE boundary lane.
+ */
+interface DriftEngageLane {
+  /** The steer axis the drift model received (the RAW steer, never softened). */
+  readonly driftSteerAxis: number | undefined;
+  /** The committed slide of the LAST tick (rad). */
+  readonly committedSlipRad: number;
+}
+
+/**
+ * Runs a drift ENGAGE boundary lane and MEASURES the boundary.
+ *
+ * THE MEASUREMENT (the observable): the drift commitment is spied on (the
+ * Step 14T lane pattern), so the lane reads the RAW steer axis the drift
+ * model receives - a softened axis would silently re-scale the 0.5 gate -
+ * and the committed slide of the lane's LAST tick says whether the slide
+ * ENGAGED at all.
+ *
+ * @param steer - The steer axis of the lane.
+ * @returns The measured reading of the lane.
+ */
+const runDriftEngageLane = (steer: number): DriftEngageLane => {
+  const start: PhysicsCarState = {
+    ...createInitialPhysicsCarState(42),
+    speed: TURNFEEL_DRIFT_ENGAGE_SPEED_MPS,
+    drift: {
+      committed: { slip: 0, turnSign: 0, reArmed: true },
+      pose: { pose: 0, poseRate: 0, articulation: 0 },
+    },
+  };
+  const surfaceResolver = (): FixtureSurface => 'road';
+  const spy = jest.spyOn(driftModelModule, 'stepDriftCommitment');
+  try {
+    let state = start;
+    for (let tick = 0; tick < TURN_RATE_LANE_TICKS; tick += 1) {
+      state = stepPhysics(
+        state,
+        { throttle: 1, brake: 0, steer },
+        surfaceResolver,
+      );
+    }
+    const firstCall = spy.mock.calls[0];
+    const driftInput = firstCall
+      ? firstCall[1]
+      : ({} as unknown as DriftStepInput);
+    return {
+      driftSteerAxis: driftInput.steer,
+      committedSlipRad: state.drift.committed.slip,
+    };
+  } finally {
+    spy.mockRestore();
+  }
+};
+
+/**
+ * The TURNING FEEL contracts (Step 14Y, slice `P1-turnfeel-red`; AC-098).
+ *
+ * AC-098 (the turning feel + the AI driveability): the commanded turn rate
+ * must be able to HOLD the corner the car is driving, at the speed the car
+ * is driving it at - the arcade feel realizes a CONSTANT 44.5 m minimum turn
+ * radius today, so every corner tighter than that is unholdable at ANY
+ * speed.
+ *
+ * THE RED SET: RED-1 is DISCRIMINATING (it fails today on its own
+ * assertion, on the tightest MEASURED layout of the repo). RED-5 is a
+ * LABELLED PRESERVATION GUARD SET that holds today and is NEVER counted as
+ * a red: it pins the crawl band's ABSOLUTE rate (the N-7 carry-forward), the
+ * mild reduction's RELATIVE bite above the band and the drift gates' EXACT
+ * meaning.
+ */
+describe('the TURNING FEEL wave (Step 14Y, slice P1-turnfeel-red; AC-098)', () => {
+  describe('RED-1 (the USER channel can HOLD the tightest corner)', () => {
+    // [RED-14Y-1-USER-HOLDS-TIGHTEST-CORNER]
+    it('AC-098: the USER channel commanded rate can HOLD the tightest corner of the tightest MEASURED layout (the commanded rate meets the kinematic requirement) (RED-14Y-1-USER-HOLDS-TIGHTEST-CORNER)', () => {
+      // Arrange
+      const corner = tightestCornerOf(TURNFEEL_TIGHT_SAMPLES);
+      const lane = runTurnRateLane(
+        corner.targetSpeedMps,
+        TURN_RATE_USER_INPUT,
+      );
+
+      // Act + Assert
+      // The NON-VACUITY GUARD comes FIRST, and it has TWO parts: the
+      // probe really IS a corner (never a straight) and the corner
+      // demands MORE than the model's own nominal law at that speed (so
+      // the sufficiency clause below can never be satisfied VACUOUSLY by
+      // a corner that asks for LESS than the law already commands).
+      expect(Math.abs(corner.curvaturePerM)).toBeGreaterThan(
+        NEATRACING_RACING_LINE_STRAIGHT_CURVATURE_PER_M,
+      );
+      expect(corner.requiredRateRadPerS).toBeGreaterThan(
+        nominalLawRateOf(corner.targetSpeedMps),
+      );
+      // THE DISCRIMINATING CLAUSE: the commanded rate must MEET the
+      // kinematic requirement of the corner.
+      //
+      // THE MEASURED post-fix state: the USER law commands 2.4475 rad/s
+      // at the R = 8 m corner's target speed (~17.8 m/s), against a
+      // required 2.225 rad/s (a 1.1x margin) - the clause is GREEN on the
+      // post-fix bytes.
+      expect(lane.commandedRateRadPerS).toBeGreaterThanOrEqual(
+        corner.requiredRateRadPerS,
+      );
+    });
+
+    // [RED-14Y-1-SERVED-LAYOUT-READING]
+    it('AC-098: the SERVED layout reading of the same contract (the served track\'s tightest corner is ALREADY holdable) (RED-14Y-1-SERVED-LAYOUT-READING) - PRESERVATION GUARD (GREEN on arrival, NOT a red)', () => {
+      // Arrange
+      const spec = generateTrack({
+        seed: 42,
+        layoutVersion: 1,
+        sizeBucket: 'large',
+      });
+      const corner = tightestCornerOf(spec.splineSamples);
+      const lane = runTurnRateLane(
+        corner.targetSpeedMps,
+        TURN_RATE_USER_INPUT,
+      );
+
+      // Act + Assert
+      // PRESERVATION GUARD, NOT A RED: the MEASURED current-model state
+      // already HOLDS the served track's tightest corner (the commanded
+      // 1.3027 rad/s meets the required 0.5830 rad/s), so this lane is
+      // GREEN on arrival.
+      //
+      // THE RECORD (WHY the RED-1 lane probes the TIGHTEST MEASURED
+      // layout instead of the served one): the served layout's tightest
+      // corner has a 116.5 m radius, so the served track is ALREADY
+      // holdable - a served-track reading of RED-1 would be VACUOUS, and
+      // RED-1's own non-vacuity guard forbids that.
+      // The NON-VACUITY GUARD comes FIRST: the lane must REALLY turn.
+      expect(lane.commandedRateRadPerS).toBeGreaterThan(0);
+      expect(lane.commandedRateRadPerS).toBeGreaterThanOrEqual(
+        corner.requiredRateRadPerS,
+      );
+    });
+  });
+
+  describe('RED-5 (the PRESERVATION GUARDS - NOT reds)', () => {
+    // [RED-14Y-5A-CRAWL-BAND-ABSOLUTE]
+    it('AC-098: the crawl-band ABSOLUTE near-standstill rate is UNCHANGED (the N-7 carry-forward pin) (RED-14Y-5A-CRAWL-BAND-ABSOLUTE) - PRESERVATION GUARD (NOT a red)', () => {
+      // Arrange
+      const lane = runTurnRateLane(
+        TURN_RATE_CRAWL_SPEED_MPS,
+        TURN_RATE_USER_INPUT,
+      );
+
+      // Act + Assert
+      // PRESERVATION GUARD, NOT A RED: the MEASURED current-model state
+      // already commands exactly that rate, so this lane is GREEN on
+      // arrival.
+      //
+      // THE N-7 CARRY-FORWARD (the load-bearing ABSOLUTE pin): the crawl
+      // band's near-standstill rate is PINNED to its measured value, so a
+      // global raise of the nominal turn rate can never reach the crawl
+      // band - the crawl feel (the near-standstill handling) stays
+      // ratifiable.
+      expect(lane.commandedRateRadPerS).toBeCloseTo(
+        TURNFEEL_CRAWL_BAND_ABSOLUTE_RAD_PER_S,
+        12,
+      );
+    });
+
+    // [RED-14Y-5B-TOP-SPEED-REDUCTION-BITES]
+    it('AC-092: the mild reduction still BITES above the crawl band (the top-speed USER rate stays STRICTLY BELOW the nominal law of that speed) (RED-14Y-5B-TOP-SPEED-REDUCTION-BITES) - PRESERVATION GUARD (NOT a red)', () => {
+      // Arrange
+      const lane = runTurnRateLane(
+        TURN_RATE_TOP_SPEED_MPS,
+        TURN_RATE_USER_INPUT,
+      );
+
+      // Act + Assert
+      // PRESERVATION GUARD, NOT A RED: the MEASURED current-model state
+      // already reads 1.6 rad/s against the nominal 2 rad/s, so this lane
+      // is GREEN on arrival.
+      //
+      // THE RELATIVE FORM (why this lane is NOT the 14T lane): the
+      // comparison axis is the DERIVED nominal law of the top speed
+      // (`nominalLawRateOf`), never the nominal CONSTANT, so the clause
+      // SURVIVES a global raise of the nominal turn rate - only the
+      // crawl-band ABSOLUTE pin (RED-14Y-5A) breaks under a raise.
+      //
+      // THE 14T CRAWL-BAND RELATIVE CLAUSE is NOT duplicated here: it is
+      // already pinned by `[RED-14T-1-CRAWL-BAND]`.
+      expect(lane.commandedRateRadPerS).toBeGreaterThan(0);
+      expect(lane.commandedRateRadPerS).toBeLessThan(
+        nominalLawRateOf(TURN_RATE_TOP_SPEED_MPS),
+      );
+    });
+
+    // [RED-14Y-5C-DRIFT-GATES]
+    it('AC-098: the drift gates keep their EXACT meaning (the 0.5 / 0.15 / 0.9 steer thresholds are unchanged) (RED-14Y-5C-DRIFT-GATES) - PRESERVATION GUARD (NOT a red)', () => {
+      // Act + Assert
+      // PRESERVATION GUARD, NOT A RED: the MEASURED current-model state
+      // already publishes exactly those thresholds, so this lane is GREEN
+      // on arrival - it is the RAIL a turn-rate change must stay on (a
+      // change that touched the steer axis would silently re-scale every
+      // gate).
+      expect(NEATRACING_DRIFT_STEER_ENGAGE_THRESHOLD).toBe(0.5);
+      expect(NEATRACING_DRIFT_STEER_NEUTRAL_THRESHOLD).toBe(0.15);
+      expect(NEATRACING_DRIFT_COUNTERSTEER_MIN_STEER).toBe(0.9);
+    });
+
+    // [RED-14Y-5C-DRIFT-ENGAGE-AT-GATE]
+    it('AC-098: the drift ENGAGE boundary keeps its EXACT meaning (the engage gate still ENGAGES the slide) (RED-14Y-5C-DRIFT-ENGAGE-AT-GATE) - PRESERVATION GUARD (NOT a red)', () => {
+      // Arrange
+      const engageLane = runDriftEngageLane(TURNFEEL_DRIFT_ENGAGE_STEER);
+
+      // Act + Assert
+      // PRESERVATION GUARD, NOT A RED: the MEASURED current-model state
+      // already commits the slide at the engage gate, so this lane is
+      // GREEN on arrival.
+      // The NON-VACUITY GUARD comes FIRST: the drift model must REALLY
+      // receive the RAW steer axis (a softened axis would make the gate
+      // meaningless).
+      expect(engageLane.driftSteerAxis).toBe(TURNFEEL_DRIFT_ENGAGE_STEER);
+      // The ENGAGE side of the boundary: the slide COMMITS.
+      expect(Math.abs(engageLane.committedSlipRad)).toBeGreaterThan(0);
+    });
+
+    // [RED-14Y-5C-DRIFT-NO-ENGAGE-BELOW-GATE]
+    it('AC-098: the drift ENGAGE boundary keeps its EXACT meaning (just BELOW the engage gate the slide never commits) (RED-14Y-5C-DRIFT-NO-ENGAGE-BELOW-GATE) - PRESERVATION GUARD (NOT a red)', () => {
+      // Arrange
+      const noEngageLane = runDriftEngageLane(TURNFEEL_DRIFT_NO_ENGAGE_STEER);
+
+      // Act + Assert
+      // PRESERVATION GUARD, NOT A RED: the MEASURED current-model state
+      // never commits the slide below the gate, so this lane is GREEN on
+      // arrival.
+      // The NON-VACUITY GUARD comes FIRST: the drift model must REALLY
+      // receive the RAW steer axis on this lane too.
+      expect(noEngageLane.driftSteerAxis).toBe(TURNFEEL_DRIFT_NO_ENGAGE_STEER);
+      // The HOLDING side of the boundary: the slide NEVER commits.
+      expect(noEngageLane.committedSlipRad).toBe(0);
+    });
+
+    // [RED-14Y-5C-STEER-AXIS-BINARY]
+    it('AC-098: the steer AXIS stays BINARY above the crawl band (the mirrored steer commands the mirrored rate) (RED-14Y-5C-STEER-AXIS-BINARY) - PRESERVATION GUARD (NOT a red)', () => {
+      // Arrange
+      const leftLane = runTurnRateLane(
+        TURN_RATE_TOP_SPEED_MPS,
+        TURN_RATE_USER_INPUT,
+      );
+      const rightLane = runTurnRateLane(TURN_RATE_TOP_SPEED_MPS, {
+        throttle: 1,
+        brake: 0,
+        steer: -1,
+      });
+
+      // Act + Assert
+      // PRESERVATION GUARD, NOT A RED: the MEASURED current-model state
+      // already mirrors the rate, so this lane is GREEN on arrival.
+      //
+      // THE LANE (why it runs ABOVE the band): the crawl-band mirroring
+      // is already pinned by `[RED-14T-3-ABSENT-PERCENT-STEER-LAW]`, so
+      // this lane measures the regime where the mild factor actually
+      // bites - the mirroring must survive the factor too.
+      // The NON-VACUITY GUARD comes FIRST: BOTH lanes must REALLY turn.
+      expect(leftLane.commandedRateRadPerS).toBeGreaterThan(0);
+      expect(rightLane.commandedRateRadPerS).toBeLessThan(0);
+      // The steer AXIS is BINARY and SYMMETRIC: the mirrored steer
+      // commands the mirrored rate.
+      expect(rightLane.commandedRateRadPerS).toBeCloseTo(
+        -leftLane.commandedRateRadPerS,
+        12,
       );
     });
   });

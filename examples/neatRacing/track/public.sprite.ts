@@ -91,10 +91,12 @@ import {
   getBleacherSeatAnchors,
   getBleacherSeatTopY,
   resolveOuterRingSlotCount,
+  resolveSeamClearanceOffsetM,
+  resolveRightWorldSeam,
   selectBleacherSlotIndices,
   selectPeopleRingSampleIndices,
 } from './right-world.builder';
-import type { RightWorldProp } from './right-world.builder';
+import type { RightWorldProp, RightWorldSeamContext } from './right-world.builder';
 import { resolvePropHalfSize } from './right-world.prop-sizes';
 import type { TrackSlabBuildInput } from './track.slabs';
 
@@ -509,30 +511,66 @@ export const NEATRACING_PUBLIC_BILLBOARD_DENSITY_BUDGET =
   NEATRACING_PUBLIC_OFF_BLEACHER_AGENT_ALLOWANCE;
 
 /**
- * Trackside distance of the standing spectators, in meters beyond the road
- * half-width of their track sample.
+ * Trackside clearance of the standing spectators, in meters beyond the SEAM
+ * edge of the road.
+ *
+ * The value is a CLEARANCE, not a distance from the centreline: the
+ * placement measures it against the published edge of the track, so the
+ * crowd stands the same distance from the road everywhere along the loop.
+ *
+ * The band is re-based on the SAME seam-relative scale as the props (the
+ * 14V clearance re-base): the props now stand at least 10 m beyond the
+ * seam edge, so their footprints reach further out than the retired
+ * spline-normal model allowed, and the crowd bands move outward with them.
+ * The RELATIVE order and the RELATIVE gaps of the retired layout are KEPT:
+ * the two walker bands stay INSIDE the standing band, so the standing
+ * spectators still wait OUTSIDE the walking crowd.
+ *
+ * The band is RAISED from 24 m to 27.5 m by the Step 14V P-PC-R fix
+ * packet: the prop rings moved outward by the same 3.5 m, so an
+ * off-bleacher agent that has to clear a prop footprint now searches from
+ * a band that is outside the raised prop rings, and every off-bleacher
+ * billboard footprint clears the USER-NAMED 10 m floor.
  */
-const NEATRACING_PUBLIC_STANDING_TRACKSIDE_OFFSET_M = 19;
+const NEATRACING_PUBLIC_STANDING_TRACKSIDE_OFFSET_M = 27.5;
 
 /**
- * Random spread of the standing spectator trackside distance, in meters.
+ * Random spread of the standing spectator clearance, in meters.
  */
 const NEATRACING_PUBLIC_STANDING_OFFSET_JITTER_M = 1;
 
 /**
- * Trackside distance of the first walker band, in meters beyond the road
- * half-width of their track sample.
+ * Clearance of the first walker band, in meters beyond the SEAM edge of the
+ * road.
+ *
+ * The band is re-based on the seam-relative scale with the rest of the
+ * off-bleacher crowd (see the standing band): the first walker band walks
+ * in the gap between the bleacher ring and the second walker band.
+ *
+ * The band is RAISED from 18 m to 21.5 m by the Step 14V P-PC-R fix
+ * packet, by the SAME 3.5 m as the prop rings it has to clear: the
+ * bleacher ring now reaches 22.6 m beyond the seam edge, so a walker
+ * band left at 18 m would search outward from INSIDE the raised rings and
+ * the off-bleacher census would lose walkers.
  */
-const NEATRACING_PUBLIC_WALKER_BAND_ONE_OFFSET_M = 11.5;
+const NEATRACING_PUBLIC_WALKER_BAND_ONE_OFFSET_M = 21.5;
 
 /**
- * Trackside distance of the second walker band, in meters beyond the road
- * half-width of their track sample.
+ * Clearance of the second walker band, in meters beyond the SEAM edge of the
+ * road.
+ *
+ * The band is re-based on the seam-relative scale with the rest of the
+ * off-bleacher crowd (see the standing band): the second walker band walks
+ * OUTSIDE the first band and INSIDE the standing spectators.
+ *
+ * The band is RAISED from 21 m to 24.5 m by the Step 14V P-PC-R fix
+ * packet, by the SAME 3.5 m as the first walker band, so the RELATIVE
+ * gap between the two walker bands is KEPT.
  */
-const NEATRACING_PUBLIC_WALKER_BAND_TWO_OFFSET_M = 15;
+const NEATRACING_PUBLIC_WALKER_BAND_TWO_OFFSET_M = 24.5;
 
 /**
- * Random spread of the walker trackside distance, in meters.
+ * Random spread of the walker clearance, in meters.
  */
 const NEATRACING_PUBLIC_WALKER_OFFSET_JITTER_M = 1;
 
@@ -540,8 +578,9 @@ const NEATRACING_PUBLIC_WALKER_OFFSET_JITTER_M = 1;
  * Radial step of the off-bleacher clearance search, in meters.
  *
  * An off-bleacher agent that lands on a scenery prop or on the personal
- * space of another billboard is pushed further out in steps of this size,
- * until a clear spot is found or the agent is skipped.
+ * space of another billboard is pushed further out in steps of this size -
+ * each step asks for a clearance that is this many meters further beyond
+ * the seam edge - until a clear spot is found or the agent is skipped.
  */
 const NEATRACING_PUBLIC_CLEARANCE_STEP_M = 1.5;
 
@@ -563,8 +602,8 @@ const NEATRACING_PUBLIC_OFF_BLEACHER_PERSONAL_SPACE_CLEARANCE_M =
   NEATRACING_ROBOT_PERSONAL_SPACE_M - NEATRACING_ROBOT_PERSONAL_SPACE_EPSILON_M;
 
 /**
- * Trackside distances of the two walker bands, in meters beyond the road
- * half-width of their track sample.
+ * Trackside clearances of the two walker bands, in meters beyond the SEAM
+ * edge of the road.
  */
 const NEATRACING_PUBLIC_WALKER_BAND_OFFSETS_M: readonly number[] = [
   NEATRACING_PUBLIC_WALKER_BAND_ONE_OFFSET_M,
@@ -1375,16 +1414,19 @@ function buildBleacherSeatPositions(
  *    seated seat must never be starved by an off-bleacher agent.
  * 2. The MECHANICS of the inner pit band. They stand on their own pit
  *    pedestal and wear a team accent.
- * 3. The STANDING spectators OUTSIDE the ring, beyond the road edge.
+ * 3. The STANDING spectators OUTSIDE the ring, beyond the SEAM edge of the
+ *    road.
  * 4. The WALKERS on the trackside, in two bands per people-ring sample.
  *
  * The STANDING spectators and the WALKERS are placed through a CLEARANCE
  * search: the agent is pushed further out in steps until its footprint is
  * clear of every scenery prop AND it keeps the 1 m personal space of every
- * billboard placed before it. An agent with no clear spot is SKIPPED - the
- * crowd is a cap, never a quota. The MECHANICS are NOT searched: they are
- * anchored to their own pit pedestal, so they keep their spot by
- * construction.
+ * billboard placed before it. Every candidate clearance is MEASURED beyond
+ * the SEAM edge - the published edge of the track - so the crowd never
+ * relies on the retired spline-normal distance model. An agent with no
+ * clear spot is SKIPPED - the crowd is a cap, never a quota. The MECHANICS
+ * are NOT searched: they are anchored to their own pit pedestal, so they
+ * keep their spot by construction.
  *
  * The seated spectators, the standing spectators and the mechanics face the
  * camera with a stand frame so they look at the car, while the walkers use a
@@ -1446,6 +1488,9 @@ export function buildPublicBillboards(
   const random = createDeterministicRandom(resolvePublicSpriteSeed(input, 0));
   const cameraUp = computeCameraUp(camera);
   const props = buildRightWorldProps(input);
+  // The SEAM context of THIS track: every clearance of the off-bleacher
+  // crowd is measured against the edge the road's own readers publish.
+  const seam = resolveRightWorldSeam(spec.segments);
   const bleacherSeats = buildBleacherSeatPositions(
     props.filter((prop) => prop.kind === 'bleacher'),
   );
@@ -1537,7 +1582,7 @@ export function buildPublicBillboards(
     });
   }
 
-  // (c) The STANDING spectators wait OUTSIDE the ring, beyond the road edge.
+  // (c) The STANDING spectators wait OUTSIDE the ring, beyond the SEAM edge.
   for (let ordinal = 0; ordinal < standingCount; ordinal += 1) {
     const sample = samples[peopleSampleIndices[ordinal]!];
     const frame = resolveSplineSampleFrame(samples, sample.globalIndex);
@@ -1552,6 +1597,7 @@ export function buildPublicBillboards(
       placed: billboards,
       sample,
       frame,
+      seam,
       baseOffsetM,
       resolveFrameId: (x, z) =>
         selectPublicLookAtCarFrameId(
@@ -1601,6 +1647,7 @@ export function buildPublicBillboards(
         placed: billboards,
         sample,
         frame,
+        seam,
         baseOffsetM,
         resolveFrameId: () => walkFrameId,
       });
@@ -1640,7 +1687,9 @@ interface OffBleacherAgentPlacement {
   readonly sample: SplineSample;
   /** Track-side frame of the sample. */
   readonly frame: SplineSampleFrame;
-  /** Base distance beyond the road half-width, in meters. */
+  /** Seam context the clearances of the candidates are measured against. */
+  readonly seam: RightWorldSeamContext;
+  /** Base clearance beyond the SEAM edge, in meters. */
   readonly baseOffsetM: number;
   /** Resolves the frame id of a candidate position. */
   readonly resolveFrameId: (x: number, z: number) => string;
@@ -1649,11 +1698,16 @@ interface OffBleacherAgentPlacement {
 /**
  * Places ONE off-bleacher agent through the clearance candidate search.
  *
- * The candidate offsets are the base offset and the base offset plus the
- * clearance steps, and the FIRST candidate whose footprint is clear of every
- * scenery prop AND keeps the personal space of every billboard placed before
- * it wins. An agent with no clear candidate is SKIPPED: the crowd is a cap,
- * never a quota.
+ * The candidate offsets are the base clearance and the base clearance plus
+ * the clearance steps, and the FIRST candidate whose footprint is clear of
+ * every scenery prop AND keeps the personal space of every billboard placed
+ * before it wins. An agent with no clear candidate is SKIPPED: the crowd is
+ * a cap, never a quota.
+ *
+ * EVERY candidate is MEASURED against the SEAM edge: the candidate offset is
+ * the outward offset whose measured clearance beyond the seam edge reaches
+ * the clearance of that candidate, so the retired spline-normal distance
+ * model never places the crowd again.
  *
  * @param request - Placement request of the agent.
  * @returns The placed billboard, or undefined when no candidate was clear.
@@ -1669,15 +1723,23 @@ function placeOffBleacherAgent(
     placed,
     sample,
     frame,
+    seam,
     baseOffsetM,
     resolveFrameId,
   } = request;
 
   for (let step = 0; step < NEATRACING_PUBLIC_CLEARANCE_STEP_COUNT; step += 1) {
-    const offset =
-      sample.width / 2 +
-      baseOffsetM +
-      step * NEATRACING_PUBLIC_CLEARANCE_STEP_M;
+    // The candidate clearance is measured BEYOND THE SEAM EDGE: the search
+    // returns the outward offset whose measured clearance reaches it.
+    const targetClearanceM =
+      baseOffsetM + step * NEATRACING_PUBLIC_CLEARANCE_STEP_M;
+    const offset = resolveSeamClearanceOffsetM(
+      seam,
+      sample,
+      frame,
+      targetClearanceM,
+      0,
+    );
     const generatorX = sample.x - frame.normalX * offset;
     const generatorY = sample.y - frame.normalY * offset;
     const x = generatorX;

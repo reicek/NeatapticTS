@@ -1,26 +1,29 @@
 /**
  * ============================================================================
  * P1-outer-edge-red (plan step 14U) - the ASYMMETRIC EDGE MODEL - the
- * CONTAINMENT BOUND lane (RED-4).
+ * CONTAINMENT BOUND lane (RED-4) - CLOSED BY THE RETIREMENT
+ * (fix-packet-P1-sand-red-iteration-3, AC-090 VERDICT 8).
  *
  * AC tags: AC-095 (the asymmetric edge - the named, curvature-derived
  * inner/outer half-width pair, the outer one growing with the local corner
- * measure), AC-081 (the RETAINED containment clauses - the pose-independence,
- * the ONE bound, the shipped tick and the anti-masking clauses are NOT
- * re-opened here; this lane only asserts that the bound MOVED with the
- * edge), AC-090 (the user gate is NOT claimed - this lane closes nothing
- * and records no verdict).
+ * measure - SURVIVES as the BAND LAW: the classifier still reads the SAME
+ * widened edge), AC-081 (the containment bound is RETIRED - the
+ * pose-independence, the ONE-bound and the anti-masking clauses SURVIVE as
+ * properties of the retired NO-OP seam and the band law, asserted in their
+ * re-authored ABSENCE form), AC-090 (the user gate is NOT claimed - this
+ * file closes nothing and records no verdict).
  *
- * RED-4 (DISCRIMINATING - the lane FAILS today on its own assertion): the
- * containment bound follows the SAME asymmetric OUTER edge - the bound is
- * measured against the widened outer edge, so the car is contained INSIDE
- * the widened road and never on the apron that the widening created - and
- * the observable is that the probe pose is NOT reseated. The contract opens
- * with a NON-VACUITY GUARD: the probe POSE MUST really be outside the
- * RETIRED symmetric bound and inside the widened bound, because a probe
- * that is outside both would satisfy the clause vacuously. The probe is
- * RUNTIME-ONLY: it reads the EXISTING containment bound, so the lane is red
- * BY ASSERTION and never by an import failure.
+ * RED-4 (CLOSED - VERDICT 8 retired the bound): there is no containment
+ * bound left to follow the widened edge, so the probe pose is NEVER
+ * reseated - the retirement makes the former "the bound MOVED with the
+ * edge" clause true by construction. The guard the red lane opened with
+ * survives in its re-authored form: the probe POSE MUST still really sit
+ * beyond the RETIRED symmetric bound and within one named curb width of
+ * it, and the re-anchored clause is that the probe stays a DRIVABLE
+ * off-road pose under the band law (the widened edge survives as the
+ * classifier's edge) while the retired seam leaves it untouched. The
+ * probe is RUNTIME-ONLY: it reads the EXISTING readers, never the
+ * import-time name of a gone lane.
  *
  * The drift space (the measured outer extension) is a NAMED EXPORT owned by
  * the implementing slice: THIS contract NEVER carries its number - the probe
@@ -41,9 +44,13 @@
  * "Cannot find module '../host/input'" under ts-jest diagnostics); a green
  * suite during the red phase would be a contract defect. The plan red_test
  * note was reconciled against the spec source of truth: arcade elastic
- * bounce responses (car-car and car-boundary, LD-05) plus off-track
+ * bounce responses for car-vs-car (LD-05) plus off-track
  * detection on the track ribbon lateral bounds (§5.2) and the D5 keyboard
- * map (sample once per rAF frame, replay into every catch-up tick).
+ * map (sample once per rAF frame, replay into every catch-up tick). THE
+ * PLAN'S EARLIER car-vs-track-boundary NON-REFLECTING CLAMP CLAUSE IS
+ * RETIRED (fix-packet-P1-sand-red-iteration-3, AC-090 VERDICT 8): the
+ * road edge is an inner boundary and the ONE off-track limit is the
+ * USER-named sand cap (AC-094).
  *
  * Determinism rung: same-runtime byte-identical via `JSON.stringify`
  * serialization; every util is pure — it returns new records, never
@@ -60,8 +67,8 @@
  * `NEATRACING_CAR_COLLISION_RADIUS_M` (D6: a named fixed physics
  * constant, finite > 0, never derived from voxel models), the band widths
  * `NEATRACING_TRACK_CURB_WIDTH_M` (1.0) and
- * `NEATRACING_TRACK_GRASS_APRON_WIDTH_M` (3.0) mirroring the private
- * track.slabs band constants, the factory
+ * `NEATRACING_TRACK_GRASS_APRON_WIDTH_M` (3.0) RE-EXPORTED from the
+ * track.slabs band-geometry owner (never a mirrored value), the factory
  * `createTrackSurfaceResolver(segments)` returning a pure
  * `(car: PhysicsCarState) => PhysicsSurfaceType` whose nearest-segment
  * lateral bands mirror the slab rasterizer (road when
@@ -76,22 +83,19 @@
  * equal-mass frictionless arcade elastic exchange along the collision
  * normal (kinetic energy and normal momentum conserved, relative normal
  * velocity reversed, no deformation, no crash penalties or rewards per
- * LD-04) and centers separated to at least the sum of the radii, and
- * `resolveTrackBoundaryCar(car, segments)` using the DRIVABLE-SURFACE
- * edge (the ribbon's driveable half width - the outer edge of the road
- * core plus the curb band) as the bound, which is the AC-081 contract of
- * Step 14I REUSED and never re-derived: the grass apron is a
- * NON-drivable off-road surface, so a car is reseated BEFORE it can come
- * to rest on it, and the bound is POSE-INDEPENDENT (it is derived from
- * the ribbon geometry only, never from the heading, the slip or the drift
- * pose) so the containment can never mask the AI steering defect owned
- * by Step 14M (AC-085): outside the bound the car is reseated on the
- * edge with its outward world-velocity component reflected elastically
- * at preserved magnitude; inside the bound the car is returned
- * byte-identical. The former untouched-at-lat-5 interpretation pin is
- * RE-BASELINED by the AC-081 contract: the inside-the-bound pin is
- * re-anchored at lat 2.5 (inside the drivable surface) and a car at
- * lat 5 is now PAST the bound, so it is reseated on the drivable edge.
+ * LD-04) and centers separated to at least the sum of the radii. THE
+ * RETIREMENT (fix-packet-P1-sand-red-iteration-3, AC-090 VERDICT 8):
+ * `resolveTrackBoundaryCar` is REMOVED - there is NO track-boundary
+ * containment at all (the road edge is an INNER boundary and the ONE
+ * off-track limit is the USER-named sand cap, AC-094): the band
+ * classification (`classifyTrackSurface` / the band law) survives
+ * - the band BETWEEN the drivable edge and the band outer edge is a
+ * DRIVABLE off-road surface, so a car that crossed the road edge really
+ * ends up off the road and is never reseated on the ribbon - and the
+ * LIVE tick applies the RETIRED seam: EVERY track-geometry input of its
+ * 4-arg form is a byte-identical NO-OP whose published pose is the
+ * reached pose (pose-independence TRUE BY CONSTRUCTION, so nothing can
+ * mask the AI steering defect owned by Step 14M (AC-085)).
  * '../host/input' exports the pure
  * `sampleKeyboardInput(presses)` reading a once-per-rAF-frame pressed-key
  * map `{ up, down, left, right }` (host-collected, transport neutral) and
@@ -120,7 +124,6 @@ import {
   NEATRACING_TRACK_CURB_WIDTH_M,
   NEATRACING_TRACK_GRASS_APRON_WIDTH_M,
   resolveCarCollisions,
-  resolveTrackBoundaryCar,
 } from './collision.utils';
 import type { TrackSurfaceClassification } from './collision.utils';
 import { sampleKeyboardInput } from '../host/input';
@@ -282,10 +285,13 @@ describe('collision.utils constants (D6, spec §5.1)', () => {
     expect(NEATRACING_CAR_COLLISION_RADIUS_M).toBeGreaterThan(0);
   });
 
-  it('mirrors the track slab curb and grass-apron band widths', () => {
+  it('re-exports the track slab curb and grass-apron band widths (never a mirrored value)', () => {
     expect(NEATRACING_TRACK_CURB_WIDTH_M).toBe(1.0);
-    // The apron width mirrors the rasterized band geometry; it is NOT
-    // the containment bound (the bound is the drivable-surface edge).
+    // The apron width is the PUBLISHED rasterized band geometry (the
+    // band-geometry owner publishes it and this module RE-EXPORTS it);
+    // its outer edge anchored the FORMER containment bound (the
+    // drivable-surface edge PLUS this apron width, AC-094 (d)) that the
+    // retirement has REMOVED.
     expect(NEATRACING_TRACK_GRASS_APRON_WIDTH_M).toBe(3.0);
   });
 });
@@ -349,104 +355,138 @@ describe('car-car elastic collision responses (LD-05, spec §4.3)', () => {
   });
 });
 
-describe('track boundary bounce (spec §4.3, D6, AC-081 containment)', () => {
+describe('track boundary retirement (spec §4.3, D6, AC-090 VERDICT 8 - the AC-081 bound is RETIRED)', () => {
   /**
    * The DRIVABLE-SURFACE edge of the fixture ribbon: the ribbon's
    * driveable half width (the outer edge of the road core plus the curb
-   * band). The grass apron lies BEYOND it and is a NON-drivable off-road
-   * surface, so a car is reseated before it can come to rest there.
+   * band). The off-track BAND lies BEYOND it and is a DRIVABLE off-road
+   * surface (AC-094 (b)), so a car that crossed the drivable edge is NOT
+   * reseated - it keeps driving on the band.
    */
   const drivableSurfaceEdgeM = FIXTURE_HALF_TRACK_WIDTH_M;
 
-  it('reseats a car past the drivable surface edge onto the edge and reflects the outward velocity', () => {
-    const car = seededCarAt(FIXTURE_RIBBON_X_M, drivableSurfaceEdgeM + 1, {
+  /**
+   * The OUTER edge of the off-track band (m): the drivable-surface edge
+   * plus the EXISTING named grass-apron width (AC-094 (d) - the band
+   * width is an EXISTING published constant, never a band-paint
+   * constant). RETIREMENT ANCHOR (AC-090 VERDICT 8): the bound once
+   * seated here is REMOVED - the road edge is an INNER boundary and
+   * never a wall, so this number only anchors the lanes' probe poses
+   * and their "kept rolling past it" guards.
+   */
+  const bandOuterEdgeM =
+    drivableSurfaceEdgeM + NEATRACING_TRACK_GRASS_APRON_WIDTH_M;
+
+  it('retirement: a car beyond the former bound keeps rolling - the outward velocity is never reflected or clamped', () => {
+    const car = seededCarAt(FIXTURE_RIBBON_X_M, bandOuterEdgeM + 1, {
       heading: Math.PI / 2,
       speed: 10,
     });
-    const bounced = resolveTrackBoundaryCar(car, FIXTURE_TRACK_SEGMENTS);
-    const [velocityX, velocityY] = worldVelocityOf(bounced);
+    const input: PhysicsStepInput = { throttle: 0, brake: 0, steer: 0 };
 
-    // The car is reseated EXACTLY on the drivable surface edge, never
-    // beyond it (the bound is the edge, not the grass-apron edge).
-    expect(Math.abs(bounced.y)).toBeCloseTo(drivableSurfaceEdgeM, 6);
-    expect(Math.abs(bounced.y)).toBeLessThanOrEqual(
-      drivableSurfaceEdgeM + 1e-6,
+    // The RETIRED seam touches NOTHING: the LIVE tick with the ribbon
+    // geometry is byte-identical to the free roll, so the car keeps
+    // rolling outward instead of stopping on the band edge (able to
+    // fail if a containment bound ever creeps back into the tick).
+    const published = stepPhysics(car, input, undefined, FIXTURE_TRACK_SEGMENTS);
+
+    expect(published).toEqual(stepPhysics(car, input));
+    // The published pose IS the reached pose: beyond the former band
+    // outer edge, plain NON-drivable grass by the band law, with the
+    // outward world-velocity component NOT reflected.
+    const [velocityX, velocityY] = worldVelocityOf(published);
+    expect(Math.abs(published.y)).toBeGreaterThan(bandOuterEdgeM);
+    expect(classifyTrackSurface(published, FIXTURE_TRACK_SEGMENTS).surface).toBe(
+      'grass',
     );
-    // The outward world-velocity component (heading PI/2 → +y, outward)
-    // reverses elastically while the magnitudes are preserved.
-    expect(velocityY).toBeCloseTo(-10, 6);
-    expect(Math.hypot(velocityX, velocityY)).toBeCloseTo(10, 6);
+    expect(velocityY).toBeGreaterThan(0);
+    expect(velocityX).toBeCloseTo(0, 6);
   });
 
-  it('returns a car inside the bound byte-identically (re-baselined interpretation pin)', () => {
-    // RE-BASELINED by the AC-081 contract: lat 2.5 is INSIDE the
-    // drivable surface (the road core), so the car is untouched. The
-    // former lat-5 pin asserted the outer grass-apron bound, which
-    // AC-081 replaces with the drivable-surface edge.
+  it('retirement: the tick is byte-identical with the ribbon geometry at lat 2.5 (re-baselined interpretation pin)', () => {
+    // lat 2.5 is INSIDE the road core (the drivable edge is 4.0 and the
+    // former band outer edge 7.0), and under the retirement EVERY pose
+    // gets the same NO-OP seam - the LIVE tick is byte-identical with
+    // and without the track segments.
     const car = seededCarAt(FIXTURE_RIBBON_X_M, 2.5, { speed: 10 });
-    const resolved = resolveTrackBoundaryCar(car, FIXTURE_TRACK_SEGMENTS);
+    const input: PhysicsStepInput = { throttle: 0, brake: 0, steer: 0 };
 
-    expect(serializeCars([resolved])).toBe(serializeCars([car]));
-  });
+    const published = stepPhysics(car, input, undefined, FIXTURE_TRACK_SEGMENTS);
 
-  it('reseats a car inside the grass apron onto the drivable surface edge (the former lat-5 case)', () => {
-    // lat 5 is inside the grass apron (the drivable edge is 4.0), so
-    // the car is PAST the bound and is reseated on the edge.
-    const car = seededCarAt(FIXTURE_RIBBON_X_M, 5, { speed: 10 });
-    const resolved = resolveTrackBoundaryCar(car, FIXTURE_TRACK_SEGMENTS);
-
-    expect(Math.abs(resolved.y)).toBeCloseTo(drivableSurfaceEdgeM, 6);
-    expect(Math.abs(resolved.y)).toBeLessThanOrEqual(
-      drivableSurfaceEdgeM + 1e-6,
+    expect(published).toEqual(stepPhysics(car, input));
+    expect(classifyTrackSurface(car, FIXTURE_TRACK_SEGMENTS).surface).toBe(
+      'road',
     );
   });
 
-  it('reseats to the SAME position for every car pose (the bound is pose-independent)', () => {
-    // AC-089: the containment bound is derived from the ribbon geometry
-    // ONLY, so it can never MASK the AI steering defect owned by Step
-    // 14M (AC-085) - the reseat position reads neither the heading, nor
-    // the slip, nor the drift pose.
+  it('retirement: a car on the band at lat 5 keeps rolling - the road edge is an inner boundary, never a wall', () => {
+    // lat 5 is on the off-track band (the drivable edge is 4.0 and the
+    // band outer edge is 7.0). The retirement NEVER pulls the car back:
+    // the LIVE tick keeps rolling it outward, byte-identical to the
+    // free roll (able to fail if a containment bound creeps back).
+    const car = seededCarAt(FIXTURE_RIBBON_X_M, 5, { speed: 10 });
+    const input: PhysicsStepInput = { throttle: 0, brake: 0, steer: 0 };
+
+    const published = stepPhysics(car, input, undefined, FIXTURE_TRACK_SEGMENTS);
+
+    expect(published).toEqual(stepPhysics(car, input));
+    // ...and the reached pose really stays off the road core, yet on
+    // the DRIVABLE off-road band.
+    expect(Math.abs(published.y)).toBeGreaterThan(
+      FIXTURE_HALF_TRACK_WIDTH_M,
+    );
+    expect(
+      classifyTrackSurface(published, FIXTURE_TRACK_SEGMENTS).isDrivable,
+    ).toBe(true);
+  });
+
+  it('retirement: the tick is byte-identical with the geometry for EVERY car pose (pose-independence by construction)', () => {
+    // AC-089 anti-masking, re-authored under the retirement: the SEAM
+    // reads no pose at all - a beyond-band car keeps its heading, slip
+    // and drift channels, so nothing can mask the AI steering defect
+    // owned by Step 14M (AC-085). Byte-identity of the LIVE tick with
+    // and without the track segments is the strongest form of that.
     const poses: readonly PhysicsCarState[] = [
-      seededCarAt(FIXTURE_RIBBON_X_M, drivableSurfaceEdgeM + 1, {
+      seededCarAt(FIXTURE_RIBBON_X_M, bandOuterEdgeM + 1, {
         heading: Math.PI / 2,
         speed: 10,
       }),
-      seededCarAt(FIXTURE_RIBBON_X_M, drivableSurfaceEdgeM + 1, {
+      seededCarAt(FIXTURE_RIBBON_X_M, bandOuterEdgeM + 1, {
         heading: -Math.PI / 2,
         speed: 10,
       }),
-      seededCarAt(FIXTURE_RIBBON_X_M, drivableSurfaceEdgeM + 1, {
+      seededCarAt(FIXTURE_RIBBON_X_M, bandOuterEdgeM + 1, {
         heading: 0,
         speed: 10,
         slipAngle: 0.4,
         lateralVelocity: -3,
       }),
     ];
+    const input: PhysicsStepInput = { throttle: 0, brake: 0, steer: 0 };
 
     for (const pose of poses) {
-      const resolved = resolveTrackBoundaryCar(pose, FIXTURE_TRACK_SEGMENTS);
-
-      expect(resolved.x).toBeCloseTo(FIXTURE_RIBBON_X_M, 6);
-      expect(resolved.y).toBeCloseTo(drivableSurfaceEdgeM, 6);
+      expect(
+        stepPhysics(pose, input, undefined, FIXTURE_TRACK_SEGMENTS),
+      ).toEqual(stepPhysics(pose, input));
     }
   });
 
-  it('is the ONE bound the LIVE tick applies (the shipped tick reuses THIS bound)', () => {
-    // AC-081-WIRE ("there is ONE bound in the codebase"): the live tick
-    // must apply THIS bound and NOT a second, differently-edged one. The
-    // lane therefore measures the LIVE published pose against the bound
-    // applied to the very same unbounded tick output.
-    const car = seededCarAt(FIXTURE_RIBBON_X_M, drivableSurfaceEdgeM + 1, {
+  it('retirement: EVERY track-geometry input of the LIVE tick is a byte-identical NO-OP (the wire proves the absence)', () => {
+    // The AC-081-WIRE re-authored under the retirement: there is ONE
+    // named owner of the former containment - the retired seam - and
+    // any bound re-landed OUTSIDE the seam would break the byte-identity
+    // below. The probe is seated BEYOND the band outer edge, so the
+    // compare can never pass on a pose that never moved (the former
+    // non-vacuity guard).
+    const car = seededCarAt(FIXTURE_RIBBON_X_M, bandOuterEdgeM + 1, {
       heading: Math.PI / 2,
       speed: 10,
     });
     const input: PhysicsStepInput = { throttle: 0, brake: 0, steer: 0 };
 
-    // The unbounded tick output: the pose the bound sees.
+    // The unbounded tick output: the pose the retired seam never even reads.
     const unbounded = stepPhysics(car, input);
-    // The bound applied to that very pose.
-    const expected = resolveTrackBoundaryCar(unbounded, FIXTURE_TRACK_SEGMENTS);
-    // The LIVE tick WITH the ribbon geometry.
+    // The LIVE tick WITH the ribbon geometry: the RETIRED seam's output.
     const published = stepPhysics(
       car,
       input,
@@ -454,16 +494,16 @@ describe('track boundary bounce (spec §4.3, D6, AC-081 containment)', () => {
       FIXTURE_TRACK_SEGMENTS,
     );
 
-    // The published pose IS the bound's pose - byte for byte.
-    expect(published.x).toBe(expected.x);
-    expect(published.y).toBe(expected.y);
-    expect(published.heading).toBe(expected.heading);
-    expect(published.speed).toBe(expected.speed);
-    expect(published.slipAngle).toBe(expected.slipAngle);
+    // The published pose IS the free pose - byte for byte.
+    expect(published.x).toBe(unbounded.x);
+    expect(published.y).toBe(unbounded.y);
+    expect(published.heading).toBe(unbounded.heading);
+    expect(published.speed).toBe(unbounded.speed);
+    expect(published.slipAngle).toBe(unbounded.slipAngle);
     // The NON-VACUITY GUARD comes LAST: the unbounded tick really did
-    // leave the drivable surface, so the equality above can never pass on
-    // a pose that never moved.
-    expect(unbounded.y).toBeGreaterThan(drivableSurfaceEdgeM);
+    // leave the band, so the equality above can never pass on a pose
+    // that never moved.
+    expect(unbounded.y).toBeGreaterThan(bandOuterEdgeM);
   });
 });
 
@@ -505,9 +545,13 @@ describe('named surface classification (AC-087 - the ROAD-ONLY lane)', () => {
     expect(lane.isDrivable).toBe(true);
   });
 
-  it('names the grass apron and everything beyond it as grass - never drivable', () => {
-    // The apron width is the rasterizer band mirror: the apron starts at
-    // the drivable edge, so its middle is a named off-road sample.
+  it('names the off-track band as grass and DRIVABLE, and the grass beyond the band as grass and never drivable', () => {
+    // The apron width is the PUBLISHED rasterized band geometry: the
+    // apron starts at the drivable edge, so its middle is a named
+    // off-road sample - and the off-track band is DRIVABLE (AC-094 (b)),
+    // so the band sample reads isDrivable true. The grass BEYOND the
+    // band outer edge is the grass the FORMER containment bound kept
+    // the car out of (the bound is retired; the band law stays).
     const apronLane = classify(
       carOnRibbonAt(
         FIXTURE_HALF_TRACK_WIDTH_M + NEATRACING_TRACK_GRASS_APRON_WIDTH_M / 2,
@@ -517,7 +561,7 @@ describe('named surface classification (AC-087 - the ROAD-ONLY lane)', () => {
 
     expect(apronLane.surface).toBe('grass');
     expect(apronLane.isRoadOnly).toBe(false);
-    expect(apronLane.isDrivable).toBe(false);
+    expect(apronLane.isDrivable).toBe(true);
     expect(farLane.surface).toBe('grass');
     expect(farLane.isRoadOnly).toBe(false);
     expect(farLane.isDrivable).toBe(false);
@@ -553,16 +597,14 @@ describe('named surface classification (AC-087 - the ROAD-ONLY lane)', () => {
     expect(serializeCars([car])).toBe(before);
   });
 
-  it('keeps a curb-riding car contained yet NOT road-only (the containment never masks the road-only lane)', () => {
-    // AC-089: the containment keeps the car on the drivable surface, but
-    // a contained car that rides the curb is still NOT road-only, so a
-    // contained-but-off-centre AI can never be reported as a pass by the
-    // AC-085 measurement owned by Step 14M.
+  it('keeps a curb-riding car NOT road-only (the retirement never masks the road-only lane)', () => {
+    // AC-089, re-authored under the retirement: the SEAM keeps the car
+    // exactly where it reaches, but a curb-riding car is still NOT
+    // road-only, so an off-centre AI car can never be reported as a pass
+    // by the AC-085 measurement owned by Step 14M.
     const curbCar = carOnRibbonAt(3.5);
-    const contained = resolveTrackBoundaryCar(curbCar, FIXTURE_TRACK_SEGMENTS);
-    const lane: TrackSurfaceClassification = classify(contained);
+    const lane: TrackSurfaceClassification = classify(curbCar);
 
-    expect(serializeCars([contained])).toBe(serializeCars([curbCar]));
     expect(lane.surface).toBe('curb');
     expect(lane.isRoadOnly).toBe(false);
   });
@@ -675,17 +717,27 @@ describe('drift channel reset on a collision bounce (P0-3, AC-079)', () => {
   const drivableSurfaceEdgeM = FIXTURE_HALF_TRACK_WIDTH_M;
 
   /**
-   * A SLIDING car seated outside the drivable surface edge, heading
-   * outward along +y so the elastic reflection actually fires: the
-   * boundary branch only rebases an APPROACHING car, and the sliding
-   * channels (slipAngle, lateralVelocity) are the ones the reset must
-   * wipe.
+   * The OUTER edge of the off-track band (m): the drivable-surface edge
+   * plus the EXISTING named grass-apron width (AC-094 (d)). RETIREMENT
+   * ANCHOR (AC-090 VERDICT 8): the ONE containment bound once seated
+   * here is REMOVED - this number only seats the probes BEYOND it so the
+   * lanes can prove the retired seam wipes nothing there.
    */
-  const slidingCarOutsideDrivableSurface = (
+  const bandOuterEdgeM =
+    drivableSurfaceEdgeM + NEATRACING_TRACK_GRASS_APRON_WIDTH_M;
+
+  /**
+   * A SLIDING car seated beyond the band outer edge, heading outward
+   * along +y: the pose the former boundary-containment branch would have
+   * scrubbed. UNDER THE RETIREMENT there is NO boundary branch - the
+   * sliding channels (slipAngle, lateralVelocity) are exactly what the
+   * re-authored lanes prove survive the live tick unstopped.
+   */
+  const slidingCarBeyondBandOuterEdge = (
     channel: RedDriftChannelView,
   ): PhysicsCarState =>
     withDriftChannel(
-      seededCarAt(FIXTURE_RIBBON_X_M, drivableSurfaceEdgeM + 1, {
+      seededCarAt(FIXTURE_RIBBON_X_M, bandOuterEdgeM + 1, {
         heading: Math.PI / 2,
         speed: 10,
         slipAngle: 0.2,
@@ -756,67 +808,304 @@ describe('drift channel reset on a collision bounce (P0-3, AC-079)', () => {
     expect(driftChannelOf(bouncedA).pose.articulation).toBe(0);
   });
 
-  // The TRACK-BOUNDARY branch is the second bounce seam: the same wipe
-  // must happen when the car is reseated on the drivable surface edge.
-  // [RED-P0-3-BOUNDARY-ZERO]
-  it('wipes the whole drift channel on a track-boundary bounce', () => {
-    const bounced = resolveTrackBoundaryCar(
-      slidingCarOutsideDrivableSurface(DIRTY_DRIFT_CHANNEL),
-      FIXTURE_TRACK_SEGMENTS,
-    );
+  // The TRACK-BOUNDARY scrub is RETIRED (AC-090 VERDICT 8): there is no
+  // boundary-contact branch any more, so a car seated beyond the band
+  // outer edge keeps its WHOLE drift channel through the live tick - the
+  // retired seam wipes NOTHING.
+  // [RED-P0-3-BOUNDARY-ZERO - re-authored to the retirement]
+  it('retirement: a boundary-past car keeps its whole drift channel (no boundary-contact scrub exists)', () => {
+    const slidingCar = slidingCarBeyondBandOuterEdge(DIRTY_DRIFT_CHANNEL);
+    const input: PhysicsStepInput = { throttle: 0, brake: 0, steer: 0 };
 
-    // The elastic reflection ran: the incoming slip channel of the
-    // reseated car is wiped (0.2 -> 0).
-    expect(bounced.slipAngle).toBe(0);
-    expect(driftChannelOf(bounced).pose.pose).toBe(0);
-    expect(driftChannelOf(bounced).committed.slip).toBe(0);
+    // The guard the former scrub lane opened with: the probe really was
+    // a sliding car beyond the band, so the byte-identity below could
+    // never pass on a pose the former law ignored.
+    expect(Math.abs(slidingCar.y)).toBeGreaterThan(bandOuterEdgeM);
+    expect(slidingCar.slipAngle).toBe(0.2);
+
+    // The LIVE tick with the ribbon geometry is BYTE-IDENTICAL to the
+    // free roll: the boundary contact that used to wipe the channel
+    // (0.2 -> 0) is RETIRED, so the sliding car keeps rolling (able to
+    // fail if a boundary scrub creeps back into the tick).
+    expect(
+      stepPhysics(slidingCar, input, undefined, FIXTURE_TRACK_SEGMENTS),
+    ).toEqual(stepPhysics(slidingCar, input));
   });
 
-  // The latent defect, asserted ABSENT: the reset zeroed slipAngle but
-  // left the committed slip behind, so a bounced car kept the old
-  // slide's commitment while its slip channel read zero.
-  // [RED-P0-3-LATENT-SLIP-DEFECT]
-  it('leaves no committed slip behind a bounce that zeroed the slip angle', () => {
-    const bounced = resolveTrackBoundaryCar(
-      slidingCarOutsideDrivableSurface(DIRTY_DRIFT_CHANNEL),
-      FIXTURE_TRACK_SEGMENTS,
-    );
+  // The latent defect the red contract hunted - a contact that zeroed
+  // the visible slip but left the committed slip behind - CANNOT EXIST
+  // any more: there is no boundary contact left to hide a commitment
+  // behind, and the seeded slide passes through the live tick UNWIPED.
+  // [RED-P0-3-LATENT-SLIP-DEFECT - re-authored to the retirement]
+  it('retirement: no boundary contact exists to hide a committed slip behind (the slide passes through unwiped)', () => {
+    const slidingCar = slidingCarBeyondBandOuterEdge(DIRTY_DRIFT_CHANNEL);
+    const input: PhysicsStepInput = { throttle: 0, brake: 0, steer: 0 };
 
-    expect(bounced.slipAngle).toBe(0);
-    expect(driftChannelOf(bounced).committed.slip).toBe(0);
+    // The visible slip and the committed slip BOTH survive the live
+    // tick: the retired seam never zeroes the visible slip that used to
+    // mask the latent commitment.
+    expect(
+      stepPhysics(slidingCar, input, undefined, FIXTURE_TRACK_SEGMENTS),
+    ).toEqual(stepPhysics(slidingCar, input));
+    // The input really carried BOTH a visible slip and a commitment (the
+    // former discriminating pairing).
+    expect(slidingCar.slipAngle).toBe(0.2);
+    expect(driftChannelOf(slidingCar).committed.slip).toBe(
+      DIRTY_DRIFT_CHANNEL.committed.slip,
+    );
   });
 
-  // The retained guard: the bounce still zeroes the lateral velocity
-  // exactly, so the channel wipe may not drop that pin.
-  // [RED-P0-3-GUARD-LATERAL]
-  it('keeps zeroing the lateral velocity on a bounce', () => {
-    const bounced = resolveTrackBoundaryCar(
-      slidingCarOutsideDrivableSurface(DIRTY_DRIFT_CHANNEL),
-      FIXTURE_TRACK_SEGMENTS,
-    );
+  // The retained guard of the scrapped contact - the lateral velocity
+  // zeroed on touch - is RETIRED WITH THE CONTACT: the lateral channel
+  // survives the live tick untouched.
+  // [RED-P0-3-GUARD-LATERAL - re-authored to the retirement]
+  it('retirement: the lateral velocity is NOT zeroed - there is no boundary contact left to zero it', () => {
+    const slidingCar = slidingCarBeyondBandOuterEdge(DIRTY_DRIFT_CHANNEL);
+    const input: PhysicsStepInput = { throttle: 0, brake: 0, steer: 0 };
 
-    expect(bounced.lateralVelocity).toBe(0);
+    // The input really carried the lateral channel the former guard
+    // zeroed on touch.
+    expect(slidingCar.lateralVelocity).toBe(-3);
+
+    // The LIVE tick leaves it intact - byte-identical to the free roll.
+    expect(
+      stepPhysics(slidingCar, input, undefined, FIXTURE_TRACK_SEGMENTS),
+    ).toEqual(stepPhysics(slidingCar, input));
   });
 
-  // The wipe leaves the channel UNCOMMITTED, not merely zeroed: the
-  // latched turn sign is cleared and the re-arm token is cleared, so
-  // the next legitimate drift has to re-latch from scratch.
-  // [RED-P0-3-UNCOMMITTED]
-  it('leaves the channel uncommitted after a bounce (turn sign and re-arm token cleared)', () => {
-    const bounced = resolveTrackBoundaryCar(
-      slidingCarOutsideDrivableSurface(LATCHED_DRIFT_CHANNEL),
-      FIXTURE_TRACK_SEGMENTS,
-    );
+  // The channel of the scrapped contact was left UNCOMMITTED - turn
+  // sign and re-arm token cleared. THE CONTACT IS RETIRED, so a latched
+  // channel passes through the live tick STILL LATCHED: nothing exists
+  // to clear it.
+  // [RED-P0-3-UNCOMMITTED - re-authored to the retirement]
+  it('retirement: a latched channel stays latched (no boundary contact exists to clear the commitment)', () => {
+    const slidingCar = slidingCarBeyondBandOuterEdge(LATCHED_DRIFT_CHANNEL);
+    const input: PhysicsStepInput = { throttle: 0, brake: 0, steer: 0 };
 
-    // The elastic reflection ran: the incoming slip channel of the
-    // reseated car is wiped (0.2 -> 0).
-    expect(bounced.slipAngle).toBe(0);
-    expect(driftChannelOf(bounced).committed.turnSign).toBe(0);
-    expect(driftChannelOf(bounced).committed.reArmed).toBe(false);
+    // The LIVE tick is byte-identical to the free roll: the boundary
+    // contact that used to clear the turn sign and the re-arm token is
+    // RETIRED.
+    expect(
+      stepPhysics(slidingCar, input, undefined, FIXTURE_TRACK_SEGMENTS),
+    ).toEqual(stepPhysics(slidingCar, input));
+    // The input really carried the latched commitment the former contact
+    // cleared.
+    expect(slidingCar.slipAngle).toBe(0.2);
+    expect(driftChannelOf(slidingCar).committed.turnSign).toBe(
+      LATCHED_DRIFT_CHANNEL.committed.turnSign,
+    );
+    expect(driftChannelOf(slidingCar).committed.reArmed).toBe(
+      LATCHED_DRIFT_CHANNEL.committed.reArmed,
+    );
   });
 });
 
-describe('the ASYMMETRIC EDGE MODEL (P1-outer-edge-red, plan step 14U) - the CONTAINMENT BOUND lane (RED-4)', () => {
+/**
+ * ============================================================================
+ * P1-sand-red (plan step 14W) - the BOUNDARY RE-CONTRACT - CLOSED BY THE
+ * RETIREMENT (fix-packet-P1-sand-red-iteration-3, AC-090 VERDICT 8): the
+ * ONE containment bound is REMOVED and the boundary law lanes are
+ * re-authored to the absence form.
+ *
+ * AC tags: AC-094 (a - RETIRED WITH THE BOUND: there is NO boundary law
+ * left that could carry the car to the middle of the track; the lanes now
+ * prove the LIVE tick reseats NOTHING), AC-094 (c/d - the off-road speed
+ * law is the USER-named 20 km/h cap and the ONE-bound clause is retired),
+ * AC-081 (RECONCILED - the POSE-INDEPENDENCE, the ONE-BOUND and the
+ * SHIPPED-TICK clauses survive as properties of the retired NO-OP seam the
+ * live tick exposes), AC-090 (the user gate is NOT claimed - this lane
+ * closes nothing and records no verdict).
+ *
+ * THE CLASSIFICATION THIS SLICE RECORDS (before any production edit): the
+ * user directive ("touching the edge teleports you to the middle of the
+ * track") is a BOUNDARY/MODEL defect - the BOUNDARY LAW owned the pose -
+ * and NEVER a VISUAL or a PRESENTATION defect. The retirement settles the
+ * classification the packet resolved: the whole containment law is
+ * REMOVED (the road edge is an inner boundary), so the observable is now
+ * the LIVE tick's byte-identity with the free roll.
+ *
+ * RED-1 (RE-AUTHORED to the absence form): a car that crosses the
+ * drivable edge keeps rolling - the published lateral distance stays
+ * BEYOND the drivable edge and the longitudinal progress is never reset.
+ * The NON-VACUITY GUARD in the Step 14Q style survives: the probe pose
+ * MUST really cross the drivable edge (a pose that stays inside the
+ * drivable edge would satisfy the clause vacuously) and the guard is
+ * asserted BEFORE the relational clause. The former law reseated the car
+ * EXACTLY on the drivable edge, so the re-authored clause would fail
+ * against any re-landed reseat.
+ *
+ * RED-4 (RE-AUTHORED to the absence form): the retired seam touches
+ * NOTHING - a band pose and a beyond-band pose are BOTH left where they
+ * reached (each the byte-identical free roll). The NON-VACUITY GUARD
+ * comes FIRST: the band probe MUST really be beyond the drivable edge,
+ * the beyond-band probe really beyond the band (a probe inside BOTH
+ * would satisfy the clause vacuously). The POSE-INDEPENDENCE rail (the
+ * AC-081 clause the retired seam keeps) rides along: the seam reads the
+ * ribbon geometry ONLY - the LIVE tick is byte-identical with and
+ * without it for EVERY heading and slip. The ONE-BOUND and SHIPPED-TICK
+ * clauses stay pinned by the relational lanes of the retirement block
+ * above (they compare the LIVE published pose against its free roll, so
+ * they can never pass while a second, differently-edged bound lives in
+ * the tick).
+ *
+ * THE BAND WIDTH IS AN EXISTING PUBLISHED CONSTANT: the band reaches from
+ * the drivable edge to the OUTER edge of the EXISTING named grass apron
+ * (AC-094 (d)), so the probe margins are expressed through
+ * `NEATRACING_TRACK_GRASS_APRON_WIDTH_M` and NEVER through a band-paint
+ * constant (AC-080 keeps the tri-colour ladder a PAINT ladder).
+ *
+ * The lanes are RUNTIME-ONLY: they probe the EXISTING boundary law, so
+ * every red is a NAMED RUNTIME failure and NEVER an import failure.
+ *
+ * Standing constraints (plan: zero per-frame allocation (P9) and the
+ * capacity limits maxNodes 8000 / maxConnections 32000, AC-029): this RED
+ * lane adds no per-frame allocation and no node/connection growth - it
+ * only PROBES the existing readers.
+ */
+describe('P1-sand-red (plan step 14W) - the BOUNDARY RE-CONTRACT (the drivable off-track band)', () => {
+  /**
+   * The drivable-surface edge of the fixture ribbon, in meters: the
+   * PUBLISHED side-specific half-width of the straight chord (a straight
+   * publishes the SAME inner and outer half-width, so the edge is 4.0 m).
+   */
+  const drivableEdgeM = FIXTURE_HALF_TRACK_WIDTH_M;
+
+  /**
+   * The OUTER edge of the off-track band: the drivable edge plus the
+   * EXISTING named grass-apron width (AC-094 (d) - the band width is an
+   * EXISTING published constant, never a band-paint constant).
+   */
+  const bandOuterEdgeM = drivableEdgeM + NEATRACING_TRACK_GRASS_APRON_WIDTH_M;
+
+  /**
+   * The band probe's lateral offset: the MIDDLE of the off-track band
+   * (the drivable edge plus HALF the named apron width), so the probe is
+   * beyond the drivable edge AND inside the band.
+   */
+  const bandProbeLateralM =
+    drivableEdgeM + NEATRACING_TRACK_GRASS_APRON_WIDTH_M / 2;
+
+  /**
+   * A lateral offset BEYOND the band: the pose the retirement had to
+   * leave UNTOUCHED - the car keeps rolling past the former band outer
+   * edge (never clamped to it).
+   */
+  const beyondBandLateralM = bandOuterEdgeM + 1;
+
+  /** The probe's x: inside the fixture chord's span (a lateral crossing). */
+  const probeX = FIXTURE_RIBBON_X_M;
+
+  it('RED-1 (RE-AUTHORED to the absence form): the tick NEVER carries the car back onto the ribbon (the published lateral distance stays BEYOND the drivable edge) and NEVER resets the longitudinal progress', () => {
+    // The NON-VACUITY GUARD comes FIRST (the Step 14Q style): the probe
+    // pose MUST really cross the drivable edge (a pose that stays inside
+    // the drivable edge would satisfy the clause VACUOUSLY) ...
+    expect(bandProbeLateralM).toBeGreaterThan(drivableEdgeM);
+    // ... and it MUST really be a LATERAL crossing: the probe sits inside
+    // the chord's span, so the track direction is well defined and the
+    // displacement along it is measurable.
+    expect([
+      probeX > FIXTURE_SEGMENT.startX,
+      probeX < FIXTURE_SEGMENT.endX,
+    ]).toEqual([true, true]);
+
+    // Arrange: the band pose the retired seam receives - the car is
+    // heading OUTWARD.
+    const car = seededCarAt(probeX, bandProbeLateralM, {
+      heading: Math.PI / 2,
+      speed: 10,
+    });
+    const input: PhysicsStepInput = { throttle: 0, brake: 0, steer: 0 };
+
+    // Act: the LIVE tick with the ribbon geometry - the retired seam's
+    // one remaining entry point.
+    const published = stepPhysics(
+      car,
+      input,
+      undefined,
+      FIXTURE_TRACK_SEGMENTS,
+    );
+
+    // RELATIONAL CLAUSE (DISCRIMINATING, re-authored): the published
+    // lateral distance from the centreline is STRICTLY GREATER than the
+    // drivable half-width - the car kept rolling outward, past the
+    // drivable edge. The former law reseated the car EXACTLY ONTO the
+    // drivable edge, so the published distance would have EQUALLED the
+    // drivable half-width and the re-landed reseat would fail here (by
+    // assertion, never by an import failure).
+    expect(Math.abs(published.y)).toBeGreaterThan(drivableEdgeM);
+
+    // RAIL: the displacement along the TRACK direction is ZERO for a pose
+    // that only crosses the edge laterally - the tick never resets the
+    // longitudinal progress either.
+    expect(published.x - car.x).toBeCloseTo(0, 9);
+  });
+
+  it('RED-4 (RE-AUTHORED to the absence form): the retired seam touches NOTHING (a band pose and a beyond-band pose are BOTH left where they reached)', () => {
+    // The NON-VACUITY GUARD comes FIRST: the band probe MUST really be
+    // beyond the drivable edge AND inside the band, and the beyond-band
+    // probe really beyond the band (a probe inside BOTH would satisfy
+    // the clause VACUOUSLY - a pose the former law left alone either
+    // way).
+    expect([
+      bandProbeLateralM > drivableEdgeM,
+      bandProbeLateralM < bandOuterEdgeM,
+    ]).toEqual([true, true]);
+    expect(beyondBandLateralM).toBeGreaterThan(bandOuterEdgeM);
+
+    // Arrange + Act: both poses read through the LIVE tick's retired seam
+    // (the ribbon geometry argument).
+    const bandCar = seededCarAt(probeX, bandProbeLateralM, {
+      heading: Math.PI / 2,
+      speed: 10,
+    });
+    const input: PhysicsStepInput = { throttle: 0, brake: 0, steer: 0 };
+    const bandPublished = stepPhysics(
+      bandCar,
+      input,
+      undefined,
+      FIXTURE_TRACK_SEGMENTS,
+    );
+    const beyondBandCar = seededCarAt(probeX, beyondBandLateralM, {
+      heading: Math.PI / 2,
+      speed: 10,
+    });
+    const beyondBandPublished = stepPhysics(
+      beyondBandCar,
+      input,
+      undefined,
+      FIXTURE_TRACK_SEGMENTS,
+    );
+
+    // RELATIONAL CLAUSE 1 (DISCRIMINATING, re-authored): a pose beyond the
+    // drivable edge but INSIDE the band is NEVER reseated - the published
+    // pose is the free roll, byte for byte. The former drivable-edge
+    // bound would have reseated it onto the edge.
+    expect(bandPublished).toEqual(stepPhysics(bandCar, input));
+
+    // RELATIONAL CLAUSE 2 (DISCRIMINATING, re-authored): a pose beyond the
+    // band is never pulled back to the band outer edge - the former
+    // band-edge clamp is RETIRED and the car keeps rolling outward.
+    expect(beyondBandPublished).toEqual(stepPhysics(beyondBandCar, input));
+    expect(beyondBandPublished.y).toBeGreaterThan(bandOuterEdgeM);
+
+    // RAIL (the AC-081 POSE-INDEPENDENCE the retired seam keeps): the
+    // seam reads the ribbon geometry ONLY - the LIVE tick is
+    // byte-identical with and without it for EVERY heading, so no
+    // re-landed pose-reading bound could ever hide behind the ribbon call.
+    const headingList = [0, Math.PI / 2, Math.PI, -Math.PI / 2];
+    for (const heading of headingList) {
+      const probe = seededCarAt(probeX, beyondBandLateralM, {
+        heading,
+        speed: 10,
+      });
+      expect(
+        stepPhysics(probe, input, undefined, FIXTURE_TRACK_SEGMENTS),
+      ).toEqual(stepPhysics(probe, input));
+    }
+  });
+});
+
+describe('the ASYMMETRIC EDGE MODEL (P1-outer-edge-red, plan step 14U) - the band law after the RETIREMENT (AC-090 VERDICT 8)', () => {
   /**
    * The asymmetric-edge fixture track: a closed counter-clockwise loop with
    * FOUR 90 degree corners (P0, P3, P4, P7) and COLLINEAR vertices elsewhere,
@@ -857,11 +1146,13 @@ describe('the ASYMMETRIC EDGE MODEL (P1-outer-edge-red, plan step 14U) - the CON
   const BOUND_PROBE_CORNER_Y = -30;
 
   /**
-   * The probe distance from the corner vertex: the retired half width plus
-   * HALF the named curb width. The margin is expressed through the EXISTING
-   * curb-width constant (never a widening number), so the probe sits within
-   * one curb width beyond the retired bound - the room the outer widening
-   * absorbs - and therefore inside the widened bound.
+   * The probe distance from the corner vertex: the retired (symmetric)
+   * half width plus HALF the named curb width. The margin is expressed
+   * through the EXISTING curb-width constant (never a widening number),
+   * so the probe sits within one curb width beyond the retired bound -
+   * the pose the retirement had to leave UNTOUCHED while the band law
+   * (the asymmetric edge) still classifies the widened surface around
+   * it.
    */
   const BOUND_PROBE_DISTANCE_M =
     BOUND_RETIRED_HALF_WIDTH_M + NEATRACING_TRACK_CURB_WIDTH_M / 2;
@@ -887,7 +1178,8 @@ describe('the ASYMMETRIC EDGE MODEL (P1-outer-edge-red, plan step 14U) - the CON
 
   /**
    * The distance from a physics-plane point to a chord (the clamped
-   * projection - the same measure the containment bound uses).
+   * projection - the same measure the band geometry and the former
+   * containment bound both used).
    */
   const distanceToChord = (
     pointX: number,
@@ -911,22 +1203,11 @@ describe('the ASYMMETRIC EDGE MODEL (P1-outer-edge-red, plan step 14U) - the CON
     );
   };
 
-  /**
-   * The BOUND POSE of a resolved car: the position the containment bound
-   * settled on, serialized. The pose-independence clause is about the BOUND
-   * (the geometry-derived edge) and NOT about the whole car state: the
-   * elastic reflection is POSE-DEPENDENT BY DESIGN (AC-081), so a
-   * whole-state byte comparison would compare the reflection and never the
-   * bound.
-   */
-  const boundPoseOf = (car: PhysicsCarState): string =>
-    JSON.stringify({ x: car.x, y: car.y });
-
-  it('RED-4 (DISCRIMINATING): the containment bound follows the SAME asymmetric OUTER edge (the probe pose on the widened outer side is NOT reseated)', () => {
-    // WHY the guard: a probe that sits outside BOTH the retired symmetric
-    // bound AND the widened bound would satisfy the RED-4 clause
-    // VACUOUSLY (such a car is reseated by either bound, so "the pose is
-    // NOT reseated" would prove nothing at all).
+  it('RED-4 (RE-AUTHORED to the absence form): the RETIRED bound reseats NOTHING (the probe pose on the widened outer side is left where it reached)', () => {
+    // WHY the guard: a probe that sits far beyond BOTH the retired
+    // symmetric bound AND the widened band-law surface would satisfy the
+    // RED-4 clause VACUOUSLY (no seam ever rebases such a car, so "the
+    // pose is NOT reseated" would prove nothing at all).
     const probeChordDistanceM = Math.min(
       ...BOUND_FIXTURE_SEGMENTS.map((segment) =>
         distanceToChord(BOUND_PROBE_X, BOUND_PROBE_Y, segment),
@@ -935,17 +1216,19 @@ describe('the ASYMMETRIC EDGE MODEL (P1-outer-edge-red, plan step 14U) - the CON
 
     // The NON-VACUITY GUARD comes FIRST (the Step 14Q style): the probe
     // pose MUST really be outside the retired symmetric bound AND within
-    // one named curb width beyond it (so it lies inside the widened bound -
-    // a probe outside BOTH bounds would satisfy the clause VACUOUSLY), and
-    // it MUST really be on the OUTER side of the corner.
+    // one named curb width beyond it (so it lies inside the widened band
+    // the classifier still reads - a probe far beyond both would satisfy
+    // the clause VACUOUSLY), and it MUST really be on the OUTER side of
+    // the corner.
     //
     // The probe really IS outside the retired symmetric bound (the retired
     // half width IS the retired drivable-surface edge).
     expect(probeChordDistanceM).toBeGreaterThan(BOUND_RETIRED_HALF_WIDTH_M);
     // ... and it lies WITHIN one named curb width beyond it: that band is
-    // the room the outer widening absorbs, so the probe is inside the
-    // widened bound (the contract never carries the drift-space number -
-    // the margin is a FRACTION of the EXISTING curb-width constant).
+    // the room the outer widening absorbs, so the probe sits inside the
+    // widened band-law surface (the contract never carries the
+    // drift-space number - the margin is a FRACTION of the EXISTING
+    // curb-width constant).
     expect(probeChordDistanceM - BOUND_RETIRED_HALF_WIDTH_M).toBeLessThan(
       NEATRACING_TRACK_CURB_WIDTH_M,
     );
@@ -967,25 +1250,37 @@ describe('the ASYMMETRIC EDGE MODEL (P1-outer-edge-red, plan step 14U) - the CON
       cornerHeadingX * cornerOffsetY - cornerHeadingY * cornerOffsetX,
     ).toBeLessThan(0);
 
-    // The car is contained INSIDE the widened road and NEVER on the apron
-    // that the widening created: the bound follows the SAME asymmetric
-    // OUTER edge the road was widened to, so a pose that sits inside the
-    // widened road is NOT reseated onto the retired (symmetric) edge.
+    // The pose is NEVER reseated onto an edge - the widened road survives
+    // as the band law's surface (the asymmetric edge classes this probe a
+    // DRIVABLE off-road or widened-road pose), and the RETIRED seam
+    // leaves the pose byte for byte: the published tick IS the free roll.
     const car = seededCarAt(BOUND_PROBE_X, BOUND_PROBE_Y);
-    const resolved = resolveTrackBoundaryCar(car, BOUND_FIXTURE_SEGMENTS);
+    const input: PhysicsStepInput = { throttle: 0, brake: 0, steer: 0 };
+    const published = stepPhysics(
+      car,
+      input,
+      undefined,
+      BOUND_FIXTURE_SEGMENTS,
+    );
 
-    // The car state is untouched - byte for byte.
-    expect(serializeCars([resolved])).toBe(serializeCars([car]));
+    // The car state is untouched - byte for byte, no pose channel moved.
+    expect(published).toEqual(stepPhysics(car, input));
+    // The band law still reads the widened edge: the probed apron is a
+    // DRIVABLE surface (never a hard off-track classification).
+    expect(
+      classifyTrackSurface(published, BOUND_FIXTURE_SEGMENTS).isDrivable,
+    ).toBe(true);
     // The probe pose itself is NOT reseated.
-    expect(resolved.x).toBeCloseTo(BOUND_PROBE_X, 9);
-    expect(resolved.y).toBeCloseTo(BOUND_PROBE_Y, 9);
+    expect(published.x).toBeCloseTo(BOUND_PROBE_X, 9);
+    expect(published.y).toBeCloseTo(BOUND_PROBE_Y, 9);
   });
 
-  it('RED-4 (PRESERVATION - the bound is still resolved from the geometry only): the bound does not depend on the pose', () => {
-    // AC-081's pose-independence stays GREEN and is only PINNED here: the
-    // containment bound is derived from the ribbon geometry ONLY, so the
-    // re-based (asymmetric) bound may never start reading the heading, the
-    // slip or the drift pose of the car it bounds.
+  it('RED-4 (PRESERVATION - re-authored to the absence form): the retired seam does not depend on the pose (it reads NO pose at all)', () => {
+    // AC-081's pose-independence, re-authored under the retirement: there
+    // IS no bound left to rebase, and the seam proves it by NOT touching
+    // ANY pose - the LIVE tick with the (asymmetric) ribbon fixture is
+    // byte-identical to the free roll for EVERY heading and slip state,
+    // so no re-landed pose-reading bound could pass here unnoticed.
     const headingA = seededCarAt(BOUND_PROBE_X, BOUND_PROBE_Y, {
       heading: 0,
       speed: 10,
@@ -1000,23 +1295,30 @@ describe('the ASYMMETRIC EDGE MODEL (P1-outer-edge-red, plan step 14U) - the CON
       slipAngle: 0.4,
       lateralVelocity: -3,
     });
+    const input: PhysicsStepInput = { throttle: 0, brake: 0, steer: 0 };
 
-    const resolvedHeadingA = resolveTrackBoundaryCar(
+    const publishedHeadingA = stepPhysics(
       headingA,
+      input,
+      undefined,
       BOUND_FIXTURE_SEGMENTS,
     );
-    const resolvedHeadingB = resolveTrackBoundaryCar(
+    const publishedHeadingB = stepPhysics(
       headingB,
+      input,
+      undefined,
       BOUND_FIXTURE_SEGMENTS,
     );
-    const resolvedSlipped = resolveTrackBoundaryCar(
+    const publishedSlipped = stepPhysics(
       slipped,
+      input,
+      undefined,
       BOUND_FIXTURE_SEGMENTS,
     );
 
-    // The SAME probe pose with three different headings/slip states
-    // settles on the SAME bound pose - byte for byte.
-    expect(boundPoseOf(resolvedHeadingA)).toBe(boundPoseOf(resolvedHeadingB));
-    expect(boundPoseOf(resolvedHeadingA)).toBe(boundPoseOf(resolvedSlipped));
+    // EVERY probe pose is left where it reached - byte for byte.
+    expect(publishedHeadingA).toEqual(stepPhysics(headingA, input));
+    expect(publishedHeadingB).toEqual(stepPhysics(headingB, input));
+    expect(publishedSlipped).toEqual(stepPhysics(slipped, input));
   });
 });

@@ -29,16 +29,31 @@
  *   never produces a bleacher. No two bleachers overlap in world space, and
  *   the mechanic/crew/team-banner prop kinds are re-authored on the INNER
  *   ring, closer to the road than the bleachers.
+ *
+ * STEP 14V RED CONTRACTS (slice P1-prop-clearance-red, AC-096 / AC-095):
+ * every right-world prop must stand at least the USER-NAMED 10 m from the
+ * TRACK EDGE, and the edge is the SEAM EDGE (the same edge the containment
+ * bound and the rasterizer read, published by Step 14U) - NEVER the
+ * retired spline-normal distance model, which measured the distance from
+ * the spline centreline and therefore disagreed with the driving edge by
+ * up to 29.184 m on the Catmull-Rom bulges. The floor is USER-NAMED: it is
+ * never lowered, never widened by a tolerance and never satisfied by
+ * dropping a prop, so a residual violation is a NAMED, MEASURED violation
+ * reported per seed and per prop kind.
  */
 
 import { describe, expect, it } from '@jest/globals';
 import { generateTrack } from '../../racing_curriculum/track/track.generator';
-import type { SplineSample } from '../../racing_curriculum/track/track.generator.types';
+import type {
+  SplineSample,
+  TrackSpec,
+} from '../../racing_curriculum/track/track.generator.types';
 import {
   resolveSplineSampleFrame,
   type SplineSampleFrame,
 } from '../../racing_curriculum/track/track.spline.utils';
 import {
+  BLEACHER_VOXEL_HALF_EXTENT_M,
   NEATRACING_RIGHT_WORLD_BLEACHER_COUNT,
   NEATRACING_RIGHT_WORLD_BLEACHER_FOOTPRINT_DEPTH_M,
   NEATRACING_RIGHT_WORLD_BLEACHER_FOOTPRINT_WIDTH_M,
@@ -55,14 +70,27 @@ import {
   getBleacherHostingFootprintArea,
   getBleacherSeatAnchors,
   resolveOuterRingSlotCount,
+  resolveRightWorldSeam,
+  resolveSeamClearanceOffsetM,
   selectBleacherHostProp,
   selectBleacherSlotIndices,
   selectPeopleRingSampleIndices,
   type RightWorldProp,
+  type RightWorldSeamContext,
 } from './right-world.builder';
 import * as rightWorldBuilderModule from './right-world.builder';
 import { resolvePropHalfSize } from './right-world.prop-sizes';
-import type { TrackSlabBuildInput } from './track.slabs';
+import {
+  resolveNearestTrackChord,
+  resolveTrackEdgeHalfWidthM,
+  resolveTrackEdgeProfile,
+  resolveTrackEdgeSideAtWorldZ,
+  type TrackEdgeProfile,
+} from './track.edge';
+import {
+  classifyTrackSlabSurfaceAt,
+  type TrackSlabBuildInput,
+} from './track.slabs';
 
 /** Canonical determinism tuple reused from the track slab builder. */
 const FIXTURE_TRACK_BUILD_INPUT = {
@@ -254,6 +282,153 @@ const NEATRACING_TEST_INNER_RING_PEOPLE_KINDS: readonly string[] = [
 const NEATRACING_TEST_PEOPLE_RING_COUNT = 10;
 
 /**
+ * The re-pinned base clearance of the OUTER ring beyond the SEAM edge (m).
+ *
+ * Step 14V re-pin (AC-089): the retired base offset of 6 m was a distance
+ * from the spline CENTRELINE of the retired spline-normal distance model.
+ * The re-pinned base offset is a CLEARANCE beyond the SEAM EDGE - the ONE
+ * edge the road publishes - and the band is clamped to the USER-NAMED 10 m
+ * floor.
+ *
+ * Step 14V P-PC-R fix packet: the base is RAISED from 12 m to 15.5 m. The
+ * band is measured at the bleacher PROBE ROW, so the parts of a prop that
+ * reach closer to the road than the probe - the guardrail voxel corner of
+ * a bleacher, and the placement footprint of a seated spectator - were
+ * still BELOW the USER-NAMED 10 m floor at the anchor level.
+ *
+ * BASIS: the P-PC-R row of the Step 14V CLEARANCE GREEN-slice ledger of
+ * `plans/neatracing-voxel-racer.plans.md` - the NAMED body-level residual
+ * (9 of 400 prop bodies and 371 of 4384 billboard footprints below the
+ * floor) - and the MEASURED body-level extremes of this raise: the outer
+ * band targets the 15.5 m .. 19.5 m band beyond the seam edge, and the
+ * measured prop body clears the floor by 2.33 m at its worst.
+ */
+const NEATRACING_TEST_OUTER_RING_BASE_CLEARANCE_M = 15.5;
+
+/**
+ * The re-pinned range of the OUTER ring's clearance draw (m).
+ *
+ * BASIS: the Step 14V RED CLEARANCE REPORT and the Step 14V P-PC-R fix
+ * packet - the outer band is 15.5 m .. 19.5 m beyond the seam edge, so
+ * the clearance draw covers 4 m. The RANGE is UNCHANGED by the raise.
+ */
+const NEATRACING_TEST_OUTER_RING_CLEARANCE_RANGE_M = 4;
+
+/**
+ * The re-pinned base clearance of the INNER pit band beyond the SEAM edge
+ * (m).
+ *
+ * Step 14V re-pin (AC-089): the retired base offset of 3 m was a distance
+ * from the spline CENTRELINE. The re-pinned base offset is a CLEARANCE
+ * beyond the SEAM EDGE - the ONE edge the road publishes.
+ *
+ * Step 14V P-PC-R fix packet: the base is RAISED from 10.5 m to 14 m, by
+ * the SAME 3.5 m as the outer ring, so the RELATIVE order and the
+ * RELATIVE gap of the two bands are KEPT. The mechanic billboard that
+ * stands on a pit pedestal reaches 3.3935 m nearer than the pedestal
+ * anchor, and the team banner body reaches 1.2035 m nearer than its own
+ * anchor, so the anchor-level pit band was still below the floor at the
+ * body level.
+ *
+ * BASIS: the P-PC-R row of the Step 14V CLEARANCE GREEN-slice ledger of
+ * `plans/neatracing-voxel-racer.plans.md` - the NAMED body-level residual
+ * - and the MEASURED body-level extremes of this raise: the pit band
+ * targets the 14 m .. 16 m band beyond the seam edge, and the measured
+ * mechanic billboard footprint clears the floor by 0.80 m at its worst.
+ */
+const NEATRACING_TEST_PEOPLE_RING_BASE_CLEARANCE_M = 14;
+
+/**
+ * The re-pinned range of the INNER pit band's clearance draw (m).
+ *
+ * BASIS: the Step 14V RED CLEARANCE REPORT and the Step 14V P-PC-R fix
+ * packet - the pit band is 14 m .. 16 m beyond the seam edge, so the
+ * clearance draw covers 2 m. The RANGE is UNCHANGED by the raise.
+ */
+const NEATRACING_TEST_PEOPLE_RING_CLEARANCE_RANGE_M = 2;
+
+/**
+ * The bleacher PROBE inset of the seam-clearance search (m).
+ *
+ * A bleacher is measured at its FRONT SEAT ROW - the row closest to the
+ * track and the row the seated crowd stands on - so the stand's own anchor
+ * sits this many meters further out than the measured clearance. The
+ * production constant is private, so the test-local mirror states it here.
+ *
+ * BASIS: the production bleacher probe (`NEATRACING_BLEACHER_FRONT_SEAT_U_M`
+ * in `right-world.builder.ts`) and the Step 14V RED CLEARANCE REPORT. The
+ * mirror-vs-production comparison of the stream contract is what keeps the
+ * two in step: a probe inset that drifts fails that contract loudly.
+ */
+const NEATRACING_TEST_BLEACHER_PROBE_INSET_M = 3;
+
+/**
+ * The re-pinned corridor of the INNER pit band beyond the SEAM edge (m).
+ *
+ * Step 14V re-pin (AC-089): the retired corridor was 3 m .. 5 m beyond the
+ * road edge of the retired spline-normal distance model, and it is
+ * structurally unattainable under the USER-NAMED 10 m floor. The re-pinned
+ * corridor is the MEASURED post-14V corridor on the seam scale.
+ *
+ * Step 14V P-PC-R fix packet: the corridor is re-pinned ONE-FOR-ONE to the
+ * MEASURED corridor of the RAISED pit band.
+ *
+ * BASIS: the P-PC-R row of the Step 14V CLEARANCE GREEN-slice ledger of
+ * `plans/neatracing-voxel-racer.plans.md` - the pit band measures
+ * 14.06 m .. 16.11 m beyond the seam edge at all eight crowd seeds - and
+ * the MEASURED extremes of that sweep (14.0604 m .. 16.1003 m).
+ */
+const NEATRACING_TEST_INNER_BAND_CORRIDOR_MIN_M = 14.06;
+
+/**
+ * The upper bound of the re-pinned corridor of the INNER pit band beyond
+ * the SEAM edge (m).
+ *
+ * BASIS: the P-PC-R row of the Step 14V CLEARANCE GREEN-slice ledger of
+ * `plans/neatracing-voxel-racer.plans.md` - the pit band measures
+ * 14.06 m .. 16.11 m beyond the seam edge at all eight crowd seeds.
+ */
+const NEATRACING_TEST_INNER_BAND_CORRIDOR_MAX_M = 16.11;
+
+/**
+ * The re-pinned corridor of the BLEACHERS beyond the SEAM edge (m).
+ *
+ * Step 14V re-pin (AC-089): the retired corridor was 6 m .. 10 m beyond the
+ * road edge of the retired spline-normal distance model. The re-pinned
+ * corridor is the MEASURED post-14V corridor on the seam scale.
+ *
+ * Step 14V P-PC-R fix packet: the corridor is re-pinned ONE-FOR-ONE to the
+ * MEASURED corridor of the RAISED bleacher band.
+ *
+ * BASIS: the P-PC-R row of the Step 14V CLEARANCE GREEN-slice ledger of
+ * `plans/neatracing-voxel-racer.plans.md` - the bleachers measure
+ * 18.39 m .. 22.59 m beyond the seam edge at all eight crowd seeds - and
+ * the MEASURED extremes of that sweep (18.3988 m .. 22.5882 m).
+ */
+const NEATRACING_TEST_BLEACHER_BAND_CORRIDOR_MIN_M = 18.39;
+
+/**
+ * The upper bound of the re-pinned corridor of the BLEACHERS beyond the
+ * SEAM edge (m).
+ *
+ * BASIS: the P-PC-R row of the Step 14V CLEARANCE GREEN-slice ledger of
+ * `plans/neatracing-voxel-racer.plans.md` - the bleachers measure
+ * 18.39 m .. 22.59 m beyond the seam edge at all eight crowd seeds.
+ */
+const NEATRACING_TEST_BLEACHER_BAND_CORRIDOR_MAX_M = 22.59;
+
+/**
+ * The margin a prop has to clear the road ribbon by (m).
+ *
+ * Step 14V re-pin (AC-089): the retired clause compared the prop's
+ * distance from the spline CENTRELINE against the ribbon half width plus
+ * this one-metre margin. The re-pinned clause measures the prop beyond the
+ * SEAM EDGE - the ONE edge the road publishes - and keeps the SAME
+ * one-metre margin.
+ */
+const NEATRACING_TEST_ROAD_RIBBON_MARGIN_M = 1;
+
+/**
  * Replays the builder's seed derivation for a determinism tuple.
  *
  * @param input - Determinism tuple `{ seed, layoutVersion, sizeBucket }`.
@@ -308,9 +483,16 @@ interface ReplayedRingPlan {
   readonly slotCount: number;
   /** Candidate archetypes of the ring, in draw order. */
   readonly kinds: readonly string[];
-  /** Distance in meters from the road edge to the ring's base offset. */
+  /**
+   * Base clearance of the ring beyond the SEAM EDGE, in meters.
+   *
+   * The value is a clearance, not a distance from the spline centreline:
+   * the retired spline-normal distance model is retired with the Step 14V
+   * prop-clearance re-base, and the placement measures the band against
+   * the published edge of the track.
+   */
   readonly baseOffset: number;
-  /** Range in meters covered by the random offset draw. */
+  /** Range in meters covered by the random clearance draw. */
   readonly offsetRange: number;
   /**
    * Slot indices reserved as bleachers BY CONSTRUCTION.
@@ -330,19 +512,34 @@ interface ReplayedRingPlan {
  * Replays one ring of the builder emission.
  *
  * The replay mirrors the production draw order EXACTLY: every slot consumes
- * one offset draw, one kind draw, and one colour draw - including the
+ * one clearance draw, one kind draw, and one colour draw - including the
  * reserved bleacher slots, whose kind is overridden AFTER their draw was
  * consumed. That is the B5 contract: the reservation must not shift the
  * stream, so every later prop stays byte-identical to the pre-reservation
  * emission.
  *
+ * THE PLACEMENT (Step 14V re-pin): the band of a slot is a CLEARANCE
+ * BEYOND THE SEAM EDGE, clamped to the USER-NAMED floor, and the offset is
+ * the outward offset whose MEASURED clearance reaches that band. The
+ * retired model - the distance from the spline centreline
+ * (`sample.width / 2 + baseOffset + roll * offsetRange`) - is retired, so
+ * the mirror does not state it any more.
+ *
+ * The clearance search itself is the PUBLISHED seam API - the same reader
+ * the Step 14V contracts use - so the mirror and the road always read ONE
+ * edge. Every STREAM rule stays mirrored locally: the draw order, the
+ * draw count, the band literals, the archetype and colour tables, the slot
+ * mapping, the reserved-slot rule and the bleacher probe inset.
+ *
+ * @param seam - Seam context the clearances are measured against.
  * @param samples - Spline samples of the track the ring is placed along.
  * @param random - Seeded PRNG the replay consumes its draws from.
- * @param plan - Slot count, archetypes, offsets, and reserved slots.
+ * @param plan - Slot count, archetypes, clearances, and reserved slots.
  * @returns The props the production ring emitter must have emitted, in
  *   emission order.
  */
 function replayRingProps(
+  seam: RightWorldSeamContext,
   samples: readonly SplineSample[],
   random: () => number,
   plan: ReplayedRingPlan,
@@ -354,10 +551,10 @@ function replayRingProps(
     const sampleIndex = Math.floor((index * samples.length) / plan.slotCount);
     const sample = samples[sampleIndex]!;
     const frame = resolveSplineSampleFrame(samples, sample.globalIndex);
-    const offset =
-      sample.width / 2 + plan.baseOffset + random() * plan.offsetRange;
-    const generatorX = sample.x - frame.normalX * offset;
-    const generatorY = sample.y - frame.normalY * offset;
+    // The three draws of the slot are consumed in the SAME order as the
+    // production emission: the clearance band, the archetype, and the
+    // colour.
+    const clearanceRoll = random();
     const kindRoll = index === plan.skipArchetypeDrawAt ? 0 : random();
     const kind = reservedBleacherSlots.has(index)
       ? 'bleacher'
@@ -366,6 +563,21 @@ function replayRingProps(
       NEATRACING_TEST_NEON_COLORS[
         Math.floor(random() * NEATRACING_TEST_NEON_COLORS.length)
       ]!;
+    // The band is a CLEARANCE beyond the SEAM EDGE, clamped to the
+    // USER-NAMED floor, and a bleacher is probed at its front seat row.
+    const targetClearanceM = Math.max(
+      NEATRACING_PROP_CLEARANCE_FLOOR_M,
+      plan.baseOffset + clearanceRoll * plan.offsetRange,
+    );
+    const offset = resolveSeamClearanceOffsetM(
+      seam,
+      sample,
+      frame,
+      targetClearanceM,
+      kind === 'bleacher' ? NEATRACING_TEST_BLEACHER_PROBE_INSET_M : 0,
+    );
+    const generatorX = sample.x - frame.normalX * offset;
+    const generatorY = sample.y - frame.normalY * offset;
 
     replayed.push({ kind, x: generatorX, z: -generatorY, color });
   }
@@ -377,17 +589,24 @@ function replayRingProps(
  * Replays the inner-ring people band of the builder emission.
  *
  * The mirror consumes the same three draws per slot as the outer ring - the
- * offset, the archetype, and the colour - and overrides the RESOLVED
+ * clearance band, the archetype, and the colour - and overrides the RESOLVED
  * archetype with the BY CONSTRUCTION round-robin people kind, so the stream
  * of the outer ring is never shifted by the inner band.
  *
+ * THE PLACEMENT (Step 14V re-pin): the band of a slot is a CLEARANCE
+ * BEYOND THE SEAM EDGE, clamped to the USER-NAMED floor. The retired model
+ * - the distance from the spline centreline - is retired, so the mirror
+ * does not state it any more.
+ *
+ * @param seam - Seam context the clearances are measured against.
  * @param samples - Spline samples of the track the band is placed along.
  * @param random - Seeded PRNG the replay consumes its draws from.
- * @param plan - Offsets and the track sample index of every people slot.
+ * @param plan - Clearances and the track sample index of every people slot.
  * @returns The props the production inner-ring emitter must have emitted,
  *   in emission order.
  */
 function replayPeopleRingProps(
+  seam: RightWorldSeamContext,
   samples: readonly SplineSample[],
   random: () => number,
   plan: {
@@ -401,10 +620,10 @@ function replayPeopleRingProps(
   for (let index = 0; index < plan.sampleIndices.length; index += 1) {
     const sample = samples[plan.sampleIndices[index]!]!;
     const frame = resolveSplineSampleFrame(samples, sample.globalIndex);
-    const offset =
-      sample.width / 2 + plan.baseOffset + random() * plan.offsetRange;
-    const generatorX = sample.x - frame.normalX * offset;
-    const generatorY = sample.y - frame.normalY * offset;
+    // The three draws of the slot are consumed in the SAME order as the
+    // production emission: the clearance band, the archetype, and the
+    // colour.
+    const clearanceRoll = random();
     // The archetype draw is consumed and the resolved archetype is
     // overridden by the BY CONSTRUCTION round-robin people kind.
     random();
@@ -416,6 +635,21 @@ function replayPeopleRingProps(
       NEATRACING_TEST_NEON_COLORS[
         Math.floor(random() * NEATRACING_TEST_NEON_COLORS.length)
       ]!;
+    // The band is a CLEARANCE beyond the SEAM EDGE, clamped to the
+    // USER-NAMED floor.
+    const targetClearanceM = Math.max(
+      NEATRACING_PROP_CLEARANCE_FLOOR_M,
+      plan.baseOffset + clearanceRoll * plan.offsetRange,
+    );
+    const offset = resolveSeamClearanceOffsetM(
+      seam,
+      sample,
+      frame,
+      targetClearanceM,
+      0,
+    );
+    const generatorX = sample.x - frame.normalX * offset;
+    const generatorY = sample.y - frame.normalY * offset;
 
     replayed.push({ kind, x: generatorX, z: -generatorY, color });
   }
@@ -520,21 +754,22 @@ function replayEmittedProps(
 ): readonly ReplayedProp[] {
   const spec = generateTrack(input);
   const samples = spec.splineSamples;
+  const seam = resolveRightWorldSeam(spec.segments);
   const random = replayDeterministicRandom(replayRightWorldSeed(input));
   const outerSlotCount = replayOuterRingSlotCount(samples.length);
   const bleacherSlotIndices = replayBleacherSlotIndices(outerSlotCount);
 
-  const outer = replayRingProps(samples, random, {
+  const outer = replayRingProps(seam, samples, random, {
     slotCount: outerSlotCount,
     kinds: NEATRACING_TEST_OUTER_RING_KINDS,
-    baseOffset: 6,
-    offsetRange: 4,
+    baseOffset: NEATRACING_TEST_OUTER_RING_BASE_CLEARANCE_M,
+    offsetRange: NEATRACING_TEST_OUTER_RING_CLEARANCE_RANGE_M,
     reservedBleacherSlots: bleacherSlotIndices,
   });
 
-  const people = replayPeopleRingProps(samples, random, {
-    baseOffset: 3,
-    offsetRange: 2,
+  const people = replayPeopleRingProps(seam, samples, random, {
+    baseOffset: NEATRACING_TEST_PEOPLE_RING_BASE_CLEARANCE_M,
+    offsetRange: NEATRACING_TEST_PEOPLE_RING_CLEARANCE_RANGE_M,
     sampleIndices: replayPeopleRingSampleIndices(
       samples,
       bleacherSlotIndices,
@@ -701,32 +936,33 @@ function computeLateral(
 }
 
 /**
- * Computes how far a prop sits BEYOND the road + curb ribbon.
+ * Computes how far a prop sits BEYOND the SEAM edge.
  *
- * The offset is the lateral distance of the prop from the track centerline
- * minus the half width of the ribbon at the nearest sample, so the outer
- * and the inner band are compared on the same scale.
+ * The clearance is read through the road's OWN union reader - the SAME
+ * reader the Step 14V clearance contracts use - so the prop and the road
+ * are always read on ONE scale.
+ *
+ * The retired model - the lateral distance from the spline CENTRELINE minus
+ * the ribbon half width - is retired with the Step 14V prop-clearance
+ * re-base: the spline bulges far outside the chord ring, so the distance
+ * from the centreline is not the distance beyond the road edge.
  *
  * @param spec - Generated track the prop belongs to.
+ * @param profile - Published seam profile of that track.
  * @param prop - Prop to measure.
- * @returns The offset beyond the road edge, in meters.
+ * @returns The clearance beyond the seam edge, in meters.
  */
-function computeOffsetBeyondRoadEdge(
+function computeSeamClearanceBeyondEdge(
   spec: ReturnType<typeof generateTrack>,
+  profile: TrackEdgeProfile,
   prop: RightWorldProp,
 ): number {
-  const sample = nearestSample(
-    spec.splineSamples,
+  return classifyTrackSlabSurfaceAt(
     prop.position[0],
     prop.position[2],
-  );
-  const frame = resolveSplineSampleFrame(
-    spec.splineSamples,
-    sample.globalIndex,
-  );
-  const lateral = Math.abs(computeLateral(sample, frame, prop.position));
-
-  return lateral - sample.width / 2;
+    spec.segments,
+    profile,
+  ).distancePastEdgeM;
 }
 
 describe('buildRightWorldProps (P1-right-world-props, AC-048)', () => {
@@ -742,6 +978,7 @@ describe('buildRightWorldProps (P1-right-world-props, AC-048)', () => {
   it('places every prop on the right side of the track and outside the road ribbon', () => {
     const spec = generateTrack(FIXTURE_TRACK_BUILD_INPUT);
     const props = buildRightWorldProps(FIXTURE_TRACK_BUILD_INPUT);
+    const profile = resolveTrackEdgeProfile(spec.segments);
 
     for (const prop of props) {
       const sample = nearestSample(
@@ -762,9 +999,22 @@ describe('buildRightWorldProps (P1-right-world-props, AC-048)', () => {
       // Negative lateral means the prop is on the right-hand side of the
       // centerline (opposite the left normal used by the inner lane).
       expect(lateral).toBeLessThan(0);
-      // It must also sit beyond the road core + curb band, not on the pavement.
-      const ribbonHalfWidth = sample.width / 2;
-      expect(Math.abs(lateral)).toBeGreaterThan(ribbonHalfWidth + 1);
+      // It must also sit beyond the road ribbon, not on the pavement. The
+      // ribbon is the SEAM EDGE - the ONE edge the road publishes and the
+      // ONLY edge the clearance floor is measured against - and the
+      // clearance is read through the road's OWN union reader, so the prop
+      // is measured against the edge the car drives on.
+      //
+      // Step 14V re-pin (AC-089): the retired clause measured the distance
+      // from the spline CENTRELINE against the ribbon half width, and the
+      // spline bulges far outside the chord ring, so that distance is not
+      // the distance beyond the road edge. The clause keeps its one-metre
+      // margin, re-based onto the seam edge.
+      const clearanceM = computeSeamClearanceBeyondEdge(spec, profile, prop);
+
+      expect(clearanceM).toBeGreaterThan(
+        NEATRACING_TEST_ROAD_RIBBON_MARGIN_M,
+      );
     }
   });
 
@@ -2278,28 +2528,30 @@ describe(
           seed,
           ...NEATRACING_CROWD_BUILD_INPUT,
         });
+        const profile = resolveTrackEdgeProfile(spec.segments);
         const props = buildRightWorldProps({
           seed,
           ...NEATRACING_CROWD_BUILD_INPUT,
         });
-        const innerOffsets = props
+        const innerClearances = props
           .filter(
             (prop) =>
               (prop as unknown as { ringSide: string }).ringSide === 'inner',
           )
-          .map((prop) => computeOffsetBeyondRoadEdge(spec, prop));
-        const bleacherOffsets = props
+          .map((prop) => computeSeamClearanceBeyondEdge(spec, profile, prop));
+        const bleacherClearances = props
           .filter(
             (prop) =>
               (prop as unknown as { kind: string }).kind === 'bleacher',
           )
-          .map((prop) => computeOffsetBeyondRoadEdge(spec, prop));
+          .map((prop) => computeSeamClearanceBeyondEdge(spec, profile, prop));
 
-        // AC-074: the pit band sits CLOSER to the road than the bleachers.
-        // The offset is measured beyond the road + curb ribbon, so the two
-        // bands are compared on the same scale.
-        const innerMax = Math.max(...innerOffsets);
-        const bleacherMin = Math.min(...bleacherOffsets);
+        // AC-074: the pit band sits CLOSER to the road EDGE than the
+        // bleachers. The clearance is measured beyond the SEAM EDGE - the
+        // ONE edge the road publishes - so the two bands are compared on
+        // the same scale.
+        const innerMax = Math.max(...innerClearances);
+        const bleacherMin = Math.min(...bleacherClearances);
 
         if (innerMax >= bleacherMin) {
           violations.push(
@@ -2307,21 +2559,29 @@ describe(
           );
         }
 
-        // The two bands also sit in their OWN corridors: the pit props 3 m
-        // to 5 m and the bleachers 6 m to 10 m beyond the road edge. The
-        // measurement is exact on every reachable configuration, because
-        // the nearest track sample of a prop IS the track sample it was
-        // placed on - so this corridor check also proves that the
-        // road-edge metric has not drifted onto a neighbouring sample.
-        for (const offset of innerOffsets) {
-          if (offset < 3 - 1e-9 || offset > 5 + 1e-9) {
-            violations.push(`seed=${seed} innerOffset=${offset.toFixed(3)}`);
+        // The two bands also sit in their OWN corridors, re-pinned to the
+        // MEASURED post-14V corridors on the seam scale: the pit props
+        // 14.06 m to 16.11 m and the bleachers 18.39 m to 22.59 m beyond
+        // the SEAM edge. The retired corridors - the pit props 3 m to 5 m
+        // and the bleachers 6 m to 10 m beyond the road edge - pinned the
+        // retired spline-normal distance model.
+        for (const clearance of innerClearances) {
+          if (
+            clearance < NEATRACING_TEST_INNER_BAND_CORRIDOR_MIN_M - 1e-9 ||
+            clearance > NEATRACING_TEST_INNER_BAND_CORRIDOR_MAX_M + 1e-9
+          ) {
+            violations.push(
+              `seed=${seed} innerClearance=${clearance.toFixed(3)}`,
+            );
           }
         }
-        for (const offset of bleacherOffsets) {
-          if (offset < 6 - 1e-9 || offset > 10 + 1e-9) {
+        for (const clearance of bleacherClearances) {
+          if (
+            clearance < NEATRACING_TEST_BLEACHER_BAND_CORRIDOR_MIN_M - 1e-9 ||
+            clearance > NEATRACING_TEST_BLEACHER_BAND_CORRIDOR_MAX_M + 1e-9
+          ) {
             violations.push(
-              `seed=${seed} bleacherOffset=${offset.toFixed(3)}`,
+              `seed=${seed} bleacherClearance=${clearance.toFixed(3)}`,
             );
           }
         }
@@ -2383,9 +2643,22 @@ describe(
       // skipped slot does have a track sample.
       const input = NEATRACING_STREAM_FIXTURE_INPUTS[0]!;
       const samples = generateTrack(input).splineSamples;
+      // The plan is the PRODUCTION PIT BAND, not the retired probe: the
+      // retired `baseOffset: 3 / offsetRange: 2` literals put the WHOLE
+      // band UNDER the USER-NAMED 10 m floor, so `max(10, 3 + roll * 2)`
+      // clamped EVERY slot to the floor - the clearance draw could not
+      // move the band at all, so the position comparison below could not
+      // observe the draw it claims to pin. The re-pinned band is 14 m ..
+      // 16 m, which NEVER clamps at the floor.
+      //
+      // BASIS: the `P1-prop-clearance-repin` ORCHESTRATOR ADVANCE row of
+      // `plans/neatracing-voxel-racer.plans.md` and the P-PC-R row of the
+      // Step 14V CLEARANCE GREEN-slice ledger - the pit band is placed
+      // in the 14 m .. 16 m corridor beyond the seam edge (the pit
+      // band 3 -> 10.5 -> 14, the range 2 unchanged).
       const plan = {
-        baseOffset: 3,
-        offsetRange: 2,
+        baseOffset: NEATRACING_TEST_PEOPLE_RING_BASE_CLEARANCE_M,
+        offsetRange: NEATRACING_TEST_PEOPLE_RING_CLEARANCE_RANGE_M,
       };
       const seeded = (): (() => number) =>
         replayDeterministicRandom(replayRightWorldSeed(input));
@@ -2462,14 +2735,21 @@ describe(
       // This contract drives the production ring emitter with a reserved
       // slot that is NOT the first one, so the same shift is asserted at a
       // known interior position of the ring.
+      //
+      // The ring band is the re-pinned Step 14V CLEARANCE band beyond the
+      // SEAM edge (12 m + 0..4 m), so the clearance draw of a slot really
+      // moves the slot: a band clamped to the floor would leave the draw
+      // vacuous.
       const input = NEATRACING_STREAM_FIXTURE_INPUTS[0]!;
-      const samples = generateTrack(input).splineSamples;
+      const spec = generateTrack(input);
+      const samples = spec.splineSamples;
+      const seam = resolveRightWorldSeam(spec.segments);
       const reservedBleacherSlot = 1;
       const plan = {
         slotCount: 4,
         kinds: NEATRACING_TEST_OUTER_RING_KINDS,
-        baseOffset: 6,
-        offsetRange: 4,
+        baseOffset: NEATRACING_TEST_OUTER_RING_BASE_CLEARANCE_M,
+        offsetRange: NEATRACING_TEST_OUTER_RING_CLEARANCE_RANGE_M,
         reservedBleacherSlots: [reservedBleacherSlot],
       };
       const seeded = (): (() => number) =>
@@ -2478,10 +2758,10 @@ describe(
       const production = propStreamKeys(
         emitRightWorldRing(samples, seeded(), plan),
       );
-      const stable = replayRingProps(samples, seeded(), plan).map((prop) =>
-        propStreamKey(prop),
+      const stable = replayRingProps(seam, samples, seeded(), plan).map(
+        (prop) => propStreamKey(prop),
       );
-      const shifted = replayRingProps(samples, seeded(), {
+      const shifted = replayRingProps(seam, samples, seeded(), {
         ...plan,
         skipArchetypeDrawAt: reservedBleacherSlot,
       }).map((prop) => propStreamKey(prop));
@@ -2575,6 +2855,629 @@ describe(
         ),
       ).toBe(true);
     });
+  },
+);
+
+/**
+ * The USER-NAMED prop-clearance floor (Step 14V, AC-096).
+ *
+ * The 10 m floor is a USER-NAMED number, not an author decision: it is
+ * never lowered, never widened by a tolerance and never satisfied by
+ * dropping a prop. A residual violation is a NAMED, MEASURED violation.
+ */
+const NEATRACING_PROP_CLEARANCE_FLOOR_M = 10;
+
+/**
+ * The float tolerance of the clearance comparisons (m).
+ *
+ * The house float tolerance (cf. the AC-072 "within 1e-9 m" precedent): it
+ * covers the double-precision residue of the geometry only.
+ */
+const CLEARANCE_TOLERANCE_M = 1e-9;
+
+/** One measured prop clearance against the SEAM edge. */
+interface PropClearanceReading {
+  /** The prop's kind (bleacher, gantry, crew, ...). */
+  readonly kind: string;
+  /** The prop's index inside the built list. */
+  readonly index: number;
+  /** The clearance beyond the seam edge (m) - the UNION reader. */
+  readonly unionM: number;
+  /** The clearance beyond the seam edge (m) - the nearest-chord reader. */
+  readonly nearestChordM: number;
+}
+
+/**
+ * Reads the kind of a built prop.
+ *
+ * @param prop - The built prop.
+ * @returns The prop kind as published by the builder.
+ */
+const propKindOf = (prop: RightWorldProp): string =>
+  (prop as unknown as { kind: string }).kind;
+
+/**
+ * Measures the clearance of every built prop beyond the SEAM edge.
+ *
+ * TWO READERS of the ONE seam edge are measured for every prop:
+ *
+ * - `unionM` - the road's OWN union reader ({@link
+ *   classifyTrackSlabSurfaceAt}): the MINIMUM past-edge distance over
+ *   EVERY chord of the published profile. This is the reader the
+ *   rasterizer and the band paint use, so it is the reader the world is
+ *   measured against.
+ * - `nearestChordM` - the CONTAINMENT BOUND's reader: the distance to the
+ *   NEAREST chord of the same published profile, minus that chord's
+ *   PUBLISHED side half-width.
+ *
+ * @param spec - The generated track the props belong to.
+ * @param profile - The seam profile published for that track.
+ * @param props - The built props to measure.
+ * @returns One reading per prop, in the built order.
+ */
+const measurePropClearances = (
+  spec: TrackSpec,
+  profile: TrackEdgeProfile,
+  props: readonly RightWorldProp[],
+): PropClearanceReading[] =>
+  props.map((prop, index) => {
+    const worldX = prop.position[0];
+    const worldZ = prop.position[2];
+
+    const unionM = classifyTrackSlabSurfaceAt(
+      worldX,
+      worldZ,
+      spec.segments,
+      profile,
+    ).distancePastEdgeM;
+
+    const nearest = resolveNearestTrackChord(
+      profile,
+      worldX,
+      sceneZToGeneratorY(worldZ),
+    );
+    const nearestChord = profile.chords[nearest.segmentIndex]!;
+    const nearestSide = resolveTrackEdgeSideAtWorldZ(
+      profile,
+      nearest.segmentIndex,
+      worldX,
+      worldZ,
+    );
+    const nearestChordM =
+      nearest.distanceM -
+      resolveTrackEdgeHalfWidthM(nearestChord, nearestSide);
+
+    return {
+      kind: propKindOf(prop),
+      index,
+      unionM,
+      nearestChordM,
+    };
+  });
+
+/**
+ * Summarises the props of ONE group (a seed or a prop kind) that sit below
+ * the USER-NAMED floor.
+ *
+ * A residual violation is a NAMED, MEASURED violation: the line names the
+ * group, how many of its props sit below the floor and the WORST measured
+ * clearance of the group (with the prop that carries it).
+ *
+ * @param label - The group label (a seed or a prop kind).
+ * @param rows - The group's measured clearances with their prop labels.
+ * @returns The summary line, or `null` when the whole group clears.
+ */
+const summarizeGroupViolations = (
+  label: string,
+  rows: readonly {
+    readonly clearanceM: number;
+    readonly propLabel: string;
+  }[],
+): string | null => {
+  const violations = rows.filter(
+    (row) => row.clearanceM < NEATRACING_PROP_CLEARANCE_FLOOR_M,
+  );
+
+  if (violations.length === 0) {
+    return null;
+  }
+
+  let worst = violations[0]!;
+
+  for (const row of violations) {
+    if (row.clearanceM < worst.clearanceM) {
+      worst = row;
+    }
+  }
+
+  return `${label}: ${violations.length}/${rows.length} below the ${NEATRACING_PROP_CLEARANCE_FLOOR_M} m floor, worst ${worst.clearanceM.toFixed(3)} m (${worst.propLabel})`;
+};
+
+/**
+ * The body-level sampling step of the prop body reading (m).
+ *
+ * The BODY reading samples the boundary of the placed body's own boxes at
+ * this step and keeps the MINIMUM measured clearance over the sampled
+ * points. The step is the READING RESOLUTION of the body surface, NOT a
+ * tolerance on the floor: the USER-NAMED floor is compared with the SAME
+ * strict rule as the anchor-level lanes.
+ *
+ * BASIS: the P-PC-R row of the Step 14V CLEARANCE GREEN-slice ledger of
+ * `plans/neatracing-voxel-racer.plans.md` - the body-level residual was
+ * MEASURED with this sampling step.
+ */
+const NEATRACING_PROP_BODY_SAMPLE_STEP_M = 0.25;
+
+/**
+ * The margin the body reading has to be nearer than its anchor (m).
+ *
+ * NON-VACUITY GUARD of the body-level lane: a lane that read the ANCHOR
+ * instead of the BODY would satisfy the floor with the very same numbers
+ * the anchor-level lanes already pin, so the lane proves that it really
+ * reads a NEARER surface - the placed body's own nearest surface toward
+ * the road.
+ */
+const NEATRACING_PROP_BODY_SURFACE_MARGIN_M = 0.5;
+
+/** One measured prop BODY clearance against the SEAM edge. */
+interface PropBodyClearanceReading {
+  /** The prop's kind (bleacher, gantry, crew, ...). */
+  readonly kind: string;
+  /** The prop's index inside the built list. */
+  readonly index: number;
+  /** The clearance beyond the seam edge (m) of the body's nearest surface. */
+  readonly bodyM: number;
+  /** The number of body boundary points sampled for this prop. */
+  readonly sampledPoints: number;
+}
+
+/**
+ * Samples the boundary of one axis-aligned box in the XZ plane.
+ *
+ * @param minX - Lower x bound of the box (m).
+ * @param maxX - Upper x bound of the box (m).
+ * @param minZ - Lower z bound of the box (m).
+ * @param maxZ - Upper z bound of the box (m).
+ * @returns The sampled boundary points of the box, in world meters.
+ */
+const sampleAxisAlignedBoxBoundary = (
+  minX: number,
+  maxX: number,
+  minZ: number,
+  maxZ: number,
+): readonly (readonly [number, number])[] => {
+  const points: (readonly [number, number])[] = [];
+  const spanX = maxX - minX;
+  const spanZ = maxZ - minZ;
+  const stepsX = Math.max(
+    1,
+    Math.ceil(spanX / NEATRACING_PROP_BODY_SAMPLE_STEP_M),
+  );
+  const stepsZ = Math.max(
+    1,
+    Math.ceil(spanZ / NEATRACING_PROP_BODY_SAMPLE_STEP_M),
+  );
+
+  for (let step = 0; step <= stepsX; step += 1) {
+    const x = minX + (spanX * step) / stepsX;
+
+    points.push([x, minZ], [x, maxZ]);
+  }
+
+  for (let step = 0; step <= stepsZ; step += 1) {
+    const z = minZ + (spanZ * step) / stepsZ;
+
+    points.push([minX, z], [maxX, z]);
+  }
+
+  return points;
+};
+
+/**
+ * Resolves the axis-aligned boxes of the PLACED BODY of one prop.
+ *
+ * A bleacher is a stepped voxel structure, so its body is the union of its
+ * REAL voxel boxes - the published voxel positions plus the published voxel
+ * half extent. Every other archetype is ONE box, read from the CANONICAL
+ * axis-aligned half-size table that the render pass draws from.
+ *
+ * @param prop - The built prop.
+ * @returns The body's boxes as `[minX, maxX, minZ, maxZ]` bounds (m).
+ */
+const resolvePropBodyBoxes = (
+  prop: RightWorldProp,
+): readonly (readonly [number, number, number, number])[] => {
+  const voxels = prop.bleacherGeometry?.voxels;
+
+  if (voxels && voxels.length > 0) {
+    return voxels.map((voxel) => {
+      const half = BLEACHER_VOXEL_HALF_EXTENT_M;
+
+      return [
+        voxel.position[0] - half,
+        voxel.position[0] + half,
+        voxel.position[2] - half,
+        voxel.position[2] + half,
+      ];
+    });
+  }
+
+  const [halfWidth, , halfDepth] = resolvePropHalfSize(prop.kind);
+
+  return [
+    [
+      prop.position[0] - halfWidth,
+      prop.position[0] + halfWidth,
+      prop.position[2] - halfDepth,
+      prop.position[2] + halfDepth,
+    ],
+  ];
+};
+
+/**
+ * Measures the BODY-level clearance of every built prop beyond the SEAM
+ * edge.
+ *
+ * The MEASURED POINT is the placed body's own nearest surface toward the
+ * road: the boundary of the body's boxes is SAMPLED and the MINIMUM
+ * clearance over the sampled points is the reading. The reader is the
+ * road's OWN union reader ({@link classifyTrackSlabSurfaceAt}) - the ONE
+ * edge the rasterizer and the band paint use - so the body and the anchor
+ * are read on the SAME scale.
+ *
+ * @param spec - The generated track the props belong to.
+ * @param profile - The seam profile published for that track.
+ * @param props - The built props to measure.
+ * @returns One reading per prop, in the built order.
+ */
+const measurePropBodyClearances = (
+  spec: TrackSpec,
+  profile: TrackEdgeProfile,
+  props: readonly RightWorldProp[],
+): PropBodyClearanceReading[] =>
+  props.map((prop, index) => {
+    let bodyM = Number.POSITIVE_INFINITY;
+    let sampledPoints = 0;
+
+    for (const [minX, maxX, minZ, maxZ] of resolvePropBodyBoxes(prop)) {
+      for (const [x, z] of sampleAxisAlignedBoxBoundary(
+        minX,
+        maxX,
+        minZ,
+        maxZ,
+      )) {
+        const clearanceM = classifyTrackSlabSurfaceAt(
+          x,
+          z,
+          spec.segments,
+          profile,
+        ).distancePastEdgeM;
+
+        if (clearanceM < bodyM) {
+          bodyM = clearanceM;
+        }
+
+        sampledPoints += 1;
+      }
+    }
+
+    return {
+      kind: propKindOf(prop),
+      index,
+      bodyM,
+      sampledPoints,
+    };
+  });
+
+/**
+ * The Step 14V prop-clearance contracts (slice `P1-prop-clearance-red`).
+ *
+ * AC-096 (the 10 m floor - the USER directive 1): EVERY right-world prop
+ * stands at least the USER-NAMED 10 m from the TRACK EDGE, and the edge is
+ * the SEAM EDGE - the same edge the containment bound and the rasterizer
+ * read - NEVER the retired spline-normal distance model.
+ *
+ * AC-095 (the seam is closed - the ONE edge): the clearance is measured
+ * against the ONE seam edge, read through BOTH of the road's own readers
+ * of it.
+ */
+describe(
+  'right-world prop clearance beyond the SEAM edge (Step 14V, slice P1-prop-clearance-red, AC-096)',
+  () => {
+    describe('RED-1 (the USER-NAMED 10 m floor on the SEAM edge)', () => {
+      // [RED-14V-PROP-1-SEAM-FLOOR]
+      it('AC-096: EVERY right-world prop stands at least 10 m beyond the SEAM edge (RED-14V-PROP-1-SEAM-FLOOR)', () => {
+        // Arrange
+        const input = { seed: 42, ...NEATRACING_CROWD_BUILD_INPUT };
+        const spec = generateTrack(input);
+        const profile = resolveTrackEdgeProfile(spec.segments);
+        const props = buildRightWorldProps(input);
+
+        // NON-VACUITY GUARD (asserted BEFORE the relational clause): the
+        // lane MUST really place props (an empty prop list would satisfy
+        // the floor vacuously) and it MUST really measure a distance (a
+        // zero reading would satisfy the floor vacuously).
+        expect(props.length).toBeGreaterThan(0);
+        expect(profile.chords.length).toBeGreaterThan(0);
+        expect(
+          profile.chords.every(
+            (chord) =>
+              chord.innerHalfWidthM > 0 && chord.outerHalfWidthM > 0,
+          ),
+        ).toBe(true);
+
+        // Act
+        const readings = measurePropClearances(spec, profile, props);
+
+        expect(readings.length).toBe(props.length);
+        expect(
+          readings.every(
+            (row) =>
+              Number.isFinite(row.unionM) &&
+              Number.isFinite(row.nearestChordM),
+          ),
+        ).toBe(true);
+
+        // Assert
+        // The floor is the USER-NAMED 10 m and is NEVER widened by a
+        // tolerance: a residual violation is a NAMED, MEASURED violation.
+        const kinds = [...new Set(readings.map((row) => row.kind))];
+        const violationLines = kinds
+          .map((kind) =>
+            summarizeGroupViolations(
+              `kind=${kind}`,
+              readings
+                .filter((row) => row.kind === kind)
+                .map((row) => ({
+                  clearanceM: row.unionM,
+                  propLabel: `${row.kind}#${row.index}`,
+                })),
+            ),
+          )
+          .filter((line): line is string => line !== null);
+
+        expect(violationLines).toEqual([]);
+      });
+    });
+
+    describe('RED-2 (the floor holds at EVERY seed and for EVERY prop kind)', () => {
+      // [RED-14V-PROP-2-SEED-BREADTH]
+      it('AC-096: the 10 m floor holds at EVERY published seed and for EVERY prop kind, and the measured worst is reported per seed and per kind (RED-14V-PROP-2-SEED-BREADTH)', () => {
+        // Arrange
+        const seedLines: string[] = [];
+        const kindRows = new Map<
+          string,
+          { clearanceM: number; propLabel: string }[]
+        >();
+
+        // Act - the whole published seed set, NOT one hand-picked seed.
+        for (const seed of NEATRACING_CROWD_FIXTURE_SEEDS) {
+          const input = { seed, ...NEATRACING_CROWD_BUILD_INPUT };
+          const spec = generateTrack(input);
+          const profile = resolveTrackEdgeProfile(spec.segments);
+          const props = buildRightWorldProps(input);
+          const readings = measurePropClearances(spec, profile, props);
+
+          const seedLine = summarizeGroupViolations(
+            `seed=${seed}`,
+            readings.map((row) => ({
+              clearanceM: row.unionM,
+              propLabel: `${row.kind}#${row.index}`,
+            })),
+          );
+
+          if (seedLine !== null) {
+            seedLines.push(seedLine);
+          }
+
+          for (const row of readings) {
+            const rows = kindRows.get(row.kind) ?? [];
+
+            rows.push({
+              clearanceM: row.unionM,
+              propLabel: `${row.kind}#${row.index}@seed${seed}`,
+            });
+            kindRows.set(row.kind, rows);
+          }
+        }
+
+        // NON-VACUITY GUARD (asserted BEFORE the relational clause): the
+        // sweep MUST really cover more than one seed and more than one
+        // prop kind - a single-seed, single-kind sweep would satisfy the
+        // breadth clause vacuously.
+        expect(NEATRACING_CROWD_FIXTURE_SEEDS.length).toBeGreaterThan(1);
+        expect(kindRows.size).toBeGreaterThan(1);
+
+        // Assert
+        const kindLines = [...kindRows.entries()]
+          .map(([kind, rows]) =>
+            summarizeGroupViolations(`kind=${kind}`, rows),
+          )
+          .filter((line): line is string => line !== null);
+
+        expect([...seedLines, ...kindLines]).toEqual([]);
+      });
+    });
+
+    describe(
+      'RED-3 (the prop count, the bleacher count and the determinism are PRESERVED - a LABELLED PRESERVATION GUARD, NEVER counted as a RED)',
+      () => {
+        // [RED-14V-PROP-3-COUNT-PRESERVED]
+        it('AC-096: the right world keeps its reserved prop count, its reserved bleacher count and its density budget (RED-14V-PROP-3-COUNT-PRESERVED)', () => {
+          // Arrange
+          const input = { seed: 42, ...NEATRACING_CROWD_BUILD_INPUT };
+          const spec = generateTrack(input);
+          const props = buildRightWorldProps(input);
+          const expectedPropCount =
+            resolveOuterRingSlotCount(spec.splineSamples.length) +
+            NEATRACING_RIGHT_WORLD_PEOPLE_RING_COUNT;
+          const bleachers = props.filter(
+            (prop) => propKindOf(prop) === 'bleacher',
+          );
+
+          // Assert - no prop is dropped, merged or duplicated to satisfy
+          // the clearance floor.
+          expect(props.length).toBe(expectedPropCount);
+          expect(bleachers.length).toBe(
+            NEATRACING_RIGHT_WORLD_BLEACHER_COUNT,
+          );
+          expect(props.length).toBeLessThanOrEqual(
+            NEATRACING_RIGHT_WORLD_PROP_DENSITY_BUDGET,
+          );
+        });
+
+        // [RED-14V-PROP-3-DETERMINISM-PRESERVED]
+        it('AC-096: the same determinism tuple still yields the same prop list, byte for byte (RED-14V-PROP-3-DETERMINISM-PRESERVED)', () => {
+          // Arrange
+          const input = { seed: 42, ...NEATRACING_CROWD_BUILD_INPUT };
+
+          // Act
+          const first = buildRightWorldProps(input);
+          const second = buildRightWorldProps(input);
+
+          // Assert
+          expect(JSON.stringify(second)).toBe(JSON.stringify(first));
+        });
+      },
+    );
+
+    describe('RED-4 (the world reads the SAME edge as the road)', () => {
+      // [RED-14V-PROP-4-ONE-SEAM]
+      it('AC-095: the clearance is measured against the ONE seam edge - BOTH of the road\'s own readers of it clear the floor (RED-14V-PROP-4-ONE-SEAM)', () => {
+        // Arrange
+        const input = { seed: 42, ...NEATRACING_CROWD_BUILD_INPUT };
+        const spec = generateTrack(input);
+        const profile = resolveTrackEdgeProfile(spec.segments);
+        const props = buildRightWorldProps(input);
+        const readings = measurePropClearances(spec, profile, props);
+
+        // NON-VACUITY GUARD (asserted BEFORE the relational clause): the
+        // lane MUST really compare TWO DIFFERENT readers of the ONE seam
+        // edge. The union reader is a MINIMUM over EVERY published chord,
+        // so it can never report MORE clearance than the nearest-chord
+        // reader, and the seam publishes more than one chord - so the two
+        // readers consult DIFFERENT chord sets and comparing one reader
+        // with itself would satisfy the clause below vacuously.
+        expect(profile.chords.length).toBeGreaterThan(1);
+
+        for (const row of readings) {
+          expect(row.unionM).toBeLessThanOrEqual(
+            row.nearestChordM + CLEARANCE_TOLERANCE_M,
+          );
+        }
+
+        // Assert - BOTH readers of the ONE seam edge must clear the
+        // USER-NAMED floor, so the world and the road can never disagree
+        // about where the edge is.
+        const kinds = [...new Set(readings.map((row) => row.kind))];
+        const violationLines = kinds
+          .map((kind) =>
+            summarizeGroupViolations(
+              `kind=${kind}`,
+              readings
+                .filter((row) => row.kind === kind)
+                .map((row) => ({
+                  clearanceM: Math.min(row.unionM, row.nearestChordM),
+                  propLabel: `${row.kind}#${row.index}`,
+                })),
+            ),
+          )
+          .filter((line): line is string => line !== null);
+
+        expect(violationLines).toEqual([]);
+      });
+    });
+
+    describe(
+      'RED-5 share (the BODY-LEVEL floor - the P-PC-R body-level lane)',
+      () => {
+        // [RED-14V-PROP-5-BODY-LEVEL]
+        it('AC-096: EVERY right-world prop BODY clears the USER-NAMED 10 m floor, read at the placed body\'s nearest surface toward the road (RED-14V-PROP-5-BODY-LEVEL)', () => {
+          // Arrange
+          const seedLines: string[] = [];
+          const kindRows = new Map<
+            string,
+            { clearanceM: number; propLabel: string }[]
+          >();
+          let sampledPoints = 0;
+          let nearestSurfaceGapM = 0;
+
+          // Act - the whole published seed set, NOT one hand-picked seed.
+          for (const seed of NEATRACING_CROWD_FIXTURE_SEEDS) {
+            const input = { seed, ...NEATRACING_CROWD_BUILD_INPUT };
+            const spec = generateTrack(input);
+            const profile = resolveTrackEdgeProfile(spec.segments);
+            const props = buildRightWorldProps(input);
+            const anchorReadings = measurePropClearances(spec, profile, props);
+            const bodyReadings = measurePropBodyClearances(
+              spec,
+              profile,
+              props,
+            );
+
+            for (const [position, body] of bodyReadings.entries()) {
+              const anchor = anchorReadings[position]!;
+
+              nearestSurfaceGapM = Math.max(
+                nearestSurfaceGapM,
+                anchor.unionM - body.bodyM,
+              );
+            }
+
+            sampledPoints += bodyReadings.reduce(
+              (total, row) => total + row.sampledPoints,
+              0,
+            );
+
+            const seedLine = summarizeGroupViolations(
+              `seed=${seed}`,
+              bodyReadings.map((row) => ({
+                clearanceM: row.bodyM,
+                propLabel: `${row.kind}#${row.index}`,
+              })),
+            );
+
+            if (seedLine !== null) {
+              seedLines.push(seedLine);
+            }
+
+            for (const row of bodyReadings) {
+              const rows = kindRows.get(row.kind) ?? [];
+
+              rows.push({
+                clearanceM: row.bodyM,
+                propLabel: `${row.kind}#${row.index}@seed${seed}`,
+              });
+              kindRows.set(row.kind, rows);
+            }
+          }
+
+          // NON-VACUITY GUARDS (asserted BEFORE the relational clause): the
+          // sweep MUST really place props over more than one seed and more
+          // than one prop kind, the lane MUST really SAMPLE the bodies, and
+          // it MUST really read a surface NEARER than the anchor - a lane
+          // that measured the anchor would satisfy the floor with the
+          // numbers the anchor-level lanes already pin.
+          expect(NEATRACING_CROWD_FIXTURE_SEEDS.length).toBeGreaterThan(1);
+          expect(kindRows.size).toBeGreaterThan(1);
+          expect(sampledPoints).toBeGreaterThan(0);
+          expect(nearestSurfaceGapM).toBeGreaterThan(
+            NEATRACING_PROP_BODY_SURFACE_MARGIN_M,
+          );
+
+          // Assert - the BODY of every prop clears the USER-NAMED floor.
+          // The floor is NEVER widened by a tolerance and NO prop is ever
+          // dropped to satisfy it.
+          const kindLines = [...kindRows.entries()]
+            .map(([kind, rows]) =>
+              summarizeGroupViolations(`kind=${kind}`, rows),
+            )
+            .filter((line): line is string => line !== null);
+
+          expect([...seedLines, ...kindLines]).toEqual([]);
+        });
+      },
+    );
   },
 );
 

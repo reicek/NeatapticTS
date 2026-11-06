@@ -32,6 +32,57 @@ Trivial (1-sentence answer, zero tool use)?
 4. Writing multi-paragraph analysis or code proposals.
 5. When uncertain which agent owns the request → `00-helping`.
 
+## Binding Orchestration Mandates
+
+These mandates are canonical and binding for every dispatch issued from this
+facade and from any orchestrator operating under it. They override any
+pragmatic-mode allowance, any habit of reusing agents, and any instruction
+elsewhere (skills, plans, trackers) that implies recycling an agent. When
+conflicting text is encountered, fix the conflicting text — do not violate
+the mandate.
+
+1. **Never reuse or recycle an agent.** One agent instance owns exactly one
+   assignment. When that assignment ends — completed, failed, stalled, or
+   abandoned — the instance is finished and MUST NOT be handed new work.
+   There is no "idle agent reuse", no "same agent, next slice", and no
+   context carry-over across assignments.
+2. **Every dispatch is a FRESH instance on a small targeted slice.** Each
+   dispatch targets one narrow slice: one objective, one boundary, the
+   minimum file set. A fresh instance starts clean, loads its own context,
+   and owns its slice end to end.
+3. **RAG by slice ID only — no inline context.** Dispatch prompts carry only
+   the slice/step ID plus a one-line instruction to load context via RAG
+   (Cortex MCP `search_context` / `get_slice_context`). Do NOT inline file
+   lists, code snippets, design rationale, step-by-step instructions, or plan
+   excerpts into the prompt. If the plan lacks the required context, dispatch
+   `01-planning` to repair the plan — never inline it yourself.
+4. **Sub-agents own their work — never forward.** A dispatched agent OWNS its
+   assignment and returns the result. It MUST NOT forward, re-dispatch, or
+   chain its assignment onward to another sub-agent. Escalating an unresolved
+   blocker back to the orchestrator is correct; delegating it sideways is
+   not.
+5. **A stalled or narration-stalled agent is STOPPED, never nudged.** If an
+   agent emits narration, repeated status chatter, or shows no tool progress,
+   STOP it. Do NOT send a "continue", "keep going", or "are you still
+   there?" nudge — a nudge burns an orchestrator turn and produces no new
+   work. Stop the agent, capture its gap report (completed / remaining /
+   blockers / next action), and dispatch a **fresh** instance seeded with that
+   report.
+6. **Bounded fan-out.** Never saturate the sub-agent pool. Reserve at least
+   one slot for the orchestrator, size the fan-out to the task rather than to
+   the number of free slots, and queue the remainder.
+
+`write_agent` is permitted **only** to deliver a small clarification to an
+agent that is still inside its own assignment scope (for example, "answer
+only the second question"). It MUST NOT be used to recycle a finished or
+stalled agent onto a new slice, to hand off unfinished work, or to substitute
+for a fresh instance.
+
+**Violation handling.** A violation is a workflow defect, not a style
+choice: stop the violating dispatch, correct it in place (narrow the packet,
+stop the forwarding agent, serialize the write, re-dispatch a fresh
+instance), and continue. No concessions, no "just this once" exceptions.
+
 ## Implementation-Loop Rule
 
 For sliced implementation steps, enforce a strict RED → IMPLEMENT → GREEN loop:
@@ -97,10 +148,11 @@ The strict RED → IMPLEMENT → GREEN loop and per-slice gate ceremony are the
 bypass legacy ceremony, single-model mandate, remove legacy noise) in a
 `## Mandates` section. When a plan declares such mandates, agents and
 orchestrators executing that plan MUST follow the mandate over the default
-ceremony — broad slices mean one dispatch per phase, follow-ups go to the
-same idle agent via `write_agent`, and the plan-verification green-light cycle
-may be bypassed when the plan authorizes it. Pragmatic mode is plan-scoped,
-not global. Full policy in the `execute` skill Section 2.4.
+ceremony — broad slices mean one dispatch per phase, every dispatch is a
+FRESH instance (agents are never reused or recycled), and the
+plan-verification green-light cycle may be bypassed when the plan authorizes
+it. Pragmatic mode is plan-scoped, not global. Full policy in the `execute`
+skill Section 2.4.
 
 When a slice, step, phase, or whole plan completes, the orchestrator MUST
 update the active plan file with the latest details before advancing or
@@ -187,6 +239,7 @@ This file is the always-loaded routing facade. Detailed playbooks live in canoni
 - **Agent/skill frontmatter, routing-table freshness, tier-graph rules** → `agent-frontmatter-standards` and `routing-optimization-policy` skills.
 - **Orchestration doctrine (thin scope, parallel scouts, central merge, parallel executors, time-budget exit)** → `execute` skill §9.0.
 - **Responsible parallel execution (auxiliary scope, ownership without forwarding, no nested self-orchestration, disjoint write sets, bounded fan-out)** → `execute` skill §9.0.1.
+- **Binding orchestration mandates (never reuse or recycle an agent, fresh instance per dispatch, STOP-don't-nudge on stalled agents, RAG by slice ID only, ownership without forwarding, bounded fan-out)** → this file, "Binding Orchestration Mandates"; extended text in `execute` skill §9.0 and §9.0.1.
 - **TDD/red-test contracts and test-fix workflows** → `red-test-contracts` and `test-fix-workflow` skills.
 - **Reproducibility, checkpointing, workers, hybrid training** → domain skills (`reproducibility-contracts`, `checkpointing-persistence`, `worker-inference-transport`, `hybrid-training-interop`).
 

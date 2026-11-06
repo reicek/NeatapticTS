@@ -52,11 +52,24 @@ Five binding rules for every dispatch. Full text: `execute` skill §9.0.
 4. **Parallel executors** — parallel writes allowed only over non-overlapping file sets; overlap is serialized.
 5. **Time-budget exit** — an agent over budget stops and returns a gap report for a fresh takeover.
 
+## Binding Orchestration Mandates
+
+Binding on every dispatch. Full text: `execute` skill §9.0.1 (RPE-6/7/8) and `.github/copilot-instructions.md` → "Binding Orchestration Mandates".
+
+- **Never reuse or recycle an agent** — one instance owns one assignment; a finished, failed, or stalled instance is never resumed for new work.
+- **Every dispatch is a FRESH instance** on a small, targeted slice (one objective, one boundary, minimum file set).
+- **RAG by slice ID only** — the prompt carries the slice/step ID plus a RAG-load instruction; no inlined file lists, code, or design context.
+- **Sub-agents own their work, never forward** — no sideways re-dispatch or chaining; escalate blockers up to the orchestrator.
+- **Stalled or narration-stalled = STOP, never nudge** — stop it, capture the gap report, dispatch a fresh instance seeded with it.
+- **Bounded fan-out** — reserve at least one orchestrator slot; size the fan-out to the task, not to free slots.
+
+`write_agent` is permitted only for a small clarification inside an agent's own assignment scope — never to recycle an agent, hand off unfinished work, or substitute for a fresh instance.
+
 ## Time-Boxing
 
 - Soft cap: ~20 min (trivial/moderate), ~30 min (complex).
-- If an agent exceeds cap+50%, check progress; if static, stop it, capture its gap report, and re-dispatch a FRESH instance seeded with that report.
-- The orchestrator MAY stop a running agent and pass follow-up instructions via write_agent (small clarifications only — not unfinished work).
+- If an agent exceeds cap+50%, check progress; if static, it is STALLED — stop it, capture its gap report, and re-dispatch a FRESH instance seeded with that report.
+- Never nudge a stalled or narration-stalled instance ("continue", "any progress?"); a nudge is a violation, not a recovery — stop and re-dispatch fresh.
 
 ## Concurrency
 

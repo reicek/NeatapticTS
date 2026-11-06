@@ -3,22 +3,29 @@
  * example (plan slice P1-S7-C; AC-024 partial, spec sections 4.3, 5.1
  * D6, 5.2, LD-04/LD-05).
  *
- * Arcade collision model (LD-05): car-vs-car and car-vs-track-boundary
- * bounces are frictionless and perfectly elastic — kinetic energy and
- * normal momentum are conserved, the relative normal velocity reverses,
- * tangential velocity is preserved — with NO deformation and NO crash
- * penalties or rewards beyond the bounce itself (LD-04). Car bodies are
+ * Arcade collision model (LD-05): the car-vs-car bounce is frictionless
+ * and perfectly elastic — kinetic energy and normal momentum are
+ * conserved, the relative normal velocity reverses, tangential velocity
+ * is preserved — with NO deformation and NO crash penalties or rewards
+ * beyond the bounce itself (LD-04). The car-vs-track-boundary law is
+ * NOT a bounce and NOT a wall: there is NO track-boundary containment
+ * at all (the AC-090 VERDICT-8 supersession), so a car that leaves the
+ * ribbon really goes off track and keeps rolling. Car bodies are
  * circles sized by the D6 fixed physics constant
  * {@link NEATRACING_CAR_COLLISION_RADIUS_M}, never derived from voxel
  * models, so `.bin` rebuilds stay gameplay neutral (renderer-only).
  *
- * Surface bands mirror the slab rasterizer (`../track/track.slabs`):
+ * Surface bands ARE the slab rasterizer's bands (`../track/track.slabs`):
  * lateral bands measured from the segment chords as road
- * (`distance <= halfWidth - curb`), curb (`<= halfWidth`), and grass
- * (everything beyond the drivable surface — physics has no air
- * surface, so every point off the ribbon reads as off-track grass).
- * Junctions resolve by the rasterizer's priority rule (road before
- * curb). The same band law is exposed as a NAMED, testable
+ * (`distance <= halfWidth - curb`), curb (`<= halfWidth`), the
+ * DRIVABLE off-track band (`<= halfWidth + apron`) and the grass
+ * beyond it (physics has no air surface, so every point off the
+ * ribbon reads as off-track grass). Junctions resolve by the
+ * rasterizer's priority rule (road before curb before grass). The
+ * band WIDTHS are not mirrored here - they are READ from the
+ * band-geometry owner ({@link NEATRACING_TRACK_GRASS_APRON_WIDTH_M}),
+ * so the rasterizer and this classifier can never disagree about where
+ * a band ends. The same band law is exposed as a NAMED, testable
  * classification ({@link TrackSurfaceClassification}) so a traction or
  * slide measurement can be asserted ROAD-ONLY instead of re-deriving
  * the bands at the call site.
@@ -29,26 +36,34 @@
  * a corner (the road never narrows) and the widened outer half-width on
  * the outer side - and the chord distance is the seam's canonical
  * measure. This module derives NO half-width of its own, so the
- * rasterizer, the tri-colour band paint and this bound can never
+ * rasterizer, the tri-colour band paint and this module can never
  * disagree about how WIDE the road is. The physics plane IS the
  * generator plane (the car state reads the generator x/y directly), so
  * the generator-plane entry points of the seam apply here.
  *
- * Containment (AC-081): {@link resolveTrackBoundaryCar} bounces a car
- * at the DRIVABLE surface edge (`halfWidth` — the outer edge of the
- * road core plus the curb band), so the grass apron stays a
- * NON-drivable off-road surface the car can never come to rest on. The
- * bound is POSE-INDEPENDENT (it is derived from the ribbon geometry
- * ONLY — never from the heading, the slip or the drift pose), so the
- * containment can never MASK the AI steering defect owned by Step 14M
- * (AC-085): a contained car may still wander off-centre, and a car
- * riding the curb is still not road-only.
+ * NO BOUND (AC-090 VERDICT 8, superseding AC-081/AC-094 (d)): the
+ * track has NO invisible wall. The off-track band is DRIVABLE off-road
+ * (the EXISTING 'grass' surface member) and the grass BEYOND the band
+ * is drivable TOO - the car crosses the edge, keeps rolling, and is
+ * limited only by the off-track SPEED cap (the NAMED 20 km/h off-track
+ * limit owned by the physics step service), never by a geometric bound.
+ * The road edge is therefore an INNER boundary only: a car that has
+ * crossed the edge really ends up off the road, and no law ever reseats
+ * it on the ribbon nor resets its longitudinal progress. Because there
+ * is no bound at all, there is nothing that could MASK the AI steering
+ * defect owned by Step 14M (AC-085) either: a car that has left the
+ * ribbon is simply off the ribbon, and a car riding the curb is still
+ * not road-only.
  *
  * Determinism: every util is pure and state-free — inputs are never
  * mutated, resolved states are fresh records, and identical inputs on
  * the same runtime always produce byte-identical `JSON.stringify`
  * output (same-runtime reproducibility rung, ordered deterministic
- * arithmetic, no `Math.random`).
+ * arithmetic, no `Math.random`). The ONE exception is the
+ * CONTENT-GUARDED edge-profile memo
+ * ({@link resolveEdgeProfileForSegments}): a pure cache that changes
+ * only HOW OFTEN the published profile is resolved, NEVER the resolved
+ * values themselves.
  */
 
 import type {
@@ -60,12 +75,15 @@ import type { DriftChannelState } from './drift.model';
 import type { TrackSegment } from '../../racing_curriculum/track/track.generator.types';
 import {
   distanceToTrackChordM,
-  resolveNearestTrackChord,
   resolveTrackEdgeHalfWidthM,
   resolveTrackEdgeProfile,
   resolveTrackEdgeSideAt,
 } from '../track/track.edge';
 import type { TrackEdgeProfile } from '../track/track.edge';
+import {
+  NEATRACING_TRACK_CURB_WIDTH_M,
+  NEATRACING_TRACK_GRASS_APRON_WIDTH_M,
+} from '../track/track.slabs';
 
 /**
  * Fixed arcade collision radius of every car body, in meters (D6): one
@@ -77,23 +95,27 @@ import type { TrackEdgeProfile } from '../track/track.edge';
 export const NEATRACING_CAR_COLLISION_RADIUS_M = 1.0;
 
 /**
- * Width of the curb band on each side of the road core, in meters —
- * mirrors the private `TRACK_SLAB_CURB_WIDTH_M` band constant of
- * `../track/track.slabs` so the driven surface bands and the
- * rasterized surface look agree exactly.
+ * Width of the curb band on each side of the road core, in meters - the
+ * PUBLISHED curb-band width, owned by the band-geometry owner
+ * (`../track/track.slabs`) and RE-EXPORTED here, so the driven surface
+ * bands and the rasterized surface agree exactly by construction instead
+ * of by a mirrored value.
  */
-export const NEATRACING_TRACK_CURB_WIDTH_M = 1.0;
+export { NEATRACING_TRACK_CURB_WIDTH_M };
 
 /**
- * Width of the grass apron beyond the curb on each side, in meters —
- * mirrors the private `TRACK_SLAB_GRASS_APRON_WIDTH_M` band constant of
- * `../track/track.slabs`. The apron is a NON-drivable OFF-ROAD surface
- * (AC-081): the containment wall is the drivable-surface edge
- * ({@link resolveTrackBoundaryCar}), so a car is bounced BEFORE it can
- * sit on the apron. The width stays a named mirror of the rasterized
- * band geometry.
+ * Width of the grass apron beyond the curb on each side, in meters - the
+ * PUBLISHED width of the OFF-TRACK BAND, owned by the band-geometry owner
+ * (`../track/track.slabs`) and RE-EXPORTED here, so the rasterizer and the
+ * physics classifier read ONE band boundary (AC-094 (e)).
+ *
+ * The apron IS the off-track band: it is DRIVABLE off-road (the EXISTING
+ * 'grass' surface member). It is a SURFACE the car can drive on, not a
+ * boundary that stops it - the car may roll past the band outer edge
+ * onto the open grass (there is NO containment bound), and the only
+ * limit out there is the off-track speed cap.
  */
-export const NEATRACING_TRACK_GRASS_APRON_WIDTH_M = 3.0;
+export { NEATRACING_TRACK_GRASS_APRON_WIDTH_M };
 
 /** Pairwise collision diameter: circles overlap when centers sit closer. */
 const CAR_COLLISION_DIAMETER_M = NEATRACING_CAR_COLLISION_RADIUS_M * 2;
@@ -108,12 +130,6 @@ const TIEBREAK_NORMAL_X = 1;
 
 /** Y-half of the coincident-center collision-normal tiebreak (+x axis). */
 const TIEBREAK_NORMAL_Y = 0;
-
-/** Chord projection domain start (at the chord start point). */
-const CHORD_PROJECTION_START = 0;
-
-/** Chord projection domain end (at the chord end point). */
-const CHORD_PROJECTION_END = 1;
 
 /** Full-turn wrap period for heading normalization. */
 const HEADING_WRAP_TAU_RADIANS = Math.PI * 2;
@@ -130,8 +146,34 @@ const ROAD_SURFACE: PhysicsSurfaceType = 'road';
 /** Curb-band surface label (shares the road longitudinal model here). */
 const CURB_SURFACE: PhysicsSurfaceType = 'curb';
 
-/** Off-track surface label (grass apron and everything beyond it). */
+/** Off-track surface label (the drivable band and the grass beyond it). */
 const OFF_TRACK_SURFACE: PhysicsSurfaceType = 'grass';
+
+/**
+ * The CONTENT-GUARDED edge-profile memo: ONE resolved edge profile per
+ * segments-ARRAY IDENTITY.
+ *
+ * WHY it exists: the edge profile is the PUBLISHED width profile every
+ * reader measures the road through, and resolving it ALLOCATES (the
+ * seam snapshots the segments and builds one chord per segment). The
+ * surface classifier runs on the LIVE TICK path - once per car, per tick
+ * - so resolving a FRESH profile there allocated four arrays plus two
+ * objects per segment on EVERY frame, breaking the
+ * resolve-the-profile-ONCE law this same file already follows and the
+ * standing zero-per-frame-allocation constraint.
+ *
+ * WHY the ARRAY IDENTITY is the key: the shipped page hands ONE stable
+ * `trackSpec.segments` reference to every tick, so the identity is the
+ * ONE key that is stable across frames AND exact for the caller's array.
+ * The memo is CONTENT-GUARDED ({@link isEdgeProfileCurrent}), so a
+ * profile is NEVER served for an array whose content changed - the
+ * changed content is re-resolved instead. A `WeakMap` lets an
+ * unreferenced track be collected together with its profile.
+ */
+const EDGE_PROFILE_BY_SEGMENTS = new WeakMap<
+  readonly TrackSegment[],
+  TrackEdgeProfile
+>();
 
 /**
  * The NAMED, testable surface classification of the ground under a
@@ -148,8 +190,10 @@ const OFF_TRACK_SURFACE: PhysicsSurfaceType = 'grass';
 export interface TrackSurfaceClassification {
   /**
    * The named surface label under the car: 'road' (the road core),
-   * 'curb' (the curb band) or 'grass' (the non-drivable off-road
-   * surface).
+   * 'curb' (the curb band) or 'grass' (the off-road surface: the
+   * DRIVABLE off-track band and the grass beyond it - the surface union
+   * stays road | curb | grass, so no new surface member was
+   * introduced).
    */
   readonly surface: PhysicsSurfaceType;
   /**
@@ -159,9 +203,13 @@ export interface TrackSurfaceClassification {
    */
   readonly isRoadOnly: boolean;
   /**
-   * TRUE on the DRIVABLE surface (the road core and the curb band) —
-   * the surface the AC-081 containment keeps the car on. FALSE on the
-   * grass apron, which is never drivable.
+   * TRUE on every DRIVABLE surface: the road core, the curb band AND
+   * the off-track band (the grass apron between the drivable edge and
+   * the band outer edge - the DRIVABLE off-road surface of AC-094
+   * (b)). FALSE beyond the band outer edge, on the OPEN GRASS the car
+   * may roll onto (there is NO containment bound any more, so nothing
+   * holds the car there): the band itself stays the drivable off-road
+   * surface.
    */
   readonly isDrivable: boolean;
 }
@@ -180,7 +228,24 @@ const CURB_CLASSIFICATION: TrackSurfaceClassification = Object.freeze({
   isDrivable: true,
 });
 
-/** The off-track classification record (the non-drivable grass). */
+/**
+ * The DRIVABLE off-track band record (the off-road band between the
+ * drivable edge and the band outer edge): the EXISTING 'grass' surface
+ * member, so the surface union stays road | curb | grass (no new member
+ * was introduced, so no exhaustive surface switch elsewhere can break)
+ * and the band is the drivable off-road surface of AC-094 (b).
+ */
+const GRASS_BAND_CLASSIFICATION: TrackSurfaceClassification = Object.freeze({
+  surface: OFF_TRACK_SURFACE,
+  isRoadOnly: false,
+  isDrivable: true,
+});
+
+/**
+ * The off-track classification record BEYOND the band outer edge (the
+ * open grass the car may roll onto - NO containment bound holds it
+ * there).
+ */
 const GRASS_CLASSIFICATION: TrackSurfaceClassification = Object.freeze({
   surface: OFF_TRACK_SURFACE,
   isRoadOnly: false,
@@ -216,31 +281,11 @@ interface VelocityExchange {
 }
 
 /**
- * Nearest on-chord point of one segment relative to a world point.
- * The shared geometry step of the surface bands (distance from the
- * chord) and the boundary bounce (reseat point and outward normal).
- */
-interface ChordPointSample {
-  /** Nearest on-chord point x, in meters. */
-  readonly pointX: number;
-  /** Nearest on-chord point y, in meters. */
-  readonly pointY: number;
-  /**
-   * The PUBLISHED half-width of the side the point sits on, in meters: the
-   * inner half-width on the inner side of the road, the widened outer
-   * half-width on the outer side (published by the edge seam).
-   */
-  readonly halfWidthM: number;
-  /** Euclidean distance from the world point to the nearest chord point, in meters. */
-  readonly distanceM: number;
-}
-
-/**
  * Creates a pure surface resolver for a fixed track geometry: the
  * returned probe maps a car state to the physics surface under it with
  * the same nearest-chord lateral bands the slab rasterizer paints
- * (junction priority: road before curb; beyond every band the car is
- * off-track grass).
+ * (junction priority: road before curb before the off-track band; beyond
+ * every band the car is off-track grass).
  *
  * The resolver reads the SAME band law as the named classification
  * ({@link createTrackSurfaceClassifier}) — there is ONE band
@@ -292,7 +337,7 @@ export function createTrackSurfaceClassifier(
 ): (car: PhysicsCarState) => TrackSurfaceClassification {
   // The edge profile is resolved ONCE for the whole probe: it is the
   // published width profile every probe measures the road through.
-  const edgeProfile = resolveTrackEdgeProfile(segments.slice());
+  const edgeProfile = resolveEdgeProfileForSegments(segments);
   return (car: PhysicsCarState) => classifySurfaceAt(car.x, car.y, edgeProfile);
 }
 
@@ -319,7 +364,7 @@ export function classifyTrackSurface(
   return classifySurfaceAt(
     car.x,
     car.y,
-    resolveTrackEdgeProfile(segments.slice()),
+    resolveEdgeProfileForSegments(segments),
   );
 }
 
@@ -355,72 +400,6 @@ export function resolveCarCollisions(
   const resolved = cars.map((car) => ({ ...car }));
   resolvePairImpulsesInOrder(resolved);
   return resolved;
-}
-
-/**
- * Bounces a car off the DRIVABLE surface edge of the nearest ribbon
- * segment (LD-05 arcade elastic, boundaries per spec section 5.2; the
- * AC-081 containment contract).
- *
- * The bound is the outer edge of the drivable band — the road core plus
- * the curb band (the PUBLISHED half-width of the side the car sits on:
- * the inner half-width on the inner side of the road, the widened outer
- * half-width on the outer side, both published by the edge seam). The
- * grass apron is a NON-drivable off-road surface, so a car is reseated
- * BEFORE it can come to rest on it. The bound is POSE-INDEPENDENT: it
- * is derived from the ribbon geometry ONLY (never from the heading, the
- * slip or the drift pose), so the containment can never MASK the AI
- * steering defect owned by Step 14M (AC-085) — a contained car may
- * still wander off-centre, and a car riding the curb is still not
- * road-only.
- *
- * Inside the bound (`distance <= halfWidthM`, the published side-specific
- * half-width) the car is returned byte-identical. Outside the bound the
- * car is reseated exactly on the drivable surface edge along its outward
- * chord normal, and only an approaching car (positive outward velocity
- * component) has that outward component negated elastically at preserved
- * magnitude (tangential velocity preserved); a car already moving inward
- * keeps every velocity-channel field untouched.
- *
- * @param car - Car state, treated read-only; never mutated.
- * @param segments - Closed-loop ribbon segments; the loop is non-empty
- *   and every segment carries a positive driveable width (the
- *   `TrackSegment` domain).
- * @returns A fresh car state inside the drivable-surface bound; an
- *   approaching car is bounced through the velocity-aligned
- *   recomposition (whose fields satisfy the `PhysicsCarState` contract:
- *   `speed >= 0`, zero slip/lateral drift), while a car already moving
- *   inward keeps its original velocity channels as-is.
- * @throws Error when `segments` is empty (no ribbon to bound against).
- *
- * @example
- * ```ts
- * const bounced = resolveTrackBoundaryCar(approachingCar, spec.segments);
- * console.log(bounced.lateralVelocity === 0); // recomposed, no drift
- * ```
- */
-export function resolveTrackBoundaryCar(
-  car: PhysicsCarState,
-  segments: readonly TrackSegment[],
-): PhysicsCarState {
-  const edgeProfile = resolveTrackEdgeProfile(segments.slice());
-  const nearestChord = resolveNearestChordPoint(car.x, car.y, edgeProfile);
-  // The drivable-surface edge: the outer edge of the road core plus the
-  // curb band. Geometry ONLY — the bound never reads the car pose.
-  const drivableSurfaceEdgeM = nearestChord.halfWidthM;
-
-  // Step 1: Inside the drivable surface — the car keeps everything.
-  if (nearestChord.distanceM <= drivableSurfaceEdgeM) {
-    return { ...car };
-  }
-
-  // Step 2: Reseat on the drivable surface edge; the helper reflects
-  // only an approaching outward component.
-  return reboundPastDrivableSurfaceEdge(
-    car,
-    nearestChord,
-    drivableSurfaceEdgeM,
-  );
 }
 
 /** Applies the pairwise elastic exchange and separation in index order. */
@@ -625,105 +604,97 @@ function recomposeCarWithVelocity(
 }
 
 /**
- * Reseats a car outside the drivable surface edge back onto the bound
- * along its outward chord normal. Only an approaching car — a positive
- * outward world-velocity component (`v · outward > 0`) — takes the
- * elastic reflection (`v - 2(v·n)n`, tangential velocity preserved)
- * followed by the velocity-aligned recomposition. A car already moving
- * inward along the normal (or tangent, `v · outward <= 0`) leaves the
- * bound by itself, so its reseated state keeps every velocity-channel
- * field untouched (no recompose, no added energy — the same
- * approaching-only impulse rule as the car-car exchange).
+ * Resolves the published edge profile for a segments array, REUSING the
+ * profile already resolved for that exact array identity.
  *
- * The reseat POSITION depends on the ribbon geometry only (the chord
- * point and the bound), never on the car pose, so the AC-081
- * containment is POSE-INDEPENDENT.
+ * The profile is resolved ONCE per segments-ARRAY IDENTITY and then
+ * reused, so the live tick resolves NO profile and allocates NO array
+ * and NO chord per car per frame. The reuse is CONTENT-GUARDED
+ * ({@link isEdgeProfileCurrent}): a memoized profile is handed back only
+ * while the caller's array still holds the content the profile was
+ * resolved from, so a changed geometry is NEVER served a stale profile -
+ * it is re-resolved instead.
+ *
+ * The returned profile is the SEAM'S OWN profile (never a copy of it), so
+ * the published chords and the segment snapshot stay the ONE geometry
+ * every reader measures the road through.
+ *
+ * @param segments - Closed-loop ribbon segments (ordered, read only).
+ * @returns The published edge profile for these segments.
  */
-function reboundPastDrivableSurfaceEdge(
-  car: PhysicsCarState,
-  nearestChord: ChordPointSample,
-  drivableSurfaceEdgeM: number,
-): PhysicsCarState {
-  const outwardNormalX = (car.x - nearestChord.pointX) / nearestChord.distanceM;
-  const outwardNormalY = (car.y - nearestChord.pointY) / nearestChord.distanceM;
-  const [velocityX, velocityY] = resolveWorldVelocity(car);
-  const outwardComponent =
-    velocityX * outwardNormalX + velocityY * outwardNormalY;
-  const reseatedCar: PhysicsCarState = {
-    ...car,
-    x: nearestChord.pointX + outwardNormalX * drivableSurfaceEdgeM,
-    y: nearestChord.pointY + outwardNormalY * drivableSurfaceEdgeM,
-  };
-
-  // Step 1: An inward- or tangent-moving car already leaves the bound,
-  // so its velocity channels stay untouched (no recompose, no impulse).
-  if (outwardComponent <= 0) {
-    return reseatedCar;
+function resolveEdgeProfileForSegments(
+  segments: readonly TrackSegment[],
+): TrackEdgeProfile {
+  const memoized = EDGE_PROFILE_BY_SEGMENTS.get(segments);
+  if (memoized !== undefined && isEdgeProfileCurrent(memoized, segments)) {
+    return memoized;
   }
 
-  // Step 2: Only the approaching (outward) component takes the elastic
-  // reflection before the velocity-aligned recomposition.
-  return recomposeCarWithVelocity(
-    reseatedCar,
-    velocityX - 2 * outwardComponent * outwardNormalX,
-    velocityY - 2 * outwardComponent * outwardNormalY,
-  );
+  const resolved = resolveTrackEdgeProfile(segments);
+  EDGE_PROFILE_BY_SEGMENTS.set(segments, resolved);
+  return resolved;
 }
 
 /**
- * Resolves the nearest chord point across the whole ribbon (minimum
- * distance wins, the FIRST chord wins a tie - the seam's published
- * nearest-chord rule, which is the SAME policy this bound already used).
- * The ribbon is a closed loop, so at least one segment is required.
+ * Reports whether a memoized edge profile still describes the CONTENT of
+ * the caller's segments array.
  *
- * The DISTANCE and the half-width both come from the edge seam: the
- * nearest chord is the seam's, the distance is the seam's canonical
- * chord measure and the half-width is the PUBLISHED half-width of the
- * side the point sits on. Only the nearest POINT on that chord is
- * resolved here, because the reseat needs the point the outward normal
- * is measured from.
+ * The seam publishes a SNAPSHOT of the segments it resolved from, so a
+ * caller that changes the geometry IN PLACE would otherwise keep reading
+ * the profile resolved from the OLD content. The guard compares the live
+ * segments against that snapshot - the five numeric fields of every
+ * segment - and allocates NOTHING, so the hot path stays free of
+ * per-frame garbage.
+ *
+ * @param edgeProfile - The memoized profile to check.
+ * @param segments - The live segments array the caller passed.
+ * @returns TRUE when the profile still describes the live array.
  */
-function resolveNearestChordPoint(
-  pointX: number,
-  pointY: number,
+function isEdgeProfileCurrent(
   edgeProfile: TrackEdgeProfile,
-): ChordPointSample {
-  if (edgeProfile.chords.length === 0) {
-    throw new Error(
-      'resolveTrackBoundaryCar requires at least one track segment',
-    );
+  segments: readonly TrackSegment[],
+): boolean {
+  const snapshot = edgeProfile.segments;
+  if (snapshot.length !== segments.length) {
+    return false;
   }
 
-  const nearest = resolveNearestTrackChord(edgeProfile, pointX, pointY);
-  const chord = edgeProfile.chords[nearest.segmentIndex];
-  const segment = edgeProfile.segments[nearest.segmentIndex];
-  if (chord === undefined || segment === undefined) {
-    throw new Error(
-      'resolveTrackBoundaryCar requires at least one track segment',
-    );
+  for (
+    let segmentIndex = 0;
+    segmentIndex < segments.length;
+    segmentIndex += 1
+  ) {
+    const live = segments[segmentIndex];
+    const captured = snapshot[segmentIndex];
+    if (
+      live.startX !== captured.startX ||
+      live.startY !== captured.startY ||
+      live.endX !== captured.endX ||
+      live.endY !== captured.endY ||
+      live.width !== captured.width
+    ) {
+      return false;
+    }
   }
 
-  const nearestPoint = resolveNearestPointOnChord(pointX, pointY, segment);
-
-  return {
-    pointX: nearestPoint.x,
-    pointY: nearestPoint.y,
-    halfWidthM: resolveTrackEdgeHalfWidthM(
-      chord,
-      resolveTrackEdgeSideAt(edgeProfile, nearest.segmentIndex, pointX, pointY),
-    ),
-    distanceM: nearest.distanceM,
-  };
+  return true;
 }
 
 /**
  * Classifies one ground-plane point with the slab rasterizer's band and
- * priority rules: road core, then curb, then grass (physics has no air
+ * priority rules: road core, then curb, then the DRIVABLE off-track band
+ * (the grass apron), then the grass beyond it (physics has no air
  * surface, so beyond every band the car is off-track grass). The bands
  * are the rasterizer's UNION rule (a point is road when ANY segment's
  * road core holds it), and the result is the NAMED classification
  * record — the ONE band law behind both the bare resolver and the
  * classifier.
+ *
+ * THE BAND IS THE SAME BAND THE RASTERIZER PAINTS (AC-094 (e)): the band
+ * test is the rasterizer's own apron test
+ * (`distance <= halfWidth + apron`), with the apron width READ from the
+ * band-geometry owner, so a point on the band is the SAME surface in both
+ * models and the band boundary is ONE boundary.
  *
  * The half-width of every chord is the PUBLISHED half-width of the side
  * the point sits on, so the road is WIDER on the outer side of a corner
@@ -736,6 +707,7 @@ function classifySurfaceAt(
 ): TrackSurfaceClassification {
   let inRoadCore = false;
   let inCurbBand = false;
+  let inGrassBand = false;
 
   for (
     let segmentIndex = 0;
@@ -758,6 +730,8 @@ function classifySurfaceAt(
       inRoadCore = true;
     } else if (distanceM <= halfWidthM) {
       inCurbBand = true;
+    } else if (distanceM <= halfWidthM + NEATRACING_TRACK_GRASS_APRON_WIDTH_M) {
+      inGrassBand = true;
     }
   }
 
@@ -767,42 +741,10 @@ function classifySurfaceAt(
   if (inCurbBand) {
     return CURB_CLASSIFICATION;
   }
-  return GRASS_CLASSIFICATION;
-}
-
-/**
- * Resolves the nearest ON-CHORD POINT of one chord (the clamped
- * projection the reseat needs, mirroring the slab rasterizer's clamped
- * chord projection). The DISTANCE to that chord is the seam's canonical
- * measure, so only the point itself is resolved here.
- */
-function resolveNearestPointOnChord(
-  pointX: number,
-  pointY: number,
-  segment: Readonly<TrackSegment>,
-): { readonly x: number; readonly y: number } {
-  const chordX = segment.endX - segment.startX;
-  const chordY = segment.endY - segment.startY;
-  const chordLengthSquared = chordX * chordX + chordY * chordY;
-
-  if (chordLengthSquared <= 0) {
-    // A degenerate point chord has no projection direction: its whole
-    // geometry is the start point.
-    return { x: segment.startX, y: segment.startY };
+  if (inGrassBand) {
+    return GRASS_BAND_CLASSIFICATION;
   }
-
-  const projection =
-    ((pointX - segment.startX) * chordX + (pointY - segment.startY) * chordY) /
-    chordLengthSquared;
-  const clampedProjection = Math.min(
-    CHORD_PROJECTION_END,
-    Math.max(CHORD_PROJECTION_START, projection),
-  );
-
-  return {
-    x: segment.startX + clampedProjection * chordX,
-    y: segment.startY + clampedProjection * chordY,
-  };
+  return GRASS_CLASSIFICATION;
 }
 
 /**

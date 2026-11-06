@@ -52,9 +52,9 @@ When invoked with `/execute @plan.md`:
 12. **When the plan is complete**, update with final status + resume point.
 
 Pragmatic mode (if the plan declares `## Mandates`) overrides the ceremony:
-broad slices mean one dispatch per phase/step, follow-ups go to the same
-idle agent via `write_agent`, and the plan-verification green-light cycle may
-be bypassed when authorized. See §5 for the full mandate rules.
+broad slices mean one dispatch per phase/step, every re-dispatch is a **fresh**
+agent instance, and the plan-verification green-light cycle may be bypassed
+when authorized. See §5 for the full mandate rules.
 
 ## §2 — Tier Graph & Delegation Rules
 
@@ -217,10 +217,10 @@ follow the mandate over the default ceremony:
 1. **Broad slices.** When a plan declares broad slices (e.g., one slice per
    phase), the orchestrator dispatches **one agent per phase/slice** and
    does not subdivide into micro-slices or spawn redundant red/green/doc
-   sub-slices. A phase that needs a second pass is handled by sending a
-   follow-up to the **same** (still idle) agent via `write_agent`, not by
-   spawning a fresh instance. Broad slices override "SLICES MUST BE THIN"
-   for the declaring plan only, but must not span multiple SDLC phases.
+   sub-slices. A phase that needs a second pass is handled by dispatching a
+   **fresh** agent instance for that pass — an idle instance is never reused
+   or recycled (RPE-6). Broad slices override "SLICES MUST BE THIN" for the
+   declaring plan only, but must not span multiple SDLC phases.
 2. **Bypass legacy ceremony.** When authorized, agents MAY skip the
    plan-verification green-light cycle, per-AC gate calls, fix-packet YAML
    ceremony, and the strict three-phase loop when doing so accelerates
@@ -241,9 +241,12 @@ follow the mandate over the default ceremony:
 declares pragmatic mode with bypass, the orchestrator MAY skip the
 verification gate (§8).
 
-**Idle-agent reuse under pragmatic mode:** follow-ups go to the same idle
-agent via `write_agent`. Max 2 reuse iterations before spawning a fresh
-instance. Convergence tracker counts both fresh and fast-path iterations.
+**Fresh instances under pragmatic mode:** every follow-up, second pass, and
+fix iteration is dispatched as a **fresh** agent instance. Idle instances are
+never reused or recycled — a recycled instance carries stale context and
+silently breaks the thin-scope and RAG-only rules. The convergence tracker
+counts each fresh dispatch as one iteration; the `fix-inline` reuse fast-path
+no longer exists (§11).
 
 Pragmatic mode is **plan-scoped**, not global. The mandates apply only to
 the plan that declares them; other plans retain the default strict ceremony.
@@ -454,8 +457,8 @@ iteration <n> status=<failed|passed>` markers, counts iterations, and
 
 The dispatch packet builder classifies every slice as trivial, moderate, or
 complex. The complexity hint controls the prompt-length budget (200/500/1000
-chars) and fix-packet fast-path eligibility. When unsure, default to
-`moderate`.
+chars) and the severity of validation ceremony each tier owes. When unsure,
+default to `moderate`.
 
 ```mermaid
 flowchart TD
@@ -519,6 +522,16 @@ rules 1–5.
 | **RPE-3** | **No nested self-orchestration** | A dispatched agent does not re-enter the orchestration machinery on its own initiative: it does not spawn its own RED → IMPLEMENT → GREEN loop, its own reviewer chain, or its own phase transitions. Tier-authorized delegation inside an agent's own scope (a Tier-2 coordinator dispatching its own Tier-3 scouts) is permitted, but stays bounded by RPE-1, RPE-4, and RPE-5. Dispatching an SDLC phase agent from inside a dispatched task is not. |
 | **RPE-4** | **Disjoint write sets**  | Parallel writes happen **only** over non-overlapping files. Two agents that would touch the same file are serialized through the file-lock tracker (§12) and never co-written. This is the execution form of Rule 4. |
 | **RPE-5** | **Bounded fan-out**      | The orchestrator keeps the sub-agent pool **below saturation**: it reserves at least one slot for itself (§12), dispatches only as many agents as the remaining capacity allows, and queues the rest. Fan-out is sized to the task, never to the number of free slots. |
+| **RPE-6** | **Fresh, never recycled** | Every dispatch is a **fresh** agent instance on a small, targeted slice. An idle, stopped, or previously-used instance is **never** reused, recycled, or resumed with `write_agent` for a new slice, second pass, or fix iteration. Reuse is a workflow defect: a recycled instance carries stale context, violates thin scope (Rule 1), and cannot re-read the plan cleanly. |
+| **RPE-7** | **RAG-only context** | All context reaches the agent through Cortex RAG keyed by **slice/step ID** (`get_slice_context`, `search_context`, `pre_execute_hook`). The orchestrator MUST NOT inline design context, file lists, diffs, or step-by-step instructions in the prompt. If the plan lacks the context the agent needs, dispatch `01-planning` to write it into the plan — do not paste it into the prompt. |
+| **RPE-8** | **Stall-stop, no nudge** | A **stalled** agent (no tool-call progress) or a **narration-stalled** agent (emits prose/status narration instead of doing the work) is **STOPPED** by the orchestrator — never nudged, never pinged, never "given a hint" to continue. Stop the instance, capture its gap report, and dispatch a **fresh** instance against the same slice (RPE-6). A nudge converts a recoverable stall into an unbounded burn of the time budget. |
+
+**The dispatch obligations.** Every dispatch in this repository is bound by
+all eight clauses: a small targeted auxiliary scope (RPE-1), work owned and
+returned by the sub-agent with no forwarding (RPE-2), no nested
+self-orchestration (RPE-3), disjoint write sets (RPE-4), bounded fan-out
+(RPE-5), a fresh instance per dispatch (RPE-6), RAG-only context delivery
+(RPE-7), and stall-stop instead of nudging (RPE-8).
 
 ```mermaid
 flowchart TD
@@ -528,17 +541,23 @@ flowchart TD
     Cap -->|No| Queue["Queue the dispatch"]
     Cap -->|Yes| Files{"Parallel write?<br/>Files disjoint?"}
     Files -->|No| Serialize["Serialize via file-lock tracker"]
-    Files -->|Yes| Dispatch["Dispatch sub-agent<br/>owns its work, no forwarding"]
+    Files -->|Yes| Fresh["Fresh instance only<br/>never reuse or recycle"]
+    Fresh --> Rag["Context via slice/step ID<br/>RAG only — nothing inline"]
+    Rag --> Dispatch["Dispatch sub-agent<br/>owns its work, no forwarding"]
     Dispatch --> Owns{"Agent forwards or<br/>self-orchestrates?"}
     Owns -->|Yes| Correct["Correct in place:<br/>narrow packet, stop,<br/>re-dispatch fresh"]
-    Owns -->|No| Merge["Agent returns result<br/>to the central merge point"]
+    Owns -->|No| Stall{"Stalled or<br/>narration-stalled?"}
+    Stall -->|Yes| StopIt["STOP the instance<br/>capture gap report —<br/>never nudge"]
+    Stall -->|No| Merge["Agent returns result<br/>to the central merge point"]
+    StopIt --> Correct
 ```
 
 **Violation handling:** an RPE violation is a workflow defect, not a style
 preference. Correct it in place — narrow the packet, stop the forwarding
 agent, serialize the write, or re-dispatch a fresh instance — and continue
 until the dispatch is compliant or a true technical limit is reached. No
-concessions, no artificial retry threshold.
+concessions, no artificial retry threshold. Nudging a stalled instance is a
+violation, not a recovery: stop it and re-dispatch fresh (RPE-8).
 
 ### §9.1 — Slice Time-Boxing
 
@@ -548,11 +567,15 @@ concessions, no artificial retry threshold.
   dispatch.
 - If an agent is still running at cap+50% (30/45 min), check
   `tool_calls_completed`. If progressing, allow one grace extension. If
-  static across multiple checks, stop the agent and re-dispatch a fresh
+  static across multiple checks, **stop** the agent and re-dispatch a fresh
   instance seeded with its gap report.
-- The orchestrator MAY stop a running agent and pass follow-up instructions
-  via `write_agent` (queued for next turn), or stop and re-dispatch a fresh
-  instance.
+- **Never nudge.** The orchestrator MUST NOT send a stalled or
+  narration-stalled instance a "continue", "any progress?", or status message
+  to revive it. Stop it, capture the gap report, and dispatch a fresh
+  instance (RPE-6, RPE-8).
+- **Never reuse.** A stopped, completed, or idle instance is not resumed with
+  `write_agent` for the remaining work. Follow-up work goes to a fresh
+  instance that loads its context from RAG (RPE-6, RPE-7).
 
 #### Thin Scope Before Dispatch (Doctrine Rule 1)
 
@@ -604,12 +627,32 @@ violation — the remaining work is unowned.
 #### Orchestrator Overrun Handling
 
 - At cap+50%, check `tool_calls_completed`. Progressing → one grace
-  extension. Static across multiple checks → stop the agent, capture its gap
-  report, re-dispatch a fresh instance.
+  extension. Static across multiple checks → **stop** the agent, capture its
+  gap report, re-dispatch a fresh instance.
 - Prefer a **fresh** instance over a continued context for any overrun: a
   fresh instance re-reads the plan and cannot inherit a stale mental model.
-- Use `write_agent` for small, cheap clarifications — not for handing off
-  unfinished work.
+- `write_agent` is **not** an overrun-recovery tool. Do not revive a stalled
+  instance with a status message — stop it and re-dispatch fresh.
+
+#### Stall Detection & Stop Rule (RPE-8)
+
+A stalled agent has stopped making tool-call progress against its slice. Two
+forms matter:
+
+| Form                  | Symptom                                                                                             | Response                                                                |
+| --------------------- | --------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| **Stalled**           | `tool_calls_completed` is static across multiple checks while the slice is still unfinished.         | STOP the instance, capture the gap report, dispatch a **fresh** instance. |
+| **Narration-stalled** | The agent emits prose — status updates, restated plans, task narration — instead of executing calls. | STOP the instance, capture the gap report, dispatch a **fresh** instance. |
+
+The orchestrator MUST NOT attempt to revive a stalled instance by messaging
+it. A nudge ("are you stuck?", "continue", "any progress?") is forbidden: it
+burns the remaining time budget on a context that is already failing and
+produces no verifiable work. The response to a stall is always the same —
+**stop, capture, re-dispatch fresh** (RPE-6, RPE-8).
+
+Stall-stop applies to background dispatches (§9.2) and to fix-loop iterations
+(§11) alike: a fix iteration is a fresh instance, so a stalled implementer is
+replaced, never resumed.
 
 ### §9.2 — Sync vs Background Mode
 
@@ -622,6 +665,16 @@ violation — the remaining work is unowned.
   completion).
 - **Always reserve ≥ 1 slot for the orchestrator.** See §12 for concurrency
   limits.
+- **Fresh instance per dispatch.** Background mode changes *when* an agent
+  runs, not *which* instance runs it: every dispatch — background or
+  foreground — is a fresh instance on a small targeted slice, with context
+  delivered via slice/step ID (RPE-6, RPE-7).
+- **Background stall-stop.** A background agent that stalls or
+  narration-stalls is stopped and replaced by a fresh instance exactly like
+  a foreground one. Background mode is not an exemption from the stall-stop
+  rule (§9.1, RPE-8).
+- **Bounded fan-out.** Queue dispatches when the pool nears saturation;
+  never fan out to "use every free slot" (RPE-5).
 
 #### Parallel Scouts (Doctrine Rule 2)
 
@@ -767,23 +820,33 @@ deterministic ID, makes only the changes needed to resolve the listed
 observations, and updates the same block with a follow-up note if further
 loop-back is required.
 
-### Reuse Idle Agent (Fast-Path)
+### Fresh Instance for Every Fix Iteration
 
-For **trivial** slices only, when a specialist returns `REQUEST_CHANGES`
-with a small fix, the orchestrator MAY send the fix directly to the idle
-implementation agent via `write_agent` instead of spawning a fresh
-`04-implementing` instance.
+Every fix-loop iteration is dispatched to a **fresh** `04-implementing`
+instance. The idle-agent reuse fast-path is **removed**: an instance that
+already produced an implementation MUST NOT be resumed via `write_agent` to
+apply a fix, not even for a one-line change.
 
-- **Criteria (all must hold):** slice classified trivial, fix targets the
-  same slice, the fix is small (one-line, config tweak, comment/formatting),
-  no plan updates required.
-- **Counter-criteria (any one disqualifies):** slice is moderate/complex,
-  context contamination risk, fix requires plan updates, fix is not small.
-- **Recording:** record the inline fix with `fix-inline: <slice-id>
-iteration <n>` in `## Latest validation evidence` alongside the standard
-  `fix-loop:` marker. The convergence tracker counts inline fixes as
-  iterations.
-- **Max 2 reuse iterations**, then spawn a fresh instance.
+- **Why:** a reused instance carries the mental model of the implementation it
+  just produced — including the assumptions the reviewer rejected. It is also
+  the instance most likely to be context-bound or narration-stalled. A fresh
+  instance re-reads the plan and the fix packet and re-derives the change
+  (RPE-6, RPE-7).
+- **How:** append the fix packet to the plan under the deterministic ID, then
+  dispatch a fresh instance using the dispatch contract above. The fix
+  packet — never an inline message — carries the observations.
+- **Small fixes are still small slices.** A one-line fix is dispatched as a
+  one-line slice: fresh instance, minimal file set, RAG-loaded context. The
+  size of the fix does not change the instance rule; it only changes the
+  slice boundary.
+- **Recording:** record the iteration with the standard `fix-loop:
+  <slice-id> iteration <n> status=<failed|passed>` marker in `## Latest
+  validation evidence`. There is no `fix-inline` marker and no reuse counter
+  — every iteration is a fresh dispatch, and the convergence tracker counts
+  them all.
+- **Stalled fix iterations:** a fix instance that stalls or narration-stalls
+  is stopped and replaced by another fresh instance — never nudged into
+  continuing (§9.1, RPE-8).
 
 See EXECUTE_REFERENCE.md for the full fix-packet YAML schema.
 
@@ -843,7 +906,9 @@ When waiting for background agents, use `read_agent` with `timeout: 1200`
 slices. Do NOT poll with short 3-minute timeouts. The orchestrator is
 auto-notified on completion; polling is only a safety net. If an agent
 hasn't completed after the timeout, check `tool_calls_completed`: if
-increasing, the agent is progressing; if static, it may be stuck.
+increasing, the agent is progressing; if static, it is **stalled** — stop it,
+capture its gap report, and dispatch a fresh instance (§9.1 stall-stop).
+Never nudge a stalled background agent into continuing.
 
 ## §13 — Plan Update at End
 
