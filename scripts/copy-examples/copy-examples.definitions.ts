@@ -89,6 +89,16 @@ export const EXAMPLE_DEFINITIONS: readonly ExampleDefinition[] = [
   {
     category: 'flagship',
     description:
+      'A browser-hosted WebGL2 voxel racing lesson with a hand-rolled render-pass engine, deterministic 1/60 physics, worker-owned simulation and evaluation, and a voxel editor for the car and track art.',
+    dirName: 'neatRacing',
+    label: 'neatRacing',
+    runCommand: 'npm run dev:neatRacing',
+    title: 'Neat Racing (NeatapticTS)',
+    sourceDir: path.resolve('examples', 'neatRacing'),
+  },
+  {
+    category: 'flagship',
+    description:
       'A browser-hosted raycasting demo that hosts the Neatenstein NGE lifecycle: grid DDA raycasting, neon wall/floor rendering, deterministic pulses, and a module worker off-load slot.',
     dirName: 'neatenstein',
     label: 'neatenstein',

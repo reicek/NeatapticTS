@@ -64,6 +64,10 @@ import type {
   BloomPass,
   BloomPassDrawFrame,
 } from '../engine/passes/bloom.pass';
+// The adaptive-quality controller ladder (AC-035): the full-quality stage
+// record below is the single source of the construction-time bloom
+// neutral, so this site can never drift from the controller.
+import { NEATRACING_ADAPTIVE_QUALITY_STAGES } from '../engine/adaptive-quality';
 
 /** `gl.FRAMEBUFFER` (0x8D40) target of every composer framebuffer bind. */
 const GL_FRAMEBUFFER = 0x8d40;
@@ -137,8 +141,18 @@ const INITIAL_BAG_CARS: readonly CarPassCarState[] = [];
 /** Neutral construction-time pulse payload reference; refreshed per tick. */
 const INITIAL_BAG_PULSES: readonly AmbientPulse[] = [];
 
-/** Neutral construction-time bloom flag; refreshed before the first draw. */
-const INITIAL_BAG_BLOOM_ENABLED = true;
+/**
+ * Neutral construction-time bloom flag; refreshed before the first draw.
+ *
+ * AC-035 (runtime wiring): the neutral value is DERIVED from the
+ * adaptive-quality controller ladder's full-quality stage record instead
+ * of an independent `true` literal, so the initial bag can never drift
+ * from the controller - the ladder is the single source of the bloom
+ * off-switch at BOTH hardcoded sites (the browser entry's composer-frame
+ * construction and this construction-time neutral).
+ */
+const INITIAL_BAG_BLOOM_ENABLED: boolean =
+  NEATRACING_ADAPTIVE_QUALITY_STAGES[0].bloomEnabled;
 
 /** One composed frame handed to the composer's draw seam. */
 export interface NeatRacingFrameComposerFrame {
@@ -154,8 +168,14 @@ export interface NeatRacingFrameComposerFrame {
   readonly cars: readonly CarPassCarState[];
   /** Optional right-world scenery draw state; omitted when the pass is absent. */
   readonly rightWorld?: RightWorldPassDrawState;
-  /** AC-035 bloom off-switch, forwarded verbatim to the bloom frame. */
-  readonly enabled: boolean;
+  /**
+   * AC-035 bloom off-switch, forwarded verbatim to the bloom frame. The
+   * host refreshes this member IN PLACE per rendered frame from the ticked
+   * adaptive-quality controller (the zero per-frame allocation rule keeps
+   * the frame's identity stable), so it is a live knob rather than a
+   * construction-time constant.
+   */
+  enabled: boolean;
 }
 
 /** Draw state forwarded to the not-yet-extracted track pass seam. */

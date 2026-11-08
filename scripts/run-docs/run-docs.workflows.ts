@@ -65,6 +65,10 @@ export async function runFullDocsWorkflow(): Promise<void> {
       label: 'Shared network visualization folder docs',
       scriptName: 'docs:folders:shared-network-visualization:built',
     },
+    {
+      label: 'Neat Racing folder docs',
+      scriptName: 'docs:folders:neatRacing:built',
+    },
   ]);
 
   await runScriptTask({
@@ -105,6 +109,10 @@ export async function runFoldersWorkflow(): Promise<void> {
     {
       label: 'Shared network visualization folder docs',
       scriptName: 'docs:folders:shared-network-visualization:built',
+    },
+    {
+      label: 'Neat Racing folder docs',
+      scriptName: 'docs:folders:neatRacing:built',
     },
   ]);
 }

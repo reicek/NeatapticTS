@@ -316,6 +316,14 @@ const config = {
         'scripts/trace-summarize.mjs',
       ],
     },
+    {
+      displayName: 'build-scripts-mjs',
+      testMatch: ['**/scripts/build-*.test.mjs'],
+      testEnvironment: 'node',
+      transform: {},
+      testTimeout: 300000,
+      collectCoverageFrom: ['scripts/build-neatracing.mjs'],
+    },
   ],
   testMatch: [
     '**/src/**/*.test.ts',

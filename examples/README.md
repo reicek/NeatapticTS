@@ -102,6 +102,8 @@ Best starting points:
 
 [racing_curriculum](./racing_curriculum) is the best next step if you want to study coevolution, host/worker authority, and deterministic packed-snapshot streaming.
 
+**Status: deprecated.** `examples/racing_curriculum` has been superseded by [Neat Racing](./neatRacing) (`examples/neatRacing`), the repository's WebGL2 voxel racer. The demo stays in the examples tree until removal is explicitly confirmed; new readers should start with `examples/neatRacing`.
+
 It runs two independent NEAT populations (Team A and Team B) against frozen opponent snapshots, keeps all simulation truth inside a dedicated worker, and streams compact typed-array race-step frames back to the host. The lesson is how to separate rendering authority from evolution authority and how to keep a competitive coevolution benchmark fair, replayable, and easy to extend with new neuromodulation, plasticity, or controller contracts.
 
 Best starting points:

@@ -134,4 +134,21 @@ export const DOCS_TARGETS: Record<string, DocsTargetConfig> = {
     ),
     includeFolderIndex: false,
   },
+  neatRacing: {
+    name: 'neatRacing',
+    sourceDir: path.resolve('examples', 'neatRacing'),
+    docsDir: path.join(DOCS_DIR, 'examples', 'neatRacing', 'docs'),
+    rootDocsDir: path.join(DOCS_DIR, 'examples', 'neatRacing', 'docs'),
+    rootReadmeSource: path.resolve('examples', 'neatRacing', 'README.md'),
+    rootReadmeDestination: path.join(
+      DOCS_DIR,
+      'examples',
+      'neatRacing',
+      'docs',
+      'README.md',
+    ),
+    excludeRootSourceFiles: true,
+    publishedRootDir: path.join(DOCS_DIR, 'examples', 'neatRacing'),
+    preservePublishedEntries: ['index.html'],
+  },
 };

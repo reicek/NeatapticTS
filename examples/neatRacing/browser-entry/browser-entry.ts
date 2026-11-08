@@ -26,6 +26,20 @@
  * install here (rather than in the shell script) means the page never needs
  * to know how the canvas is created or torn down.
  *
+ * Step 05 (P2-S4-C) re-plumbs the live drive loop onto the Phase-2
+ * simulation-worker protocol (AC-033): the host now owns a REAL sim-worker
+ * session (`createSimWorkerSession`) instead of the phase-1 host session, so
+ * the HUMAN drives car 0 while the worker's fleet carries the evolving
+ * rivals. The worker owns the spawning, the physics, the lap-line detector
+ * and the race rules; the host owns the input sampling, the composer
+ * bindings, the AI-mode goal lifecycle, the most-forward network panel and
+ * the teardown.
+ *
+ * The worker module is a PURE realm-free state machine apart from its
+ * transport tail (`self.onmessage = ...`), which is harmless in the main
+ * thread: the page never posts window messages, so the assignment only
+ * parks an unused handler.
+ *
  * @module
  */
 
@@ -69,6 +83,18 @@ import {
   type StarfieldPass,
 } from '../engine/passes/starfield.pass';
 import { createFrameComposer } from '../host/frame-composer';
+// The adaptive-quality controller (AC-035): the drive loop ticks it EXACTLY
+// once per rendered frame and the composed frame carries the RESOLVED
+// (defensively clamped) stage record's bloom off-switch - never a hardcoded
+// literal.
+import {
+  createInitialAdaptiveQualityState,
+  tickAdaptiveQuality,
+  NEATRACING_ADAPTIVE_QUALITY_MAX_STAGE_INDEX,
+  NEATRACING_ADAPTIVE_QUALITY_STAGES,
+  type AdaptiveQualityStage,
+  type AdaptiveQualityState,
+} from '../engine/adaptive-quality';
 import { computeVisualWheelSpinDeltaRad } from '../voxel/wheel.mount.utils';
 import { fillCarRenderPose } from '../car/generate-car';
 import {
@@ -86,27 +112,68 @@ import type { NeatRacingFrameComposerFrame } from '../host/frame-composer';
 import type { NeatRacingHudState } from '../host/hud';
 import { createHud } from '../host/hud';
 import { sampleKeyboardInput } from '../host/input';
+import type { NeatRacingKeyboardSample } from '../host/input';
 import type { NeatRacingRaceMode } from '../host/mode-selector';
 import { createRaceModeSelector } from '../host/mode-selector';
-import { createRaceSession } from '../host/race-session';
-import type { NeatRacingRaceSession } from '../host/race-session';
 import { NEATRACING_FIXED_TIMESTEP_SECONDS } from '../host/render-loop.utils';
 import { createTrackSurfaceResolver } from '../physics/collision.utils';
-import { stepRaceRules } from '../physics/race-rules';
-import { stepAutopilotInput } from '../physics/ai.autopilot';
-import {
-  createInitialPhysicsCarState,
-  stepPhysics,
+import { createRaceRulesState } from '../physics/race-rules';
+import type { RaceRulesState } from '../physics/race-rules';
+import type {
+  PhysicsCarState,
+  PhysicsSurfaceType,
 } from '../physics/physics.step.service';
-import type { PhysicsCarSpawnPose } from '../physics/physics.step.service';
+import {
+  createNeatRacingAiModeGoalSession,
+  recordNeatRacingAiModeGoalCrossing,
+  NEATRACING_AI_MODE_START_LEVEL,
+} from '../ai/ai-mode.goals';
+import type {
+  NeatRacingAiModeGoalCrossingOutcome,
+  NeatRacingAiModeGoalSession,
+} from '../ai/ai-mode.goals';
+import type { NeatRacingObservationLevel } from '../ai/observation.assembler';
+import {
+  resolveNeatRacingLevelCarCount,
+  runNeatRacingScriptedBaselineProbeEpisode,
+} from '../ai/promotion.rules';
+import { detectSteeringOscillation } from '../ai/runtime.adaptation';
+import {
+  drawNeatRacingNetworkPanelFromFrame,
+  installNeatRacingNetworkResize,
+  resolveMostForwardNeatRacingAgent,
+  resolveNeatRacingNetworkPanelVisualizationFrame,
+} from '../visualizer/network-panel.adapter';
+import type {
+  NetworkVisualizationResolvedFrame,
+  NeatRacingNetworkPanelCandidate,
+} from '../visualizer/network-panel.adapter';
+import { createSimWorkerSession } from '../workers/simulation-worker/simulation-worker';
+import type {
+  NeatRacingSimWorkerFramesPayload,
+  NeatRacingSimWorkerRaceMode,
+  NeatRacingSimWorkerSession,
+} from '../workers/simulation-worker/simulation-worker';
+import {
+  NEATRACING_DEFAULT_FEATURE_FLAGS,
+  NEATRACING_PACK_SCHEMA_VERSION,
+} from '../workers/simulation-worker/frame.pack.service';
 import type { VoxelBinModel } from '../voxel/bin.codec';
 import { NEATRACING_VOXEL_WORLD_SIZE } from '../voxel/lod.distance.utils';
 import { meshVoxelModel } from '../voxel/greedy-mesher';
 import { decodeVoxelModel } from '../voxel/model.decode.utils';
 import { validateVoxelModelDocument } from '../voxel/model.schema';
-import { NEATRACING_TEAM_ID_RED } from '../voxel/team-remap';
+import {
+  NEATRACING_TEAM_ID_BLUE,
+  NEATRACING_TEAM_ID_CYAN,
+  NEATRACING_TEAM_ID_GREEN,
+  NEATRACING_TEAM_ID_RED,
+} from '../voxel/team-remap';
 import { generateTrack } from '../../racing_curriculum/track/track.generator';
-import type { TrackSpec } from '../../racing_curriculum/track/track.generator.types';
+import type {
+  TrackSegment,
+  TrackSpec,
+} from '../../racing_curriculum/track/track.generator.types';
 import carModelDocument from '../assets/models/car-f1.model.json';
 import wheelModelDocument from '../assets/models/wheel.model.json';
 import {
@@ -230,6 +297,84 @@ const NEATRACING_CANVAS_ID = 'neatracing-canvas';
 const NEATRACING_HUD_OUTPUT_ID = 'neatracing-hud-output';
 
 /**
+ * The demo track identity the host sends to the simulation worker.
+ *
+ * The worker protocol carries a `trackId` so a round can be attributed to
+ * the track it ran on. The demo loop has no canonical track id anywhere in
+ * the repository (the worker's own suites use their own fixture ids), so the
+ * host owns this honest demo identity instead of borrowing a test fixture.
+ */
+const NEATRACING_DEMO_TRACK_ID = 'neatracing-demo-loop';
+
+/**
+ * Element id of the most-forward-agent network panel canvas.
+ *
+ * The panel canvas is a SIBLING of the HUD subtree (it is mounted into the
+ * reserved {@link NEATRACING_HUD_OUTPUT_ID} container as its own element) so
+ * the HUD's own DOM contract is never disturbed.
+ */
+const NEATRACING_NETWORK_PANEL_CANVAS_ID = 'neatracing-network-panel';
+
+/**
+ * The rival team colours, cycled by rival index.
+ *
+ * Car 0 (the human) always keeps {@link NEATRACING_TEAM_ID_RED}; the rivals
+ * cycle this palette so two cars never share a colour on the same frame.
+ */
+const NEATRACING_RIVAL_TEAM_COLOR_IDS: readonly number[] = [
+  NEATRACING_TEAM_ID_BLUE,
+  NEATRACING_TEAM_ID_GREEN,
+  NEATRACING_TEAM_ID_CYAN,
+];
+
+/**
+ * The along-track progress scan window (in chords).
+ *
+ * The host-owned progress meter scans the chords around the incumbent chord
+ * index first and falls back to a FULL scan when the window clipped a
+ * boundary, so a car that jumped far along the track still resolves its
+ * position exactly.
+ */
+const NEATRACING_PROGRESS_CHORD_SCAN_WINDOW = 8;
+
+/**
+ * The fraction of the loop length that separates a forward wrap from a
+ * backward wrap in the host-owned progress meter.
+ */
+const NEATRACING_PROGRESS_HALF_LOOP_FRACTION = 0.5;
+
+/**
+ * The physics surface that counts as "on the road" for the host-owned
+ * off-track fraction.
+ *
+ * The physics surface band is a three-value union (`road`, `curb`,
+ * `grass`); only `road` counts as on-track for the drivability measurement.
+ */
+const NEATRACING_PHYSICS_SURFACE_ROAD: PhysicsSurfaceType = 'road';
+
+/**
+ * The evolved-network node count the demo lane can honestly report.
+ *
+ * The eval worker's growth engine is NOT integrated yet (the workers are
+ * transport-only in this slice), so the live demo has NO evolved carriers to
+ * count. The number is reported as ZERO - never fabricated - because the
+ * per-tick rival control and the network growth live inside the workers
+ * (E11(a)). The demo crossings therefore ride the non-promoting `lapCounted`
+ * path and the machine keeps racing (LD-10).
+ */
+const NEATRACING_DEMO_EVOLVED_NODE_COUNT = 0;
+
+/**
+ * The race mode the host boots the simulation worker with.
+ *
+ * The host ALWAYS boots the worker in `manual` mode: the human drives car 0
+ * in BOTH UI modes (LD-12), and the worker's `ai` race mode would hand car
+ * 0's controls to the machine.
+ */
+const NEATRACING_DEMO_WORKER_RACE_MODE: NeatRacingSimWorkerRaceMode =
+  'manual';
+
+/**
  * Boot-session teardown bookkeeping (frame loop, resize listener, fallback
  * notice, stopped flag) shared by the wired boot surfaces.
  */
@@ -248,6 +393,10 @@ interface BootSession {
   keyupListener: ((event: KeyboardEvent) => void) | null;
   /** Composer + pass teardown installed by the drive loop, or null. */
   driveTeardown: (() => void) | null;
+  /** Live simulation-worker session, or null once it is stopped. */
+  simSession: NeatRacingSimWorkerSession | null;
+  /** Network-panel teardown (resize uninstall + canvas removal), or null. */
+  networkPanelTeardown: (() => void) | null;
   /** Starfield pass updated on resize by the boot listener, or null. */
   starfieldPass: StarfieldPass | null;
 }
@@ -321,10 +470,11 @@ function neatRacingStart(outputId: string): NeatRacingStop {
 
   // Step 6: Build the live drive loop — decode the static voxel assets,
   // assemble the composer passes once (degrading to an inert composer when
-  // the context lacks program support or composition throws), and start the
-  // RAF loop. The session owns the fixed-timestep accumulator: each frame
-  // advances it (physics → rules → HUD → composer). One request at boot,
-  // one re-request per frame (AC-003 cadence).
+  // the context lacks program support or composition throws), boot the
+  // simulation-worker session, and start the RAF loop. The worker owns the
+  // fixed-timestep accumulator: each frame feeds the protocol one pace
+  // request and rebinds the reply (physics → rules snapshots). One request
+  // at boot, one re-request per frame (AC-003 cadence).
   const driveSession = startLiveDriveLoop(gl, session, overlays, canvas);
   startRenderLoop(session, driveSession);
 
@@ -447,6 +597,8 @@ function createBootSession(): BootSession {
     keydownListener: null,
     keyupListener: null,
     driveTeardown: null,
+    simSession: null,
+    networkPanelTeardown: null,
     starfieldPass: null,
   };
 }
@@ -512,6 +664,28 @@ function createBootProgramRegistry(
     bloomBlur,
     bloomAdditive,
   ];
+}
+
+/**
+ * Resolves the defensively clamped adaptive-quality stage record for a
+ * controller stage index (AC-035): negative, out-of-range or non-finite
+ * controller outputs clamp into the stage ladder so the off-switch knob is
+ * ALWAYS a defined stage record (never `undefined`).
+ *
+ * @param stageIndex - The raw stage index handed back by the ticked
+ *   controller.
+ * @returns The resolved (defensively clamped) stage record.
+ */
+function resolveAdaptiveQualityStageClamped(
+  stageIndex: number,
+): AdaptiveQualityStage {
+  const clampedStageIndex = Number.isFinite(stageIndex)
+    ? Math.min(
+        Math.max(Math.trunc(stageIndex), 0),
+        NEATRACING_ADAPTIVE_QUALITY_MAX_STAGE_INDEX,
+      )
+    : 0;
+  return NEATRACING_ADAPTIVE_QUALITY_STAGES[clampedStageIndex];
 }
 
 /**
@@ -760,26 +934,473 @@ export function multiplyViewProjectionInto(
 }
 
 /**
+ * One track chord: a straight piece of the generated loop plus its
+ * along-track arc-length offset.
+ *
+ * WHY: the host-owned along-track progress meter measures a car's position
+ * by the NEAREST-CHORD rule over the generated segments, so the meter needs
+ * the chord geometry (start, end, length) and the arc-length offset of each
+ * chord in loop order.
+ */
+export interface NeatRacingTrackChord {
+  /** The chord start point (generator x / y plane). */
+  readonly startX: number;
+  /** The chord start point (generator x / y plane). */
+  readonly startY: number;
+  /** The chord end point (generator x / y plane). */
+  readonly endX: number;
+  /** The chord end point (generator x / y plane). */
+  readonly endY: number;
+  /** The chord length (world units). */
+  readonly lengthM: number;
+  /** The chord's arc-length offset from the loop start (world units). */
+  readonly startOffsetM: number;
+}
+
+/**
+ * The boot-time chord index the host-owned progress meter rides.
+ */
+export interface NeatRacingTrackChordIndex {
+  /** The chords in loop order. */
+  readonly chords: readonly NeatRacingTrackChord[];
+  /** The total loop length (world units). */
+  readonly loopLengthM: number;
+}
+
+/**
+ * The host-owned along-track progress state of ONE car.
+ *
+ * UNIT: the progress meter measures METERS along the track's centerline
+ * (the sum of the generated segments' chord lengths).
+ */
+export interface NeatRacingCarProgressState {
+  /** The monotone along-track total (meters). */
+  readonly totalM: number;
+  /** The along-track offset inside the loop (meters, `0..loopLengthM`). */
+  readonly alongM: number;
+  /** The incumbent chord index (the nearest chord). */
+  readonly chordIndex: number;
+}
+
+/**
+ * The host decision surface for one AI-mode goal crossing.
+ */
+export interface NeatRacingAiModeRebaseDecision {
+  /**
+   * The level the host round must rebase onto, or null when the crossing
+   * did not promote the goal session.
+   */
+  readonly rebaseRung: NeatRacingObservationLevel | null;
+}
+
+/**
+ * The host-owned lap-fact bookkeeping for one rendered frame.
+ */
+export interface NeatRacingLapFactAdvance {
+  /** The baseline the host adopted (the rules' laps completed). */
+  readonly lapBaseline: number;
+  /** The laps completed since the last crossing (the protocol counter). */
+  readonly lapsSinceLastCrossing: number;
+  /** True when the frame carried a forward crossing. */
+  readonly crossed: boolean;
+}
+
+/**
+ * Builds the chord index the host-owned progress meter rides.
+ *
+ * The chords are the generated track's segments in loop order; the arc-length
+ * offsets are ONE prefix-sum over the chord lengths, so the index is built
+ * once per boot and never rebuilt per frame.
+ *
+ * @param segments - The generated track's segments in loop order.
+ * @returns The chord index and the total loop length.
+ *
+ * @example
+ * ```ts
+ * const index = buildNeatRacingTrackChordIndex(trackSpec.segments);
+ * ```
+ */
+export function buildNeatRacingTrackChordIndex(
+  segments: readonly TrackSegment[],
+): NeatRacingTrackChordIndex {
+  const chords: NeatRacingTrackChord[] = [];
+  let startOffsetM = 0;
+  for (const segment of segments) {
+    const lengthM = Math.hypot(
+      segment.endX - segment.startX,
+      segment.endY - segment.startY,
+    );
+    chords.push({
+      startX: segment.startX,
+      startY: segment.startY,
+      endX: segment.endX,
+      endY: segment.endY,
+      lengthM,
+      startOffsetM,
+    });
+    startOffsetM += lengthM;
+  }
+  return { chords, loopLengthM: startOffsetM };
+}
+
+/**
+ * Resolves the squared distance from a point to the nearest point of a
+ * chord (the clamped projection).
+ *
+ * @param chord - The chord to measure against.
+ * @param pointX - The point's generator x coordinate.
+ * @param pointY - The point's generator y coordinate.
+ * @returns The squared distance.
+ */
+function resolveChordDistanceSq(
+  chord: NeatRacingTrackChord,
+  pointX: number,
+  pointY: number,
+): number {
+  const chordX = chord.endX - chord.startX;
+  const chordY = chord.endY - chord.startY;
+  const lengthSq = chord.lengthM * chord.lengthM;
+  const relX = pointX - chord.startX;
+  const relY = pointY - chord.startY;
+  if (lengthSq === 0) {
+    return relX * relX + relY * relY;
+  }
+  const t = Math.min(
+    1,
+    Math.max(0, (relX * chordX + relY * chordY) / lengthSq),
+  );
+  const offsetX = relX - t * chordX;
+  const offsetY = relY - t * chordY;
+  return offsetX * offsetX + offsetY * offsetY;
+}
+
+/**
+ * Resolves the along-track offset of a point on a chord (meters).
+ *
+ * @param chord - The chord to measure against.
+ * @param pointX - The point's generator x coordinate.
+ * @param pointY - The point's generator y coordinate.
+ * @returns The along-track offset from the loop start (meters).
+ */
+function resolveChordAlongM(
+  chord: NeatRacingTrackChord,
+  pointX: number,
+  pointY: number,
+): number {
+  const chordX = chord.endX - chord.startX;
+  const chordY = chord.endY - chord.startY;
+  const lengthSq = chord.lengthM * chord.lengthM;
+  const relX = pointX - chord.startX;
+  const relY = pointY - chord.startY;
+  if (lengthSq === 0) {
+    return chord.startOffsetM;
+  }
+  const t = Math.min(
+    1,
+    Math.max(0, (relX * chordX + relY * chordY) / lengthSq),
+  );
+  return chord.startOffsetM + t * chord.lengthM;
+}
+
+/**
+ * Resolves the nearest chord of a point (the nearest-chord rule).
+ *
+ * The scan is WINDOWED around the incumbent chord index (a car moves a few
+ * chords per frame) and falls back to a FULL scan whenever the windowed
+ * winner sits on the window boundary, so the nearest chord is always the
+ * true nearest one.
+ *
+ * @param index - The boot-time chord index.
+ * @param pointX - The point's generator x coordinate.
+ * @param pointY - The point's generator y coordinate.
+ * @param incumbentIndex - The incumbent chord index of the previous frame.
+ * @returns The index of the nearest chord.
+ */
+function resolveNearestChordIndex(
+  index: NeatRacingTrackChordIndex,
+  pointX: number,
+  pointY: number,
+  incumbentIndex: number,
+): number {
+  const chords = index.chords;
+  if (chords.length === 0) {
+    return 0;
+  }
+  const windowStart = Math.max(
+    0,
+    incumbentIndex - NEATRACING_PROGRESS_CHORD_SCAN_WINDOW,
+  );
+  const windowEnd = Math.min(
+    chords.length - 1,
+    incumbentIndex + NEATRACING_PROGRESS_CHORD_SCAN_WINDOW,
+  );
+  let bestIndex = windowStart;
+  let bestDistanceSq = Number.POSITIVE_INFINITY;
+  for (let chordIndex = windowStart; chordIndex <= windowEnd; chordIndex += 1) {
+    const chord = chords[chordIndex];
+    if (chord === undefined) {
+      continue;
+    }
+    const distanceSq = resolveChordDistanceSq(chord, pointX, pointY);
+    if (distanceSq < bestDistanceSq) {
+      bestDistanceSq = distanceSq;
+      bestIndex = chordIndex;
+    }
+  }
+  const onWindowBoundary = bestIndex === windowStart || bestIndex === windowEnd;
+  if (!onWindowBoundary) {
+    return bestIndex;
+  }
+  // FULL-SCAN FALLBACK: the windowed winner sits on the boundary, so the
+  // true nearest chord may live outside the window.
+  let fullBestIndex = 0;
+  let fullBestDistanceSq = Number.POSITIVE_INFINITY;
+  for (let chordIndex = 0; chordIndex < chords.length; chordIndex += 1) {
+    const chord = chords[chordIndex];
+    if (chord === undefined) {
+      continue;
+    }
+    const distanceSq = resolveChordDistanceSq(chord, pointX, pointY);
+    if (distanceSq < fullBestDistanceSq) {
+      fullBestDistanceSq = distanceSq;
+      fullBestIndex = chordIndex;
+    }
+  }
+  return fullBestIndex;
+}
+
+/**
+ * Resolves the host-owned along-track progress of one car.
+ *
+ * UNIT: METERS along the track's centerline (the sum of the generated
+ * segments' chord lengths). The position inside the loop comes from the
+ * NEAREST-CHORD rule (the clamped projection onto the nearest chord); the
+ * total accumulates the forward distance and detects a half-loop wrap.
+ *
+ * WRAP LAW: the wrap direction is read from the SIGN of `deltaM`; the
+ * loop-length correction applies OPPOSITE that sign. A FORWARD crossing
+ * of the loop start DROPS the global along-track position (`deltaM` very
+ * negative) and grows the total by the loop tail + head
+ * (`deltaM + loopLengthM`, the +L correction opposite the negative
+ * sign). A BACKWARD crossing RAISES the position (`deltaM` very
+ * positive) and DECREMENTS the total by the wrapped shorter displacement
+ * (`deltaM - loopLengthM`): the rivals never own the rules' laps (the
+ * worker's lap detector is car-0-only), so the host accepts the
+ * decrement instead of inventing a lap counter of its own.
+ *
+ * @param index - The boot-time chord index.
+ * @param carX - The car's generator x coordinate.
+ * @param carY - The car's generator y coordinate.
+ * @param previous - The previous progress state, or null on the first frame.
+ * @returns The car's progress state.
+ *
+ * @example
+ * ```ts
+ * const progress = resolveNeatRacingCarAlongProgressM(
+ *   index,
+ *   car.x,
+ *   car.y,
+ *   previous,
+ * );
+ * ```
+ */
+export function resolveNeatRacingCarAlongProgressM(
+  index: NeatRacingTrackChordIndex,
+  carX: number,
+  carY: number,
+  previous: NeatRacingCarProgressState | null,
+): NeatRacingCarProgressState {
+  const chords = index.chords;
+  if (chords.length === 0 || index.loopLengthM <= 0) {
+    return { totalM: 0, alongM: 0, chordIndex: 0 };
+  }
+  const incumbentIndex = previous?.chordIndex ?? 0;
+  const chordIndex = resolveNearestChordIndex(
+    index,
+    carX,
+    carY,
+    incumbentIndex,
+  );
+  const chord = chords[chordIndex];
+  if (chord === undefined) {
+    return { totalM: 0, alongM: 0, chordIndex: 0 };
+  }
+  const alongM = resolveChordAlongM(chord, carX, carY);
+  if (previous === null) {
+    return { totalM: alongM, alongM, chordIndex };
+  }
+  const deltaM = alongM - previous.alongM;
+  const halfLoopM = index.loopLengthM * NEATRACING_PROGRESS_HALF_LOOP_FRACTION;
+  if (deltaM > halfLoopM) {
+    const totalM = previous.totalM + deltaM - index.loopLengthM;
+    return { totalM, alongM, chordIndex };
+  }
+  if (deltaM < -halfLoopM) {
+    const totalM = previous.totalM + deltaM + index.loopLengthM;
+    return { totalM, alongM, chordIndex };
+  }
+  return { totalM: previous.totalM + deltaM, alongM, chordIndex };
+}
+
+/**
+ * Resolves the host's rebase decision for one AI-mode goal crossing.
+ *
+ * The decision surface is PURE: the host applies the rebase (re-boot the
+ * worker round on the promoted rung) and the suite can exercise the same
+ * decision without a live promoted round.
+ *
+ * @param outcome - The goal machine's outcome for the crossing.
+ * @returns The rebase decision (null when the round does not rebase).
+ *
+ * @example
+ * ```ts
+ * const decision = resolveNeatRacingAiModeRebaseRung(outcome);
+ * if (decision.rebaseRung !== null) {
+ *   rebaseHostRound(decision.rebaseRung);
+ * }
+ * ```
+ */
+export function resolveNeatRacingAiModeRebaseRung(
+  outcome: NeatRacingAiModeGoalCrossingOutcome,
+): NeatRacingAiModeRebaseDecision {
+  if (outcome.kind !== 'promoted') {
+    return { rebaseRung: null };
+  }
+  // The promoted rung is the PROMOTED SESSION's level (the machine already
+  // clamped the evaluation's `toLevel` onto the shared observation ladder).
+  return { rebaseRung: outcome.session.level };
+}
+
+/**
+ * Resolves the AI-mode goal session a mode switch must boot.
+ *
+ * A switch INTO `ai` boots a FRESH goal session on the start level; a
+ * switch to `manual` parks the AI-mode lifecycle (the adopted session stays
+ * adopted and NO further goal facts are fed), so the resolver returns null.
+ *
+ * @param mode - The UI race mode the host switched to.
+ * @returns The fresh goal session, or null when the lifecycle parks.
+ *
+ * @example
+ * ```ts
+ * const booted = resolveNeatRacingAiModeGoalSessionForMode('ai');
+ * ```
+ */
+export function resolveNeatRacingAiModeGoalSessionForMode(
+  mode: NeatRacingRaceMode,
+): NeatRacingAiModeGoalSession | null {
+  if (mode !== 'ai') {
+    return null;
+  }
+  return createNeatRacingAiModeGoalSession(NEATRACING_AI_MODE_START_LEVEL);
+}
+
+/**
+ * Resolves the host-owned lap-fact bookkeeping for one rendered frame.
+ *
+ * The worker owns the lap detector (car 0 only); the host keeps the
+ * baseline it adopted at the round boot and derives the laps completed since
+ * the last crossing from the protocol's forward-lap counter.
+ *
+ * @param lapBaseline - The laps completed the host adopted as its baseline.
+ * @param lapsCompleted - The laps completed the rules clone now reports.
+ * @returns The lap-fact advance (no crossing when nothing changed).
+ *
+ * @example
+ * ```ts
+ * const advance = resolveNeatRacingLapFactAdvance(0, 1);
+ * // { lapBaseline: 1, lapsSinceLastCrossing: 1, crossed: true }
+ * ```
+ */
+export function resolveNeatRacingLapFactAdvance(
+  lapBaseline: number,
+  lapsCompleted: number,
+): NeatRacingLapFactAdvance {
+  if (lapsCompleted <= lapBaseline) {
+    return { lapBaseline, lapsSinceLastCrossing: 0, crossed: false };
+  }
+  return {
+    lapBaseline: lapsCompleted,
+    lapsSinceLastCrossing: lapsCompleted - lapBaseline,
+    crossed: true,
+  };
+}
+
+/**
+ * The host-owned display wheel-spin state of ONE car.
+ */
+interface NeatRacingWheelSpinState {
+  /** The accumulated display wheel spin (radians). */
+  accumulatorRad: number;
+  /** The last published physics tick the accumulator saw. */
+  lastTick: number;
+}
+
+/**
+ * The host-owned race state: what the drive loop reads from the worker
+ * protocol on every frame.
+ */
+interface NeatRacingHostRaceState {
+  /**
+   * Car 0 - the human's car and the AUTHORITY for every host binding
+   * (the chase camera, the HUD, the drift seam, the right-world pass).
+   */
+  car: PhysicsCarState | null;
+  /** The rival fleet (the worker's cars 1..n) in fleet order. */
+  rivals: PhysicsCarState[];
+  /** The worker's race-rules clone (the HUD's read model). */
+  rules: RaceRulesState;
+  /** The current frame's keyboard sample (the front-wheel steer source). */
+  input: NeatRacingKeyboardSample | null;
+}
+
+/**
+ * The host-owned AI-mode goal lifecycle state.
+ */
+interface NeatRacingAiModeGoalState {
+  /** The adopted goal session (parked while the UI mode is `manual`). */
+  session: NeatRacingAiModeGoalSession;
+  /** The sum of car 0's speeds over the CURRENT lap window. */
+  speedSum: number;
+  /** The number of frames in the CURRENT lap window. */
+  frameCount: number;
+  /** The number of off-road frames in the CURRENT lap window. */
+  offTrackFrameCount: number;
+  /** The host's own per-frame steer samples over the CURRENT lap window. */
+  steerSeries: number[];
+}
+
+/**
+ * The host-owned most-forward network panel state.
+ */
+interface NeatRacingNetworkPanelState {
+  /** The mounted panel canvas, or null when the panel is unmounted. */
+  canvas: HTMLCanvasElement | null;
+  /** The incumbent (sticky) most-forward agent id, or null. */
+  incumbentAgentId: number | null;
+}
+
+/**
  * Builds the live drive session and starts the RAF-driven drive: keyboard
  * presses are tracked on the window, the composer scene is assembled once
  * (decode + mesh the static voxel assets, per-pass program construction), and
- * every frame runs through the session-owned fixed-timestep drive
- * (`physics → rules → HUD → composer`).
+ * every frame runs through the simulation-worker protocol
+ * (`sample → worker frame → rebind → lap facts → HUD → panel → composer`).
  *
  * Composition is best-effort within a live render path: when the context
  * cannot compile programs (fake/headless GL surfaces) or the scene assembly
  * throws, the session keeps running against an inert composer that swallows
- * draw frames, so the drive loop (input, physics, rules, HUD) stays live
+ * draw frames, so the drive loop (input, the worker protocol, the HUD)
+ * stays live
  * without render-path noise. The composer and its passes are disposed by the
  * boot stop handle through the session teardown hook.
  *
- * The lap-line detector reads signed sides of segment 0's chord in the ground
- * plane (generator x maps to world x; generator y maps to world z) and
- * reports any strict sign flip as a crossing; direction filtering and
- * checkpoint ordering are carried gaps for later slices. The detector
- * baseline re-binds on every restart via a second boot-owned switch
- * subscription (the session itself still subscribes exactly one restart
- * listener at creation, preserving its contract).
+ * Step 05 (P2-S4-C) moved the SIMULATION out of the host: the worker owns
+ * the spawning, the physics, the race rules and the lap-line detector, and
+ * the host owns the input sampling, the composer bindings, the AI-mode goal
+ * lifecycle, the most-forward network panel and the teardown. Car 0 is the
+ * AUTHORITY for the chase camera, the HUD, the drift seam and the
+ * right-world pass; the rivals (cars 1..n) are the worker's fleet.
  *
  * @param gl - Live WebGL2 context for the mounted canvas.
  * @param session - Boot session receiving teardown bookkeeping.
@@ -793,36 +1414,26 @@ function startLiveDriveLoop(
   overlays: BootShellOverlays,
   canvas: HTMLCanvasElement,
 ) {
-  // Track geometry: the recycled generator with the pinned demo fixture; the
-  // resolver feeds the physics surface band, segments[0] feeds the lap line.
+  // Track geometry: the recycled generator with the pinned demo fixture. The
+  // resolver feeds the host's off-track measurement and the chord index
+  // feeds the host-owned along-track progress meter.
   const trackSpec: TrackSpec = generateTrack(NEATRACING_DEMO_TRACK_GENERATION);
   const surfaceResolver = createTrackSurfaceResolver(trackSpec.segments);
+  const chordIndex = buildNeatRacingTrackChordIndex(trackSpec.segments);
 
-  // Place the car on the first segment centerline so the race starts on
-  // the track and the track ribbon is visible from frame 0.
-  const firstSegment = trackSpec.segments[0];
-  const spawnHeading = firstSegment
-    ? Math.atan2(
-        firstSegment.endY - firstSegment.startY,
-        firstSegment.endX - firstSegment.startX,
-      )
-    : 0;
-  const spawnPose: PhysicsCarSpawnPose = {
-    x: (firstSegment?.startX ?? 0) + Math.cos(spawnHeading) * 2,
-    y: (firstSegment?.startY ?? 0) + Math.sin(spawnHeading) * 2,
-    heading: spawnHeading,
+  // The host-owned race state: car 0 is the AUTHORITY for the chase camera,
+  // the HUD, the drift seam and the right-world pass; the rivals are the
+  // worker's fleet (cars 1..n).
+  const raceState: NeatRacingHostRaceState = {
+    car: null,
+    rivals: [],
+    rules: createRaceRulesState(),
+    input: null,
   };
-
-  // Detector state: latched along-track side (meters past/before the
-  // finish plane); null until the first qualifying sample, cleared on
-  // restart and whenever the car leaves the gate window around the
-  // start point.
-  let lapLinePrevSide: number | null = null;
-  // Session holder bound right after creation; frame/physics closures read
-  // it only once the RAF loop starts (strictly after the binding below).
-  const driveHolder: { session: NeatRacingRaceSession | null } = {
-    session: null,
-  };
+  // The lap baseline the host adopted at the round boot. The worker's
+  // lap-line detector is the SINGLE authority for car 0's forward
+  // crossings, so the host only tracks the baseline it compares against.
+  let lapBaseline = 0;
 
   // Keyboard: track a stable presses record on the window; the session
   // samples it once per frame (the phase-1 drive contract).
@@ -898,49 +1509,6 @@ function startLiveDriveLoop(
   ) => void = (): void => undefined;
   let disposeComposition: (() => void) | null = null;
 
-  // Lap-line detector: the finish line is the plane through segment 0's
-  // start point perpendicular to the track. A lap counts when the car's
-  // along-track position flips sign while it stays inside the lateral
-  // gate around the start point (crossing that plane anywhere else on
-  // the loop, or lateral drift along the start straight, must not
-  // count). Any-flip semantics for phase 1 (direction filtering is a
-  // carried gap).
-  const NEATRACING_LAP_LINE_LATERAL_GATE_M = 5;
-  const NEATRACING_LAP_LINE_ALONG_EPS_M = 0.5;
-  const resolveForwardLapLineCrossing = (): boolean => {
-    const car = driveHolder.session?.state.car ?? null;
-    if (car === null) {
-      return false;
-    }
-    const firstSegment = trackSpec.segments[0];
-    if (firstSegment === undefined) {
-      return false;
-    }
-    const chordX = firstSegment.endX - firstSegment.startX;
-    const chordZ = firstSegment.endY - firstSegment.startY;
-    const chordLength = Math.hypot(chordX, chordZ);
-    if (chordLength === 0) {
-      return false;
-    }
-    const relX = car.x - firstSegment.startX;
-    const relY = car.y - firstSegment.startY;
-    const alongM = (relX * chordX + relY * chordZ) / chordLength;
-    const lateralM = (chordX * relY - chordZ * relX) / chordLength;
-    if (Math.abs(lateralM) > NEATRACING_LAP_LINE_LATERAL_GATE_M) {
-      lapLinePrevSide = null;
-      return false;
-    }
-    if (Math.abs(alongM) < NEATRACING_LAP_LINE_ALONG_EPS_M) {
-      return false;
-    }
-    const baseline = lapLinePrevSide;
-    lapLinePrevSide = alongM;
-    if (baseline === null) {
-      return false;
-    }
-    return baseline * alongM < 0;
-  };
-
   // Reusable frame building bags: one draw frame object refreshed in place
   // per frame (the composer consumes it immediately, so reuse is safe).
   const viewProjection = new Float32Array(16);
@@ -969,6 +1537,12 @@ function startLiveDriveLoop(
     tractionSeverity: 0,
   };
   const carsBag = [carPoseBag];
+  // The rival pose bags are allocated ONLY when the fleet GROWS (the array
+  // identity and the existing bags stay stable, so the composer's readonly
+  // `cars` reference never changes). The parallel spin and progress states
+  // keep the SAME length as the bag array.
+  const rivalSpinStates: NeatRacingWheelSpinState[] = [];
+  const rivalProgressStates: (NeatRacingCarProgressState | null)[] = [];
   // The drift debug seam BAG (Step 14Q2): ONE stable object, refreshed IN
   // PLACE every frame, so the seam can carry the PUBLISHED traction
   // severity WITHOUT a per-frame allocation (the zero per-frame
@@ -1008,7 +1582,7 @@ function startLiveDriveLoop(
   // restart winds the tick counter backwards.
   let wheelSpinAccumulatorRad = 0;
   let wheelSpinLastTick = 0;
-  let wheelSpinBoundSession: object | null = null;
+  let wheelSpinBoundSession: NeatRacingSimWorkerSession | null = null;
   const rightWorldCarPosition: [number, number, number] = [0, 0, 0];
   const rightWorldDrawState: RightWorldPassDrawState = {
     viewProjection,
@@ -1018,6 +1592,15 @@ function startLiveDriveLoop(
     timeSeconds: 0,
     carPosition: rightWorldCarPosition,
   };
+  // The adaptive-quality controller (AC-035): ONE state instance per drive
+  // session, ticked EXACTLY once per rendered frame by the drive loop; the
+  // composed frame's bloom off-switch is the RESOLVED (defensively
+  // clamped) stage record's value. The driven rAF timestamp is the
+  // controller's frame clock; the tracker below publishes a zero delta for
+  // the first rendered frame (the controller ignores non-positive deltas).
+  const adaptiveQualityState: AdaptiveQualityState =
+    createInitialAdaptiveQualityState();
+  let adaptiveLastFrameTimestampMs: number | null = null;
   const composerFrame: NeatRacingFrameComposerFrame = {
     viewProjection,
     cameraWorld,
@@ -1025,7 +1608,12 @@ function startLiveDriveLoop(
     pulses: pulseListBag,
     cars: carsBag,
     rightWorld: rightWorldDrawState,
-    enabled: true,
+    // AC-035: the construction-time neutral IS the controller ladder's
+    // full-quality stage record (defensively clamped lookup), refreshed
+    // per rendered frame from the ticked controller in the drive loop.
+    enabled:
+      resolveAdaptiveQualityStageClamped(adaptiveQualityState.stage)
+        .bloomEnabled,
   };
 
   // Frame builder: chase camera hovering behind and above the car, looking
@@ -1035,9 +1623,9 @@ function startLiveDriveLoop(
   // The wheel spin accumulates the clamped visual omega per stepped tick
   // (AC-015 strobing cap) instead of replaying the uncapped physical integral.
   const buildComposerFrame = (): NeatRacingFrameComposerFrame => {
-    const boundSession = driveHolder.session;
-    if (boundSession !== null) {
-      const car = boundSession.state.car;
+    const boundSession = session.simSession;
+    const car = raceState.car;
+    if (car !== null) {
       const carSceneZ = carSceneWorldZ(car.y);
       // Step 14P: the chase camera follows the TRAVEL direction (the
       // PUBLISHED slip), not the nose. The follow advances in TICKS - the
@@ -1083,7 +1671,7 @@ function startLiveDriveLoop(
         carSceneYawRad(car.heading),
         wheelSpinAccumulatorRad,
         NEATRACING_TEAM_ID_RED,
-        boundSession.state.input?.steer,
+        raceState.input?.steer,
       );
       // AC-047C / AC-087: feed the pre-computed visual drift pose from the
       // physics state directly into the car pass. The pose now lives in the
@@ -1127,6 +1715,9 @@ function startLiveDriveLoop(
       driftSeamBag.followOffsetRad = chaseFollow.offsetRad;
       driftSeamBag.tractionSeverity = car.tractionSeverity;
       window.neatRacingDriftState = driftSeamBag;
+      // The rivals (the worker's fleet, cars 1..n) are refreshed in their
+      // own stable pose bags; car 0 keeps its own bag above.
+      syncRivalPoseBags();
       // Ambient pulse window (TP-20): the pure time-window collector turns
       // the deterministic physics tick count into the alive-set, newest
       // first, so the expanding ground rings replay identically per seed.
@@ -1276,52 +1867,607 @@ function startLiveDriveLoop(
     }
   }
 
-  // The session owns the drive contract: one sampled driving input per
-  // frame (the autopilot seam when the selector is on `ai` — the page
-  // opens as a running race — else the keyboard sample), physics then
-  // rules per released tick, one hud.update per drawn frame, and exactly
-  // one composer drawFrame per frame (zero-step frames included).
-  const driveSession = createRaceSession({
-    composer: { drawFrame: (frame) => drawComposerFrame(frame) },
-    hud: overlays.hud,
-    modeSelector: overlays.selector,
-    presses,
-    sampleKeyboardInput,
-    sampleAutoInput: (car) => stepAutopilotInput(car, trackSpec.splineSamples),
-    stepPhysics: (car, input) =>
-      stepPhysics(car, input, surfaceResolver, trackSpec.segments),
-    stepRaceRules,
-    resolveForwardLapLineCrossing,
-    createInitialCarState: () =>
-      createInitialPhysicsCarState(trackSpec.seed, spawnPose),
-    buildComposerFrame,
-  });
-  driveHolder.session = driveSession;
+  // =====================================================================
+  // The simulation-worker protocol wiring (P2-S4-C).
+  //
+  // The worker owns spawning, the physics fleet, the race rules and the
+  // car-0 lap-line detector. The host boots ONE worker session per racing
+  // round, feeds it the once-per-frame keyboard sample, and rebinds its
+  // composer/HUD state from the per-frame `frames` reply:
+  //
+  // `sample → worker frame → LAST `frames` reply → rebind → lap facts →
+  // HUD → panel → composer`
+  //
+  // LD-12 (the human takes car 0 in BOTH UI modes): every round is booted
+  // with the worker raceMode 'manual' ALWAYS. The worker's own 'ai' race
+  // mode would drive car 0 with the worker autopilot seam and steal the
+  // human's controls, so it is NOT booted here; the AI-mode goal machine
+  // lives in the HOST (ai-mode.goals) and is fed by the host's honest lap
+  // windows. Car 0 stays the human's car and the AUTHORITY for the chase
+  // camera, the HUD, the drift seam and the right-world pass in both
+  // modes; the rivals (cars 1..n) are the worker's fleet.
+  //
+  // Rivals join at the promotion rungs (NEATRACING_TEAM_LAYOUTS: level 1
+  // is a lone car 0 with no rivals, level 2 carries 2 cars, level 3
+  // carries 5 cars), so the level-1 boot carries the lone-car fleet and
+  // the most-forward network panel rides its idle path until a promoted
+  // rebase grows the fleet.
+  // =====================================================================
 
-  // Boot-owned restart carrier: the session subscribed its own restart
-  // listener exactly once at creation (contract); this second boot-owned
-  // subscription only re-binds the detector baseline so a fresh car never
-  // registers a spurious crossing against the previous car's side sample.
+  /**
+   * The AI-mode goal lifecycle: the adopted goal-machine session plus the
+   * HONEST per-lap-window measurement accumulators. Null until the first
+   * switch into 'ai'; parked (kept adopted, never fed again) by a switch
+   * back to 'manual' because the per-frame feed gates on the selector
+   * mode.
+   */
+  let goalState: NeatRacingAiModeGoalState | null = null;
+  /**
+   * The scripted-baseline lap pace (m/s) of the generated demo track:
+   * computed ONCE per AI-lane lifecycle at the first AI boot by the pure
+   * deterministic probe (up to its pinned 12k-tick budget — boot cost,
+   * accepted) and reused across restarts of the same track (never re-run
+   * per crossing).
+   */
+  let scriptedBaselineLapPaceM: number | null = null;
+  /** The most-forward network panel state (mounted canvas + incumbent). */
+  const panelState: NeatRacingNetworkPanelState = {
+    canvas: null,
+    incumbentAgentId: null,
+  };
+  /** The panel's cached idle frame (resolved once per mount). */
+  let panelIdleFrame: NetworkVisualizationResolvedFrame | null = null;
+  /**
+   * The panel's cached 2D context, resolved ONCE per mount; null parks the
+   * panel draw (a headless or 2D-less canvas never throws per frame).
+   */
+  let panelContext: CanvasRenderingContext2D | null = null;
+  /** The session identity the panel progress states are bound to. */
+  let panelProgressBoundSession: NeatRacingSimWorkerSession | null = null;
+  /** The session identity the rival wheel-spin accumulators are bound to. */
+  let rivalSpinBoundSession: NeatRacingSimWorkerSession | null = null;
+
+  /**
+   * Boots one fresh worker session on the given level.
+   *
+   * The init request carries the GENERATED track spec (the worker owns
+   * spawning from it), the demo rung's fleet size, the pack schema version,
+   * the honest opponent snapshot for the rung, the pinned demo track id and
+   * the default feature flags. The raceMode is the worker 'manual' ALWAYS
+   * (LD-12: see the section banner above).
+   *
+   * @param bootLevel - The rules level the round races on: at loop boot the
+   *   rules' starting level, on restarts the carrier's next-race level.
+   * @returns The freshly booted (ready) worker session.
+   */
+  const bootSimWorkerRound = (
+    bootLevel: number,
+  ): NeatRacingSimWorkerSession => {
+    const simSession = createSimWorkerSession();
+    const agentCount = resolveNeatRacingLevelCarCount(bootLevel);
+    simSession.handleRequest({
+      type: 'init',
+      payload: {
+        seed: trackSpec.seed,
+        agentCount,
+        packSchemaVersion: NEATRACING_PACK_SCHEMA_VERSION,
+        opponentSnapshot: { level: bootLevel, carCount: agentCount },
+        trackId: NEATRACING_DEMO_TRACK_ID,
+        featureFlags: NEATRACING_DEFAULT_FEATURE_FLAGS,
+        trackSpec,
+        raceMode: NEATRACING_DEMO_WORKER_RACE_MODE,
+      },
+    });
+    return simSession;
+  };
+
+  /**
+   * Restarts the worker round on the given level.
+   *
+   * The old session receives the terminal `{type:'stop'}` request and is
+   * DISCARDED (`'stop'` is terminal — a stopped session is never reused);
+   * a fresh session is booted and init'd on the new level. Everything that
+   * is bound to the OLD round's identity is reset: the lap baseline, the
+   * AI-mode lap window, the panel progress/incumbent rebinding key, and
+   * the chase + wheel-spin rebindings (the composer's next frame resets
+   * their keyed states against the new session).
+   *
+   * @param bootLevel - The rules level the fresh round races on.
+   */
+  const restartSimWorkerRound = (bootLevel: number): void => {
+    session.simSession?.handleRequest({ type: 'stop' });
+    session.simSession = bootSimWorkerRound(bootLevel);
+    // The fresh round's rules start the protocol laps at zero again.
+    lapBaseline = 0;
+    // The chase + wheel-spin rebinding keys on the session identity: the
+    // next frame re-bases both against the NEW session (its tick counter
+    // restarts at zero).
+    wheelSpinBoundSession = null;
+    rivalSpinBoundSession = null;
+    chaseFollow.offsetRad = 0;
+    chaseFollow.lastTick = 0;
+    // The panel progress is a host-owned along-track meter: a fresh round
+    // restarts it from the fresh spawn, so the rebinding key and the
+    // incumbent reset (keyed states clear on the next panel update).
+    panelProgressBoundSession = null;
+    panelState.incumbentAgentId = null;
+    // The AI-mode lap window (if booted) starts over on the fresh round.
+    resetAiModeGoalWindow();
+  };
+
+  /**
+   * Resets the AI-mode lap-window accumulators (the current crossing's
+   * measurement window). The adopted goal session is never touched: only
+   * the window measurements reset.
+   */
+  const resetAiModeGoalWindow = (): void => {
+    if (goalState === null) {
+      return;
+    }
+    goalState.speedSum = 0;
+    goalState.frameCount = 0;
+    goalState.offTrackFrameCount = 0;
+    goalState.steerSeries.length = 0;
+  };
+
+  /**
+   * Boots (or re-boots) the AI-mode goal lifecycle on a switch into 'ai'.
+   *
+   * Every switch into 'ai' boots a FRESH goal session on the AI-mode start
+   * level through the exported mode resolver (its session boot stays on
+   * the live wiring path, not test-only); the scripted-baseline probe
+   * resolves once per AI-lane lifecycle (the same generated track always
+   * scores the same pace, so restarts of the same track reuse the one
+   * probe result). The measurement window starts empty.
+   *
+   * @returns The freshly booted goal state.
+   */
+  const bootAiModeGoalLifecycle = (): NeatRacingAiModeGoalState => {
+    if (scriptedBaselineLapPaceM === null) {
+      scriptedBaselineLapPaceM =
+        runNeatRacingScriptedBaselineProbeEpisode({ trackSpec }).meanLapSpeed;
+    }
+    const session = resolveNeatRacingAiModeGoalSessionForMode(
+      overlays.selector.mode,
+    );
+    if (session === null) {
+      // The 'ai' switch branch guards the mode, so the resolver's parked
+      // 'manual' null cannot fire on the live path; the guard mirrors the
+      // suite's contract guard.
+      throw new Error('an ai switch must boot a goal session');
+    }
+    goalState = {
+      session,
+      speedSum: 0,
+      frameCount: 0,
+      offTrackFrameCount: 0,
+      steerSeries: [],
+    };
+    return goalState;
+  };
+
+  /**
+   * Feeds one forward lap crossing into the AI-mode goal machine and
+   * applies its outcome (a promoted rebase reboots the worker round on the
+   * promoted rung).
+   *
+   * The measurements are HONEST lap-window facts of the host's OWN car-0
+   * traffic: the mean published speed over the window, the fraction of
+   * window frames off the road surface, the TP-09 steering-oscillation
+   * metric of the host's OWN steer samples (the single metric source law),
+   * and the ONE-time scripted baseline. The carrier node count is
+   * honestly 0 (E11(a): per-tick rival control and growth live inside the
+   * workers; this slice's crossings ride the machine's non-promoting
+   * `lapCounted` path and the demos keep racing per LD-10).
+   */
+  const feedAiModeGoalCrossing = (lapsSinceLastCrossing: number): void => {
+    const currentGoal = goalState;
+    if (
+      currentGoal === null ||
+      scriptedBaselineLapPaceM === null ||
+      raceState.car === null ||
+      currentGoal.frameCount === 0
+    ) {
+      return;
+    }
+    const outcome = recordNeatRacingAiModeGoalCrossing(currentGoal.session, {
+      forwardCrossing: true,
+      lapsSinceLastCrossing,
+      nodeCount: NEATRACING_DEMO_EVOLVED_NODE_COUNT,
+      drivability: {
+        meanForwardSpeed: currentGoal.speedSum / currentGoal.frameCount,
+        scriptedBaselineLapPace: scriptedBaselineLapPaceM,
+        oscillationMetric: detectSteeringOscillation(currentGoal.steerSeries),
+        offTrackFraction:
+          currentGoal.offTrackFrameCount / currentGoal.frameCount,
+      },
+    });
+    // The adopted session follows the outcome in EVERY kind.
+    currentGoal.session = outcome.session;
+    // The measurement window resets after every fed crossing.
+    resetAiModeGoalWindow();
+    const decision = resolveNeatRacingAiModeRebaseRung(outcome);
+    if (decision.rebaseRung !== null) {
+      // The promoted rebase: the worker round reboots on the promoted rung
+      // and the panel progress restarts from the fresh spawn (restart
+      // helper).
+      restartSimWorkerRound(decision.rebaseRung);
+    }
+  };
+
+  /** Feeds the per-frame AI-mode measurement window (mode-gated). */
+  const accumulateAiModeGoalWindow = (
+    sample: NeatRacingKeyboardSample,
+    crossed: boolean,
+    lapsSinceLastCrossing: number,
+  ): void => {
+    const currentGoal = goalState;
+    const car = raceState.car;
+    // The lifecycle parks by GATE, not by teardown: a 'manual' selector
+    // leaves the adopted session adopted and starves the window, so a
+    // later 'ai' return boots a FRESH session and an empty window anyway.
+    if (
+      currentGoal === null ||
+      car === null ||
+      overlays.selector.mode !== 'ai'
+    ) {
+      return;
+    }
+    currentGoal.speedSum += car.speed;
+    currentGoal.frameCount += 1;
+    if (
+      surfaceResolver(car) !== NEATRACING_PHYSICS_SURFACE_ROAD
+    ) {
+      currentGoal.offTrackFrameCount += 1;
+    }
+    currentGoal.steerSeries.push(sample.steer);
+    if (crossed) {
+      feedAiModeGoalCrossing(lapsSinceLastCrossing);
+    }
+  };
+
+  /**
+   * Mounts the most-forward network panel canvas inside the reserved HUD
+   * output container (a SIBLING of the HUD's own subtree, under its own
+   * id, never a child of the HUD the container hosts) and installs the
+   * adapter's resize authority as the ONE sizing owner.
+   */
+  const mountNetworkPanel = (): void => {
+    if (panelState.canvas !== null) {
+      return;
+    }
+    const panelHost = document.getElementById(NEATRACING_HUD_OUTPUT_ID);
+    if (panelHost === null) {
+      // The reserved container is gone (host shell removed it): degrade
+      // with the file's console.warn pattern and keep the loop live.
+      console.warn('neatRacing: network panel host container missing');
+      return;
+    }
+    const panelCanvas = document.createElement('canvas');
+    panelCanvas.id = NEATRACING_NETWORK_PANEL_CANVAS_ID;
+    panelHost.appendChild(panelCanvas);
+    const resizeAuthority = installNeatRacingNetworkResize(
+      panelCanvas,
+      panelHost,
+      (): void => {
+        // The per-frame draw repaints immediately; the cache drops so the
+        // idle frame re-resolves at the resized backing store.
+        panelIdleFrame = null;
+      },
+    );
+    session.networkPanelTeardown = (): void => {
+      resizeAuthority.uninstall();
+      panelCanvas.remove();
+    };
+    panelState.canvas = panelCanvas;
+    panelState.incumbentAgentId = null;
+    panelIdleFrame = null;
+    panelContext = panelCanvas.getContext('2d');
+  };
+
+  /** Removes the network panel and its resize authority (idempotent). */
+  const unmountNetworkPanel = (): void => {
+    session.networkPanelTeardown?.();
+    session.networkPanelTeardown = null;
+    panelState.canvas = null;
+    panelState.incumbentAgentId = null;
+    panelIdleFrame = null;
+    panelContext = null;
+  };
+
+  /**
+   * Draws the most-forward network panel from the current rivals.
+   *
+   * The candidates are the RIVALS ONLY (car 0 is the human's panel-exempt
+   * car): each carries its host-owned along-track progress in meters and
+   * an ALWAYS-undefined network (E11(a): the transport-only worker exposes
+   * no evolved controller networks this slice — a networkless winner is
+   * never replaced by a networked runner-up, review F3 / AC-034; the
+   * winner with no network renders the adapter's idle state). Level 1 has
+   * no rivals, so the panel rides its idle path entirely.
+   */
+  const updateNetworkPanel = (): void => {
+    if (panelState.canvas === null || panelContext === null) {
+      return;
+    }
+    const boundSession = session.simSession;
+    if (panelProgressBoundSession !== boundSession) {
+      // The progress meter re-binds to the fresh round: the along-track
+      // totals restart from the fresh spawn and the incumbent clears.
+      panelProgressBoundSession = boundSession;
+      rivalProgressStates.fill(null);
+      panelState.incumbentAgentId = null;
+    }
+    const candidates: NeatRacingNetworkPanelCandidate[] = [];
+    for (
+      let rivalIndex = 0;
+      rivalIndex < raceState.rivals.length;
+      rivalIndex += 1
+    ) {
+      const rival = raceState.rivals[rivalIndex];
+      if (rival === undefined) {
+        continue;
+      }
+      const progress = resolveNeatRacingCarAlongProgressM(
+        chordIndex,
+        rival.x,
+        rival.y,
+        rivalProgressStates[rivalIndex] ?? null,
+      );
+      rivalProgressStates[rivalIndex] = progress;
+      candidates.push({
+        agentId: rivalIndex + 1,
+        network: undefined,
+        progress: progress.totalM,
+      });
+    }
+    const winner = resolveMostForwardNeatRacingAgent(
+      candidates,
+      panelState.incumbentAgentId ?? undefined,
+    );
+    panelState.incumbentAgentId = winner?.agentId ?? null;
+    if (winner !== undefined && winner.network !== undefined) {
+      // Future-transport path (a real network snapshot resolves a fresh
+      // frame each draw); no transport networks exist this slice.
+      const resolvedFrame = resolveNeatRacingNetworkPanelVisualizationFrame(
+        panelContext,
+        winner.network,
+      );
+      drawNeatRacingNetworkPanelFromFrame(panelContext, resolvedFrame);
+      return;
+    }
+    if (panelIdleFrame === null) {
+      panelIdleFrame = resolveNeatRacingNetworkPanelVisualizationFrame(
+        panelContext,
+        undefined,
+      );
+    }
+    drawNeatRacingNetworkPanelFromFrame(panelContext, panelIdleFrame);
+  };
+
+  /**
+   * Refreshes the rival pose bags (the worker's fleet, cars 1..n) in place.
+   *
+   * A bag is allocated ONLY when the fleet GROWS (a promoted rebase); the
+   * existing bag identities stay stable, so the composer's readonly
+   * `cars` reference never changes. A fresh round with a shorter fleet
+   * shrinks the parallel state arrays. Rival team colors cycle BLUE →
+   * GREEN → CYAN by rival index; car 0 keeps NEATRACING_TEAM_ID_RED.
+   *
+   * BOUNDARY: the rivals' steering samples are the worker's internal
+   * autopilot state and never travel with the `frames` reply, so the bags
+   * render neutral front-wheel steer instead of inventing a sample.
+   */
+  const syncRivalPoseBags = (): void => {
+    const rivals = raceState.rivals;
+    while (carsBag.length - 1 < rivals.length) {
+      carsBag.push({
+        worldX: 0,
+        worldZ: 0,
+        yawRad: 0,
+        teamColorId: NEATRACING_TEAM_ID_BLUE,
+        wheelSpinRad: 0,
+        steerAngleRad: 0,
+        driftYawOffsetRad: 0,
+        tractionSeverity: 0,
+      });
+      rivalSpinStates.push({ accumulatorRad: 0, lastTick: 0 });
+      rivalProgressStates.push(null);
+    }
+    while (carsBag.length - 1 > rivals.length) {
+      carsBag.pop();
+      rivalSpinStates.pop();
+      rivalProgressStates.pop();
+    }
+    if (rivalSpinBoundSession !== session.simSession) {
+      // The rival wheel-spin accumulators re-base onto the fresh round
+      // (its tick counter restarts at zero, like car 0's above).
+      rivalSpinBoundSession = session.simSession;
+      for (const rivalSpin of rivalSpinStates) {
+        rivalSpin.accumulatorRad = 0;
+        rivalSpin.lastTick = 0;
+      }
+    }
+    for (
+      let rivalIndex = 0;
+      rivalIndex < rivals.length;
+      rivalIndex += 1
+    ) {
+      const rival = rivals[rivalIndex];
+      const rivalPose = carsBag[rivalIndex + 1];
+      const rivalSpin = rivalSpinStates[rivalIndex];
+      if (rival === undefined || rivalPose === undefined) {
+        continue;
+      }
+      if (rivalSpin !== undefined && rival.tick < rivalSpin.lastTick) {
+        rivalSpin.accumulatorRad = 0;
+      }
+      const spinDeltaTicks =
+        rival.tick - (rivalSpin?.lastTick ?? rival.tick);
+      if (rivalSpin !== undefined) {
+        rivalSpin.lastTick = rival.tick;
+        if (spinDeltaTicks > 0) {
+          rivalSpin.accumulatorRad += computeVisualWheelSpinDeltaRad(
+            spinDeltaTicks,
+            NEATRACING_FIXED_TIMESTEP_SECONDS,
+            rival.speed,
+            wheelRadius,
+          );
+        }
+      }
+      fillCarRenderPose(
+        rivalPose,
+        rival.x,
+        carSceneWorldZ(rival.y),
+        carSceneYawRad(rival.heading),
+        rivalSpin?.accumulatorRad ?? 0,
+        NEATRACING_RIVAL_TEAM_COLOR_IDS[
+          rivalIndex % NEATRACING_RIVAL_TEAM_COLOR_IDS.length
+        ] ?? NEATRACING_TEAM_ID_BLUE,
+      );
+      // AC-047C / AC-088 for the rivals, too: the pre-computed visual
+      // drift pose and the PUBLISHED traction severity ride the worker's
+      // fleet snapshot; the host READS both and never re-derives either.
+      rivalPose.driftYawOffsetRad = rival.drift.pose.pose;
+      rivalPose.tractionSeverity = rival.tractionSeverity;
+    }
+  };
+
+  // Boot the round the loop opens with: the P1 rules seeding fixes the
+  // starting level, and the fresh rules state carries it (`nextRaceLevel`
+  // is null until a race-completion boundary sets it).
+  session.simSession = bootSimWorkerRound(raceState.rules.level);
+
+  /**
+   * Drives ONE frame through the worker protocol.
+   *
+   * The input samples ONCE per frame (the phase-1 cadence), the worker
+   * replies are taken for the LAST `frames` message, and the host rebinds:
+   * car 0 into the authority bag, the rivals into their pose bags, the
+   * rules into the HUD's read model, the lap facts from the protocol's
+   * forward-lap counter, the AI-mode window (mode-gated), the most-forward
+   * panel (mode-gated), the adaptive-quality controller tick (exactly once
+   * per rendered frame, AC-035) and exactly one composer draw — zero-step
+   * frames included.
+   *
+   * The controller tick consumes the WALL-CLOCK rAF delta (P3-S1-A
+   * OBS-9, carried): the RENDERED quality toggles derive from live frame
+   * pacing and are therefore not replay-stable, while physics and the
+   * chase camera stay deterministic — the tick never feeds the
+   * simulation.
+   *
+   * @param timestampMs - The rAF-style monotonic frame timestamp.
+   */
+  const driveSimProtocolFrame = (timestampMs: number): void => {
+    const simSession = session.simSession;
+    if (simSession === null) {
+      return;
+    }
+    const sample = sampleKeyboardInput(presses);
+    raceState.input = sample;
+    // Step 1: one protocol frame request per drawn frame.
+    const responses = simSession.handleRequest({
+      type: 'frame',
+      payload: { timestampMs, sample },
+    });
+    // Step 2: the LAST `frames` reply rebinds the host state.
+    let framesPayload: NeatRacingSimWorkerFramesPayload | null = null;
+    for (const simResponse of responses) {
+      if (simResponse.type === 'frames') {
+        framesPayload = simResponse.payload;
+      }
+    }
+    if (framesPayload === null) {
+      // Degrade (the file's console.warn pattern): a frame without a
+      // `frames` reply leaves the previous bindings drawn and the HUD
+      // untouched.
+      console.warn('neatRacing: simulation worker frames reply missing');
+      return;
+    }
+    raceState.rivals = framesPayload.cars.slice(1);
+    raceState.rules = framesPayload.rules;
+    const car = framesPayload.cars[0] ?? null;
+    raceState.car = car;
+    // Step 3: the worker's own car-0 lap authority drives the host's
+    // forward-lap facts (single authority: the protocol counter).
+    const lapAdvance = resolveNeatRacingLapFactAdvance(
+      lapBaseline,
+      raceState.rules.lapsCompleted,
+    );
+    lapBaseline = lapAdvance.lapBaseline;
+    // Step 4: the HUD read model updates EVERY drawn frame (the protocol
+    // car 0 speed, the rules clone and the PUBLISHED severity).
+    if (car !== null) {
+      overlays.hud.update({
+        speedUnitsPerS: car.speed,
+        raceState: raceState.rules,
+        tractionSeverity: car.tractionSeverity,
+      });
+    }
+    // Step 5: the AI-mode measurement window (mode-gated; the lap crossing
+    // feeds the goal machine and may rebase the round, which swaps the
+    // session identity the rebinding keys read on the NEXT frame).
+    accumulateAiModeGoalWindow(
+      sample,
+      lapAdvance.crossed,
+      lapAdvance.lapsSinceLastCrossing,
+    );
+    // Step 6: the most-forward network panel draw (mode-gated).
+    if (overlays.selector.mode === 'ai') {
+      updateNetworkPanel();
+    }
+    // Step 7: exactly one composer drawFrame per frame (zero-step frames
+    // included), with the adaptive-quality controller ticked EXACTLY once
+    // per rendered frame AHEAD of the composer draw (AC-035). The composed
+    // frame's bloom off-switch is the RESOLVED stage record's value from
+    // that tick; the per-frame path allocates nothing (the stable
+    // composer-frame bag is refreshed in place, zero per-frame rule).
+    const adaptiveFrameMs =
+      adaptiveLastFrameTimestampMs === null
+        ? 0
+        : timestampMs - adaptiveLastFrameTimestampMs;
+    adaptiveLastFrameTimestampMs = timestampMs;
+    composerFrame.enabled = resolveAdaptiveQualityStageClamped(
+      tickAdaptiveQuality(adaptiveQualityState, adaptiveFrameMs),
+    ).bloomEnabled;
+    drawComposerFrame(buildComposerFrame());
+  };
+
+  // The selector's restart carrier (Phase-2 JSDoc: the host shell owns the
+  // restart, in BOTH switch directions). The worker's rules clone right
+  // before the switch decides the fresh round's level: the carried
+  // next-race level when a race-completion boundary set it, the session
+  // level otherwise. A switch into 'ai' boots a fresh goal lifecycle and
+  // mounts the panel; a switch into 'manual' parks the lifecycle (the
+  // adopted session stays adopted, no further goal facts are fed) and
+  // unmounts the panel.
   overlays.selector.onSwitch((): void => {
-    lapLinePrevSide = null;
+    restartSimWorkerRound(
+      raceState.rules.nextRaceLevel ?? raceState.rules.level,
+    );
+    if (overlays.selector.mode === 'ai') {
+      bootAiModeGoalLifecycle();
+      mountNetworkPanel();
+      return;
+    }
+    unmountNetworkPanel();
   });
 
-  // Composer + pass teardown rides on the boot stop handle.
   session.driveTeardown = disposeComposition;
-  return driveSession;
+  return { handleFrame: driveSimProtocolFrame };
 }
 
 /**
  * Runs the session-driven render loop.
  *
  * Exactly one `requestAnimationFrame` is requested at boot; each frame hands
- * the timestamp to the drive session, which advances its own fixed-timestep
- * accumulator (physics → rules → HUD → composer) and re-requests the next
- * frame so the loop stays alive. The boot no longer carries an accumulator:
- * the drive loop slice replaced the boot-owned `advanceFrameSteps` wiring
- * with the session-owned one (No-Deferred-Cleanup: the old boot-side wiring
- * is removed with this change). A stopped session never schedules again, so
- * the stop handle terminates the loop deterministically.
+ * the timestamp to the drive session, which forwards it through the
+ * simulation-worker protocol (sample → worker frame → rebind → HUD → panel →
+ * composer) and re-requests the next frame so the loop stays alive. The boot
+ * itself carries no accumulator: the worker owns the fixed-timestep
+ * accumulator (P2-S4-C), so the host's per-frame entry point is a pure
+ * protocol hop. A stopped session never schedules again, so the stop handle
+ * terminates the loop deterministically.
  *
  * @param session - Boot session storing the current frame handle.
  * @param driveSession - Session whose `handleFrame` drives one frame.
@@ -1398,6 +2544,13 @@ function createStopHandle(
       window.removeEventListener('resize', session.resizeListener);
       session.resizeListener = null;
     }
+    // The network panel rides its resize authority + canvas (teardown
+    // installed at the panel mount); the worker session receives the
+    // terminal `{type:'stop'}` request and every live surface is dropped.
+    session.networkPanelTeardown?.();
+    session.networkPanelTeardown = null;
+    session.simSession?.handleRequest({ type: 'stop' });
+    session.simSession = null;
     session.driveTeardown?.();
     session.driveTeardown = null;
     session.starfieldPass = null;

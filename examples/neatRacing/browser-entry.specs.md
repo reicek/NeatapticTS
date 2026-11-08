@@ -36,7 +36,7 @@ sequenceDiagram
     autonumber
     participant W as window
     participant KB as sampleKeyboardInput
-    participant RS as createRaceSession
+    participant RS as simulation worker session
     participant PHY as stepPhysics
     participant RULES as stepRaceRules
     participant HUD as createHud

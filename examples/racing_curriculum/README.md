@@ -1,5 +1,11 @@
 # Racing Curriculum (NeatapticTS)
 
+> **Deprecated:** This example has been superseded by
+> [Neat Racing](../neatRacing/README.md) (`examples/neatRacing`), the
+> repository's WebGL2 voxel racer flagship demo. Racing Curriculum stays in the
+> examples tree and its suites remain green until removal is explicitly
+> confirmed. New readers should start with `examples/neatRacing`.
+
 This folder is the repository's lesson in **competitive coevolution under tight
 runtime boundaries**. It asks a harder systems question than the other flagship
 demos: how do you evolve two populations at once, keep their evaluation fair,

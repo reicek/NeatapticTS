@@ -2,12 +2,18 @@
  * NeatRacing host race-mode selector — plan slice P1-S7-E (plan
  * `neatracing-voxel-racer.plans.md`, phase 1, step 12), implementing the
  * AC-024 selector overlay ("top-right; ai, manual options; initial
- * manual mode"; spec sections 4.2, 10.2, 11.2, 13.1) and pre-verifying
- * the AC-033 restart-on-switch surface: `onSwitch` is the single hook
- * the host shell will connect to a race restart, so the "toggle the
- * race mode" step of the slice is delivered as a notify contract here
- * rather than as an owned restart call (spec section 4.2 keeps mode
- * authority in the shell, not the selector).
+ * manual mode"; spec sections 4.2, 10.2, 11.2, 13.1) and serving the
+ * AC-033 restart-on-switch surface: `onSwitch` is the single hook the
+ * host shell connects to a race restart, so the "toggle the race mode"
+ * step is delivered as a notify contract here rather than as an owned
+ * restart call (spec section 4.2 keeps mode authority in the shell, not
+ * the selector).
+ *
+ * Phase-2 update (P2-S4-A, AC-033): the AC-033 mode half is now served
+ * with the Phase-2 AI goal lifecycle (`../ai/ai-mode.goals.ts`): AI mode
+ * runs a minimum 20-lap session and then continues until the current
+ * level's promotion-threshold-driven growth goal is met, and level 3
+ * continues until the user stops the session.
  *
  * Structural precedent (cited in the slice contract header):
  * `examples/neatenstein/browser-entry/host/hud.human-mode.utils.ts` —
@@ -31,7 +37,11 @@
  * covered
  * by the slice contract's jest non-call assertion) rather than silent
  * restarts: the host shell must not reset a race because a user
- * re-picked the already-active mode.
+ * re-picked the already-active mode. A mode switch into AI mode makes
+ * the HOST shell (the P2-S4-C wiring) boot a fresh AI goal session at
+ * the first ladder rung (`NEATRACING_AI_MODE_START_LEVEL`,
+ * `../ai/ai-mode.goals.ts`); the selector itself keeps notifying exactly
+ * once per actual switch and owns no race state.
  *
  * Cyan/magenta discipline (spec section 11.2 "same CSS tokens,
  * cyan/magenta"): the border recycles `NEATRACING_HUD_COLOR_CYAN`
@@ -128,6 +138,9 @@ export interface NeatRacingRaceModeSelector {
   /**
    * Subscribes a listener to actual mode switches (AC-033 restart
    * hook; fired exactly once per switch with the switched-to mode).
+   * Phase 2 (LD-12): the host restarts the race in BOTH directions on
+   * this notification; the boot of the fresh AI goal session that an
+   * AI-mode restart needs belongs to the host wiring slice P2-S4-C.
    */
   onSwitch(listener: NeatRacingRaceModeListener): void;
 }
@@ -207,10 +220,13 @@ function createModeSelect(): HTMLSelectElement {
  * subscribers exactly once per actual switch and never notify on
  * same-value switches.
  *
- * Why (AC-033 pre-verify): the host shell will connect `onSwitch` to a
- * race restart (later-phase slice); this slice delivers and verifies the
- * hook so the restart wiring cannot be blocked by a missing selector
- * surface. Step 14P opens the race in the 'manual' mode (the served
+ * Why (AC-033, Phase 2): the host connects `onSwitch` to a race
+ * restart — the restart runs in BOTH directions (LD-12) and the host
+ * shell (the P2-S4-C wiring) handles it, including the boot of the
+ * fresh AI goal session at the first ladder rung
+ * (`../ai/ai-mode.goals.ts`); the hook is delivered and verified here so
+ * the restart wiring cannot be blocked by a missing selector surface.
+ * Step 14P opens the race in the 'manual' mode (the served
  * page is the acceptance surface and the ai-mode page is never
  * acceptable evidence — see `INITIAL_RACE_MODE`); the boot glue never
  * calls `setMode`; the 'ai' option remains

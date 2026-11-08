@@ -18786,3 +18786,1285 @@ fix_packet:
 - FP-14T-10 and FP-14T-11 -> recorded for the next author pass (no change is required).
 - FP-14T-12 -> the ORCHESTRATOR (the step-header flip).
 
+### Evidence batch 159 - the STEP-01 CLOSE (the spec-P2-S1 step-packet compression out of plans/neatracing-voxel-racer.plans.md + the superseded 2026-11-06 CURRENT BOUNDARY paragraph - plan + logs bytes only, no production byte, no test byte, no git mutation) - 07-logging (Tier 1), 2026-11-06
+
+- **THE MOVE (the USER directive: close Step 01 (P2-S1-green) of plans/neatracing-voxel-racer.plans.md per its packet + evidence rows — flip Step 01 [DONE], compress the Step-01 detail to logs batch 159 (compact marker + logs ref), advance the CURRENT BOUNDARY to Step 02 staging, append learning events for the evidence-row tooling notes, run plan gates; the Phase 2 heading, Steps 02-05, the AC register, README/Roadmap untouched; edit tool only, git read-only):** the plan's full `#### Step 01 — Simulation worker + packed frames + reproducibility tuple (spec P2-S1) [WIP]` step packet (the PRE-MOVE plan lines 6361..6467 — the YAML packet with its FOUR slice packets all [DONE], the User instruction, the Step objective, the Stop conditions incl. the DISCHARGED 2026-11-06 Gated record of the USER-ONLY Phase-1 EXIT CHECK and the Required-validation tails) moves to SUB-BLOCK A; the step heading STAYS in-plan flipped `[DONE 2026-11-06]` under the compact [COMPRESSED] marker, with the inner step-YAML `status: '[WIP]'` kept as PROVENANCE (the batch-157 convention — the authoritative status is the kept [DONE] step heading). The plan's superseded 2026-11-06 CURRENT BOUNDARY paragraph (the PRE-MOVE plan line 8947, the PHASE-1 EXIT CHECK APPROVED boundary naming the P2-S1-A dispatch) moves to SUB-BLOCK B. KEPT in the plan: the step heading + the [COMPRESSED] pointer, the Phase-2 placeholder_steps row 1 flipped to [DONE], the Step 01 slice evidence rows + gate re-run rows + the P2-S1-green step-level green-validation row + the slice PlanUpdate blocks (the phase-close material per the batch-158 convention), the new STEP-02-STAGING CURRENT BOUNDARY, and the Phase 2 heading + phase YAML + Steps 02-05 + the AC register BYTE-UNTOUCHED. The full texts below are byte-exact (hash-verified: sub-block A pre-move SHA256 0438AD6454AA3EC726CC49ABFA6EEFC03852D3C960AD9FE1D90867128A7A6A46 over the 107 packet lines joined with LF; sub-block B pre-move line SHA256 A952688915D2A484FE4CA431CF274DFDBCCD387F99961BC465144E215C36CC86).
+
+- **SUB-BLOCK A - the full Step 01 step packet (the pre-move plan lines 6361..6467, moved VERBATIM, content byte-exact, transported inside a four-backtick fence so the packet's internal three-backtick yaml fences stay verbatim):**
+
+````markdown
+#### Step 01 — Simulation worker + packed frames + reproducibility tuple (spec P2-S1) [WIP]
+
+```yaml
+phase: 2
+step: 1
+title: 'Simulation worker + packed frames + reproducibility tuple (spec P2-S1)'
+status: '[WIP]'
+goal: implementing
+expansion: slices
+auto_expand: true
+tdd_sequence: green-only
+mode: fresh-session
+source_of_truth: 'plans/neatracing-voxel-racer.plans.md'
+copy_paste: true
+next_step: 'Step 02 - Eval worker + observation assembler + scripted rivals (spec P2-S2)'
+pre_execute_hook:
+  tool: 'neataptic-workflow-mcp-get_slice_context'
+  args:
+    slice_id: 'P2-S1-A'
+skills:
+  - implementation-standards
+  - red-test-contracts
+  - green-validation-gates
+validation:
+  - 'examples/neatRacing/workers'
+  - 'npx tsc -p tsconfig.neatRacing.json --noEmit'
+acceptance_criteria:
+  - 'AC-025: sim worker owns all sim state incl. physics + controllers; single in-band live-worker file; packed frames schema neatracing-packed-v1 (P2-S1-A/B)'
+  - 'AC-026: reproducibility tuple (seed, agentCount, packSchemaVersion, opponentSnapshot, trackId, featureFlags) reproduces identical frames for the same tuple on the same runtime with no live human input (P2-S1-C)'
+  - 'AC-042 (partial): per-frame host<->worker transfer over preallocated buffers (P2-S1-B)'
+slices:
+  - slice_id: 'P2-S1-A'
+    title: 'Simulation worker (in-band live-worker file) + worker bundle registration'
+    status: '[DONE]'
+    goal: implementing
+    estimate_hours: 3
+    files_to_change:
+      - 'examples/neatRacing/workers/simulation-worker/simulation-worker.ts'
+      - 'examples/neatRacing/workers/simulation-worker/simulation-worker.test.ts'
+      - 'package.json worker bundle addition (trivial registration)'
+    acceptance_criteria:
+      - 'AC-025 (partial): sim worker boots and runs the fixed-step loop; single in-band live-worker file per LD'
+    red_test:
+      - 'RED: simulation-worker.test.ts fails before the worker; asserts boot + message protocol contract'
+    parallelizable: true
+    dependencies:
+      - 'P1-S7-G2'
+  - slice_id: 'P2-S1-B'
+    title: 'Frame pack service (neatracing-packed-v1, preallocated buffers)'
+    status: '[DONE]'
+    goal: implementing
+    estimate_hours: 3
+    files_to_change:
+      - 'examples/neatRacing/workers/simulation-worker/frame.pack.service.ts'
+      - 'examples/neatRacing/workers/simulation-worker/frame.pack.service.test.ts'
+    acceptance_criteria:
+      - 'AC-025: packed frame schema neatracing-packed-v1; AC-042 partial: transfer uses preallocated buffers with offsets'
+    red_test:
+      - 'RED: frame.pack.service.test.ts fails before the service; asserts pack/unpack round-trip and zero-alloc transfer'
+    parallelizable: true
+    dependencies:
+      - 'P2-S1-A'
+  - slice_id: 'P2-S1-C'
+    title: 'Reproducibility tuple utils (child seeds, byte parity)'
+    status: '[DONE]'
+    goal: implementing
+    estimate_hours: 3
+    files_to_change:
+      - 'examples/neatRacing/workers/simulation-worker/reproducibility.utils.ts'
+      - 'examples/neatRacing/workers/simulation-worker/reproducibility.utils.test.ts'
+    acceptance_criteria:
+      - 'AC-026: same-tuple runs produce byte-identical frames across >= NEATRACING_REPLAY_ADAPTATION_TICKS=32 adaptation ticks; visual-only surfaces exempt; no Math.random sim-side (D1)'
+    red_test:
+      - 'RED: reproducibility.utils.test.ts fails before the utils; asserts byte parity over 32 adaptation ticks for a fixed tuple'
+    parallelizable: true
+    dependencies:
+      - 'P2-S1-A'
+  - slice_id: 'P2-S1-green'
+    title: 'Step green validation: sim worker + packed frames + tuple'
+    status: '[DONE]'
+    goal: green-testing
+    estimate_hours: 1
+    files_to_change:
+      - 'plans/neatracing-voxel-racer.plans.md'
+    acceptance_criteria:
+      - 'Step 01 AC subset green: AC-025, AC-026, AC-042 partial; workers jest pattern green'
+    parallelizable: false
+    dependencies:
+      - 'P2-S1-A'
+      - 'P2-S1-B'
+      - 'P2-S1-C'
+```
+
+**User instruction:** Implement spec slice P2-S1: simulation worker, packed frames (neatracing-packed-v1), and the reproducibility tuple; red -> implement -> green per slice.
+
+**Step objective:** Move all sim state incl. physics + controllers into an in-band live-worker file with packed frames over preallocated buffers and byte-identical tuple reproduction.
+
+**Stop conditions:**
+
+- **Done:** workers jest suite green; typecheck clean; AC-025, AC-026, AC-042 partial recorded.
+- **Blocked:** worker bundle registration breaks the dev server — record and escalate via 00.cross-tier-helper.
+- **Gated:** the FIRST slice dispatch (P2-S1-A) waits on the USER-ONLY Phase-1 EXIT CHECK (the phase Staging gate record above) — the step may stay [WIP] without a dispatch until the USER records the exit-check pass. **GATE DISCHARGED 2026-11-06: the USER APPROVED the Phase-1 EXIT CHECK — the USER words verbatim: "looks good, approved" — the first slice dispatch (P2-S1-A) is UNBLOCKED.**
+
+**Required validation:**
+
+- `npm run jest:base -- --testPathPatterns="examples/neatRacing/workers"`
+- `npx tsc -p tsconfig.neatRacing.json --noEmit`
+````
+
+- **SUB-BLOCK B - the superseded CURRENT BOUNDARY paragraph (the pre-move plan line 8947, moved VERBATIM byte-exact):**
+
+CURRENT BOUNDARY (2026-11-06, the PHASE-1 EXIT CHECK APPROVED — the USER verdict recorded on this plan — PLAN-STATUS EDITS ONLY, NO production byte, NO test byte, NO git mutation): Phase 2 — AI migration (NGE) flipped [PLANNED] → [WIP] per the phase-YAML `next_phase` mandate — the phase heading, the phase YAML status and the placeholder_steps row 1 carry [WIP]; the five pre-authored step packets and their 18 slices stayed BYTE-UNTOUCHED by the staging; Step 01 (spec P2-S1) is the active [WIP] step with its packet heading + step YAML flipped; slices P2-S1-A / P2-S1-B / P2-S1-C / P2-S1-green stay [PLANNED] until each is dispatched; Steps 02-05 stay [PLANNED]. THE TRIO STATE: (1) the PHASE-1 EXIT CHECK — USER-ONLY, MANUAL mode on `npm run build:neatRacing` then `npm run dev:neatRacing` (the AC-021 / AC-024 mandate) — is APPROVED and CLOSED 2026-11-06 (the USER ran the comprehensive two-page retest and typed the verdict — the USER words verbatim: "looks good, approved"; the verdict now sits on the Phase 2 Staging gate record + the Step 01 Gated stop condition + ONE new evidence row in `## Latest validation evidence`; the gate is marked DISCHARGED; the no-P2-dispatch precondition is SATISFIED); (2) the CORTEX INDEX REBUILD — 00-helping, `node rag-index/build-index.mjs` + `node rag-index/embed-index.mjs` — keeps its standing routed ownership and is NOT discharged by the exit check; (3) the Phase 2 STAGING IS DONE (the [WIP] flips of the 2026-11-05 staging + the staging gate evidence head row in `## Latest validation evidence`). CARRIED STILL-OPEN ITEMS (none blocks the P2-S1-A dispatch): the O-N1/O-N3/O-N5 residual ledger rows P-TURN-17..23 (routed observations, non-blocking), the stale @example band literals (right-world.builder.ts), O-8 citation drift, the MCP validation-allowlist degradation, and the STALE CORTEX INDEX (owned by 00-helping as above). THE NEXT BOUNDARY: the **P2-S1-A dispatch (first Phase-2 slice)** (green-only per the Step 01 tdd_sequence; the pre_execute_hook binds P2-S1-A; the CORTEX INDEX REBUILD rides its standing carried routing above) → Phase 2 steps 01-05 → on Phase 2 DONE, Phase 3 — Polish + deprecation prep per the Phase 2 `next_phase` mandate.
+
+- **THE PLAN-RETAINED RECORD (batch-158 convention — the phase-close material STAYS in-plan):** the Step 01 step heading (flipped [DONE 2026-11-06]) + the [COMPRESSED 2026-11-06 by the 07-logging STEP-01 CLOSE compression …] pointer; the Phase-2 placeholder_steps row 1 (carries [DONE], flipped from [WIP] by this close); the FOUR slice evidence rows + the two gate re-run rows + the P2-S1-green step-level green-validation row in `## Latest validation evidence` + the slice PlanUpdate blocks in the PlanUpdate tail; the AC register; the Phase 2 heading + phase YAML (status [WIP]) and Steps 02-05 (all [PLANNED]) BYTE-UNTOUCHED; the new STEP-02-STAGING CURRENT BOUNDARY paragraph + the batch-159 archive bullet in the Handoff query.
+
+- **THE LEARNING EVENTS (append-only, `.github/ai-learning/learning-log.jsonl`, both status open, owner agent-maintenance-coordinator, recorded by this close):** learn-20261106-p2s1-validation-mcp-allowlist-executor-jest-string-rejection — the validation-MCP allowlist executor's exact-text rejection of the allow-listed Jest lane string `npm run jest:base -- --testPathPatterns="examples/neatRacing/workers"` (listed in requiredValidationCommands yet rejected with "Command is not allow-listed by the active step packet"; recurring across the P2-S1-A / P2-S1-B / P2-S1-green evidence rows; the identical text PASSED shell-direct every time; gate shared-validation, category agent-system-gap); learn-20261106-p2s1-step-packet-validationcommandsmatch-false-quirk — the packet loader's validationCommandsMatch:false on the Step 01 packet (the 14L-style YAML-validation-entries-vs-Required-validation-prose rendering quirk; BOTH required commands ran and passed; gate step-packet, category agent-system-gap).
+
+- **THE GATES (plan-level only — NO code-level validation ran, none is allowed in the 07 logging role):** ROUND 1 (the post-compression pre-evidence-row bytes — the plan at 17,516 physical lines, 2026-11-06): validate-plan-sync.mjs --json PASS (0 errors, 0 warnings); MCP neataptic-gate-mcp slice-advancement slice-id step-01-close PASS 7/7 (plan-sync / step-packet / plan-slice-quality / plan-command-lint / shared-validation / code-coverage / specialist-review; severity FULL, specialistCount 1, failedGates [], erroredGates []; args changed-files = the plan + the logs + the learning log); phase-compression.gate.mjs --json PASS; stale-wip-plans.gate.mjs --json PASS (4 plans checked, 0 stale); learning-event.gate.mjs --json PASS. The run-after-append (round 2) re-measure on the final plan bytes — the verdict is appended to this bullet below.
+  - **ROUND 2 (the run-after-append re-measure on the FINAL plan bytes — 17,518 physical lines incl. the Edit-C Context-count correction (17,516 → 17,518) and the STEP 01 CLOSED evidence row; 2026-11-06):** validate-plan-sync.mjs --json PASS (0 errors, 0 warnings; plan status WIP); MCP neataptic-gate-mcp slice-advancement slice-id step-01-close PASS 7/7 — IDENTICAL to round 1 (plan-sync / step-packet / plan-slice-quality / plan-command-lint / shared-validation / code-coverage / specialist-review; severity FULL, specialistCount 1, failedGates [], erroredGates []; same args changed-files = the plan + the logs + the learning log); phase-compression.gate.mjs --json PASS; stale-wip-plans.gate.mjs --json PASS (4 plans checked, 0 stale); learning-event.gate.mjs --json PASS (eventCount 28761) — the run-before-append (round 1) and run-after-append (round 2) verdicts MATCH. The FINAL-BYTES re-run (the bytes incl. this verdict line; plan unchanged at 17,518 physical lines, logs at 18,917 physical lines, learning-log untouched): all FIVE verdicts IDENTICAL — validate-plan-sync.mjs --json PASS 0/0; MCP slice-advancement step-01-close PASS 7/7 (severity FULL, specialistCount 1, failedGates [], erroredGates []); phase-compression.gate.mjs --json PASS; stale-wip-plans.gate.mjs --json PASS (4 plans, 0 stale); learning-event.gate.mjs --json PASS (eventCount 28761). HASH VERIFICATION on the batch-159 archives: sub-block A (the 107-line Step 01 packet, LF-joined, 5,070 UTF-8 bytes incl. the multibyte punctuation) -> SHA-256 0438AD6454AA3EC726CC49ABFA6EEFC03852D3C960AD9FE1D90867128A7A6A46 EXACT match to the pre-move PKG hash; sub-block B (the 2,205-char PHASE-1-EXIT-APPROVED CURRENT BOUNDARY line) -> SHA-256 A952688915D2A484FE4CA431CF274DFDBCCD387F99961BC465144E215C36CC86 EXACT match to the pre-move BND hash — the move is byte-exact.
+
+- **NEXT BOUNDARY (the Step-01 close hands control back):** the STEP 02 STAGING (spec P2-S2 — Eval worker + observation assembler + scripted rivals) — the orchestrator-owned [PLANNED] → [WIP] flip (the step heading + the step YAML + the placeholder_steps row 2; the pre_execute_hook binds P2-S2-A) then the P2-S2-A dispatch; on Phase 2 DONE, Phase 3 — Polish + deprecation prep per the Phase 2 `next_phase` mandate. The CORTEX INDEX REBUILD (00-helping) rides its standing carried ownership; the round-2 gate addendum + the byte-verification hashes are recorded on this batch's THE-GATES bullet and the plan's STEP 01 CLOSED evidence row.
+
+### Evidence batch 160 - the STEP-02 CLOSE (the spec-P2-S2 step-packet close out of plans/neatracing-voxel-racer.plans.md + the superseded 2026-11-06 CURRENT BOUNDARY paragraph - plan + logs bytes only, no production byte, no test byte, no git mutation) - 07-logging (Tier 1), 2026-11-06
+
+- **THE MOVE (2026-11-06, PLAN-STATUS EDITS ONLY — no production byte, no test byte, no git mutation):** the USER directive (verbatim): "Close Step 02 per plans/neatracing-voxel-racer.plans.md; load context via Cortex MCP / get_slice_context (Step-02 close, logs batch 160). Flip step heading+YAML [DONE], placeholder row 2 [DONE], archive packet verbatim to batch 160 with hash check, advance CURRENT BOUNDARY to Step-03 staging, append all queued learning events listed in the plan ledger + session todos, run plan gates. Git read-only." (the get_slice_context hook for the Step-02 close returned notFound — the sanctioned native fallback ran and the close executed from the plan packet itself). The pre-close Step 02 step packet = the PRE-MOVE plan lines 6365..6469 (105 lines: the step heading + the YAML packet with its FOUR slice packets all already [DONE 2026-11-06] from the 2026-11-06 green wave + the User instruction + the Step objective + the Stop conditions + the Required-validation prose tail). SUB-BLOCK A archives the FULL packet VERBATIM (byte-exact, hash-verified: pre-move SHA256 DADA228FB6E987287E19ACEAF14008BE9C21C61C4E7A0B130F74D8339A61412A over the 105 packet lines joined with LF, 4,484 UTF-8 bytes). **ARCHIVE DEVIATION — the USER close directive (Flip step heading+YAML [DONE]) SUPERSEDES the batch-157/159 provenance convention:** the step heading + the inner step-YAML status are RETAINED IN-PLAN flipped [WIP] → [DONE 2026-11-06] under a compact [COMPRESSED] pointer — the archived copy below keeps the pre-move [WIP] values for provenance; the prose tail (the User instruction / Step objective / Stop conditions / Required validation) is compressed to this archive (the batch-158 convention keeps the Step-02 slice evidence rows + PlanUpdates in-plan as the phase-close material). The superseded 2026-11-06 CURRENT BOUNDARY paragraph (the PRE-MOVE plan line 9038, the STEP-02-STAGED boundary naming the P2-S2-A dispatch) moves to SUB-BLOCK B VERBATIM (byte-exact, hash-verified: pre-move line SHA256 5A0F8E40ECC8D9C4B3C81D2C4012E7B457099625036DF256404EB98A434C5C1D over the single 3,037-char line, no trailing LF). KEPT in the plan: the step heading + the step YAML (both flipped [DONE 2026-11-06]) + the [COMPRESSED] pointer; the Phase-2 placeholder_steps row 2 [DONE] (row 1 already [DONE]); the Step-03 staging [WIP] (the step heading + the step YAML + the placeholder_steps row 3 flipped [PLANNED]→[WIP]; the first slice P2-S3-A [WIP] while P2-S3-B / P2-S3-C / P2-S3-G1 stay [PLANNED]); ALL the Step-02 slice evidence rows + the slice PlanUpdate blocks; the STEP-03-STAGING CURRENT BOUNDARY + the Handoff refresh + the batch-160 [ARCHIVED] marker bullet. UNTOUCHED: the Phase 2 heading + phase YAML, Steps 04-05 [PLANNED] BYTE-UNTOUCHED, the AC register, README/Roadmap, every production/test byte; NO mutating git.
+
+- **SUB-BLOCK A - the full Step 02 step packet (the pre-move plan lines 6365..6469, moved VERBATIM - the [WIP] statuses below are the archived PRE-MOVE provenance; the in-plan packet is RETAINED flipped [DONE 2026-11-06] + a [COMPRESSED] pointer per the USER close directive):**
+
+````markdown
+#### Step 02 — Eval worker + observation assembler + scripted rivals (spec P2-S2) [WIP]
+
+```yaml
+phase: 2
+step: 2
+title: 'Eval worker + observation assembler + scripted rivals (spec P2-S2)'
+status: '[WIP]'
+goal: implementing
+expansion: slices
+auto_expand: true
+tdd_sequence: green-only
+mode: fresh-session
+source_of_truth: 'plans/neatracing-voxel-racer.plans.md'
+copy_paste: true
+next_step: 'Step 03 - NGE growth + promotion part 1 (spec P2-S3 A-C)'
+pre_execute_hook:
+  tool: 'neataptic-workflow-mcp-get_slice_context'
+  args:
+    slice_id: 'P2-S2-A'
+skills:
+  - implementation-standards
+  - red-test-contracts
+  - green-validation-gates
+validation:
+  - 'examples/neatRacing/workers'
+  - 'examples/neatRacing/ai'
+acceptance_criteria:
+  - 'AC-029 (partial): eval worker protocol with bounded parallelVariantCount (P2-S2-A; growth engine lands in Phase 2 Step 03)'
+  - 'AC-027: observation assembler produces the 82/89/110-channel tier vector with track-relative features and recycled scales (P2-S2-B)'
+  - 'AC-028: scripted waypoint rivals with per-course deterministic throttle table (SCRIPTED_THROTTLE_CONSTANT=0.82 + proportional steer) (P2-S2-C)'
+  - 'AC-043 (partial): eval-worker protocol budget hooks (P2-S2-A; budget tests complete in Phase 2 Step 03)'
+slices:
+  - slice_id: 'P2-S2-A'
+    title: 'Eval worker + protocol'
+    status: '[DONE 2026-11-06]'
+    goal: implementing
+    estimate_hours: 3
+    files_to_change:
+      - 'examples/neatRacing/workers/eval-worker/eval-worker.ts'
+      - 'examples/neatRacing/workers/eval-worker/eval.protocol.ts'
+      - 'examples/neatRacing/workers/eval-worker/eval.protocol.test.ts'
+    acceptance_criteria:
+      - 'AC-029 (partial) + AC-043 (partial): two-worker split protocol with bounded parallelVariantCount named constant'
+    red_test:
+      - 'RED: eval.protocol.test.ts fails before the worker; asserts request/eval/result protocol and variant-count bound'
+    parallelizable: true
+    dependencies:
+      - 'P2-S1-green'
+  - slice_id: 'P2-S2-B'
+    title: 'Observation assembler (82/89/110 channels)'
+    status: '[DONE 2026-11-06]'
+    goal: implementing
+    estimate_hours: 3
+    files_to_change:
+      - 'examples/neatRacing/ai/observation.assembler.ts'
+      - 'examples/neatRacing/ai/observation.assembler.test.ts'
+    acceptance_criteria:
+      - 'AC-027: channel counts 82/89/110 per tier with rival-gap >= 4 at lvl 3 and teammate tail 3x7=21; one tier per test fixture'
+    red_test:
+      - 'RED: observation.assembler.test.ts fails before the assembler; asserts per-tier channel counts and semantics fixtures'
+    parallelizable: true
+    dependencies: []
+  - slice_id: 'P2-S2-C'
+    title: 'Scripted waypoint rivals (per-course throttle table)'
+    status: '[DONE 2026-11-06]'
+    goal: implementing
+    estimate_hours: 2
+    files_to_change:
+      - 'examples/neatRacing/ai/scripted.controller.ts'
+      - 'examples/neatRacing/ai/scripted.controller.test.ts'
+    acceptance_criteria:
+      - 'AC-028: deterministic scripted controller with per-course speed/throttle table; throttle constant 0.82 + proportional steer'
+    red_test:
+      - 'RED: scripted.controller.test.ts fails before the controller; asserts per-course table determinism'
+    parallelizable: true
+    dependencies: []
+  - slice_id: 'P2-S2-green'
+    title: 'Step green validation: eval worker + assembler + rivals'
+    status: '[DONE 2026-11-06]'
+    goal: green-testing
+    estimate_hours: 1
+    files_to_change:
+      - 'plans/neatracing-voxel-racer.plans.md'
+    acceptance_criteria:
+      - 'Step 02 AC subset green: AC-027, AC-028, AC-029/AC-043 partial; workers + ai jest patterns green'
+    parallelizable: false
+    dependencies:
+      - 'P2-S2-A'
+      - 'P2-S2-B'
+      - 'P2-S2-C'
+```
+
+**User instruction:** Implement spec slice P2-S2: eval worker + protocol, observation assembler (82/89/110 channels), and scripted waypoint rivals; red -> implement -> green per slice.
+
+**Step objective:** Deliver the eval-worker split protocol with bounded parallelVariantCount, the tiered observation vector, and deterministic scripted rivals.
+
+**Stop conditions:**
+
+- **Done:** workers + ai jest suites green; AC-027, AC-028 + AC-029/AC-043 partials recorded.
+- **Blocked:** channel-count fixtures disagree with spec tables — record and escalate via 00.cross-tier-helper.
+
+**Required validation:**
+
+- `npm run jest:base -- --testPathPatterns="examples/neatRacing/workers"`
+- `npm run jest:base -- --testPathPatterns="examples/neatRacing/ai"`
+````
+
+- **SUB-BLOCK B - the superseded 2026-11-06 CURRENT BOUNDARY paragraph (the pre-move plan line 9038, the STEP-02-STAGED boundary naming the P2-S2-A dispatch), moved VERBATIM (byte-exact, pre-move line SHA256 5A0F8E40ECC8D9C4B3C81D2C4012E7B457099625036DF256404EB98A434C5C1D):**
+
+CURRENT BOUNDARY (2026-11-06, STEP 02 STAGED [WIP] — the orchestrator-owned STEP-02-STAGING move; PLAN-STATUS EDITS ONLY, NO production byte, NO test byte, NO git mutation): Step 01 (spec P2-S1) is CLOSED [DONE 2026-11-06] — all FOUR slices [DONE] (P2-S1-A the in-band sim worker + the package.json worker-bundle registration; P2-S1-B the frame.pack.service neatracing-packed-v1 + preallocated buffers; P2-S1-C the reproducibility-tuple utils + the 32-tick byte parity; P2-S1-green the step-level green validation) — AC-025 + AC-026 + AC-042 (partial) GREEN (workers jest 62/62 union + neatRacing tsc clean + the worker-bundle build 21.4 KB; the consolidated gates PASS per the step-evidence rows); the step packet is COMPRESSED to plans/neatracing-voxel-racer.logs.md — evidence batch 159 (sub-block A) — leaving the compact [COMPRESSED] pointer under the kept [DONE 2026-11-06] step heading, and the placeholder_steps row 1 carries [DONE]. PHASE 2 STAYS [WIP]; STEPS 03-05 STAY [PLANNED] BYTE-UNTOUCHED; at THIS boundary Phase 2 holds ONE [WIP] step — Step 02 (spec P2-S2) STAGED [WIP] per the recorded STEP-02-STAGING boundary (the step heading + the step YAML + the placeholder_steps row 2 flipped [PLANNED]→[WIP]; the FIRST slice P2-S2-A is [WIP] while P2-S2-B / P2-S2-C / P2-S2-green STAY [PLANNED]; one [WIP] step per phase). THE NEXT BOUNDARY (the recorded STEP-02-STAGING boundary is EXECUTED): **the P2-S2-A dispatch** (the eval-worker slice per the Step 02 packet — the pre_execute_hook binds P2-S2-A; P2-S2-A's dependency on P2-S1-green is DISCHARGED by the recorded P2-S1-green pass) → the rest of Step 02 (P2-S2-B / P2-S2-C staging per-slice, then P2-S2-green) → Phase 2 steps 03-05 → on Phase 2 DONE, Phase 3 — Polish + deprecation prep per the Phase 2 `next_phase` mandate. TRIO STATE CARRY: (1) the PHASE-1 EXIT CHECK is APPROVED + DISCHARGED (2026-11-06, recorded on the Staging gate record + the Step 01 Gated stop condition archived in batch 159 sub-block A + one evidence row); (2) the CORTEX INDEX REBUILD — 00-helping, `node rag-index/build-index.mjs` + `node rag-index/embed-index.mjs` — keeps its standing routed ownership and is NOT discharged by the Step-01 close or the Step-02 staging; (3) the Phase 2 STAGING IS DONE (the 2026-11-05 [WIP] flips + the staging gate evidence rows). CARRIED STILL-OPEN ITEMS (none blocks the P2-S2-A dispatch): the O-N1/O-N3/O-N5 residual ledger rows P-TURN-17..23 (routed observations, non-blocking), the stale @example band literals (right-world.builder.ts), O-8 citation drift, the MCP validation-allowlist degradation (NOW RECORDED as two learning events in `.github/ai-learning/learning-log.jsonl` — the allowlist-executor exact-text rejection of the allow-listed Jest string (P2-S1-A/B/green rows) and the step-packet `validationCommandsMatch: false` packet-text quirk (the Step 01 green row; 14L-style quirk pre-existing), both non-blocking tooling notes, the shell-direct fallback is the operative workaround), and the STALE CORTEX INDEX (owned by 00-helping as above).
+
+- **THE PLAN-RETAINED RECORD (the batch-158 phase-close convention):** the plan retains EVERYTHING except the packet prose tail + the superseded boundary paragraph — the step heading [DONE 2026-11-06] + the RETAINED inner step-YAML [DONE 2026-11-06] + the [COMPRESSED] pointer + the four slice [DONE 2026-11-06] statuses + ALL Step-02 evidence rows (the red→green wave, the 9,000-tick lap-following probe row, the consolidated-gate re-run rows, the allowlist-rejection recurrence notes) + the four P2-S2 PlanUpdate blocks + the placeholder_steps row 2 [DONE] + the staged Step 03 ([WIP]; P2-S3-A [WIP]) + the STEP-03-STAGING CURRENT BOUNDARY + the Handoff refresh (the Context line naming the 17,703 final-byte count) + the batch-160 [ARCHIVED] marker bullet. The plan re-measures 17,701 physical lines pre-evidence-row (17,703 on final bytes incl. this close's STEP-02-CLOSED evidence row + its blank; the small Context line-count correction 17,702→17,703 is a 1:1 in-line byte edit, no line delta).
+
+- **THE LEARNING EVENTS (append-only to .github/ai-learning/learning-log.jsonl, all recorded 2026-11-06 by this close, all status open, all agent_source 07-logging):** learn-20261106-p2s2-dispatch-server-prompt-cap-guard-table-mismatch (the dispatch MCP complex-tier 500-char prompt cap contra the execute-skill §3 200/500/1000 guard table — the P2-S2-A coordination note (a); reconcile the budget or correct the doc — owner agent-maintenance-coordinator + 07-logging); learn-20261106-p2s2-specialist-review-gate-planresults-plan-scoping-defect (the standalone specialist-review gate planResults naming the wrong plan despite wipPlans: 1 — the P2-S2-A coordination note (b); pin the gate's plan selection to the active --plan binding — owner agent-maintenance-coordinator); learn-20261030-p2wave-verdict6-slice-validator-contract5-learning-event (the QUEUED Tier-3 slice-validator LEARNING_EVENT_NEEDED item from the 2026-10-30 VERDICT-6 RE-OPEN WAVE record — the contract-5 slice-level-validation-key convention gap (0/139 final-byte-measured slices carry a slice-level key, adjudicated NON-BLOCKING vs the step-level-array baseline), handed to the orchestrator's learning-event-capturer, captured now by the Step-02 close); learn-20261106-p2s2-mid-session-heading-swap-plan-edit-corruption-restore (the P2-S2-C plan-edit-safety insight — a mid-session heading-argument swap corrupted a P2-S1-B evidence row, restored byte-exact same-session via read-only git diff + grep; standing practice: anchor plan edits on full multi-line context, never a bare status token). NOT re-recorded (append-only precedents standing): the validation-allowlist Jest-string rejection RECURRENCE on the Step-02 lanes (the P2-S2-A green row — the 4TH rejection; re-confirmed on the ai lane on the P2-S2-green row) under the open learn-20261106-p2s1-validation-mcp-allowlist-executor-jest-string-rejection, and the plan-family Cortex staleness under learn-20260930-082703-planfamily-reindex (the NB-C carry).
+
+- **THE GATES (plan-level only — the 07-logging close gates; ROUND 1 measured on the post-compression pre-evidence-row plan bytes, the plan at 17,701 physical lines):**
+  - ROUND 1: `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/neatracing-voxel-racer.plans.md` → **PASS (0 errors, 0 warnings)**; MCP `neataptic-gate-mcp-run_gate_check` gate=slice-advancement slice-id=step-02-close (severity FULL, gateCount 7: plan-sync + step-packet + plan-slice-quality + plan-command-lint + shared-validation + code-coverage + specialist-review; changed-files = the plan + the logs + the learning-log) → **PASS — ALL 7 sub-gates green, no failedGates, no erroredGates** ("fixHint":"All 7 gates passed for slice step-02-close (FULL)."); `node scripts/agent-customization/gates/phase-compression.gate.mjs --json` → **PASS**; `node scripts/agent-customization/gates/log-completion-marker.gate.mjs --json` → **PASS**; `node scripts/agent-customization/gates/stale-wip-plans.gate.mjs --json` → **PASS (4 plans checked, 0 stale WIP)**; `node scripts/agent-customization/gates/learning-event.gate.mjs --json` → **PASS**. JSONL INTEGRITY NOTE: the append-only file re-read at 28,769 lines — ALL FOUR new Step-02-close events (lines 28,766..28,769) parse as valid JSON with the recorded event_ids / status open / timestamps 2026-11-06T22:42:19.6xx-05:00; ONE pre-existing parse failure at line 28,712 — UNTOUCHED by this session (the historical entry predates this close; left as-is per the append-only, never-rewrite rule; flagged for agent-maintenance-coordinator follow-up).
+  - ROUND 2 (the re-measure on the final plan bytes — the plan at 17,703 physical lines incl. the STEP-02-CLOSED evidence row): `validate-plan-sync.mjs --json --plan=plans/neatracing-voxel-racer.plans.md` → **PASS (0 errors, 0 warnings)**; MCP `neataptic-gate-mcp-run_gate_check` slice-advancement slice-id=step-02-close (FULL; gateCount 7) on the final bytes → **PASS — ALL 7 sub-gates green** ("All 7 gates passed for slice step-02-close (FULL)." — zero drift with round 1 apart from the appended record bytes); `phase-compression.gate.mjs --json` → **PASS**; `log-completion-marker.gate.mjs --json` → **PASS**; `stale-wip-plans.gate.mjs --json` → **PASS (4 plans checked, 0 stale)**; `learning-event.gate.mjs --json` → **PASS** (that gate's own reader reports eventCount 28765 / rawLineCount 28766 while the direct ReadAllLines count is 28,769 lines with the ONE pre-existing parse failure at 28,712 — reader discrepancy noted for agent-maintenance-coordinator; the gate verdict is PASS either way).
+  - HASH VERIFICATION (the move is byte-exact): recomputed from the FINAL logs bytes AFTER the round-1 gates + the THE-GATES insertion: SUB-BLOCK A (the 105 packet lines inside the four-backtick markdown fence) → SHA256 DADA228FB6E987287E19ACEAF14008BE9C21C61C4E7A0B130F74D8339A61412A over 4,484 UTF-8 bytes — **MATCHES the pre-move hash recorded above**; SUB-BLOCK B (the single 3,037-char superseded CURRENT BOUNDARY line) → SHA256 5A0F8E40ECC8D9C4B3C81D2C4012E7B457099625036DF256404EB98A434C5C1D — **MATCHES the pre-move line hash**. The move is byte-exact.
+
+- **NEXT BOUNDARY (the Step-02 close hands control back):** the **P2-S3-A dispatch** (the NGE controller + runtime adaptation slice, spec P2-S3 — the pre_execute_hook binds P2-S3-A; P2-S3-A's dependency on P2-S2-green is DISCHARGED by the recorded P2-S2-green step-level pass) then the rest of Step 03 (P2-S3-B / P2-S3-C staging per-slice, then P2-S3-G1) → Phase 2 steps 04-05 → on Phase 2 DONE, Phase 3 — Polish + deprecation prep per the Phase 2 `next_phase` mandate. The CORTEX INDEX REBUILD (00-helping) rides its standing carried ownership; the round-2 gate addendum + the byte-verification hashes are recorded on this batch's THE-GATES bullet and the plan's STEP 02 CLOSED evidence row.
+
+### Evidence batch 161 - the STEP-03 CLOSE (the spec-P2-S3 A-C step-packet close out of plans/neatracing-voxel-racer.plans.md + the superseded 2026-11-06 CURRENT BOUNDARY paragraph - plan + logs bytes only, no production byte, no test byte, no git mutation) - 07-logging (Tier 1), 2026-11-07
+
+- **THE MOVE (2026-11-07, PLAN-STATUS EDITS ONLY - no production byte, no test byte, no git mutation):** the USER directive (verbatim): "Close Step 03 per plans/neatracing-voxel-racer.plans.md; load context via Cortex MCP / get_slice_context (Step-03 close, logs batch 161). Flip step heading+YAML [DONE], placeholder row 3 [DONE], archive packet verbatim to batch 161 with hash check, advance CURRENT BOUNDARY to Step-04 staging, append queued learning events per plan ledger, run plan gates. Git read-only." (the get_slice_context hook for the Step-03 close returned notFound BOTH times it was attempted (the dispatch-time attempt and the close-time re-attempt) - the sanctioned native fallback ran and the close executed from the plan packet itself, mirroring the batch-159/160 close records). The pre-close Step 03 step packet = the PRE-MOVE plan lines 6459..6566 (108 lines: the step heading + the YAML packet with its FOUR slice packets all already [DONE 2026-11-06/07] from the P2-S3 green wave + the User instruction + the Step objective + the Stop conditions + the Required-validation prose tail). SUB-BLOCK A archives the FULL packet VERBATIM (byte-exact, hash-verified: pre-move SHA256 FDF83FCB8521448BE94022D0E516D8F0179713028141CC270BFF39DC75F42461 over the 108 packet lines CR-stripped and LF-joined, 5,013 UTF-8 bytes). **ARCHIVE DEVIATION - the USER close directive (Flip step heading+YAML [DONE]) stands over the batch-159 provenance convention exactly as in the batch-160 close:** the step heading + the inner step-YAML status are RETAINED IN-PLAN flipped [WIP] -> [DONE 2026-11-07] under a compact [COMPRESSED 2026-11-07] pointer - the archived copy below keeps the pre-move [WIP] step-level values for provenance; the prose tail (the User instruction / Step objective / Stop conditions / Required validation) is compressed to this archive (the batch-158 convention keeps the Step-03 slice evidence rows + PlanUpdates in-plan as the phase-close material). The superseded 2026-11-06 CURRENT BOUNDARY paragraph (the PRE-MOVE plan line 9125, the STEP-03-STAGED boundary naming the P2-S3-A dispatch) moves to SUB-BLOCK B VERBATIM (byte-exact, hash-verified: pre-move line SHA256 F9730E819DB9D9EBB36D89515BDD0481AF49D17CB8E8C471BB4FF2E868E691E2 over the single 3,724-char line). KEPT in the plan: the step heading + the step YAML (both flipped [DONE 2026-11-07]) + the [COMPRESSED] pointer; the Phase-2 placeholder_steps row 3 [DONE] (rows 1-2 already [DONE]); the STEP-04 STAGING [WIP] executed inside this USER-directed close (the step heading + the step YAML + the placeholder_steps row 4 flipped [PLANNED]->[WIP]; the first slice P2-S3-D [WIP] while P2-S3-E / P2-S3-G2 stay [PLANNED]); ALL the Step-03 slice evidence rows + the slice PlanUpdate blocks; the STEP-04-STAGING CURRENT BOUNDARY + the Handoff refresh + the batch-161 [ARCHIVED] marker bullet. UNTOUCHED: the Phase 2 heading + phase YAML, Step 05 [PLANNED] BYTE-UNTOUCHED, the AC register, README/Roadmap, every production/test byte; NO mutating git.
+
+- **SUB-BLOCK A - the full Step 03 step packet (the pre-move plan lines 6459..6566, moved VERBATIM - the [WIP] statuses below are the archived PRE-MOVE provenance; the in-plan packet is RETAINED flipped [DONE 2026-11-07] + a [COMPRESSED] pointer per the USER close directive):**
+
+````markdown
+#### Step 03 — NGE growth + promotion part 1 (spec P2-S3 A-C) [WIP]
+
+```yaml
+phase: 2
+step: 3
+title: 'NGE growth + promotion part 1 (spec P2-S3 A-C)'
+status: '[WIP]'
+goal: implementing
+expansion: slices
+auto_expand: true
+tdd_sequence: green-only
+mode: fresh-session
+source_of_truth: 'plans/neatracing-voxel-racer.plans.md'
+copy_paste: true
+next_step: 'Step 04 - NGE growth + promotion part 2 (spec P2-S3 D-E)'
+pre_execute_hook:
+  tool: 'neataptic-workflow-mcp-get_slice_context'
+  args:
+    slice_id: 'P2-S3-A'
+skills:
+  - implementation-standards
+  - red-test-contracts
+  - green-validation-gates
+validation:
+  - 'examples/neatRacing/ai'
+  - 'npx tsc -p tsconfig.neatRacing.json --noEmit'
+acceptance_criteria:
+  - 'AC-029: NGE controller + runtime adaptation migrated with maxNodes 8000 / maxConnections 32000; eval in separate worker; <= 2 ms per-tick sim budget; jest.useFakeTimers for adaptation/timer tests (P2-S3-A)'
+  - 'AC-030: shared oscillation predicate drives penalty AND commit boost with hysteresis + symmetry + deadband 0.15 (P2-S3-B)'
+  - 'AC-031: three-part promotion predicate with 20-lap floor, drivability gate, seedNetwork + carriedInnovationCounter tuple fields, round-boundary state reset (P2-S3-C)'
+slices:
+  - slice_id: 'P2-S3-A'
+    title: 'NGE controller + runtime adaptation (seeded, capacity-limited)'
+    status: '[DONE 2026-11-06]'
+    goal: implementing
+    estimate_hours: 4
+    files_to_change:
+      - 'examples/neatRacing/ai/nge.controller.ts'
+      - 'examples/neatRacing/ai/runtime.adaptation.ts'
+      - 'examples/neatRacing/ai/runtime.adaptation.test.ts'
+    acceptance_criteria:
+      - 'AC-029: capacity limits 8000/32000 preserved; seeded xorshift32 random from (tupleSeed, carIndex); per-tick budget <= NEATRACING_ADAPTATION_TICK_BUDGET_MS=2'
+      - 'AC-026 (support): adaptation engine consumes the reproducibility tuple child-seed table (D1)'
+      - 'AC-043: budget test with jest.useFakeTimers asserts sim-worker residual work within budget'
+    red_test:
+      - 'RED: runtime.adaptation.test.ts fails before migration; asserts capacity caps, seed derivation, and 2 ms budget with fake timers'
+    parallelizable: true
+    dependencies:
+      - 'P2-S2-green'
+  - slice_id: 'P2-S3-B'
+    title: 'Shared oscillation predicate (penalty + commit boost)'
+    status: '[DONE 2026-11-06]'
+    goal: implementing
+    estimate_hours: 2
+    files_to_change:
+      - 'examples/neatRacing/ai/oscillation-penalty.utils.ts'
+      - 'examples/neatRacing/ai/oscillation-penalty.utils.test.ts'
+    acceptance_criteria:
+      - 'AC-030: one shared predicate replaces RACING_OSCILLATION_MIN_NEURONS=200; below-threshold never penalized; hysteresis; symmetric for baseline + variant; deadband 0.15'
+    red_test:
+      - 'RED: oscillation-penalty.utils.test.ts fails before the utils; asserts below-threshold no-penalty, grace window, hysteresis, and symmetry cases'
+    parallelizable: true
+    dependencies: []
+  - slice_id: 'P2-S3-C'
+    title: 'Promotion rules (three-part predicate + round boundary)'
+    status: '[DONE 2026-11-07]'
+    goal: implementing
+    estimate_hours: 4
+    files_to_change:
+      - 'examples/neatRacing/ai/promotion.rules.ts'
+      - 'examples/neatRacing/ai/promotion.rules.test.ts'
+    acceptance_criteria:
+      - 'AC-031: one red test per condition + combined; lap floor NEATRACING_AI_MIN_SESSION_LAPS=20 precondition; seedNetwork (serialized Float32Array + NGE envelope) + carriedInnovationCounter tuple fields; scripted-baseline probe episode pinned; no mid-session materialization'
+    red_test:
+      - 'RED: promotion.rules.test.ts fails before the module; asserts per-condition cases + all-conditions + round-boundary replay-from-own-tuple'
+    parallelizable: true
+    dependencies:
+      - 'P2-S3-A'
+      - 'P2-S3-B'
+  - slice_id: 'P2-S3-G1'
+    title: 'Part 1 green validation: controller + oscillation + promotion'
+    status: '[DONE 2026-11-07]'
+    goal: green-testing
+    estimate_hours: 1
+    files_to_change:
+      - 'plans/neatracing-voxel-racer.plans.md'
+    acceptance_criteria:
+      - 'Step 03 AC subset green: AC-029, AC-030, AC-031, AC-043; ai jest pattern green'
+    parallelizable: false
+    dependencies:
+      - 'P2-S3-A'
+      - 'P2-S3-B'
+      - 'P2-S3-C'
+```
+
+**User instruction:** Implement spec slice P2-S3 A-C: NGE controller + runtime adaptation migration, shared oscillation predicate, and the three-part promotion predicate; red -> implement -> green per slice.
+
+**Step objective:** Migrate the NGE brain into the eval-worker protocol with capacity limits, seeded RNG, oscillation predicate, and promotion rules.
+
+**Stop conditions:**
+
+- **Done:** ai jest suite green; typecheck clean; AC-029, AC-030, AC-031, AC-043 recorded.
+- **Blocked:** adaptation budget exceeded under jest.useFakeTimers — record and continue only once the named budget constant is respected.
+
+**Required validation:**
+
+- `npm run jest:base -- --testPathPatterns="examples/neatRacing/ai"`
+- `npx tsc -p tsconfig.neatRacing.json --noEmit`
+````
+
+- **SUB-BLOCK B - the superseded 2026-11-06 CURRENT BOUNDARY paragraph (the pre-move plan line 9125, the STEP-03-STAGED boundary naming the P2-S3-A dispatch), moved VERBATIM (byte-exact, pre-move line SHA256 F9730E819DB9D9EBB36D89515BDD0481AF49D17CB8E8C471BB4FF2E868E691E2):**
+
+CURRENT BOUNDARY (2026-11-06, STEP 03 STAGED [WIP] — the orchestrator-owned STEP-03-STAGING move executed inside the USER-directed STEP-02 close; PLAN-STATUS EDITS ONLY, NO production byte, NO test byte, NO git mutation): Step 02 (spec P2-S2) is CLOSED [DONE 2026-11-06] — all FOUR slices [DONE] (P2-S2-A the realm-free sim↔eval protocol + the eval-worker session state machine + the bounded NEATRACING_EVAL_WORKER_PARALLEL_VARIANT_COUNT=16; P2-S2-B the AC-027 tiered observation assembler (82/89/110 channels); P2-S2-C the AC-028 scripted waypoint rivals with the per-course deterministic throttle table (the steer axis is the SOLE turn channel — no turnRatePercent emission — with the mandated physics-level seam proof); P2-S2-green the step-level green validation with the 9,000-tick multi-tick lap-following integration probe DISCHARGED) — AC-027 + AC-028 + AC-029/AC-043 (partial) GREEN (workers jest 84/84 union + ai jest 42/42 (24 assembler + 18 scripted incl. the mandated physics-level seam proof) + neatRacing tsc clean; the consolidated slice-advancement gates PASS per the step-evidence rows); the pre-close step packet is ARCHIVED byte-exact (hash-verified) to plans/neatracing-voxel-racer.logs.md — evidence batch 160 (sub-block A) — leaving the compact [COMPRESSED] pointer under the kept [DONE 2026-11-06] step heading with the inner step-YAML status retained IN-PLAN flipped [DONE 2026-11-06] per the USER close directive (the batch-159 provenance convention superseded), and the placeholder_steps row 2 carries [DONE]. PHASE 2 STAYS [WIP]; STEPS 04-05 STAY [PLANNED] BYTE-UNTOUCHED; at THIS boundary Phase 2 holds ONE [WIP] step — Step 03 (spec P2-S3 A-C) STAGED [WIP] per the STEP-03-STAGING move (the step heading + the step YAML + the placeholder_steps row 3 flipped [PLANNED]→[WIP]; the FIRST slice P2-S3-A is [WIP] while P2-S3-B / P2-S3-C / P2-S3-G1 STAY [PLANNED]; one [WIP] step per phase). THE NEXT BOUNDARY (the STEP-03-STAGING move is EXECUTED): **the P2-S3-A dispatch** (the NGE controller + runtime adaptation slice per the Step 03 packet — the pre_execute_hook binds P2-S3-A; P2-S3-A's dependency on P2-S2-green is DISCHARGED by the recorded P2-S2-green step-level green pass) → the rest of Step 03 (P2-S3-B / P2-S3-C staging per-slice, then P2-S3-G1) → Phase 2 steps 04-05 → on Phase 2 DONE, Phase 3 — Polish + deprecation prep per the Phase 2 `next_phase` mandate. TRIO STATE CARRY: (1) the PHASE-1 EXIT CHECK is APPROVED + DISCHARGED (2026-11-06, recorded on the Staging gate record + the Step 01 Gated stop condition archived in batch 159 sub-block A + one evidence row); (2) the CORTEX INDEX REBUILD — 00-helping, `node rag-index/build-index.mjs` + `node rag-index/embed-index.mjs` — keeps its standing routed ownership and is NOT discharged by the Step-02 close or the Step-03 staging; (3) the Phase 2 STAGING IS DONE (the 2026-11-05 [WIP] flips + the staging gate evidence rows). CARRIED STILL-OPEN ITEMS (none blocks the P2-S3-A dispatch): the O-N1/O-N3/O-N5 residual ledger rows P-TURN-17..23 (routed observations, non-blocking), the stale @example band literals (right-world.builder.ts), O-8 citation drift, the MCP validation-allowlist degradation (RECORDED open in `.github/ai-learning/learning-log.jsonl`; the allowlist-executor exact-text Jest rejection RECURRED on the Step-02 lanes — the P2-S2-A green row (the 4TH rejection) and the P2-S2-green step-level row (re-confirmed on the ai lane) — under the standing learn-20261106-p2s1-validation-mcp-allowlist-executor-jest-string-rejection; the step-packet `validationCommandsMatch: false` quirk likewise standing; the shell-direct fallback is the operative workaround), and the STALE CORTEX INDEX (owned by 00-helping as above).
+
+- **THE PLAN-RETAINED RECORD (the batch-158 phase-close convention):** the plan retains EVERYTHING except the packet prose tail + the superseded boundary paragraph - the step heading [DONE 2026-11-07] + the RETAINED inner step-YAML [DONE 2026-11-07] + the [COMPRESSED] pointer + the four slice [DONE 2026-11-06/07] statuses + ALL Step-03 evidence rows (the three IMPL rows with the twin-replay activation-policy root-cause fix, the specialist-review round trails, the executor-outage provenance disclosures; the P2-S3-G1 GREEN row, the R1 consolidated re-run row, the R2/R3 round-ledger rows with the flag-first defect fix, the R5 formatting-repair row) + the P2-S1/P2-S2/P2-S3 PlanUpdate blocks + the placeholder_steps row 3 [DONE] + the STAGED Step 04 ([WIP]; P2-S3-D [WIP]) + the STEP-04-STAGING CURRENT BOUNDARY + the Handoff refresh (the Context line naming the final-byte line count) + the batch-161 [ARCHIVED] marker bullet. The plan re-measures 18,011 physical lines on the settled post-compression bytes (pre-evidence-row); the STEP 03 CLOSED evidence row lands +1 (the final-byte count correction recorded on that row, the batch-160 precedent).
+
+- **THE LEARNING EVENTS (append-only to .github/ai-learning/learning-log.jsonl, all recorded 2026-11-07 by this close, all status open, all agent_source 07-logging, timestamped 2026-11-07T01:05:28.391-05:00):** learn-20261107-p2s3c-executor-outage-silent-write-audit-reconciliation (the P2-S3-C queued PlanUpdate disclosure made durable - both implementation-executor dispatches failed on model-500 outages while the promotion.rules.ts bytes landed via the interrupted executor and were audited line-by-line against AC-031 / spec section 9.4 / the packet before adoption, the 50-test suite direct-authored; plus the P2-S3-B sibling disclosure - the untracked oscillation-penalty module from a prior interrupted slice instance audited line-by-line rather than rewritten; followup: audit-before-adoption + provenance disclosure standing practice, owners 04-implementing + agent-maintenance-coordinator); learn-20261107-p2s3g1-edit-tool-bare-cr-untypeable-oldstr (the G1 rounds-5 tooling note - six stray bare-CR control characters from edit-tool multi-line list joins are untypeable in a literal old_str and shell-side rewrite is out of contract; byte-verified, parser-neutral, R1..R5 green, documented over byte-perfection; followup: prefer single-line strings/full-block rewrites and byte-scan after complex reformats); learn-20261107-p2s3c-specialist-review-plan-text-trivial-marker-scoping (the P2-S3-C NB-7 observation made durable - the specialist-review severity classifier scopes markers across the whole plan text so a stray TRIVIAL marker elsewhere can contribute to a sub-gate classification; mitigation: slice-level review evidence recorded explicitly on the block + row; classifier reconciliation owner agent-maintenance-coordinator). NOT re-recorded (append-only precedents standing): the validation-allowlist exact-text Jest-string rejection recurrence (the P2-S3-A no-cache lane note + the G1 tsc lane line) under learn-20261106-p2s1-validation-mcp-allowlist-executor-jest-string-rejection; the plan-command-lint flag-first convention recurrences (the G1 round-2 self-authored '--noEmit:' defect, fixed in-line and re-measured R3..R5 green); the plan-family Cortex staleness under learn-20260930-082703-planfamily-reindex (00-helping ownership standing); the P2-S3-C/G1 citations of the heading-swap plan-edit safety practice under the standing learn-20261106-p2s2-mid-session-heading-swap-plan-edit-corruption-restore; the P2-S3-A ambient-anchor + unseeded-MOD-activation findings and the P2-S3-B tier-2 reviewer dispatch precedent - already captured by 04-implementing (learn-20261106-p2s3a-neatracing-lane-ambient-gpu-dts-first-src-import / learn-20261106-p2s3a-unseeded-mod-activation-src-gap / learn-20261106-p2s3b-tier2-reviewer-dispatch-policy-precedent).
+
+- **THE GATES (plan-level only - the 07-logging close gates; code-level validation was already produced and recorded by the 04-implementing / 05-green-testing phases; NO jest / tsc / build / lint re-run by this close):** ROUND 1 measured on the post-compression PRE-evidence-row plan bytes (the plan at 18,011 physical lines): `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/neatracing-voxel-racer.plans.md` PASS (0 errors, 0 warnings); `node scripts/agent-customization/gates/phase-compression.gate.mjs --json` PASS; `node scripts/agent-customization/gates/log-completion-marker.gate.mjs --json` PASS; `node scripts/agent-customization/gates/stale-wip-plans.gate.mjs --json` PASS (4/4 plans checked, 0 stale); `node scripts/agent-customization/gates/learning-event.gate.mjs --json` PASS (the ledger present, eventCount 28,771 per the gate's own counting semantics); `neataptic-gate-mcp run_gate_check(gate=slice-advancement, slice-id=step-03-close, changed-files=plans/neatracing-voxel-racer.plans.md,plans/neatracing-voxel-racer.logs.md,.github/ai-learning/learning-log.jsonl, plan=plans/neatracing-voxel-racer.plans.md)` PASS 7/7 SUB-GATES (plan-sync / step-packet / plan-slice-quality / plan-command-lint / shared-validation / code-coverage / specialist-review; severity FULL, specialistCount 1; failedGates [], erroredGates []). ROUND 2 measured on the FINAL bytes (the plan at 18,013 physical lines after the STEP 03 CLOSED evidence row + its separating blank and the Context 1:1 line-count correction 18,011->18,013 landed): ALL SIX PASS - validate-plan-sync PASS (0 errors, 0 warnings), phase-compression PASS, log-completion-marker PASS, stale-wip-plans PASS (4/4, 0 stale), learning-event PASS (eventCount 28,771), slice-advancement PASS 7/7 (same sub-gate set; severity FULL, specialistCount 1; failedGates [], erroredGates []).
+- **HASH VERIFICATION (the close directive's hash check, executed on the FINAL logs bytes):** both archived sub-blocks were re-extracted from plans/neatracing-voxel-racer.logs.md after the batch-161 write, CR-stripped per line and LF-joined (the verified batch-160 hash convention), then SHA-256: SUB-BLOCK A = the packet, 108 lines, 5,013 UTF-8 bytes, SHA256 FDF83FCB8521448BE94022D0E516D8F0179713028141CC270BFF39DC75F42461 - **MATCHES** the pre-move extraction; SUB-BLOCK B = the superseded 2026-11-06 boundary line, 3,724 chars, SHA256 F9730E819DB9D9EBB36D89515BDD0481AF49D17CB8E8C471BB4FF2E868E691E2 - **MATCHES**; the re-verification ran on the logs bytes AFTER the batch-161 write AND this THE-GATES insertion (the insertion touched NO sub-block byte - the batch-160 convention), so both hashes hold on the final bytes as the close-time evidence of record.
+
+- **NEXT BOUNDARY (the Step-03 close hands control back):** the **P2-S3-D dispatch** (the rival propagation operator slice, spec P2-S3-D per the Step 04 packet - the pre_execute_hook binds P2-S3-D; P2-S3-D's dependency on P2-S3-G1 is DISCHARGED by the recorded P2-S3-G1 part-1 green pass) then the rest of Step 04 (P2-S3-E per-slice staging, then P2-S3-G2) → Phase 2 step 05 → on Phase 2 DONE, Phase 3 - Polish + deprecation prep per the Phase 2 `next_phase` mandate. The CORTEX INDEX REBUILD (00-helping) rides its standing carried ownership. The round-2 gate addendum + the byte-verification hashes will be recorded on this batch's THE-GATES bullet and the plan's STEP 03 CLOSED evidence row.
+
+### Evidence batch 162 - the STEP-04 CLOSE (the spec-P2-S3 D-E step-packet close out of plans/neatracing-voxel-racer.plans.md + the superseded 2026-11-07 CURRENT BOUNDARY paragraph - plan + logs bytes only, no production byte, no test byte, no git mutation) - 07-logging (Tier 1), 2026-11-07
+
+- **THE MOVE (2026-11-07, PLAN-STATUS EDITS ONLY - no production byte, no test byte, no git mutation):** the USER directive (verbatim): "Close Step 04 of plans/neatracing-voxel-racer.plans.md per the batch-160/161 close precedent: flip Step-04 heading+YAML and row 4 to [DONE 2026-11-07], compress packet/prose to logs batch 162 (SHA-256 verified), stage Step-05 in the plan, capture owed learning events (G2 block queues 3 tooling observations), run plan gates pre+post-append, then STOP. Git read-only. Load context via Cortex MCP / get_slice_context." (the get_slice_context hook for the Step-04 close returned notFound on BOTH facade attempts (the workflow facade and the gate MCP) - the sanctioned native fallback ran and the close executed from the plan packet itself, mirroring the batch-159/160/161 close records). The pre-close Step 04 step packet = the PRE-MOVE plan lines 6556..6640 (85 lines: the step heading + the YAML packet with its THREE slice packets all already [DONE 2026-11-07] from the P2-S3 D-E green wave + the User instruction + the Step objective + the Stop conditions + the Required-validation prose tail). SUB-BLOCK A archives the FULL packet VERBATIM (byte-exact, hash-verified: pre-move SHA256 8A6BA7241CADF5DBE018021E0ACE469753BA43E6BFCA6E4BA9E381DF662B14F3 over the 85 packet lines CR-stripped and LF-joined, 3,299 UTF-8 bytes). **ARCHIVE DEVIATION - the USER close directive (flip Step-04 heading+YAML [DONE]) stands over the batch-159 provenance convention exactly as in the batch-160/161 closes:** the step heading + the inner step-YAML status are RETAINED IN-PLAN flipped [WIP] -> [DONE 2026-11-07] under a compact [COMPRESSED 2026-11-07] pointer - the archived copy below keeps the pre-move [WIP] step-level values for provenance; the prose tail (the User instruction / Step objective / Stop conditions / Required validation) is compressed to this archive (the batch-158 convention keeps the Step-04 slice evidence rows + PlanUpdates in-plan as the phase-close material). The superseded 2026-11-07 CURRENT BOUNDARY paragraph (the PRE-MOVE plan line 9122, the STEP-04-STAGED boundary naming the P2-S3-D dispatch) moves to SUB-BLOCK B VERBATIM (byte-exact, hash-verified: pre-move line SHA256 53CE9FF36B3D50F15646636B2C171CE09F7D672317918F139FA61B6070E6F7CE over the single 3,671-char line). KEPT in the plan: the step heading + the step YAML (both flipped [DONE 2026-11-07]) + the [COMPRESSED] pointer; the Phase-2 placeholder_steps row 4 [DONE]; the STEP-05 STAGING [WIP] executed inside this USER-directed close (the step heading + the step YAML + the placeholder_steps row 5 flipped [PLANNED]->[WIP]; the first slice P2-S4-A [WIP] while P2-S4-B / P2-S4-C / P2-S4-green stay [PLANNED]); ALL the Step-04 slice evidence rows + the slice PlanUpdate blocks; the NEW STEP-05-STAGING CURRENT BOUNDARY + the Handoff refresh + the batch-162 [ARCHIVED] marker bullet. UNTOUCHED: the Phase 2 heading + phase YAML, the AC register, README/Roadmap, every production/test byte; NO mutating git.
+
+- **SUB-BLOCK A - the full Step 04 step packet (the pre-move plan lines 6556..6640, moved VERBATIM - the [WIP] statuses below are the archived PRE-MOVE provenance; the in-plan packet is RETAINED flipped [DONE 2026-11-07] + a [COMPRESSED] pointer per the USER close directive):**
+
+````markdown
+#### Step 04 — NGE growth + promotion part 2 (spec P2-S3 D-E) [WIP]
+
+```yaml
+phase: 2
+step: 4
+title: 'NGE growth + promotion part 2 (spec P2-S3 D-E)'
+status: '[WIP]'
+goal: implementing
+expansion: slices
+auto_expand: true
+tdd_sequence: green-only
+mode: fresh-session
+source_of_truth: 'plans/neatracing-voxel-racer.plans.md'
+copy_paste: true
+next_step: 'Step 05 - Mode integration + network visualizer (spec P2-S4)'
+pre_execute_hook:
+  tool: 'neataptic-workflow-mcp-get_slice_context'
+  args:
+    slice_id: 'P2-S3-D'
+skills:
+  - implementation-standards
+  - red-test-contracts
+  - green-validation-gates
+validation:
+  - 'examples/neatRacing/ai'
+acceptance_criteria:
+  - 'AC-032: rival winner propagation as bounded seeded weight-nudge mutations on serialized weights; LAP/line-boundary swaps only; lvl-2 no-op tested; main agent never fully reset (P2-S3-D)'
+  - 'AC-029 (support): fitness shaping keeps variant evaluation in the eval worker per TP-08 (P2-S3-E)'
+slices:
+  - slice_id: 'P2-S3-D'
+    title: 'Rival propagation operator (weight nudges + snapshot serialization)'
+    status: '[DONE 2026-11-07]'
+    goal: implementing
+    estimate_hours: 2
+    files_to_change:
+      - 'examples/neatRacing/ai/rival.propagation.ts'
+      - 'examples/neatRacing/ai/rival.propagation.test.ts'
+    acceptance_criteria:
+      - 'AC-032: lvl-2 no-op; lvl-3 (4 rivals) propagation; boundary timing; crossing-network snapshot + mutation RNG seed serialized into opponentSnapshot'
+    red_test:
+      - 'RED: rival.propagation.test.ts fails before the module; asserts lvl-2 no-op, lvl-3 propagation, boundary timing, snapshot serialization'
+    parallelizable: true
+    dependencies:
+      - 'P2-S3-G1'
+  - slice_id: 'P2-S3-E'
+    title: 'Fitness shaping utils (TP-08)'
+    status: '[DONE 2026-11-07]'
+    goal: implementing
+    estimate_hours: 2
+    files_to_change:
+      - 'examples/neatRacing/ai/fitness.shaping.utils.ts'
+      - 'examples/neatRacing/ai/fitness.shaping.utils.test.ts'
+    acceptance_criteria:
+      - 'AC-029 (support): shaping terms per TP-08 keep variant evaluation inside the eval worker protocol'
+    red_test:
+      - 'RED: fitness.shaping.utils.test.ts fails before the utils; asserts shaping term math and bounded outputs'
+    parallelizable: true
+    dependencies: []
+  - slice_id: 'P2-S3-G2'
+    title: 'Part 2 green validation: propagation + fitness shaping'
+    status: '[DONE 2026-11-07]'
+    goal: green-testing
+    estimate_hours: 1
+    files_to_change:
+      - 'plans/neatracing-voxel-racer.plans.md'
+    acceptance_criteria:
+      - 'Step 04 AC subset green: AC-032, AC-029 support; ai jest pattern green'
+    parallelizable: false
+    dependencies:
+      - 'P2-S3-D'
+      - 'P2-S3-E'
+```
+
+**User instruction:** Implement spec slice P2-S3 D-E: rival winner propagation and TP-08 fitness shaping; red -> implement -> green per slice.
+
+**Step objective:** Deliver bounded seeded weight-nudge propagation with LAP/line-boundary swaps and fitness shaping kept inside the eval worker.
+
+**Stop conditions:**
+
+- **Done:** ai jest suite green; AC-032 + AC-029 support recorded.
+- **Blocked:** propagation touches the main agent state — stop, record, escalate via 00.cross-tier-helper.
+
+**Required validation:**
+
+- `npm run jest:base -- --testPathPatterns="examples/neatRacing/ai"`
+````
+
+- **SUB-BLOCK B - the superseded 2026-11-07 CURRENT BOUNDARY paragraph (the pre-move plan line 9122, the STEP-04-STAGED boundary naming the P2-S3-D dispatch), moved VERBATIM (byte-exact, pre-move line SHA256 53CE9FF36B3D50F15646636B2C171CE09F7D672317918F139FA61B6070E6F7CE):**
+
+CURRENT BOUNDARY (2026-11-07, STEP 04 STAGED [WIP] — the orchestrator-owned STEP-04-STAGING move executed inside the USER-directed STEP-03 close; PLAN-STATUS EDITS ONLY, NO production byte, NO test byte, NO git mutation): Step 03 (spec P2-S3 A-C) is CLOSED [DONE 2026-11-07] — all FOUR slices [DONE] (P2-S3-A the AC-029 seeded capacity-limited NGE controller (nge.controller.ts) + the runtime adaptation engine (runtime.adaptation.ts) with the activation-policy-immutability twin-replay root-cause fix and the lane's first examples→src import ambient anchor; P2-S3-B the AC-030 shared oscillation predicate with the NB-7 re-pinned 300/600 floor, the hysteresis ramp and the preserved deadband 0.15; P2-S3-C the AC-031 three-part promotion predicate + the D4 round-boundary seam (seedNetwork hex + carriedInnovationCounter, the strict injective envelope canonicalizer, the finite-weights guard) with fix-loop iteration 1 (F1/F2/F3 discharged, R2 APPROVE); P2-S3-G1 the step-level green validation) — AC-029 + AC-030 + AC-031 + AC-043 (partial support) GREEN (ai jest 156/156 union (24 assembler + 18 scripted + 27 adaptation + 37 oscillation + 50 promotion) + workers jest 84/84 regression guard + neatRacing tsc clean + eslint clean; the consolidated slice-advancement gates PASS per the step-evidence rows, five measured R1..R5 rounds on the G1 wrap-up); the pre-close step packet is ARCHIVED byte-exact (hash-verified) to plans/neatracing-voxel-racer.logs.md — evidence batch 161 (sub-block A) — leaving the compact [COMPRESSED] pointer under the kept [DONE 2026-11-07] step heading with the inner step-YAML status retained IN-PLAN flipped [DONE 2026-11-07] per the USER close directive (the batch-160 in-plan-flip convention stands), and the placeholder_steps row 3 carries [DONE]. PHASE 2 STAYS [WIP]; STEP 05 STAYS [PLANNED] BYTE-UNTOUCHED; at THIS boundary Phase 2 holds ONE [WIP] step — Step 04 (spec P2-S3 D-E) STAGED [WIP] per the STEP-04-STAGING move (the step heading + the step YAML + the placeholder_steps row 4 flipped [PLANNED]→[WIP]; the FIRST slice P2-S3-D is [WIP] while P2-S3-E / P2-S3-G2 STAY [PLANNED]; one [WIP] step per phase). THE NEXT BOUNDARY (the STEP-04-STAGING move is EXECUTED): **the P2-S3-D dispatch** (the rival-propagation operator slice per the Step 04 packet — the pre_execute_hook binds P2-S3-D; P2-S3-D's dependency on P2-S3-G1 is DISCHARGED by the recorded P2-S3-G1 part-1 green pass) → the rest of Step 04 (P2-S3-E per-slice staging, then P2-S3-G2) → Phase 2 step 05 → on Phase 2 DONE, Phase 3 — Polish + deprecation prep per the Phase 2 `next_phase` mandate. TRIO STATE CARRY: (1) the PHASE-1 EXIT CHECK is APPROVED + DISCHARGED (2026-11-06, recorded on the Staging gate record + the Step 01 Gated stop condition archived in batch 159 sub-block A + one evidence row); (2) the CORTEX INDEX REBUILD — 00-helping, `node rag-index/build-index.mjs` + `node rag-index/embed-index.mjs` — keeps its standing routed ownership and is NOT discharged by the Step-03 close or the Step-04 staging; (3) the Phase 2 STAGING IS DONE (the 2026-11-05 [WIP] flips + the staging gate evidence rows). CARRIED STILL-OPEN ITEMS (none blocks the P2-S3-D dispatch): the O-N1/O-N3/O-N5 residual ledger rows P-TURN-17..23 (routed observations, non-blocking), the stale @example band literals (right-world.builder.ts), O-8 citation drift, the MCP validation-allowlist degradation (RECORDED open in `.github/ai-learning/learning-log.jsonl`; the shell-direct fallback is the operative workaround), the runtime duplicate law constants retirement owed to the Step-03 wiring (the P2-S3-B PlanUpdate note), and the STALE CORTEX INDEX (owned by 00-helping as above).
+
+- **THE PLAN-RETAINED RECORD (the batch-158 phase-close convention):** the plan retains EVERYTHING except the packet prose tail + the superseded boundary paragraph - the step heading [DONE 2026-11-07] + the RETAINED inner step-YAML [DONE 2026-11-07] + the [COMPRESSED] pointer + the three slice [DONE 2026-11-07] statuses + ALL Step-04 evidence rows (the P2-S3-D implementer row with fix-loop iteration 1 — F1-F5 discharged, the round-2 determinism-reviewer APPROVE — the P2-S3-E implementer row with ZERO fix-loop rounds and the round-1 evolution-correctness-reviewer APPROVE, the P2-S3-G2 GREEN row with the four-lane sweep + the VALIDATION-MCP TOOLING NOTE, the P2-S3-G2 consolidated-gate row) + the P2-S1/P2-S2/P2-S3 PlanUpdate blocks (the P2-S3-D fix-packet-iteration-1 block + the D/E/G2 PlanUpdate tails incl. the OBS-1..4 carry-forwards routed to the orchestrator as the Step-05 wiring constraints) + the placeholder_steps row 4 [DONE] + row 5 [WIP] + the STAGED Step 05 ([WIP]; P2-S4-A [WIP]) + the STEP-05-STAGING CURRENT BOUNDARY + the Handoff refresh (the Context line naming the line count) + the batch-162 [ARCHIVED] marker bullet. The plan re-measures 18,207 lines on the settled post-compression PRE-evidence-row bytes (measured 2026-11-07 as the System.IO.File ReadAllLines array count — the Get-Content array count agrees; note the plan carries SIX pre-existing lone-CR legacy split artifacts from the G1 rounds-5 tooling note, so a Measure-Object style LF count gives the lower physical count); the STEP 04 CLOSED evidence row lands +2 (the row + its separating blank; the final-byte count recorded on the row, the batch-160/161 correction convention).
+
+- **THE LEARNING EVENTS (append-only to .github/ai-learning/learning-log.jsonl, all recorded 2026-11-07 by this close, all status open, all agent_source 07-logging, timestamps 2026-11-07T03:25:00.000-05:00, authored by the dispatched learning-event-capturer from this close's directive):** learn-20261107-p2s3g2-validation-mcp-allowlist-jest-string-5th-recurrence (the FIFTH occurrence of the standing Jest-string quirk family learn-20261106-p2s1-validation-mcp-allowlist-executor-jest-string-rejection — the allowlist executor rejected the P2-S3-G2 Jest lane string while the identical command PASSED shell-direct (ai jest 7 suites / 227/227); the recurrence of a known open event is recorded as its own dated event rather than a duplicate edit of the standing entry — append-only preservation; the shell-direct fallback stays operative; owner agent-maintenance-coordinator); learn-20261107-p2s3g2-validation-mcp-tsc-string-rejection-drift (NEW drift — the IDENTICAL tsc entry matched the allowlist and relayed cleanly in the P2-S3-G1 sweep but was REJECTED on the P2-S3-G2 pass with no packet, config or environment change between the two passes — the matcher's acceptance is not deterministic pass-to-pass; treat every packet-required lane as shell-direct until the matcher is characterised; owner agent-maintenance-coordinator); learn-20261107-p2s3g2-step-packet-validationcommands-bare-pattern-quirk (NEW packet-authoring contract gap — the Step 04 packet declares validationCommands = [examples/neatRacing/ai] as a BARE test-path pattern, so the exact-text matcher can never match it and validationCommandsMatch: false stands; declare literal runnable commands or add a matcher-understood lane-pattern field; owner agent-maintenance-coordinator with 07-logging). NOT re-recorded (append-only precedents standing): the plan-family Cortex staleness under learn-20260930-082703-planfamily-reindex (00-helping ownership standing); the plan-edit heading-swap safety practice citations under learn-20261106-p2s2-mid-session-heading-swap-plan-edit-corruption-restore (this close's status flips + the long-line boundary swap use full unique-context anchors; the pre-existing SIX lone-CR legacy split artifacts in the plan are from the G1 rounds-5 tooling note, NOT this close — a byte census reconciles the pre/post edit CR/LF totals exactly); the OBS-1..4 carry-forwards (routed to the orchestrator as the Step-05 wiring constraints, NOT learning events).
+
+- **THE GATES (plan-level only - the 07-logging close gates; code-level validation was already produced and recorded by the 04-implementing / 05-green-testing phases; NO jest / tsc / build / lint re-run by this close):** ROUND 1 measured on the post-compression PRE-evidence-row plan bytes (the plan at 18,207 lines as the System.IO.File ReadAllLines array count, the Get-Content count agreeing; the six pre-existing lone-CR legacy split artifacts from the G1 rounds-5 tooling note included): `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/neatracing-voxel-racer.plans.md` PASS (0 errors, 0 warnings); `node scripts/agent-customization/gates/phase-compression.gate.mjs --json` PASS; `node scripts/agent-customization/gates/log-completion-marker.gate.mjs --json` PASS; `node scripts/agent-customization/gates/stale-wip-plans.gate.mjs --json` PASS (4/4 plans checked, 0 stale); `node scripts/agent-customization/gates/learning-event.gate.mjs --json` PASS (the ledger present, eventCount 28,774 per the gate's own counting semantics); `neataptic-gate-mcp run_gate_check(gate=slice-advancement, slice-id=step-04-close, changed-files=plans/neatracing-voxel-racer.plans.md,plans/neatracing-voxel-racer.logs.md,.github/ai-learning/learning-log.jsonl, plan=plans/neatracing-voxel-racer.plans.md)` PASS 7/7 SUB-GATES (plan-sync / step-packet / plan-slice-quality / plan-command-lint / shared-validation / code-coverage / specialist-review; severity FULL, specialistCount 1; failedGates [], erroredGates []). ROUND 2 measured on the FINAL plan bytes (the plan at 18,209 lines after the STEP 04 CLOSED evidence row + its separating blank landed +2): ALL SIX PASS - validate-plan-sync PASS (0 errors, 0 warnings), phase-compression PASS, log-completion-marker PASS, stale-wip-plans PASS (4/4, 0 stale), learning-event PASS (eventCount 28,774), slice-advancement PASS 7/7 (same sub-gate set; severity FULL, specialistCount 1; failedGates [], erroredGates []). The Handoff Context line carried the final-byte count 18,209 from the analytic pre-write and the measured final-byte array count came back 18,209 — BOTH methods agree, so NO post-measure correction was needed (the batch-160/161 1:1 convention discharged true).
+- **HASH VERIFICATION (the close directive's hash check, executed on the logs bytes):** both archived sub-blocks were re-extracted from plans/neatracing-voxel-racer.logs.md, CR-stripped per line and LF-joined (the verified batch-161 hash reproduction convention - confirmed FIRST on this session against the standing batch-161 archive: sub-block A re-extracted FDF83FCB8521448BE94022D0E516D8F0179713028141CC270BFF39DC75F42461 MATCH, sub-block B F9730E819DB9D9EBB36D89515BDD0481AF49D17CB8E8C471BB4FF2E868E691E2 MATCH), then SHA-256: SUB-BLOCK A = the Step 04 packet, 85 lines, 3,299 UTF-8 bytes, SHA256 8A6BA7241CADF5DBE018021E0ACE469753BA43E6BFCA6E4BA9E381DF662B14F3 - **MATCHES** the pre-move extraction; SUB-BLOCK B = the superseded 2026-11-07 boundary line, 3,671 chars, SHA256 53CE9FF36B3D50F15646636B2C171CE09F7D672317918F139FA61B6070E6F7CE - **MATCHES**; the re-verification ran on the logs bytes AFTER the batch-162 write AND the final THE-GATES / HASH / NEXT-BOUNDARY insertion of this close (the insertion touched NO sub-block byte - the batch-160 convention), so both hashes hold on the final bytes as the close-time evidence of record.
+
+- **NEXT BOUNDARY (the Step-04 close hands control back):** the **P2-S4-A dispatch** (the AI-mode goals + mode-selector integration slice, spec P2-S4-A per the Step 05 packet - the pre_execute_hook binds P2-S4-A; P2-S4-A's dependency on P2-S3-G2 is DISCHARGED by the recorded G2 full-lane green pass) then the rest of Step 05 (P2-S4-B / P2-S4-C per-slice staging, then P2-S4-green) → on Phase 2 DONE, Phase 3 - Polish + deprecation prep per the Phase 2 `next_phase` mandate. The round ledger + the byte-verification hashes are recorded on this batch's THE-GATES / HASH VERIFICATION bullets and the plan's STEP 04 CLOSED evidence row (the batch-160/161 convention). The CORTEX INDEX REBUILD (00-helping) rides its standing carried ownership. THE CLOSE STOPPED PER THE USER DIRECTIVE - no Step-05 execution, no further file writes.
+
+### Evidence batch 163 - the STEP-05 CLOSE (the spec-P2-S4 step-packet close out of plans/neatracing-voxel-racer.plans.md + the superseded 2026-11-07 CURRENT BOUNDARY paragraph - plan + logs bytes only, no production byte, no test byte, no git mutation) - 07-logging (Tier 1), 2026-11-07
+
+- **THE MOVE (2026-11-07, PLAN-STATUS EDITS ONLY - no production byte, no test byte, no git mutation):** the USER directive (verbatim): "close Step 05 of plans/neatracing-voxel-racer.plans.md per the batch-160/161/162 close precedent: flip Step-05 heading+YAML and row 5 to [DONE 2026-11-07], compress packet/prose to logs batch 163 (SHA-256 verified), stage the next boundary per the plan, capture owed learning events (P2-S4-green queues 3 tooling/environment items), run plan gates pre+post-append, then STOP. Git read-only. Load context via Cortex MCP / get_slice_context." (the get_slice_context hook for the Step-05 close ran on BOTH the workflow facade and the gate-MCP facade and returned the COMPACT payload with EMPTY packet fields BOTH times (slice_id 05 resolved to phase 2 step 5 with no step title/status/validation data) - the sanctioned native fallback ran and the close executed from the plan packet itself, mirroring the batch-159/160/161/162 close records). The pre-close Step 05 step packet = the PRE-MOVE plan lines 6631..6737 (107 lines: the step heading + the YAML packet with its FOUR slice packets all already [DONE 2026-11-07] from the P2-S4 green wave + the User instruction + the Step objective + the Stop conditions + the Required-validation prose tail). SUB-BLOCK A archives the FULL packet VERBATIM (byte-exact, hash-verified: pre-move SHA256 EDAAF0448FC90274726768222D15EA2F0BEC36E3BDFB0D556BD89A893C7FD794 over the 107 packet lines CR-stripped and LF-joined, 9,475 UTF-8 bytes). **ARCHIVE DEVIATION - the USER close directive (flip Step-05 heading+YAML [DONE]) stands over the batch-159 provenance convention exactly as in the batch-160/161/162 closes:** the pre-move YAML carries the step status '[WIP]' (and the [WIP] step heading); the archive below keeps those PRE-MOVE PROVENANCE bytes, while the plan packet is RETAINED IN-PLAN with the heading + the inner step YAML flipped [DONE 2026-11-07] per the USER close directive and the prose tail compressed to the single [COMPRESSED] pointer (the batch-160/161/162 precedent; the pointer records the flip + the byte-exact archive disposition). KEPT in the plan: the step heading + the step YAML (both flipped [DONE 2026-11-07]) + the [COMPRESSED] pointer; the Phase-2 placeholder_steps row 5 [DONE] (flipped from [WIP]); NO Phase-3 staging flip executed (the Phase-2 close + the Phase-3 staging stay ORCHESTRATOR-OWNED per the recorded P2-S4-green phase-close holds - the close stages the next-boundary RECORD only); ALL Step-05 slice evidence rows + the slice PlanUpdate blocks; the NEW STEP-05-CLOSED CURRENT BOUNDARY + the Handoff refresh (the Context line batch-163 + the 18,464-line final count) + the batch-163 [ARCHIVED] marker bullet. UNTOUCHED: the Phase 2 heading + phase YAML (Phase 2 stays [WIP] pending the orchestrator-owned Phase-2 close), the AC register, README/Roadmap, every production/test byte; NO mutating git (the directive is git read-only; edits via the edit/create tool path only).
+
+- **SUB-BLOCK A - the full Step 05 step packet (the pre-move plan lines 6631..6737, moved VERBATIM - the [WIP] statuses below are the archived PRE-MOVE provenance; the in-plan packet is RETAINED flipped [DONE 2026-11-07] + a [COMPRESSED] pointer per the USER close directive):**
+
+````markdown
+#### Step 05 — Mode integration + network visualizer (spec P2-S4) [WIP]
+
+```yaml
+phase: 2
+step: 5
+title: 'Mode integration + network visualizer (spec P2-S4)'
+status: '[WIP]'
+goal: implementing
+expansion: slices
+auto_expand: true
+tdd_sequence: green-only
+mode: fresh-session
+source_of_truth: 'plans/neatracing-voxel-racer.plans.md'
+copy_paste: true
+next_step: 'Phase 2 complete - dispatch Phase 3 (Step 01) after green light'
+pre_execute_hook:
+  tool: 'neataptic-workflow-mcp-get_slice_context'
+  args:
+    slice_id: 'P2-S4-A'
+skills:
+  - implementation-standards
+  - red-test-contracts
+  - green-validation-gates
+validation:
+  - 'examples/neatRacing/ai'
+  - 'examples/neatRacing/host'
+  - 'manual: AI mode race with evolving agents + right-side network panel'
+acceptance_criteria:
+  - 'AC-033: AI mode runs >= NEATRACING_AI_MIN_SESSION_LAPS=20 laps until growth goal met; mode toggle restarts the race; human takes car 0 vs evolving agents (P2-S4-A/C)'
+  - 'AC-034: right-side network panel renders only the most-forward agent via thin adapter over examples/shared/network-visualization (P2-S4-B)'
+slices:
+  - slice_id: 'P2-S4-A'
+    title: 'AI mode goals + mode selector integration'
+    status: '[DONE 2026-11-07 — 04-implementing: the AI-mode goal state machine ai-mode.goals.ts (NEW — count-then-evaluate over the shared P2-S3-C eligibility predicate; finiteOrNaN-normalized measurements; the host completed-circuit bank increment; the promoted/crossingWithoutLap/lapCounted/ignored outcome union; lvl 3 unbounded with no terminal state) + its 27-test suite + the mode-selector Phase-2 JSDoc-only contract refresh (zero code lines, the pinned P1-S7-E suite green); green-only per the USER dispatch, the 3-file packet boundary honored; the round-1 specialist findings F1/F2 fixed via fix-packet-P2-S4-A-iteration-1 and the round-2 review APPROVED with zero defects; npx tsc exit 0, npx eslint exit 0, jest ai 254/254 (8 suites incl. the 27-test goals suite), jest host 92/92; the manual AI-mode browser probe stays with P2-S4-green and AC-034 stays with P2-S4-B; full evidence in ## Latest validation evidence]'
+    goal: implementing
+    estimate_hours: 3
+    files_to_change:
+      - 'examples/neatRacing/ai/ai-mode.goals.ts'
+      - 'examples/neatRacing/host/mode-selector.ts'
+      - 'examples/neatRacing/ai/ai-mode.goals.test.ts'
+    acceptance_criteria:
+      - 'AC-033: 20-lap minimum then promotion-threshold-driven continuation; lvl 3 continues until user stops'
+    red_test:
+      - 'RED: ai-mode.goals.test.ts fails before the goals module; asserts lap floor and growth-goal continuation'
+    parallelizable: true
+    dependencies:
+      - 'P2-S3-G2'
+  - slice_id: 'P2-S4-B'
+    title: 'Network panel adapter (most-forward agent only)'
+    status: '[DONE 2026-11-07 — 04-implementing: the AC-034 thin adapter examples/neatRacing/visualizer/network-panel.adapter.ts (NEW — folder-creating, over examples/shared/network-visualization mirroring the racing_curriculum network-view + installRacingNetworkResize precedents: the pure most-forward selection resolveMostForwardNeatRacingAgent over host-supplied {agentId, progress, network?} candidates with the law set — L1 PROGRESS IS HOST-OWNED (the packed neatracing-packed-v1 frame carries kinematics only, no track-geometry derivation) / L2 STICKY INCUMBENT (the leader vacates only on STRICTLY greater progress — the current winner at all times) / L3 NON-FINITE PROGRESS NEVER LEADS / L4 NO-INCUMBENT TIE-BREAK = max progress then lowest agentId / L6 ONE SIZING AUTHORITY PER CANVAS (racing-parity wiring = resize service + from-frame path; drawNeatRacingNetworkPanel is the standalone self-sizing path); the shared-frame pass-throughs (Tier A 82 input default + NGE 2 outputs + LOD enabled with the shared 2048/4/64 constants, NO custom input-label tables), the draw paths with the THR/STR/R0..R6/OUT<i> NGE output-tag law in the HUD cyan token, the 320/240 min + 0.75-aspect panel dimension law, and installNeatRacingNetworkResize as the exact racing resize mirror (fallback innerWidth*0.25 / innerHeight*0.35, apply on install + resize listener, onResize ONLY on an actual backing-size change, {uninstall, resize, redraw} with redraw a no-op)) + the 19-test green suite (single-expect, jsdom canvas-stub lane; pins the four selection laws + the resize wiring + the output tags); green-only per the USER dispatch, the 2-file packet boundary honored; the round-1 specialist review (api-contract-reviewer via review-coordinator, severity FULL) APPROVED with zero breaking findings and the 3 MINOR fix hints (F1 shared type re-exports / F2 composition law / F3 network-less-winner law) applied verbatim in-slice (additive doc/type only) with the preflight re-run green afterward; npx tsc exit 0, npx eslint exit 0, jest visualizer lane 19/19, jest ai+host lanes 346/346 (15 suites); the manual AI-mode browser probe stays with P2-S4-green; full evidence in ## Latest validation evidence + the plan-tail PlanUpdate block]'
+    goal: implementing
+    estimate_hours: 2
+    files_to_change:
+      - 'examples/neatRacing/visualizer/network-panel.adapter.ts'
+      - 'examples/neatRacing/visualizer/network-panel.adapter.test.ts'
+    acceptance_criteria:
+      - 'AC-034: adapter renders only the current winner; resize service behavior matches installRacingNetworkResize pattern'
+    red_test:
+      - 'RED: network-panel.adapter.test.ts fails before the adapter; asserts most-forward selection + resize wiring'
+    parallelizable: true
+    dependencies: []
+  - slice_id: 'P2-S4-C'
+    title: 'Human car 0 vs evolving agents host wiring'
+    status: '[DONE 2026-11-07 — 04-implementing: the AC-033 sim-worker protocol host wiring in examples/neatRacing/browser-entry/browser-entry.ts (the drive loop re-plumbed from the retired P1 createRaceSession path to the live sim worker: bootSimWorkerRound/restartSimWorkerRound stop-terminal lifecycle, AI-mode goal lifecycle fed by the rules-clone crossing authority with the host-derived lapsSinceLastCrossing fact via resolveNeatRacingLapFactAdvance, the promoted rebase at the machine-clamped rung with the matching ladder fleet and the restart carrier rulesNow.nextRaceLevel ?? rulesNow.level, rival along-track progress via the chord-index helpers buildNeatRacingTrackChordIndex + resolveNeatRacingCarAlongProgressM feeding the AC-034 panel election, the network panel mount/unmount/update, teardown symmetry) + the NEW 47-test host.wiring.test.ts suite (REAL goal machine / REAL selector / REAL protocol session; ONLY the scripted probe doubled); round-1 specialist review (api-contract-reviewer via review-coordinator, severity FULL) returned REQUEST_CHANGES and the fix iteration discharged fix-packet-P2-S4-C-iteration-1 exactly (F1 the progress wrap-law decrement path + re-pinned tests, F2 the No-Deferred-Cleanup retirement of host/race-session.ts + race-session.test.ts + race-session.sand-red.test.ts + race-session.specs.md and the browser-entry.specs.md participant re-point) with the round-2 fresh reviewer APPROVING with zero blocking findings; THE FILE FOOTPRINT WAS EXTENDED FROM TWO TO SEVEN FILES per the No-Deferred-Cleanup Policy and the plans.md L4396 precedent, recorded in the PlanUpdate; green-only per the USER dispatch; npx tsc --noEmit -p tsconfig.neatRacing.json exit 0, npx eslint exit 0, jest host 6 suites 118/118 (the race-session suites retired), jest browser-entry 3 suites 86/86, jest ai 254/254, jest workers 84/84, jest visualizer 19/19; the manual AI-mode race + panel browser probe stays with P2-S4-green; full evidence in ## Latest validation evidence + the plan-tail PlanUpdate block]'
+    goal: implementing
+    estimate_hours: 3
+    files_to_change:
+      - 'examples/neatRacing/browser-entry/browser-entry.ts'
+      - 'examples/neatRacing/host/host.wiring.test.ts'
+    acceptance_criteria:
+      - 'AC-033: end-to-end wiring of human car 0 racing evolving agents through the sim worker protocol'
+    red_test:
+      - 'RED: host.wiring.test.ts fails before wiring; asserts car 0 human control + rival evolution loop integration'
+    parallelizable: true
+    dependencies:
+      - 'P2-S4-A'
+      - 'P2-S4-B'
+  - slice_id: 'P2-S4-green'
+    title: 'Step green validation: mode integration + visualizer'
+    status: '[DONE 2026-11-07]'
+    goal: green-testing
+    estimate_hours: 1
+    files_to_change:
+      - 'plans/neatracing-voxel-racer.plans.md'
+    acceptance_criteria:
+      - 'Step 05 AC subset green: AC-033, AC-034; ai + host jest patterns green; manual AI-mode check'
+    parallelizable: false
+    dependencies:
+      - 'P2-S4-A'
+      - 'P2-S4-B'
+      - 'P2-S4-C'
+```
+
+**User instruction:** Implement spec slice P2-S4: AI-mode integration (20-lap goal floor, mode toggle) and the most-forward-agent network panel; red -> implement -> green per slice.
+
+**Step objective:** Wire AI mode end-to-end: human car 0 vs evolving agents through the sim worker protocol, plus the right-side network panel adapter.
+
+**Stop conditions:**
+
+- **Done:** ai + host jest suites green; manual AI-mode race with the network panel works; AC-033, AC-034 recorded.
+- **Blocked:** visualizer adapter breaks the examples/shared contract — record and escalate via 00.cross-tier-helper.
+
+**Required validation:**
+
+- `npm run jest:base -- --testPathPatterns="examples/neatRacing/ai"`
+- `npm run jest:base -- --testPathPatterns="examples/neatRacing/host"`
+- manual: AI mode race with evolving agents + right-side network panel
+````
+
+- **SUB-BLOCK B - the superseded 2026-11-07 CURRENT BOUNDARY paragraph (the pre-move plan line 9122, the STEP-05-STAGED boundary naming the P2-S4-A dispatch), moved VERBATIM (byte-exact, pre-move line SHA256 9CDE809F2AC2CB8DAC46C14FB848803001E441D981F4AA0A4F575AA00066F85F):**
+
+CURRENT BOUNDARY (2026-11-07, STEP 05 STAGED [WIP] — the 07-logging-close-owned STEP-05-STAGING move executed inside the USER-directed STEP-04 close; PLAN-STATUS EDITS ONLY, NO production byte, NO test byte, NO git mutation): Step 04 (spec P2-S3 D-E) is CLOSED [DONE 2026-11-07] — all THREE slices [DONE] (P2-S3-D the AC-032 rival propagation operator slice — bounded seeded weight-nudge propagation with LAP/line-boundary swaps, the in-module car-0 exclusion guard law, keep-off the main agent state; P2-S3-E the TP-08 fitness shaping slice — the pure shaped-fitness function kept inside the eval worker with named strictly-positive weights; P2-S3-G2 the step-level green validation — ai jest 227/227 (7 suites) + workers jest 84/84 + neatRacing tsc clean + eslint clean per the recorded G2 full-lane green pass) — AC-032 + AC-029 support GREEN per the step-evidence rows; the pre-close step packet is ARCHIVED byte-exact (hash-verified) to plans/neatracing-voxel-racer.logs.md — evidence batch 162 (sub-block A) — leaving the compact [COMPRESSED] pointer under the kept [DONE 2026-11-07] step heading with the inner step-YAML status retained IN-PLAN flipped [DONE 2026-11-07] per the USER close directive, and the placeholder_steps row 4 carries [DONE]. PHASE 2 STAYS [WIP]; at THIS boundary Phase 2 holds ONE [WIP] step — Step 05 (spec P2-S4) STAGED [WIP] per this close's STEP-05-STAGING move (the step heading + the step YAML + the placeholder_steps row 5 flipped [PLANNED]→[WIP]; the FIRST slice P2-S4-A is [WIP] while P2-S4-B / P2-S4-C / P2-S4-green STAY [PLANNED]; one [WIP] step per phase). THE NEXT BOUNDARY (the STEP-05-STAGING move is EXECUTED): **the P2-S4-A dispatch** (the AI-mode goals + mode-selector integration slice per the Step 05 packet — the pre_execute_hook binds P2-S4-A; P2-S4-A's dependency on P2-S3-G2 is DISCHARGED by the recorded P2-S3-G2 full-lane green pass) → the rest of Step 05 (P2-S4-B / P2-S4-C per-slice staging, then P2-S4-green) → on Phase 2 DONE, Phase 3 — Polish + deprecation prep per the Phase 2 `next_phase` mandate. TRIO STATE CARRY: (1) the PHASE-1 EXIT CHECK is APPROVED + DISCHARGED (2026-11-06, recorded on the Staging gate record + the Step 01 Gated stop condition archived in batch 159 sub-block A + one evidence row); (2) the CORTEX INDEX REBUILD — 00-helping, `node rag-index/build-index.mjs` + `node rag-index/embed-index.mjs` — keeps its standing routed ownership and is NOT discharged by the Step-04 close or the Step-05 staging; (3) the Phase 2 STAGING IS DONE (the 2026-11-05 [WIP] flips + the staging gate evidence rows). CARRIED STILL-OPEN ITEMS (none blocks the P2-S4-A dispatch): the O-N1/O-N3/O-N5 residual ledger rows P-TURN-17..23 (routed observations, non-blocking), the stale @example band literals (right-world.builder.ts), O-8 citation drift, the MCP validation-allowlist degradation (RECORDED open in `.github/ai-learning/learning-log.jsonl`; the shell-direct fallback is the operative workaround), the runtime duplicate law constants retirement owed to the Step-03 wiring (the P2-S3-B PlanUpdate note), and the STALE CORTEX INDEX (owned by 00-helping as above).
+
+- **THE PLAN-RETAINED RECORD (the batch-158 phase-close convention):** the plan keeps the Step-05 section as the [DONE 2026-11-07] step heading + the step YAML (all FOUR slice packets [DONE 2026-11-07] - P2-S4-A with the AC-033 goal-machine status description, P2-S4-B with the AC-034 adapter status description, P2-S4-C with the AC-033 host-wiring status description + fix-packet-P2-S4-C-iteration-1 + the two-to-seven-file footprint extension, P2-S4-green compact) + the [COMPRESSED 2026-11-07] pointer replacing the prose tail (the batch-158/159/160/161/162 convention) + the Phase-2 placeholder_steps row 5 [DONE]; the ## Latest validation evidence tail carries the FULL Step-05 evidence rows (the 2026-11-07 SLICE P2-S4-A/B/C IMPLEMENTED rows, the P2-S4-green GREEN VALIDATED step-gate row with the VALIDATION-MCP TOOLING NOTE + the AC-033 manual-probe discharge, and the P2-S4-green CONSOLIDATED GATE both-rounds row) + the slice PlanUpdate blocks - the phase-close material for the orchestrator-owned Phase-2 close; the NEW STEP-05-CLOSED CURRENT BOUNDARY + the Handoff refresh (the Context line records the batch-163 close archive + the 18,464-line final count) + the batch-163 [ARCHIVED] marker bullet appended under the boundary. THE PHASE 2 heading + phase YAML stay [WIP] at ZERO [WIP] steps; Phase 3 STAYS [PLANNED] (no staging flip - orchestrator-owned).
+
+- **THE LEARNING EVENTS (append-only to .github/ai-learning/learning-log.jsonl, all recorded 2026-11-07 by this close, all status open, all agent_source 07-logging, gate P2-S4-green; authored by the dispatched learning-event-capturer from this close's directive - schema-verified against the ledger tail, which also corrected the AC-033 probe evidence citation to the plan's caveat (ii) wording):** learn-20261107-p2s4green-validation-mcp-allowlist-3string-rejection (SIXTH recurrence in the allowlist-executor family: this pass the executor rejected ALL THREE Step-05 packet command strings - BOTH jest strings ARE verbatim packet validationCommands + the neatRacing tsc string - with "Command is not allow-listed by the active step packet" while the identical texts PASSED shell-direct (ai 254/254, host 118/118, tsc exit 0); the shell-direct fallback is the operative workaround for entire validation lanes; owner agent-maintenance-coordinator, followup: harden the packet-command matching path); learn-20261107-p2s4green-browser-probe-visibility-hidden-stall (the prepared OS-foreground window reported document.visibilityState hidden with rAF stalled - a frozen 0:00.0 HUD that FALSELY mimicked "AI mode does not race" - until CDP activation Page.setWebLifecycleState{active} + Emulation.setFocusEmulationEnabled{true}, after which the same instance raced live (HUD 0:01.6 -> 0:08.4 monotonic, mode=ai, rAF 124 f/1000ms, 3 distinct WebGL captures); future probes must assert visibilityState + rAF advancement BEFORE HUD/timer reads; owners browser-harness-specialist + agent-maintenance-coordinator); learn-20261107-p2s4green-devtools-mcp-facade-cannot-attach-prepared-9222 (the devtools MCP facade spawns its own Chrome without --browserUrl and cannot attach to a prepared 9222 instance - the AC-033 probe succeeded via the specialist driving the prepared instance DIRECTLY over the same DevTools protocol (raw CDP); the facade needs an attach-to-existing surface (a --browserUrl/9222 pass-through), direct-CDP stays the fallback; owner agent-maintenance-coordinator). NOT re-recorded (append-only precedents standing): the allowlist family (learn-20261106-p2s1-validation-mcp-allowlist-executor-jest-string-rejection + learn-20261107-p2s3g2-validation-mcp-tsc-string-rejection-drift), the 2026-11-07 P2-S4-C implementation-executor model-500 outage, the stale cortex-index snapshot-age artefact (P-TURN-23), and the G1 round-1/2 gate-rounds records.
+- **THE GATES (the batch-160/161/162 close convention — the round ledger):** ROUND 1 on the post-compression PRE-evidence-row plan bytes (18,462 System.IO.File ReadAllLines / 18,455 LF-split / 7 lone-CR artifacts): `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/neatracing-voxel-racer.plans.md` **PASS (0 errors / 0 warnings, issues [], plan status WIP)**; `node scripts/agent-customization/gates/phase-compression.gate.mjs --json` **PASS** (standalone-descriptor, the tier-2 phase-compression contract); `node scripts/agent-customization/gates/log-completion-marker.gate.mjs --json` **PASS** ("Compressed log entry present and target phase marked [DONE] in the tracker"); `node scripts/agent-customization/gates/stale-wip-plans.gate.mjs --json` **PASS (stalePlans [], 4 plans checked / 4 found)**; `node scripts/agent-customization/gates/learning-event.gate.mjs --json` **PASS (28,778 valid events / 28,779 raw lines — the 28,775 pre-close tail + the 3 appended P2-S4-green events)**; and the gate MCP `run_gate_check(gate=slice-advancement, slice-id=step-05-close, changed-files=plans/neatracing-voxel-racer.plans.md,plans/neatracing-voxel-racer.logs.md,.github/ai-learning/learning-log.jsonl, plan=plans/neatracing-voxel-racer.plans.md)` **PASS 7/7 sub-gates** (plan-sync PASS, step-packet PASS, plan-slice-quality PASS, plan-command-lint PASS, shared-validation PASS, code-coverage PASS, specialist-review PASS "Specialist review evidence confirmed"), severity FULL / specialistCount 1, failedGates [] / erroredGates [] / gate_error false on every sub-gate (the batch-162 close's 7/7 FULL verdict mirrored). ROUND 2 on the FINAL plan bytes (the batch-163 [ARCHIVED] bullet + the Step-05 evidence row + its separating blank + the Handoff Context-line patch to the measured 18,464-line count): ALL SIX gates re-run — validate-plan-sync **PASS (0/0)**, phase-compression **PASS**, log-completion-marker **PASS**, stale-wip-plans **PASS (0 stale / 4)**, learning-event **PASS (28,778)**, slice-advancement **PASS 7/7 sub-gates, severity FULL / specialistCount 1, failedGates [] / erroredGates []** — ZERO drift between the rounds, ZERO content failures, ZERO tooling errors. NO jest / tsc / build / lint ran (PLAN-STATUS EDITS ONLY per the directive; the code-level Step-05 validation evidence stands recorded on the plan evidence rows from the P2-S4 wave).
+- **HASH VERIFICATION (the close-time convention — post-append re-extraction from the POST-APPEND logs bytes, \r-safe ReadAllLines/TrimEnd extraction after a first '-split'-based script mis-fenced on trailing CR):** SUB-BLOCK A — the fenced 107-line packet (fences at the LF indices 19289/19397) re-extracted CR-stripped + LF-joined, NO trailing LF, UTF-8: **9,475 bytes, SHA256 EDAAF0448FC90274726768222D15EA2F0BEC36E3BDFB0D556BD89A893C7FD794, MATCH True** against the verified pre-move transcript hash; SUB-BLOCK B — the single 3,133-char superseded STEP-05-STAGED CURRENT BOUNDARY line: **SHA256 9CDE809F2AC2CB8DAC46C14FB848803001E441D981F4AA0A4F575AA00066F85F, MATCH True**. Both re-hashes cross-checked against the verified batch-162 archive convention (the archived sub-block A 85-line/3,299-byte 8A6BA7241CADF5DBE018021E0ACE469753BA43E6BFCA6E4BA9E381DF662B14F3 and sub-block B 53CE9FF36B3D50F15646636B2C171CE09F7D672317918F139FA61B6070E6F7CE, both re-hashed MATCH at the batch-162 close). PLAN COUNT ARITHMETIC verified 1:1 against the measured final bytes: 18,473 pre-close − 13 (the prose-tail compression) + 2 (the batch-163 [ARCHIVED] marker bullet + its separating blank) = 18,462 pre-row ReadAllLines (measured ✓), + 2 (the Step-05 evidence row + its separating blank) = **18,464 ReadAllLines / 18,457 LF-split / 7 lone-CR final bytes** (measured ✓) — patched into the Handoff Context line + THE MOVE + THE PLAN-RETAINED RECORD (both bullets had recorded the analytic 18,463 before the measured patch).
+- **NEXT BOUNDARY (staged per the plan):** **the ORCHESTRATOR-OWNED PHASE-2 CLOSE** — Phase 2 holds ZERO [WIP] steps (Steps 01-05 ALL [DONE]; the Phase 2 heading + phase YAML stay [WIP] pending the orchestrator-owned close); the orchestrator ratifies the step-complete Phase 2, dispatches the Phase-2 compression to a FRESH 07-logging instance per the Phase-Compression Policy, stages Phase 3 [PLANNED] → [WIP] with Step 01 (spec P3-S1) per the Phase 2 `next_phase` mandate ("Phase 3 - Polish + deprecation prep - dispatch after Phase 2 steps 01-05 are DONE"), and orders the 00-helping CORTEX INDEX REBUILD (`node rag-index/build-index.mjs` + `node rag-index/embed-index.mjs`) at the phase close; the TRIO STATE CARRY (the APPROVED + DISCHARGED Phase-1 exit check, the 00-helping-owned standing CORTEX INDEX REBUILD, the DONE Phase-2 staging) and the CARRIED STILL-OPEN ITEMS (the O-N1/O-N3/O-N5 residual ledger, the stale @example band literals, O-8 citation drift, the MCP validation-allowlist degradation with the 3 appended P2-S4-green events, the runtime duplicate-law-constants retirement, the rung-2 drive-test suggestion, the stale CORTEX INDEX) block nothing. THE CLOSE STOPPED PER THE USER DIRECTIVE - no further file writes.
+
+### Evidence batch 164 - the PHASE-2 CLOSE (the Phase-2 phase-tail compression out of plans/neatracing-voxel-racer.plans.md per the batch-158 phase-close convention: the Step 02-05 step-close STATE packets + the superseded 2026-11-07 STEP-05-CLOSED CURRENT BOUNDARY paragraph - plan + logs bytes only, no production byte, no test byte, no git mutation) - 07-logging (Tier 1), 2026-11-07
+
+- **THE MOVE (2026-11-07, PLAN-STATUS EDITS ONLY - no production byte, no test byte, no git mutation):** the USER directive (verbatim): "Compress Phase 2 of plans/neatracing-voxel-racer.plans.md per the close precedent (all 5 steps [DONE 2026-11-07], zero [WIP] steps): flip the Phase-2 heading+YAML to [DONE 2026-11-07], compress the phase tail to logs batch 164 (SHA-256 verified sub-blocks), stage the next phase/resume point exactly per the plan structure, run plan gates pre+post-append, then STOP. Git read-only. Load context via Cortex MCP / get_slice_context." (the get_slice_context hook returned the COMPACT notFound payload for the phase-level slice_id - the sanctioned native fallback ran and the close executed from the plan packet itself, mirroring the batch-159..163 close records). THE MOVE takes FIVE UNITS: (1) the superseded 2026-11-07 STEP-05-CLOSED CURRENT BOUNDARY paragraph (the HANDOFF archive, sub-block A; pre-move plan LF line 8768, a single line, 4,754 UTF-8 bytes, SHA256 CF768D0A8A1FABFCA5BDBC02AD9448FB402EB65D7871EC60D33A66D543456A43); (2) the full Step 02 step-close STATE packet (sub-block B; the pre-move plan LF lines 6363..6456, 94 lines incl. the trailing blank line, 5,555 UTF-8 bytes, SHA256 EB1A34BCA13744F38F7E795A8A82F260912F6D228F3C52857257CA832431FA5A); (3) the full Step 03 step-close STATE packet (sub-block C; the pre-move plan LF lines 6457..6553, 97 lines incl. the trailing blank line, 6,594 UTF-8 bytes, SHA256 812789B9ACF9A221E0F2D9A4FFCFC2298839A1CEC856790BAF27A5518F7319D9); (4) the full Step 04 step-close STATE packet (sub-block D; the pre-move plan LF lines 6554..6628, 75 lines incl. the trailing blank line, 4,616 UTF-8 bytes, SHA256 5B8ABCCAA6923AE4F25BD3C64805ABC7812EE01F458E57BFA8AD3BB22825CFD5); (5) the full Step 05 step-close STATE packet (sub-block E; the pre-move plan LF lines 6629..6723, 95 lines incl. the trailing blank line, 10,890 UTF-8 bytes, SHA256 494A265FA37EB0C3B6DE300225C090DA2BBB5CCD051A404B8FB4F35D81343006) - each packet = the [DONE]-flipped step heading + the retained step YAML incl. its slice packets all [DONE] + the STEP-0X-CLOSE [COMPRESSED] pointer paragraph from the batch-160..163 step closes (the step-close state at the moment of this phase close; hash-verified: pre-move SHA-256 over the packet lines CR-stripped and LF-joined, UTF-8, uppercase hex). THE SHIFT CALIBRATION: the LF-split CR-stripped LF-joined SHA-256 convention was verified against the batch-163 archive BEFORE the close (the fenced 107-line Step-05 packet at logs LF lines 19290..19396 re-extracted from the POST-APPEND logs bytes → SHA256 EDAAF0448FC90274726768222D15EA2F0BEC36E3BDFB0D556BD89A893C7FD794 = the recorded pre-move hash, MATCH TRUE). THE IN-PLAN RESULT (the batch-158 phase-close convention): the Phase-2 heading + the phase YAML flipped [DONE 2026-11-07]/[DONE]; the five step headings stay with compact [COMPRESSED] pointers (the Step-01 batch-159 close pointer stands UNTOUCHED; the Steps 02-05 pointers replaced by PHASE-2-CLOSE pointers citing the batch-164 sub-blocks B..E + the pre-close batches 160..163 sub-block A); the placeholder_steps rows 1-5 carry [DONE] (UNTOUCHED); the Phase-3 section STAYS [PLANNED] BYTE-UNTOUCHED (no staging flip - the ORCHESTRATOR-OWNED PHASE-3 STAGING per the recorded P2-S4-green phase-close holds - this close stages the next-boundary RECORD only: the refreshed CURRENT BOUNDARY + the ## Handoff query); the Phase-2 STAGING GATE RECORD + objective + Stop conditions + Required-validation stay; the CURRENT BOUNDARY advanced to the PHASE-2 CLOSED record + a seventh [ARCHIVED] bullet appended; the ## Handoff query refreshed (the Context line batch-164 + the measured counts 18,123 ReadAllLines / 18,116 LF-split + the Completed-phases Phase-2 clause + the Next-phase block rebuilt to the Phase 3 staging boundary + the Coverage-notes batch-164 clause + the batch-164 close evidence row appended to ## Latest validation evidence). KEPT IN THE PLAN (the recorded batch-158 phase-close material, NOT archived): the P2 execution evidence rows (## Latest validation evidence - the EXIT-CHECK row + every P2-S1..P2-S4 slice/green/step-close row) + the four P2 slice PlanUpdate blocks (P2-S1-A simulation-worker / P2-S1-B frame.pack.service / P2-S1-C reproducibility.utils / P2-S3-A NGE controller + runtime.adaptation; the pre-move plan LF lines 7061..7597, 70,179 UTF-8 bytes) + the plan-tail fix-packet-P2-S3-C-iteration-1 + close-out block (the pre-move plan LF lines 17794..18464, 110,721 UTF-8 bytes) - their verbatim archive to a future logs batch stays ORCHESTRATOR-OWNED at the Phase-3 close or the plan close (their Phase-1 counterparts survived the Phase-1 close the same way); the AC register, the README/Roadmap, every production/test byte, and the git state (the directive is git read-only; all plan/logs mutations via the edit path only). POST-CLOSE COUNTS (measured): the plan LF-split 18,116 lines / ReadAllLines 18,123 (pre-move: LF 18,457 / RL 18,464; the seven P1-era invisible blank-line CR artefacts carry). THE ARCHIVE DEVIATION (recorded per the batch-159..163 close convention): the batch-164 sub-blocks archive the FLIPPED [DONE] close-state packets (the batch-158 phase-close convention - the step packets as the close leaves them) as a supplement to the PRE-FLIP [WIP]-provenance step packets archived at batches 159..163 sub-block A; the in-plan STEP-0X-CLOSE pointer paragraphs for Steps 02-05 (removed by this close) are preserved VERBATIM inside the sub-blocks B..E packets.
+
+- **SUB-BLOCK A - the superseded 2026-11-07 CURRENT BOUNDARY paragraph (the pre-move plan LF line 8768, the STEP-05-CLOSED boundary staging the ORCHESTRATOR-OWNED PHASE-2 CLOSE), moved VERBATIM (byte-exact, pre-move line SHA256 CF768D0A8A1FABFCA5BDBC02AD9448FB402EB65D7871EC60D33A66D543456A43):**
+
+CURRENT BOUNDARY (2026-11-07, STEP 05 CLOSED [DONE 2026-11-07] — the USER-directed 07-logging STEP-05-CLOSE move per the batch-160/161/162 close precedent; PLAN-STATUS EDITS ONLY, NO production byte, NO test byte, NO git mutation): Step 05 (spec P2-S4) is CLOSED [DONE 2026-11-07] — all FOUR slices [DONE] (P2-S4-A the AC-033 AI-mode goal state machine ai-mode.goals.ts (+27-test suite) over the shared P2-S3-C eligibility predicate with the mode-selector Phase-2 JSDoc-only contract refresh — round-2 APPROVE with zero defects; P2-S4-B the AC-034 thin network-panel adapter network-panel.adapter.ts over examples/shared/network-visualization (the L1/L2/L3/L4/L6 most-forward selection law set, the shared-frame pass-throughs, the NGE output-tag law, the panel dimension law, installNeatRacingNetworkResize) — round-1 APPROVE with the 3 MINOR fix hints applied verbatim in-slice; P2-S4-C the AC-033 sim-worker protocol host wiring browser-entry.ts + the NEW 47-test host.wiring.test.ts (bootSimWorkerRound/restartSimWorkerRound lifecycle, the goal feed, the promoted rebase, the chord-index rival progress for the AC-034 panel election, the panel mount/unmount/update, teardown symmetry) with the No-Deferred-Cleanup retirement of host/race-session.ts + race-session.test.ts + race-session.sand-red.test.ts + race-session.specs.md — REQUEST_CHANGES discharged via fix-packet-P2-S4-C-iteration-1 and the round-2 fresh reviewer APPROVE with zero blocking findings; P2-S4-green the step-level green validation — ai jest 254/254 (8 suites) + host jest 118/118 (6 suites) + browser-entry 86/86 (3 suites) + workers 84/84 + visualizer 19/19 + npx tsc clean + npx eslint clean + the 626,261 B bundle freshness guard, and the AC-033 MANUAL browser probe DISCHARGED (the prepared-window CDP activation then the LIVE mode-switch ai race: HUD timer 0:01.6 → 0:08.4 monotonic, mode=ai, rAF 124 f/1000ms, 3 DISTINCT WebGL captures) with the AC-034 MODE-GATED panel paint verified (166,422 non-background pixels at the first frame, 0 console errors / 0 warnings)) — AC-033 + AC-034 GREEN per the step-evidence rows; the pre-close step packet is ARCHIVED byte-exact (hash-verified) to plans/neatracing-voxel-racer.logs.md — evidence batch 163 (sub-block A, pre-move SHA256 EDAAF0448FC90274726768222D15EA2F0BEC36E3BDFB0D556BD89A893C7FD794) — leaving the compact [COMPRESSED] pointer under the kept [DONE 2026-11-07] step heading with the inner step-YAML status retained IN-PLAN flipped [DONE 2026-11-07] per the USER close directive, and the placeholder_steps row 5 carries [DONE]. PHASE 2 STAYS [WIP]; at THIS boundary Phase 2 holds ZERO [WIP] steps — Steps 01-05 ALL [DONE] (Phase 2 is STEP-COMPLETE pending the Phase-2 close). THE NEXT BOUNDARY (the STEP-05 close is EXECUTED per the USER directive — the close STOPPED right after the capture + the gated append; NO Phase-3 staging flip was executed — the phase-close orchestration stays ORCHESTRATOR-OWNED per the P2-S4-green phase-close holds): **the ORCHESTRATOR-OWNED PHASE-2 CLOSE** (the orchestrator ratifies the step-complete Phase 2, then dispatches the Phase-2 compression to a FRESH 07-logging instance per the Phase-Compression Policy, then the PHASE-3 STAGING per the Phase 2 `next_phase` mandate — 'Phase 3 - Polish + deprecation prep - dispatch after Phase 2 steps 01-05 are DONE' — Stage Phase 3 [PLANNED] → [WIP] with Step 01 (spec P3-S1) the staged step) → on Phase 2 DONE, Phase 3 — Polish + deprecation prep per the Phase 2 `next_phase` mandate. TRIO STATE CARRY: (1) the PHASE-1 EXIT CHECK is APPROVED + DISCHARGED (2026-11-06, recorded on the Staging gate record + the Step 01 Gated stop condition archived in batch 159 sub-block A + one evidence row); (2) the CORTEX INDEX REBUILD — 00-helping, `node rag-index/build-index.mjs` + `node rag-index/embed-index.mjs` — keeps its standing routed ownership and is NOT discharged by the Step-05 close; (3) the Phase 2 STAGING IS DONE (the 2026-11-05 [WIP] flips + the staging gate evidence rows). CARRIED STILL-OPEN ITEMS (none blocks the Phase-2 close): the O-N1/O-N3/O-N5 residual ledger rows P-TURN-17..23 (routed observations, non-blocking), the stale @example band literals (right-world.builder.ts), O-8 citation drift, the MCP validation-allowlist degradation (RECORDED open in `.github/ai-learning/learning-log.jsonl`; the shell-direct fallback is the operative workaround; this close appended the P2-S4-green 3 tooling/environment events), the runtime duplicate law constants retirement owed to the Step-03 wiring (the P2-S3-B PlanUpdate note), the rung-2 (2-car) drive-test suggestion (the P2-S4-green probe caveat, routed to the orchestrator), and the STALE CORTEX INDEX (owned by 00-helping as above).
+
+- **SUB-BLOCK B - the full Step 02 step-close STATE packet (the pre-move plan LF lines 6363..6456), moved VERBATIM:**
+
+````markdown
+#### Step 02 — Eval worker + observation assembler + scripted rivals (spec P2-S2) [DONE 2026-11-06]
+
+```yaml
+phase: 2
+step: 2
+title: 'Eval worker + observation assembler + scripted rivals (spec P2-S2)'
+status: '[DONE 2026-11-06]'
+goal: implementing
+expansion: slices
+auto_expand: true
+tdd_sequence: green-only
+mode: fresh-session
+source_of_truth: 'plans/neatracing-voxel-racer.plans.md'
+copy_paste: true
+next_step: 'Step 03 - NGE growth + promotion part 1 (spec P2-S3 A-C)'
+pre_execute_hook:
+  tool: 'neataptic-workflow-mcp-get_slice_context'
+  args:
+    slice_id: 'P2-S2-A'
+skills:
+  - implementation-standards
+  - red-test-contracts
+  - green-validation-gates
+validation:
+  - 'examples/neatRacing/workers'
+  - 'examples/neatRacing/ai'
+acceptance_criteria:
+  - 'AC-029 (partial): eval worker protocol with bounded parallelVariantCount (P2-S2-A; growth engine lands in Phase 2 Step 03)'
+  - 'AC-027: observation assembler produces the 82/89/110-channel tier vector with track-relative features and recycled scales (P2-S2-B)'
+  - 'AC-028: scripted waypoint rivals with per-course deterministic throttle table (SCRIPTED_THROTTLE_CONSTANT=0.82 + proportional steer) (P2-S2-C)'
+  - 'AC-043 (partial): eval-worker protocol budget hooks (P2-S2-A; budget tests complete in Phase 2 Step 03)'
+slices:
+  - slice_id: 'P2-S2-A'
+    title: 'Eval worker + protocol'
+    status: '[DONE 2026-11-06]'
+    goal: implementing
+    estimate_hours: 3
+    files_to_change:
+      - 'examples/neatRacing/workers/eval-worker/eval-worker.ts'
+      - 'examples/neatRacing/workers/eval-worker/eval.protocol.ts'
+      - 'examples/neatRacing/workers/eval-worker/eval.protocol.test.ts'
+    acceptance_criteria:
+      - 'AC-029 (partial) + AC-043 (partial): two-worker split protocol with bounded parallelVariantCount named constant'
+    red_test:
+      - 'RED: eval.protocol.test.ts fails before the worker; asserts request/eval/result protocol and variant-count bound'
+    parallelizable: true
+    dependencies:
+      - 'P2-S1-green'
+  - slice_id: 'P2-S2-B'
+    title: 'Observation assembler (82/89/110 channels)'
+    status: '[DONE 2026-11-06]'
+    goal: implementing
+    estimate_hours: 3
+    files_to_change:
+      - 'examples/neatRacing/ai/observation.assembler.ts'
+      - 'examples/neatRacing/ai/observation.assembler.test.ts'
+    acceptance_criteria:
+      - 'AC-027: channel counts 82/89/110 per tier with rival-gap >= 4 at lvl 3 and teammate tail 3x7=21; one tier per test fixture'
+    red_test:
+      - 'RED: observation.assembler.test.ts fails before the assembler; asserts per-tier channel counts and semantics fixtures'
+    parallelizable: true
+    dependencies: []
+  - slice_id: 'P2-S2-C'
+    title: 'Scripted waypoint rivals (per-course throttle table)'
+    status: '[DONE 2026-11-06]'
+    goal: implementing
+    estimate_hours: 2
+    files_to_change:
+      - 'examples/neatRacing/ai/scripted.controller.ts'
+      - 'examples/neatRacing/ai/scripted.controller.test.ts'
+    acceptance_criteria:
+      - 'AC-028: deterministic scripted controller with per-course speed/throttle table; throttle constant 0.82 + proportional steer'
+    red_test:
+      - 'RED: scripted.controller.test.ts fails before the controller; asserts per-course table determinism'
+    parallelizable: true
+    dependencies: []
+  - slice_id: 'P2-S2-green'
+    title: 'Step green validation: eval worker + assembler + rivals'
+    status: '[DONE 2026-11-06]'
+    goal: green-testing
+    estimate_hours: 1
+    files_to_change:
+      - 'plans/neatracing-voxel-racer.plans.md'
+    acceptance_criteria:
+      - 'Step 02 AC subset green: AC-027, AC-028, AC-029/AC-043 partial; workers + ai jest patterns green'
+    parallelizable: false
+    dependencies:
+      - 'P2-S2-A'
+      - 'P2-S2-B'
+      - 'P2-S2-C'
+```
+
+[COMPRESSED 2026-11-06 by the 07-logging STEP-02 CLOSE compression — the full pre-close Step 02 step packet (the heading + this YAML packet incl. the FOUR slice packets all [DONE 2026-11-06] + the User instruction + the Step objective + the Stop conditions + the Required-validation prose tail) is archived BYTE-EXACT (hash-verified) at plans/neatracing-voxel-racer.logs.md — evidence batch 160, sub-block A. OUTCOME: all FOUR slices [DONE 2026-11-06] — P2-S2-A the realm-free sim↔eval protocol + the eval-worker session state machine + NEATRACING_EVAL_WORKER_PARALLEL_VARIANT_COUNT=16; P2-S2-B the AC-027 tiered observation assembler (82/89/110 channels); P2-S2-C the AC-028 scripted waypoint rivals + per-course deterministic throttle table (the steer axis is the SOLE turn channel — no turnRatePercent emission; the mandated physics-level seam proof test); P2-S2-green the step-level green validation (the workers jest 84/84 union, the ai jest 42/42 = 24 assembler + 18 scripted, the neatRacing tsc clean). AC-027 + AC-028 + AC-029/AC-043 (partial) GREEN; the Done stop condition is SATISFIED and the Blocked stop condition is NOT TRIGGERED. THE INNER STEP-YAML STATUS IS RETAINED IN-PLAN flipped '[WIP]' → '[DONE 2026-11-06]' per the USER close directive (SUPERSEDING the batch-159 provenance convention, which kept the [WIP] only inside the archive); the prose tail (the User instruction / Step objective / Stop conditions / Required validation) is compressed to the archive; the step evidence rows + the slice PlanUpdate blocks STAY in `## Latest validation evidence` / the PlanUpdate tail as the phase-close material (batch-158 convention); this step heading STAYS in-plan. NEXT: Step 03 (spec P2-S3 A-C) is staged by the orchestrator (the pre_execute_hook binds P2-S3-A).]
+````
+
+- **SUB-BLOCK C - the full Step 03 step-close STATE packet (the pre-move plan LF lines 6457..6553), moved VERBATIM:**
+
+````markdown
+#### Step 03 — NGE growth + promotion part 1 (spec P2-S3 A-C) [DONE 2026-11-07]
+
+```yaml
+phase: 2
+step: 3
+title: 'NGE growth + promotion part 1 (spec P2-S3 A-C)'
+status: '[DONE 2026-11-07]'
+goal: implementing
+expansion: slices
+auto_expand: true
+tdd_sequence: green-only
+mode: fresh-session
+source_of_truth: 'plans/neatracing-voxel-racer.plans.md'
+copy_paste: true
+next_step: 'Step 04 - NGE growth + promotion part 2 (spec P2-S3 D-E)'
+pre_execute_hook:
+  tool: 'neataptic-workflow-mcp-get_slice_context'
+  args:
+    slice_id: 'P2-S3-A'
+skills:
+  - implementation-standards
+  - red-test-contracts
+  - green-validation-gates
+validation:
+  - 'examples/neatRacing/ai'
+  - 'npx tsc -p tsconfig.neatRacing.json --noEmit'
+acceptance_criteria:
+  - 'AC-029: NGE controller + runtime adaptation migrated with maxNodes 8000 / maxConnections 32000; eval in separate worker; <= 2 ms per-tick sim budget; jest.useFakeTimers for adaptation/timer tests (P2-S3-A)'
+  - 'AC-030: shared oscillation predicate drives penalty AND commit boost with hysteresis + symmetry + deadband 0.15 (P2-S3-B)'
+  - 'AC-031: three-part promotion predicate with 20-lap floor, drivability gate, seedNetwork + carriedInnovationCounter tuple fields, round-boundary state reset (P2-S3-C)'
+slices:
+  - slice_id: 'P2-S3-A'
+    title: 'NGE controller + runtime adaptation (seeded, capacity-limited)'
+    status: '[DONE 2026-11-06]'
+    goal: implementing
+    estimate_hours: 4
+    files_to_change:
+      - 'examples/neatRacing/ai/nge.controller.ts'
+      - 'examples/neatRacing/ai/runtime.adaptation.ts'
+      - 'examples/neatRacing/ai/runtime.adaptation.test.ts'
+    acceptance_criteria:
+      - 'AC-029: capacity limits 8000/32000 preserved; seeded xorshift32 random from (tupleSeed, carIndex); per-tick budget <= NEATRACING_ADAPTATION_TICK_BUDGET_MS=2'
+      - 'AC-026 (support): adaptation engine consumes the reproducibility tuple child-seed table (D1)'
+      - 'AC-043: budget test with jest.useFakeTimers asserts sim-worker residual work within budget'
+    red_test:
+      - 'RED: runtime.adaptation.test.ts fails before migration; asserts capacity caps, seed derivation, and 2 ms budget with fake timers'
+    parallelizable: true
+    dependencies:
+      - 'P2-S2-green'
+  - slice_id: 'P2-S3-B'
+    title: 'Shared oscillation predicate (penalty + commit boost)'
+    status: '[DONE 2026-11-06]'
+    goal: implementing
+    estimate_hours: 2
+    files_to_change:
+      - 'examples/neatRacing/ai/oscillation-penalty.utils.ts'
+      - 'examples/neatRacing/ai/oscillation-penalty.utils.test.ts'
+    acceptance_criteria:
+      - 'AC-030: one shared predicate replaces RACING_OSCILLATION_MIN_NEURONS=200; below-threshold never penalized; hysteresis; symmetric for baseline + variant; deadband 0.15'
+    red_test:
+      - 'RED: oscillation-penalty.utils.test.ts fails before the utils; asserts below-threshold no-penalty, grace window, hysteresis, and symmetry cases'
+    parallelizable: true
+    dependencies: []
+  - slice_id: 'P2-S3-C'
+    title: 'Promotion rules (three-part predicate + round boundary)'
+    status: '[DONE 2026-11-07]'
+    goal: implementing
+    estimate_hours: 4
+    files_to_change:
+      - 'examples/neatRacing/ai/promotion.rules.ts'
+      - 'examples/neatRacing/ai/promotion.rules.test.ts'
+    acceptance_criteria:
+      - 'AC-031: one red test per condition + combined; lap floor NEATRACING_AI_MIN_SESSION_LAPS=20 precondition; seedNetwork (serialized Float32Array + NGE envelope) + carriedInnovationCounter tuple fields; scripted-baseline probe episode pinned; no mid-session materialization'
+    red_test:
+      - 'RED: promotion.rules.test.ts fails before the module; asserts per-condition cases + all-conditions + round-boundary replay-from-own-tuple'
+    parallelizable: true
+    dependencies:
+      - 'P2-S3-A'
+      - 'P2-S3-B'
+  - slice_id: 'P2-S3-G1'
+    title: 'Part 1 green validation: controller + oscillation + promotion'
+    status: '[DONE 2026-11-07]'
+    goal: green-testing
+    estimate_hours: 1
+    files_to_change:
+      - 'plans/neatracing-voxel-racer.plans.md'
+    acceptance_criteria:
+      - 'Step 03 AC subset green: AC-029, AC-030, AC-031, AC-043; ai jest pattern green'
+    parallelizable: false
+    dependencies:
+      - 'P2-S3-A'
+      - 'P2-S3-B'
+      - 'P2-S3-C'
+```
+
+[COMPRESSED 2026-11-07 by the 07-logging STEP-03 CLOSE compression — the full pre-close Step 03 step packet (the heading + this YAML packet incl. the FOUR slice packets all [DONE 2026-11-06/07] + the User instruction + the Step objective + the Stop conditions + the Required-validation prose tail) is archived BYTE-EXACT (hash-verified) at plans/neatracing-voxel-racer.logs.md — evidence batch 161, sub-block A. OUTCOME: all FOUR slices [DONE] — P2-S3-A (2026-11-06) the AC-029 seeded capacity-limited NGE controller (nge.controller.ts) + the runtime adaptation engine (runtime.adaptation.ts) with the activation-policy-immutability twin-replay root-cause fix (27 tests) + the lane's first examples→src import ambient anchor; P2-S3-B (2026-11-06) the AC-030 shared oscillation predicate with the NB-7 re-pinned 300/600 floor, the hysteresis ramp, the commit boost 0.03 and the preserved deadband 0.15 (37 tests); P2-S3-C (2026-11-07) the AC-031 three-part promotion predicate + the D4 round-boundary seam (seedNetwork hex + carriedInnovationCounter + the strict injective envelope canonicalizer + the finite-weights guard) with fix-loop iteration 1 (F1/F2/F3 discharged, R2 APPROVE) (50 tests); P2-S3-G1 (2026-11-07) the step-level green validation — the ai jest 156/156 union (24 assembler + 18 scripted + 27 adaptation + 37 oscillation + 50 promotion), the workers jest 84/84 regression guard, the neatRacing tsc clean + eslint clean, and FIVE measured slice-advancement gate rounds R1..R5 all PASS. AC-029 + AC-030 + AC-031 + AC-043 (partial support) GREEN; the Done stop condition is SATISFIED and the Blocked stop condition is NOT TRIGGERED. THE INNER STEP-YAML STATUS IS RETAINED IN-PLAN flipped '[WIP]' → '[DONE 2026-11-07]' per the USER close directive (the batch-160 in-plan-flip convention stands over the batch-159 provenance convention); the prose tail (the User instruction / Step objective / Stop conditions / Required validation) is compressed to the archive; the step evidence rows + the slice PlanUpdate blocks STAY in `## Latest validation evidence` / the PlanUpdate tail as the phase-close material (the batch-158 convention); this step heading STAYS in-plan. NEXT: Step 04 (spec P2-S3 D-E) is STAGED [WIP] by the orchestrator inside this close (the pre_execute_hook binds P2-S3-D).]
+````
+
+- **SUB-BLOCK D - the full Step 04 step-close STATE packet (the pre-move plan LF lines 6554..6628), moved VERBATIM:**
+
+````markdown
+#### Step 04 — NGE growth + promotion part 2 (spec P2-S3 D-E) [DONE 2026-11-07]
+
+```yaml
+phase: 2
+step: 4
+title: 'NGE growth + promotion part 2 (spec P2-S3 D-E)'
+status: '[DONE 2026-11-07]'
+goal: implementing
+expansion: slices
+auto_expand: true
+tdd_sequence: green-only
+mode: fresh-session
+source_of_truth: 'plans/neatracing-voxel-racer.plans.md'
+copy_paste: true
+next_step: 'Step 05 - Mode integration + network visualizer (spec P2-S4)'
+pre_execute_hook:
+  tool: 'neataptic-workflow-mcp-get_slice_context'
+  args:
+    slice_id: 'P2-S3-D'
+skills:
+  - implementation-standards
+  - red-test-contracts
+  - green-validation-gates
+validation:
+  - 'examples/neatRacing/ai'
+acceptance_criteria:
+  - 'AC-032: rival winner propagation as bounded seeded weight-nudge mutations on serialized weights; LAP/line-boundary swaps only; lvl-2 no-op tested; main agent never fully reset (P2-S3-D)'
+  - 'AC-029 (support): fitness shaping keeps variant evaluation in the eval worker per TP-08 (P2-S3-E)'
+slices:
+  - slice_id: 'P2-S3-D'
+    title: 'Rival propagation operator (weight nudges + snapshot serialization)'
+    status: '[DONE 2026-11-07]'
+    goal: implementing
+    estimate_hours: 2
+    files_to_change:
+      - 'examples/neatRacing/ai/rival.propagation.ts'
+      - 'examples/neatRacing/ai/rival.propagation.test.ts'
+    acceptance_criteria:
+      - 'AC-032: lvl-2 no-op; lvl-3 (4 rivals) propagation; boundary timing; crossing-network snapshot + mutation RNG seed serialized into opponentSnapshot'
+    red_test:
+      - 'RED: rival.propagation.test.ts fails before the module; asserts lvl-2 no-op, lvl-3 propagation, boundary timing, snapshot serialization'
+    parallelizable: true
+    dependencies:
+      - 'P2-S3-G1'
+  - slice_id: 'P2-S3-E'
+    title: 'Fitness shaping utils (TP-08)'
+    status: '[DONE 2026-11-07]'
+    goal: implementing
+    estimate_hours: 2
+    files_to_change:
+      - 'examples/neatRacing/ai/fitness.shaping.utils.ts'
+      - 'examples/neatRacing/ai/fitness.shaping.utils.test.ts'
+    acceptance_criteria:
+      - 'AC-029 (support): shaping terms per TP-08 keep variant evaluation inside the eval worker protocol'
+    red_test:
+      - 'RED: fitness.shaping.utils.test.ts fails before the utils; asserts shaping term math and bounded outputs'
+    parallelizable: true
+    dependencies: []
+  - slice_id: 'P2-S3-G2'
+    title: 'Part 2 green validation: propagation + fitness shaping'
+    status: '[DONE 2026-11-07]'
+    goal: green-testing
+    estimate_hours: 1
+    files_to_change:
+      - 'plans/neatracing-voxel-racer.plans.md'
+    acceptance_criteria:
+      - 'Step 04 AC subset green: AC-032, AC-029 support; ai jest pattern green'
+    parallelizable: false
+    dependencies:
+      - 'P2-S3-D'
+      - 'P2-S3-E'
+```
+
+[COMPRESSED 2026-11-07 by the 07-logging STEP-04 CLOSE compression — the full pre-close Step 04 step packet (the heading + this YAML packet incl. the THREE slice packets all already [DONE 2026-11-07] from the P2-S3 D-E green wave + the User instruction + the Step objective + the Stop conditions + the Required-validation prose tail) is ARCHIVED VERBATIM byte-exact (hash-verified) to plans/neatracing-voxel-racer.logs.md — evidence batch 162, sub-block A. OUTCOME: all THREE slices [DONE] (P2-S3-D the AC-032 rival propagation operator — bounded seeded weight-nudge propagation with LAP/line-boundary swaps, the in-module NEATRACING_RIVAL_SWAP_MAIN_AGENT_CAR_INDEX = 0 car-0 exclusion guard law, the lvl-2 no-op tested; P2-S3-E the TP-08 fitness shaping — the pure shaped-fitness fitness.shaping.utils.ts kept inside the eval worker with named strictly-positive weights; P2-S3-G2 the step-level green validation — ai jest 227/227 (7 suites) + workers jest 84/84 + neatRacing tsc clean + eslint clean per the recorded G2 full-lane green pass, zero fix-loop rounds, the specialist chains closed R2 determinism APPROVE (P2-S3-D) / R1 evolution-correctness APPROVE (P2-S3-E)). AC-032 + AC-029 support GREEN; the Done stop condition SATISFIED; the Blocked stop condition NOT TRIGGERED (propagation does NOT touch the main agent state; no 00.cross-tier-helper escalation). THE INNER STEP-YAML STATUS IS RETAINED IN-PLAN flipped '[WIP]' -> '[DONE 2026-11-07]' per the USER close directive (the batch-160/161 close convention); this prose tail is compressed to the archive; the step evidence rows + the slice PlanUpdate blocks STAY in `## Latest validation evidence` / the PlanUpdate tail as the phase-close material (the batch-158 convention); this step heading STAYS in-plan. NEXT: Step 05 (spec P2-S4) is STAGED [WIP] by this close (the pre_execute_hook binds P2-S4-A).]
+````
+
+- **SUB-BLOCK E - the full Step 05 step-close STATE packet (the pre-move plan LF lines 6629..6723), moved VERBATIM:**
+
+````markdown
+#### Step 05 — Mode integration + network visualizer (spec P2-S4) [DONE 2026-11-07]
+
+```yaml
+phase: 2
+step: 5
+title: 'Mode integration + network visualizer (spec P2-S4)'
+status: '[DONE 2026-11-07]'
+goal: implementing
+expansion: slices
+auto_expand: true
+tdd_sequence: green-only
+mode: fresh-session
+source_of_truth: 'plans/neatracing-voxel-racer.plans.md'
+copy_paste: true
+next_step: 'Phase 2 complete - dispatch Phase 3 (Step 01) after green light'
+pre_execute_hook:
+  tool: 'neataptic-workflow-mcp-get_slice_context'
+  args:
+    slice_id: 'P2-S4-A'
+skills:
+  - implementation-standards
+  - red-test-contracts
+  - green-validation-gates
+validation:
+  - 'examples/neatRacing/ai'
+  - 'examples/neatRacing/host'
+  - 'manual: AI mode race with evolving agents + right-side network panel'
+acceptance_criteria:
+  - 'AC-033: AI mode runs >= NEATRACING_AI_MIN_SESSION_LAPS=20 laps until growth goal met; mode toggle restarts the race; human takes car 0 vs evolving agents (P2-S4-A/C)'
+  - 'AC-034: right-side network panel renders only the most-forward agent via thin adapter over examples/shared/network-visualization (P2-S4-B)'
+slices:
+  - slice_id: 'P2-S4-A'
+    title: 'AI mode goals + mode selector integration'
+    status: '[DONE 2026-11-07 — 04-implementing: the AI-mode goal state machine ai-mode.goals.ts (NEW — count-then-evaluate over the shared P2-S3-C eligibility predicate; finiteOrNaN-normalized measurements; the host completed-circuit bank increment; the promoted/crossingWithoutLap/lapCounted/ignored outcome union; lvl 3 unbounded with no terminal state) + its 27-test suite + the mode-selector Phase-2 JSDoc-only contract refresh (zero code lines, the pinned P1-S7-E suite green); green-only per the USER dispatch, the 3-file packet boundary honored; the round-1 specialist findings F1/F2 fixed via fix-packet-P2-S4-A-iteration-1 and the round-2 review APPROVED with zero defects; npx tsc exit 0, npx eslint exit 0, jest ai 254/254 (8 suites incl. the 27-test goals suite), jest host 92/92; the manual AI-mode browser probe stays with P2-S4-green and AC-034 stays with P2-S4-B; full evidence in ## Latest validation evidence]'
+    goal: implementing
+    estimate_hours: 3
+    files_to_change:
+      - 'examples/neatRacing/ai/ai-mode.goals.ts'
+      - 'examples/neatRacing/host/mode-selector.ts'
+      - 'examples/neatRacing/ai/ai-mode.goals.test.ts'
+    acceptance_criteria:
+      - 'AC-033: 20-lap minimum then promotion-threshold-driven continuation; lvl 3 continues until user stops'
+    red_test:
+      - 'RED: ai-mode.goals.test.ts fails before the goals module; asserts lap floor and growth-goal continuation'
+    parallelizable: true
+    dependencies:
+      - 'P2-S3-G2'
+  - slice_id: 'P2-S4-B'
+    title: 'Network panel adapter (most-forward agent only)'
+    status: '[DONE 2026-11-07 — 04-implementing: the AC-034 thin adapter examples/neatRacing/visualizer/network-panel.adapter.ts (NEW — folder-creating, over examples/shared/network-visualization mirroring the racing_curriculum network-view + installRacingNetworkResize precedents: the pure most-forward selection resolveMostForwardNeatRacingAgent over host-supplied {agentId, progress, network?} candidates with the law set — L1 PROGRESS IS HOST-OWNED (the packed neatracing-packed-v1 frame carries kinematics only, no track-geometry derivation) / L2 STICKY INCUMBENT (the leader vacates only on STRICTLY greater progress — the current winner at all times) / L3 NON-FINITE PROGRESS NEVER LEADS / L4 NO-INCUMBENT TIE-BREAK = max progress then lowest agentId / L6 ONE SIZING AUTHORITY PER CANVAS (racing-parity wiring = resize service + from-frame path; drawNeatRacingNetworkPanel is the standalone self-sizing path); the shared-frame pass-throughs (Tier A 82 input default + NGE 2 outputs + LOD enabled with the shared 2048/4/64 constants, NO custom input-label tables), the draw paths with the THR/STR/R0..R6/OUT<i> NGE output-tag law in the HUD cyan token, the 320/240 min + 0.75-aspect panel dimension law, and installNeatRacingNetworkResize as the exact racing resize mirror (fallback innerWidth*0.25 / innerHeight*0.35, apply on install + resize listener, onResize ONLY on an actual backing-size change, {uninstall, resize, redraw} with redraw a no-op)) + the 19-test green suite (single-expect, jsdom canvas-stub lane; pins the four selection laws + the resize wiring + the output tags); green-only per the USER dispatch, the 2-file packet boundary honored; the round-1 specialist review (api-contract-reviewer via review-coordinator, severity FULL) APPROVED with zero breaking findings and the 3 MINOR fix hints (F1 shared type re-exports / F2 composition law / F3 network-less-winner law) applied verbatim in-slice (additive doc/type only) with the preflight re-run green afterward; npx tsc exit 0, npx eslint exit 0, jest visualizer lane 19/19, jest ai+host lanes 346/346 (15 suites); the manual AI-mode browser probe stays with P2-S4-green; full evidence in ## Latest validation evidence + the plan-tail PlanUpdate block]'
+    goal: implementing
+    estimate_hours: 2
+    files_to_change:
+      - 'examples/neatRacing/visualizer/network-panel.adapter.ts'
+      - 'examples/neatRacing/visualizer/network-panel.adapter.test.ts'
+    acceptance_criteria:
+      - 'AC-034: adapter renders only the current winner; resize service behavior matches installRacingNetworkResize pattern'
+    red_test:
+      - 'RED: network-panel.adapter.test.ts fails before the adapter; asserts most-forward selection + resize wiring'
+    parallelizable: true
+    dependencies: []
+  - slice_id: 'P2-S4-C'
+    title: 'Human car 0 vs evolving agents host wiring'
+    status: '[DONE 2026-11-07 — 04-implementing: the AC-033 sim-worker protocol host wiring in examples/neatRacing/browser-entry/browser-entry.ts (the drive loop re-plumbed from the retired P1 createRaceSession path to the live sim worker: bootSimWorkerRound/restartSimWorkerRound stop-terminal lifecycle, AI-mode goal lifecycle fed by the rules-clone crossing authority with the host-derived lapsSinceLastCrossing fact via resolveNeatRacingLapFactAdvance, the promoted rebase at the machine-clamped rung with the matching ladder fleet and the restart carrier rulesNow.nextRaceLevel ?? rulesNow.level, rival along-track progress via the chord-index helpers buildNeatRacingTrackChordIndex + resolveNeatRacingCarAlongProgressM feeding the AC-034 panel election, the network panel mount/unmount/update, teardown symmetry) + the NEW 47-test host.wiring.test.ts suite (REAL goal machine / REAL selector / REAL protocol session; ONLY the scripted probe doubled); round-1 specialist review (api-contract-reviewer via review-coordinator, severity FULL) returned REQUEST_CHANGES and the fix iteration discharged fix-packet-P2-S4-C-iteration-1 exactly (F1 the progress wrap-law decrement path + re-pinned tests, F2 the No-Deferred-Cleanup retirement of host/race-session.ts + race-session.test.ts + race-session.sand-red.test.ts + race-session.specs.md and the browser-entry.specs.md participant re-point) with the round-2 fresh reviewer APPROVING with zero blocking findings; THE FILE FOOTPRINT WAS EXTENDED FROM TWO TO SEVEN FILES per the No-Deferred-Cleanup Policy and the plans.md L4396 precedent, recorded in the PlanUpdate; green-only per the USER dispatch; npx tsc --noEmit -p tsconfig.neatRacing.json exit 0, npx eslint exit 0, jest host 6 suites 118/118 (the race-session suites retired), jest browser-entry 3 suites 86/86, jest ai 254/254, jest workers 84/84, jest visualizer 19/19; the manual AI-mode race + panel browser probe stays with P2-S4-green; full evidence in ## Latest validation evidence + the plan-tail PlanUpdate block]'
+    goal: implementing
+    estimate_hours: 3
+    files_to_change:
+      - 'examples/neatRacing/browser-entry/browser-entry.ts'
+      - 'examples/neatRacing/host/host.wiring.test.ts'
+    acceptance_criteria:
+      - 'AC-033: end-to-end wiring of human car 0 racing evolving agents through the sim worker protocol'
+    red_test:
+      - 'RED: host.wiring.test.ts fails before wiring; asserts car 0 human control + rival evolution loop integration'
+    parallelizable: true
+    dependencies:
+      - 'P2-S4-A'
+      - 'P2-S4-B'
+  - slice_id: 'P2-S4-green'
+    title: 'Step green validation: mode integration + visualizer'
+    status: '[DONE 2026-11-07]'
+    goal: green-testing
+    estimate_hours: 1
+    files_to_change:
+      - 'plans/neatracing-voxel-racer.plans.md'
+    acceptance_criteria:
+      - 'Step 05 AC subset green: AC-033, AC-034; ai + host jest patterns green; manual AI-mode check'
+    parallelizable: false
+    dependencies:
+      - 'P2-S4-A'
+      - 'P2-S4-B'
+      - 'P2-S4-C'
+```
+
+[COMPRESSED 2026-11-07 by the 07-logging STEP-05 CLOSE compression (the batch-158/159/160/161/162 close-out convention) — the full pre-close Step 05 step packet (the heading + this YAML packet incl. the FOUR slice packets all [DONE 2026-11-07] + the User instruction + the Step objective + the Stop conditions + the Required-validation prose tail) is ARCHIVED VERBATIM to plans/neatracing-voxel-racer.logs.md — evidence batch 163, sub-block A — byte-exact, SHA-256-verified pre-move (107 lines, 9,475 UTF-8 bytes, SHA256 EDAAF0448FC90274726768222D15EA2F0BEC36E3BDFB0D556BD89A893C7FD794); OUTCOME: all FOUR slices [DONE 2026-11-07] — P2-S4-A (the AC-033 AI-mode goal state machine ai-mode.goals.ts + the mode-selector Phase-2 JSDoc-only contract refresh, round-2 review APPROVED with zero defects), P2-S4-B (the AC-034 thin network-panel adapter over examples/shared/network-visualization, round-1 APPROVE with the 3 MINOR fix hints applied verbatim in-slice), P2-S4-C (the AC-033 sim-worker protocol host wiring browser-entry.ts + the No-Deferred-Cleanup retirement of host/race-session.ts and its two suites + specs, REQUEST_CHANGES discharged via fix-packet-P2-S4-C-iteration-1, round-2 APPROVE), P2-S4-green (the step-level green validation: ai jest 254/254 + host jest 118/118 + browser-entry 86/86 + workers 84/84 + visualizer 19/19 + npx tsc clean + npx eslint clean + the 626,261 B bundle freshness guard + the AC-033 manual browser probe DISCHARGED with the AC-034 panel paint verified); AC-033 + AC-034 GREEN; the Done stop condition is SATISFIED; the Blocked stop condition was NOT triggered; the step YAML status stays IN-PLAN flipped [DONE 2026-11-07] per the USER close directive (the batch-160/161/162 in-plan-flip convention stands) and this step heading stays in-plan; the step evidence rows + slice PlanUpdate blocks stay in ## Latest validation evidence / the PlanUpdate tail as the phase-close material (batch-158 convention). NEXT: Phase 2 holds ZERO [WIP] steps (Steps 01-05 ALL [DONE]) — the next boundary is the ORCHESTRATOR-OWNED Phase-2 close (the Phase-2 compression + the Phase-3 staging per the phase `next_phase` mandate); see the CURRENT BOUNDARY paragraph + the ## Handoff query.]
+````
+
+- **THE PLAN-RETAINED RECORD (the batch-158 phase-close convention - the material this close KEPT in-plan, NOT archived):** the Phase-2 heading + phase YAML (flipped [DONE 2026-11-07]/[DONE]); the five [DONE] step headings + the compact PHASE-2-CLOSE [COMPRESSED] pointers (Steps 02-05) + the Step-01 batch-159 close pointer; the placeholder_steps rows 1-5 [DONE]; ## Latest validation evidence: the batch-164 close row + the full P2 execution evidence stack (the EXIT-CHECK row + every P2-S1..P2-S4 slice/green/step-close row); ## PlanUpdate tail: the four P2 slice blocks (P2-S1-A / P2-S1-B / P2-S1-C / P2-S3-A; the pre-move plan LF lines 7061..7597, 70,179 UTF-8 bytes) + the plan-tail fix-packet-P2-S3-C-iteration-1 + close-out block (the pre-move plan LF lines 17794..18464, 110,721 UTF-8 bytes) - the retained P2 ledger's verbatim archive stays ORCHESTRATOR-OWNED at the Phase-3 close or the plan close; the CURRENT BOUNDARY (the PHASE-2 CLOSED record + the seventh [ARCHIVED] bullet); the ## Handoff query (the Phase 3 staging boundary).
+
+- **THE GATES (the batch-159..163 close convention - the round ledger):** ROUND 1 (after ALL plan edits, BEFORE the logs append): `node scripts/agent-customization/validate-plan-sync.mjs --json --plan=plans/neatracing-voxel-racer.plans.md` **PASS (ok:true, 0 errors / 0 warnings, plan status WIP)**; `node scripts/agent-customization/gates/phase-compression.gate.mjs --json --plan=plans/neatracing-voxel-racer.plans.md` **pass:true (evidence.check: Any phase marked [DONE] must have its history compressed to a concise coverage note in the tracker before the next phase starts or the workstream closes)**; `node scripts/agent-customization/gates/log-completion-marker.gate.mjs --json --plan=plans/neatracing-voxel-racer.plans.md` **pass:true (compressed log entry present + the target phase marked [DONE])**; `node scripts/agent-customization/gates/stale-wip-plans.gate.mjs --json --plan=plans/neatracing-voxel-racer.plans.md` **pass:true (4 plans checked, 0 stale)**; `node scripts/agent-customization/gates/learning-event.gate.mjs --json --plan=plans/neatracing-voxel-racer.plans.md` **pass:true (28,778 events recorded in .github/ai-learning/learning-log.jsonl; no new event owed by this close)**. ROUND 2 (pre-logs-end validation + the post-append hash verification; the round-2 results are recorded by the round-2 addendum edit to this bullet after the verification run): validate-plan-sync re-run POST-APPEND **PASS (ok:true, 0 errors / 0 warnings, plan status WIP)**. THE HASH VERIFICATION — ALL FIVE SUB-BLOCKS re-extracted from the batch-164 append at the calibrated close-state basis (CR-stripped, LF-joined, the slice INCLUDES the trailing blank line, UTF-8 bytes, SHA-256 uppercase hex) reproduce the RECORDED PRE-MOVE SUB-BLOCK HASHES EXACTLY — **5/5 MATCH: SUB-A CF768D0A…A43 (1 line, 4,754 B) / SUB-B EB1A34BC…FA5A (94 lines incl. trailing blank, 5,555 B) / SUB-C 812789B9…19D9 (97 lines, 6,594 B) / SUB-D 5B8ABCCA…5FD5 (75 lines, 4,616 B) / SUB-E 494A265F…3006 (95 lines, 10,890 B)**. VERIFICATION HISTORY (truthful): an interrupted pre-addendum probe re-extracted the SUB-B..E fences at a DIVERGENT basis (content WITHOUT the trailing blank line; a mis-measured byte count; an off-by-one TOP slice boundary) and produced FOUR FALSE mismatches with phantom +183/+189/+145/+185 byte drifts; the resolution forensics proved additionally the heading+YAML regions of SUB-B..E LINE-EXACT vs the batch-160/161/162/163 pre-close packet archives (the ONLY 2 differing lines per packet = the documented [WIP]→[DONE 2026-11-06/07] heading-suffix + step-status flips; 0 unexpected line diffs) and that the true pointer texts are not quoted in any prior logs record, not in git HEAD (fbea2ad4 predates the closes), not in the stale rag-index; the re-extraction at the CALIBRATED basis then reproduced ALL recorded hashes EXACTLY — NO content drift ever existed (the false drifts = the sub-block bullets' own byte lengths included by the off-by-one slice). No routing/skill/model/output-contract change; consistent with the ROUND-1 ledger (no new event owed by this close). MEASURED STATE at the batch-164 append (pre-addendum): plan LF 18,116 lines / RL 18,123 lines / raw 3,684,669 B; logs LF 19,803 lines / raw 3,256,837 B.
+
+- **HASH VERIFICATION (the batch-164 sub-blocks, the close-out convention):** 5/5 SHA-256 EXACT MATCH vs the RECORDED PRE-MOVE sub-block hashes at the calibrated close-state basis (CR-stripped LF-join of content + trailing blank line; UTF-8 bytes; uppercase hex) — SUB-A CF768D0A8A1FABFCA5BDBC02AD9448FB402EB65D7871EC60D33A66D543456A43 / SUB-B EB1A34BCA13744F38F7E795A8A82F260912F6D228F3C52857257CA832431FA5A / SUB-C 812789B9ACF9A221E0F2D9A4FFCFC2298839A1CEC856790BAF27A5518F7319D9 / SUB-D 5B8ABCCAA6923AE4F25BD3C64805ABC7812EE01F458E57BFA8AD3BB22825CFD5 / SUB-E 494A265FA37EB0C3B6DE300225C090DA2BBB5CCD051A404B8FB4F35D81343006; the SUB-A CB copy at logs LF 19,417 is byte-exact; the SUB-B..E heading+YAML regions are additionally LINE-EXACT vs the batch-160/161/162/163 pre-close archives (only the 2 documented flip lines differ per packet); the full verification history (the false-mismatch near-miss + its basis resolution) is recorded in THE GATES ROUND 2 ledger above.
+
+- **NEXT BOUNDARY (staged per the plan):** the ORCHESTRATOR-OWNED PHASE-3 STAGING (Stage Phase 3 [PLANNED] → [WIP] with Step 01 (spec P3-S1) the staged step per the Phase 2 `next_phase` mandate - 'Phase 3 - Polish + deprecation prep - dispatch after Phase 2 steps 01-05 are DONE') + the standing 00-helping CORTEX INDEX REBUILD (`node rag-index/build-index.mjs` + `node rag-index/embed-index.mjs`); TRIO STATE CARRY + the CARRIED STILL-OPEN ITEMS (incl. the retained-P2-ledger compression disposition) per the refreshed CURRENT BOUNDARY. THE PHASE-2 CLOSE STOPPED PER THE USER DIRECTIVE - no further file writes.
+
+### Evidence batch 165 - the STEP-01 CLOSE (the spec-P3-S1 step-packet close out of plans/neatracing-voxel-racer.plans.md - the step packet + the superseded 2026-11-07 CURRENT BOUNDARY paragraph ARCHIVE-DEFERRED, verification-blocked [RECOVERED 2026-11-07 - both sub-blocks appended by the ARCHIVE-COMPLETION APPEND at the batch tail; sub-block B = RECOVERED-VERIFIED EXACT (B59B8164...41B0), sub-block A = APPENDED-AS-RECOVERED-VARIANT (16FB7FBA...16FA9 vs the C9A671E2 target, STANDING UNMATCHED - the honest caveat recorded on the append)] - plan + logs bytes only, no production byte, no test byte, no git mutation) - 07-logging (Tier 1), 2026-11-07
+
+- **THE MOVE (2026-11-07, the STEP-01 close-out):** the USER directive (verbatim): "Execute Step-01 close (phase compression per plan Mandates) on plans/neatracing-voxel-racer.plans.md: compress Step-01 to a compact [DONE] marker + logs reference, archive details as the next logs batch per plans/neatracing-voxel-racer.logs.md SHA-verification convention, keep the step header visible, and set CURRENT BOUNDARY for Step-02 dispatch. Fresh session; git read-only; then STOP." The get_slice_context pre_execute_hook returned notFound for both the step and the slice packets (the plan's own Step-01 packet = the recovery source); the close proceeded plan-bytes-only via the prior 10-edit pass (all applied + verified: the Step-01 heading + YAML flip to [DONE 2026-11-07], the [COMPRESSED] pointer, the evidence-row additions, the CURRENT BOUNDARY swap, the [ARCHIVED] bullet stack; the plan = 3,791,844 B / 18,185 ReadAllLines / 18,177 LF / 7 lone-CR, measured at the close-time; the count arithmetic = 18,285 pre-close RL - 103 (the packet -> the pointer) + 2 (the evidence bullet + blank) + 1 (the close evidence row) = 18,185). This batch's session = LOGS + VERIFICATION ONLY: no plan byte, no production byte, no test byte, no git mutation.
+
+- **SUB-BLOCK A - the full Step-01 step packet - ARCHIVE DEFERRED, VERIFICATION-BLOCKED (the close convention honored: never append an unverified packet) [SUPERSEDED 2026-11-07 - RECOVERED + APPENDED-AS-VARIANT by the batch-tail ARCHIVE-COMPLETION APPEND; variant SHA256 16FB7FBA...16FA9 vs the recorded C9A671E2...BD054 target, which STANDS UNMATCHED - the honest caveat recorded on the append]:** the archive target = the pre-move packet bytes (the Step-01 packet block inside the plan's 18,285-RL pre-close state; the recorded packet shape = 107 lines incl. the trailing blank; the E3 edit span = 104 lines), measured at the pre-move state: **10,109 UTF-8 bytes, SHA256 C9A671E249E505D550C2A911D435703378242AFF65AD14674C95DC0C776BD054** (the E3-apply-time recording). The carried transcript re-types ALL drifted (10,112 / 10,086 / 10,110 / 10,111 B across this and the prior session attempts; the W-status line = 1,887 chars as carried vs the twice-anchored 1,888). The mechanical recovery sweep = **EXHAUSTED AND FALSIFIED** on the 106-line LF-joined basis: (1) single-char deletion at ALL 10,084 positions, 13-dash basis unchanged - NO MATCH; (2) all 13 em-dash -> hyphen single swaps on both the 106- and 107-line shapes = each at the right byte count, hashes NO MATCH; (3) single SPACE insertion at all 1,888 W-line positions x 13 dash swaps (~24,500 hashes) - NO MATCH; (4) single ALPHANUMERIC character insertion at all 1,888 W-line positions x 13 dash swaps = **1,521,728 hashes (C#-compiled engine)** - NO MATCH. The single-mutation space = byte-closed (the only 10,109-byte reach = the two insertion families; both falsified): the carried transcript = >=2 content chars divergent; the pre-move plan bytes = overwritten by the E3 apply; grep across the logs + artifacts + plan = NO independent copy. THE PACKET IS NOT APPENDED. [SUPERSEDED 2026-11-07 - the RECOVERED VARIANT copy (the E3-old_str span shape, 104 lines) appended by the batch-tail ARCHIVE-COMPLETION APPEND with the honest caveat; the C9A671E2 target STANDS UNMATCHED.]
+
+- **SUB-BLOCK B - the superseded 2026-11-07 CURRENT BOUNDARY paragraph - ARCHIVE DEFERRED, VERIFICATION-BLOCKED (the same close rule) [SUPERSEDED 2026-11-07 - RECOVERED-VERIFIED + APPENDED VERBATIM by the batch-tail ARCHIVE-COMPLETION APPEND; 3,555 B / SHA256 B59B8164...41B0 = the recorded target EXACTLY]:** the archive target = the single superseded P3-S1-B BUDGET-EXHAUSTED HANDOFF RECORDED boundary line (recorded in the plan-side [ARCHIVED] bullet stack, the batch-165 bullet): **3,530 chars / 3,555 UTF-8 bytes, SHA256 B59B8164D41508B5867366A646702A3BB258A38BF3E1CCEB0EBF9445FD6041B0**. The carried re-type = 3,530/3,555 EXACT SIZE but SHA256 0FC61FD37BD1C30FC93DD19C60363F300AF194AD68A8B9AE6164458860B2F6AB (size-exact, content-drift = a >=1 same-size substitution pair); the single-substitution sweep (heavy -> heavy + ASCII -> ASCII at all positions) = NO MATCH. NOT APPENDED.
+
+- **HASH TOOLS CALIBRATED (the verification METHOD = confirmed sound; the blockage = the carried transcript drift only):** the CR-strip-per-line + LF-join + no-trailing-LF + UTF-8 SHA-256 pipeline re-verified against the standing append archives: batch-163 sub-block A (the fenced 107-line packet) re-extracted from the POST-append logs bytes = **9,475 bytes, SHA256 EDAAF0448FC90274726768222D15EA2F0BEC36E3BDFB0D556BD89A893C7FD794, MATCH True**; batch-163 sub-block B (the single superseded boundary line) = **3,133 chars, SHA256 9CDE809F2AC2CB8DAC46C14FB848803001E441D981F4AA0A4F575AA00066F85F, MATCH True**. The logs file = the CRLF convention measured this session (3,259,666 B / 19,804 CR = 19,804 LF) - the CR-strip step = required and applied in both calibrations.
+
+- **THE PLAN-RETAINED RECORD (the settled plan bytes, verified this session):** the Step-01 heading (the pre-compression position) [DONE 2026-11-07] with the YAML status + the 4 slice rows P3-S1-A / P3-S1-B / P3-S1-wiring / P3-S1-green all [DONE 2026-11-07]; the [COMPRESSED] pointer recording the packet -> logs-batch-165 compression; the Step-01 evidence rows retained verbatim (the wiring green evidence row = the close-fragment source: RED 6/6 right-reason "6 failed / 86 passed / 92 total", GREEN 3 suites / 92/92 PASS + the targeted host frame-composer lane 24/24 PASS + npx eslint exit 0, the gate PASS 7/7 sub-gates x2 rounds (the historical 7-sub-gate era), OBS-N1..N4 carried); the [ARCHIVED] bullet stack (15 bullets + the batch-165 bullet carrying the recorded sub-block hashes C9A671E2... / B59B8164...CCEB0EBF9445FD6041B0); the CURRENT BOUNDARY = the STEP-01-CLOSED boundary; the Handoff block. NOTE: the plan-side batch-165 [ARCHIVED] bullet records the two sub-block hashes as appended - THIS BATCH supersedes that reading: both sub-blocks = ARCHIVE-DEFERRED (the bullets above); the discrepancy = recorded here truthfully. THE LEARNING EVENTS: NONE OWED - .github/ai-learning/learning-log.jsonl UNTOUCHED.
+
+- **THE GATES (ROUND 1 - all on the settled plan bytes, 07-logging run):** validate-plan-sync ok=True 0 errors / 0 warns; phase-compression PASS; log-completion-marker PASS; stale-wip-plans PASS; learning-event PASS; the consolidated slice-advancement MCP gate pass=true 4/4 sub-gates, severity TRIVIAL, specialistCount 0, failedGates [] + erroredGates [], gate_error false x4. ROUND 2 (the post-append re-run, this session): validate-plan-sync ok=True 0 errors / 0 warns; phase-compression PASS; log-completion-marker PASS; stale-wip-plans PASS (stalePlans []); learning-event PASS (the log exists, 28,782 events); the consolidated slice-advancement MCP gate pass=true 4/4 sub-gates (plan-sync / step-packet / plan-slice-quality / plan-command-lint), severity TRIVIAL, specialistCount 0, failedGates [] + erroredGates [], gate_error false x4 - identical verdicts to ROUND 1, zero drift. POST-APPEND LOGS MEASURED (this batch): 3,266,780 bytes / 19,819 CR = 19,819 LF (the CRLF convention, balanced); the batch = +7,114 bytes / +15 lines; the batch-165 tail = the STOP sentence + the 2-blank-line EOF convention preserved; NO packet text and NO boundary-line text emitted anywhere in the batch (the sub-blocks = the deferred bullets above). HASH VERIFICATION (the close-time convention, batch-163 style): SUB-BLOCK A - **NOT APPENDED** (the verification-blocked record above; the target 10,109 B / SHA256 C9A671E249E505D550C2A911D435703378242AFF65AD14674C95DC0C776BD054 stands UNMATCHED by the falsified sweep); SUB-BLOCK B - **NOT APPENDED** (the target 3,530 chars / 3,555 B / SHA256 B59B8164D41508B5867366A646702A3BB258A38BF3E1CCEB0EBF9445FD6041B0 stands UNMATCHED).
+
+- **NEXT BOUNDARY (ORCHESTRATOR-OWNED):** (1) the ARCHIVE-COMPLETION pass for THIS batch (the owed resume point): recover an independent Step-01 packet + boundary source (a fresh session carrying the verbatim texts NOT yet context-compacted; NO fabrication; the sweep = falsified and closed), re-verify both target hashes, append the sub-blocks, then the ROUND-2 gate re-run + the hash-verification bullets complete the close convention; (2) Step-02 (spec P3-S2 - Build + docs + deprecation prep) staging + dispatch: Step-01 [DONE 2026-11-07] = P3-S2-A's dependency DISCHARGED; TRIO STATE CARRY + CARRIED STILL-OPEN ITEMS carry unchanged from the plan-side CURRENT BOUNDARY. THE STEP-01 CLOSE STOPPED PER THE USER DIRECTIVE - no further file writes this close.
+- **THE ARCHIVE-COMPLETION APPEND (2026-11-07, the batch-165 sub-block close-out - the ORCHESTRATOR-OWED resume point (1) of the batch-165 NEXT BOUNDARY bullet, executed by the 00-helping maintenance pass):** the USER directive (verbatim): "Archive-completion (STEP-01 close). Recovered sub-blocks sit in Temp\subblock_boundary_old.txt (3,555 B, b59b8164...41b0 EXACT target match) and Temp\subblock_packet_B_old.txt (old_str of the successful compression edit). Verify both SHAs, CRLF-normalize, append both to the logs batch-165 archive zone; flip plan+logs ARCHIVE-DEFERRED to RECOVERED-VERIFIED with evidence + honest packet C9A671E2 variant caveat; correct the 2 stale provenance clauses in the plan. Git read-only; STOP for review." RECOVERY SOURCES (all LF-joined on disk outside the repo; re-hashed at this pass): %TEMP%\subblock_boundary_old.txt + %TEMP%\subblock_packet_B_old.txt (the companion variant %TEMP%\subblock_packet_A_old.txt also on disk - see the SHA verification below). NO production byte, NO test byte, NO git mutation; PLAN + LOGS bytes only; the pass STOPS for USER review.
+
+- **SHA-256 VERIFICATION AT THE CALIBRATED BASIS (CR-stripped / LF-joined / UTF-8 bytes / uppercase hex - the batch-161 convention; raw-file hash = calibrated hash, both copies LF-only):** (1) SUB-BLOCK B (the boundary): 3,555 UTF-8 bytes, SHA256 **B59B8164D41508B5867366A646702A3BB258A38BF3E1CCEB0EBF9445FD6041B0** = the recorded batch-165 sub-block-B target EXACTLY (1-line content, no CRs) - **RECOVERED-VERIFIED, APPENDED VERBATIM below.** (2) SUB-BLOCK A (the step packet): 10,038 UTF-8 bytes / 104 LF lines (the opening ```yaml fence through the final Required-validation bullet = the E3-old_str span shape), SHA256 **16FB7FBAFA4513441EF2A38BBB4397E6F74B767CF751B04066F6D9C5F4916FA9** - **NOT EQUAL to the recorded batch-165 sub-block-A target (10,109 bytes / 107 lines incl. the trailing blank / SHA256 C9A671E249E505D550C2A911D435703378242AFF65AD14674C95DC0C776BD054).** (3) VARIANTS: %TEMP%\subblock_packet_A_old.txt = 10,039 bytes, SHA256 F16A922ADAFC3E1AE6281E9DB93B780A4CEC04DC070BC8C3D7A2D6F265D237C7; A vs the appended B copy differ by EXACTLY 1 byte on the L61 wire-slice status line (A carries the trailing closing YAML-quote glyph U+0027 after the status bracket = 1,889 chars; B ends at the twice-anchored 1,888-char length without it - the batch-165 deferred record status-line-length family). (4) HONEST PACKET CAVEAT: the appended packet = the RECOVERED VARIANT per the E3-old_str provenance (the USER-designated old_str of the successful compression edit), NOT verified byte-exact to the recorded C9A671E2 pre-move packet; the 71-byte / 3-line periphery delta (the heading + the closing fence + the trailing blank per the batch-163 archived-packet shape; composition NOT reconstructed - no fabrication) and the single-byte A/B variant split are both recorded; the C9A671E2 target STANDS UNMATCHED; the disposition = APPENDED-AS-RECOVERED-VARIANT, the exact-match close convention NOT claimed for this packet.
+
+- **SUB-BLOCK A - the batch-165 Step-01 step packet, the RECOVERED VARIANT copy appended (10,038 bytes / 104 lines, CRLF-normalized into this CRLF logs file; the POST-APPEND LF-basis re-extraction below reproduces the source hash 1:1):**
+
+````markdown
+```yaml
+phase: 3
+step: 1
+title: 'Adaptive quality + memory budget (spec P3-S1)'
+status: '[WIP]'
+goal: implementing
+expansion: slices
+auto_expand: true
+tdd_sequence: green-only
+mode: fresh-session
+source_of_truth: 'plans/neatracing-voxel-racer.plans.md'
+copy_paste: true
+next_step: 'Step 02 - Build + docs + deprecation prep (spec P3-S2)'
+pre_execute_hook:
+  tool: 'neataptic-workflow-mcp-get_slice_context'
+  args:
+    slice_id: 'P3-S1-A'
+skills:
+  - implementation-standards
+  - red-test-contracts
+  - green-validation-gates
+validation:
+  - 'examples/neatRacing/engine'
+  - 'examples/neatRacing/browser-entry'
+  - 'examples/neatRacing/voxel'
+acceptance_criteria:
+  - 'AC-035: quality-first adaptive degradation order (bloom off -> LOD tier -> prop density) with deterministic hysteresis-bounded decision function (P3-S1-A)'
+  - 'AC-036: memory accounting proves no dense 128^3 grid retained at game runtime and peak within named budget; editor dense volume + undo snapshots accounted (P3-S1-B)'
+slices:
+  - slice_id: 'P3-S1-A'
+    title: 'Adaptive quality decision function'
+    status: '[DONE 2026-11-07 — 04-implementing: the GREEN-ONLY slice delivered examples/neatRacing/engine/adaptive-quality.ts + the sibling contract suite adaptive-quality.test.ts (AC-035: the quality-first drop order bloom off -> LOD tier -> prop density BEFORE frames are dropped, the explicit G8 bloom off-switch knob consumed by the bloom.pass enabled frame state, a hysteresis-bounded deterministic in-place decision executor with zero per-frame allocation, the TP-15 Phase-3 tunables 55/59/120/0.1/1000 as named NEATRACING_* constants); targeted engine lane 9 suites / 263 tests PASS, npx tsc --noEmit -p tsconfig.neatRacing.json exit 0, npx eslint exit 0 on both files, severity FULL, the ONE Tier-3 determinism-reviewer returned APPROVE via review-coordinator (0 blocking, 10 non-blocking observations); full evidence in ## Latest validation evidence; 05-green-testing step close and the P3-S1-B dispatch stay orchestrator-owned]'
+    goal: implementing
+    estimate_hours: 3
+    files_to_change:
+      - 'examples/neatRacing/engine/adaptive-quality.ts'
+      - 'examples/neatRacing/engine/adaptive-quality.test.ts'
+    acceptance_criteria:
+      - 'AC-035: drop order bloom -> LOD -> props; explicit bloom off-switch (G8); hysteresis-bounded and deterministic'
+    red_test:
+      - 'RED: adaptive-quality.test.ts fails before the module; asserts drop order + hysteresis + explicit bloom off'
+    parallelizable: true
+    dependencies:
+      - 'P2-S4-green'
+  - slice_id: 'P3-S1-B'
+    title: 'Memory budget accounting (runtime + editor)'
+    status: '[DONE 2026-11-07 — 04-implementing (FRESH-04 record-only flip per the recorded budget-exhausted handoff — NO re-implement, NO delivered byte touched): the GREEN-ONLY slice delivered examples/neatRacing/voxel/memory.budget.utils.ts (31,856 B) + the sibling contract suite memory.budget.utils.test.ts (26,400 B) per the kept 2-file contract brief tmp/P3-S1-B.dispatch-brief.md — the AC-036 memory accounting proofs: sparse-only 128^3 runtime retention (the sparse manifests retain per-slice transient grids and NO dense volume grid, enforced via the VOXEL_DENSE_GRID_RETAINED assertion code), the shipped model pipeline peaks inside the named NEATRACING_VOXEL_RUNTIME_MODEL_MEMORY_BUDGET_BYTES runtime budget, and the editor dense 2.1 MB working volume + undo snapshots reconciled against the AC-020 editor constants inside the 8 MiB appendix-P7 exception envelope; the voxel lane + tsc + eslint evidence is handback-recorded and freshly re-measured by this flip pass — full evidence in ## Latest validation evidence; severity FULL, the ONE Tier-3 determinism-reviewer returned APPROVE (round 1, 0 blocking, OBS-1..6 approved residuals, the fix loop never opened), PROC-1 discharged by the per-slice artifacts/shared-validation-p3-s1-b.json artifact + the consolidated-gate re-run; 05-green-testing confirmation and the remaining Step-01 dispatch order stay ORCHESTRATOR-OWNED]'
+    goal: implementing
+    estimate_hours: 2
+    files_to_change:
+      - 'examples/neatRacing/voxel/memory.budget.utils.ts'
+      - 'examples/neatRacing/voxel/memory.budget.utils.test.ts'
+    acceptance_criteria:
+      - 'AC-036: accounting proves sparse-only 128^3 retention at runtime; editor dense 2.1 MB working volume + <= 8 MB undo budget accounted'
+    red_test:
+      - 'RED: memory.budget.utils.test.ts fails before the utils; asserts accounting math and budget assertions on fixtures'
+    parallelizable: true
+    dependencies: []
+  - slice_id: 'P3-S1-wiring'
+    title: 'Host wiring: drive the adaptive-quality controller into the composed frame path (per-rendered-frame tick + stage-derived bloom off-switch at both hardcoded sites)'
+    status: '[DONE 2026-11-07 — 04-implementing: the RED-FIRST wiring slice delivered the AC-035 runtime wiring in the 3-file boundary BOTH hardcoded-true sites stage-derived (the composer-frame construction enabled knob reads resolveAdaptiveQualityStageClamped(state.stage).bloomEnabled; the frame-composer INITIAL_BAG_BLOOM_ENABLED neutral is derived from NEATRACING_ADAPTIVE_QUALITY_STAGES[0].bloomEnabled — the independent = true literal is gone at both sites), the clamped stage lookup (Number.isFinite/Math.trunc/Math.min/Math.max against NEATRACING_ADAPTIVE_QUALITY_MAX_STAGE_INDEX) consumed at both sites, and tickAdaptiveQuality exactly once per RENDERED frame inside driveSimProtocolFrame AFTER the missing-frames early return and ahead of the composer draw (zero-step frames INCLUDED — the tick count == the draw count; degraded frames never tick; frameMs = the rAF delta, first-frame 0) with the identity-stable composerFrame bag refreshed in place (zero per-frame allocation); the NeatRacingFrameComposerFrame.enabled member went readonly -> mutable for the in-place per-frame host refresh; RED measured 6/6 right-reason failures (0 tick calls x4, stage-1 false/true, the source pin), GREEN on the FINAL bytes: browser-entry lane 3 suites / 92/92 PASS + the targeted host frame-composer lane 24/24 PASS + npx tsc --noEmit -p tsconfig.neatRacing.json exit 0 + npx eslint on the three files exit 0; severity FULL, the ONE Tier-3 determinism-reviewer returned APPROVE via review-coordinator (round 1, 0 blocking, OBS-N1..N4 non-blocking — N1 the JSDoc wall-clock caveat + N2 the source-pin regex hardening applied IN this same pass on the final bytes and re-measured GREEN); full evidence in ## Latest validation evidence; the engine + voxel lanes stay 05-owned (unchanged modules; targeted-tests-only at 04); 05-green-testing step close and P3-S1-green stay ORCHESTRATOR-OWNED]
+    goal: implementing
+    estimate_hours: 2
+    files_to_change:
+      - 'examples/neatRacing/browser-entry/browser-entry.ts'
+      - 'examples/neatRacing/browser-entry/browser-entry.test.ts'
+      - 'examples/neatRacing/host/frame-composer.ts'
+    acceptance_criteria:
+      - 'AC-035 (runtime wiring): the composed frame consumes the ticked adaptive-quality controller - the G8 explicit bloom off-switch live from the resolved stage record at both hardcoded-true sites (browser-entry.ts composer-frame construction + frame-composer.ts initial bloom-bag neutral), a defensively clamped stage lookup, tickAdaptiveQuality exactly once per RENDERED frame ahead of the composer draw, and the AC-035 quality-first drop order bloom off -> LOD tier -> prop density BEFORE any frame is dropped stays intact'
+    red_test:
+      - 'RED: browser-entry.test.ts wiring contract fails while composerFrame.enabled is a hardcoded true and no controller tick exists - wiring doubles (P1-boot-glue invocationCallOrder precedent) mock the controller + composer modules and pin exactly one tickAdaptiveQuality per rendered frame (zero-step frames included) ahead of the composer draw, the stage-record-derived off-switch value handed to the frame (stage 0 true, stage 1 bloom-off false), and the clamped-negative-stage non-undefined knob; a readFileSync source-text pin (readHostShell precedent) fails while frame-composer.ts holds the independent INITIAL_BAG_BLOOM_ENABLED = true literal'
+    parallelizable: true
+    dependencies:
+      - 'P3-S1-A'
+  - slice_id: 'P3-S1-green'
+    title: 'Step green validation: adaptive quality + memory'
+    status: '[DONE 2026-11-07 — 05-green-testing: step close record — the three Step-01 lane validations green (engine 9 suites/263 tests + browser-entry 3 suites/92 tests incl. the 6 adaptive-quality wiring contracts + voxel 10 suites/197 tests incl. memory.budget.utils.test.ts = 552 PASS, exit 0 each, fresh session, baselines matched exactly), supplementary npx tsc --noEmit -p tsconfig.neatRacing.json exit 0 + npx eslint over the 7 delivered Step-01 files exit 0; consolidated slice-advancement 4/4 sub-gates pass both rounds; AC-035/AC-036 green; evidence head-row appended]'
+    goal: green-testing
+    estimate_hours: 1
+    files_to_change:
+      - 'plans/neatracing-voxel-racer.plans.md'
+    acceptance_criteria:
+      - 'Step 01 AC subset green: AC-035, AC-036; engine + browser-entry + voxel jest patterns green'
+    parallelizable: false
+    dependencies:
+      - 'P3-S1-A'
+      - 'P3-S1-B'
+      - 'P3-S1-wiring'
+```
+
+**User instruction:** Implement spec slice P3-S1: adaptive quality decision function and full memory budget accounting; red -> implement -> green per slice.
+
+**Step objective:** Deliver hysteresis-bounded adaptive degradation (bloom -> LOD -> props) and the memory accounting that proves sparse-only runtime retention.
+
+**Stop conditions:**
+
+- **Done:** engine + browser-entry + voxel jest lanes green; AC-035, AC-036 recorded.
+- **Blocked:** budget accounting contradicts editor undo snapshot figures — record and reconcile against the AC-020 constants.
+
+**Required validation:**
+
+- `npm run jest:base -- --testPathPatterns="examples/neatRacing/engine"`
+- `npm run jest:base -- --testPathPatterns="examples/neatRacing/browser-entry"`
+- `npm run jest:base -- --testPathPatterns="examples/neatRacing/voxel"`
+````
+
+- **SUB-BLOCK B - the batch-165 superseded 2026-11-07 CURRENT BOUNDARY paragraph, the RECOVERED-VERIFIED EXACT copy appended (3,555 bytes = the recorded target hash byte-exact, CRLF-normalized; the POST-APPEND LF-basis re-extraction below reproduces the recorded target 1:1):**
+
+CURRENT BOUNDARY (2026-11-07, P3-S1-B BUDGET-EXHAUSTED HANDOFF RECORDED — the 01-planning hand-off RECORDING pass, ORCHESTRATOR-DISPATCHED; PLAN FILE BYTES ONLY — this boundary + the head evidence row + the P3-S1-B PlanUpdate tail block; NO production byte, NO test byte, NO git mutation, NO slice flip, NO dispatch): Phase 3 — Polish + deprecation prep [WIP] / Step 01 (spec P3-S1) [WIP] unchanged; P3-S1-A [DONE 2026-11-07]; **P3-S1-B DELIVERED BY THE STOPPED 04 AND STILL [PLANNED] in the slice YAML — THE FLIP IS NOT RECORDED BY THIS PASS** (per dispatch: no slice flip by the recording pass); P3-S1-wiring + P3-S1-green + Step 02 stay [PLANNED]. HANDOFF STATE (recorded from the orchestrator stop; on-disk verified): the GREEN-ONLY slice P3-S1-B (AC-036) dispatched 2026-11-07 against the kept brief `tmp/P3-S1-B.dispatch-brief.md` (13,324 B @ 14:51:06Z); the 04-implementing instance hit its time budget (the §9.1/RPE-8 stop-and-gap-report contract — never revived) having delivered EXACTLY the two packet-target voxel files memory.budget.utils.ts (31,856 B @ 15:45:11Z) + memory.budget.utils.test.ts (26,400 B @ 15:47:09Z), handback-recorded voxel lane 197/197 PASS + tsc exit 0 + eslint both files exit 0 (NOT re-run by this pass); severity FULL; the ONE Tier-3 determinism-reviewer APPROVE (round 1, 0 blocking, 0 required fixes — the fix loop never opened) with OBS-1..OBS-6 carried as APPROVED RESIDUALS; the on-disk artifacts/shared-validation.json stays the STALE 2026-10-23 track-lane artifact (verified payload 2026-10-23T17:06:56Z; the P2-S3-C NB-6 carry-forward) while the handback cites the 2026-11-07T17:09Z in-session shared-validation run — PROC-1 routes the on-disk per-slice artifact refresh (the shared-validation-p2-s4-* naming precedent) to the fresh-04 gate re-run; PROC-2 and PROC-4 ride NB-7 per the handback disposition (the NB-7 binding confirmed at the fresh-04 flip record); the OBS/PROC verbatim text rides the same flip record. THIS PASS's gate: the consolidated slice-advancement gate (slice-id P3-S1-B, changed-files = THIS PLAN, the plan-only recording precedent) round 1 on the PRE-edit bytes PASS 4/4 sub-gates (TRIVIAL, specialistCount 0, failedGates [] + erroredGates []) — the round-2 post-append verdict is recorded in the head evidence row. NEXT (IN ORDER, ORCHESTRATOR-OWNED — this pass dispatched nothing): (1) the FRESH 04-implementing instance records the P3-S1-B slice-status flip FROM THE DELIVERED BYTES (the [DONE ...] delivery summary + the OBS-1..OBS-6/PROC-1..PROC-4 verbatim carry into the PlanUpdate tail block) AND re-runs the consolidated slice-advancement gate on the TWO voxel changed files with the PROC-1 refreshed artifact — code edits only if the re-run gate surfaces a failure (then the standard loop-back); (2) the 05-green-testing independent confirmation dispatch for P3-S1-B (targeted voxel lane + tsc + eslint, the P3-S1-A precedent); (3) then P3-S1-wiring per its packet, the P3-S1-green step-close slice, and Step 02 (spec P3-S2) per its packet — the exact dispatch order stays orchestrator-owned. The 00-helping CORTEX INDEX REBUILD keeps its standing routed ownership (the post-write reindex hook covers the edit beats; not discharged). TRIO STATE CARRY + CARRIED STILL-OPEN ITEMS carry unchanged from the PHASE-3 STAGED boundary below (superseded in place). RECORD NOTE: the same-task sibling 01-planning dispatch (p3s1b-handoff-pl) was observed running and had written NO plan bytes at record time — the orchestrator reconciles any later second record.
+
+- **HASH RE-VERIFICATION (POST-APPEND, the close-time convention):** both appended sub-blocks re-extracted from the POST-APPEND logs bytes at the CR-stripped LF-joined UTF-8 basis and re-hashed: SUB-BLOCK A = 16FB7FBAFA4513441EF2A38BBB4397E6F74B767CF751B04066F6D9C5F4916FA9 (1:1 vs the source Temp copy), SUB-BLOCK B = B59B8164D41508B5867366A646702A3BB258A38BF3E1CCEB0EBF9445FD6041B0 (1:1 = the recorded target). The batch-165 HASH VERIFICATION bullet NOT-APPENDED readings and the two ARCHIVE DEFERRED, VERIFICATION-BLOCKED sub-block bullets are SUPERSEDED in place by the flips of this append.
+
+- **STATUS FLIP (plan + logs, the RECOVERED-VERIFIED disposition):** the batch-165 heading + the SUB-BLOCK A / SUB-BLOCK B deferred bullets + the THE-GATES NOT-APPENDED tail readings are SUPERSEDED IN PLACE with the RECOVERED-VERIFIED / APPENDED-AS-VARIANT markers (the original deferred text retained for the audit trail); the plan-side flips = the [ARCHIVE-DEFERRED CORRECTED 2026-11-07] Handoff-stack bullet flipped to [RECOVERED-VERIFIED + APPENDED 2026-11-07] (prior disposition retained in summary) and the 2 stale provenance clauses (the [COMPRESSED] Step-01 pointer archived-byte-exact clause + the STEP-01-CLOSE row BOTH-matched clause) corrected with PROVENANCE CORRECTED 2026-11-07 markers (marked, NOT erased). LEARNING EVENTS: NONE OWED by this pass (a recovery completion, not a routing/skill/model/output-contract change); .github/ai-learning/learning-log.jsonl UNTOUCHED.
+
+- **NEXT BOUNDARY (the close-out):** the batch-165 archive-completion is CLOSED (the batch-165 resume point (1) DISCHARGED); the remaining plan-side resume point stays ORCHESTRATOR-OWNED - the Step-02 (spec P3-S2) staging dispatch per the CURRENT BOUNDARY + the Handoff query (P3-S1 [DONE 2026-11-07] discharges P3-S2-A dependency; P3-S2-B / P3-S2-C parallelizable). THIS PASS STOPS FOR USER REVIEW per the directive - no further file writes.
+
+### Evidence batch 166 - the PHASE-3 CLOSE (the orchestrator-directed phase close out of plans/neatracing-voxel-racer.plans.md per the batch-158 phase-close convention - the ARCHIVE-DEFERRED Step 02 (spec P3-S2) pre-close step packet, sub-block A, RECOVERED-VERIFIED EXACT + the ARCHIVE-DEFERRED superseded 2026-11-07 STEP-01-CLOSED CURRENT BOUNDARY paragraph, sub-block B, byte-exact - plan + logs bytes only, no production byte, no test byte, no git mutation) - 07-logging (Tier 1), 2026-11-07
+
+- **THE MOVE (2026-11-07, the PHASE-3 CLOSE, 07-logging Tier 1 ORCHESTRATOR-DIRECTED):** the USER directive (verbatim): "Phase-3 CLOSE (07-logging). Per plans/neatracing-voxel-racer.plans.md current boundary: compress the closed Phase-3 (Steps 01+02) into plans/neatracing-voxel-racer.logs.md (batch append), discharge the ARCHIVE-DEFERRED Step-02 packet (SHA 08B0A9AA…5685) + superseded boundary (E47C…38BB4), flip boundary to PHASE-3 CLOSED with evidence; CRLF discipline; plan gates; git read-only; STOP." THE MOVE discharges the two ARCHIVE-DEFERRED sub-blocks recorded at the 2026-11-07 STEP-02-CLOSE close-out (named in the Step-02 [COMPRESSED] pointer + the in-fence SUPERSEDED preamble + the Handoff-stack [ARCHIVE-DEFERRED] bullet), flips the boundary chain to the PHASE-3 CLOSED record, flips the Phase-3 heading + the phase YAML [WIP]→[DONE 2026-11-07]/[DONE], refreshes the Handoff query, appends the PHASE-3-CLOSE evidence row to `## Latest validation evidence`, and re-runs the plan-gate bundle - ALL of it plan-status bytes + this logs append; NO production byte, NO test byte, NO mutating git command (read-only inspection only); edits via the edit/create tool path ONLY.
+
+- **PRE-APPEND MEASUREMENTS (measured at this close, pre-append):** the plan = 3,854,173 bytes / 18,212 CR / 18,205 LF / 18,213 ReadAllLines lines (the seven P1-era invisible blank-line CR artefacts carry; the two phase-flip edits of this close applied BEFORE the measurement - the heading + the phase YAML status); the logs = 3,288,162 bytes / 19,941 CR = 19,941 LF (the pure CRLF convention; the batch-165 tail + the batch-165 ARCHIVE-COMPLETION APPEND close-out at the file end). CRLF DISCIPLINE: both files measured CRLF-pure at the close; the edit path verified to preserve/write CRLF terminators (the byte probe on the phase-YAML flip: written as CR-LF pairs).
+
+- **SUB-BLOCK A - the ARCHIVE-DEFERRED Step 02 (spec P3-S2) pre-close step packet - RECOVERED-VERIFIED EXACT, APPENDED VERBATIM below (108 lines, CR-stripped LF-joined with a trailing LF, UTF-8):** the recorded close-time target (the [COMPRESSED] pointer + the close evidence row): pre-move plan LF lines 6431..6538, **SHA256 08B0A9AA117BECEBC6712A324D8F6FEA87446B0F7ACF96A15F0CF65B2A945685** - the step yaml (status '[WIP]'; next_step 'Terminal - neatRacing tracker complete; deprecation removal is a separate user-confirmed workstream'; the AC-037..AC-039 rows) + the FOUR slice packets with the PRE-CLOSE statuses (P3-S2-A / P3-S2-B / P3-S2-C '[DONE 2026-11-07]', P3-S2-green '[PLANNED]') + the User-instruction / Step-objective / Stop-conditions / Required-validation tails, NO heading line in the span. RECOVERY PROVENANCE (the pre-close plan bytes were overwritten by the close compression; the packet = assembled from TWO independent, mutually-confirming byte-exact sources): (1) **the Cortex corpus chunk rag-index/data/turso-replica.sqlite chunk_id 1202155** (captured by the post-write reindex hook on the Step-02 close beat): body_text = the packet's 91-line yaml block VERBATIM with the pre-close statuses (the step yaml '[WIP]'; P3-S2-A/B/C '[DONE 2026-11-07]'; P3-S2-green '[PLANNED]'), its heading_path binding the span to the [WIP] Step 02 packet ('#### Step 02 — Build + docs + deprecation prep (spec P3-S2) [WIP]' - the heading sits OUTSIDE the recorded 108-line SHA span per the batch-159 shape); (2) **the 17 status-free packet tail lines from the pre-staging plan copy tmp/fold-work/backup/plans.md.bak (bak lines 6200..6216)** - the SHA match proves them byte-identical pre-close (the ONLY possible tail bytes at the recorded hash basis). VERIFICATION: the 108-line assembly (chunk yaml block + the 17 bak tail lines), CR-stripped, LF-joined with a trailing LF, UTF-8, uppercase hex → **SHA256 08B0A9AA117BECEBC6712A324D8F6FEA87446B0F7ACF96A15F0CF65B2A945685 = the recorded close-time target EXACTLY → RECOVERED-VERIFIED, APPENDED VERBATIM below.** Corroborations: the pre-staging bak packet variant (bak lines 6107..6216, 110 lines, statuses ALL '[PLANNED]') differs from the pre-close packet by EXACTLY the 5 status lines, all inside the recorded span (the pre-staging 110-line shape = the [WIP] heading + the leading blank + the 108-line span); the post-append LF-basis re-extraction is recorded in the batch-tail HASH VERIFICATION bullet below.
+
+````markdown
+```yaml
+phase: 3
+step: 2
+title: 'Build + docs + deprecation prep (spec P3-S2)'
+status: '[WIP]'
+goal: implementing
+expansion: slices
+auto_expand: true
+tdd_sequence: green-only
+mode: fresh-session
+source_of_truth: 'plans/neatracing-voxel-racer.plans.md'
+copy_paste: true
+next_step: 'Terminal - neatRacing tracker complete; deprecation removal is a separate user-confirmed workstream'
+pre_execute_hook:
+  tool: 'neataptic-workflow-mcp-get_slice_context'
+  args:
+    slice_id: 'P3-S2-A'
+skills:
+  - implementation-standards
+  - red-test-contracts
+  - green-validation-gates
+validation:
+  - 'npm run build:neatRacing'
+  - 'npx tsc -p tsconfig.neatRacing.json --noEmit'
+  - 'npm run docs'
+  - 'examples/racing_curriculum'
+  - 'manual: browser check of bundle-served game page'
+acceptance_criteria:
+  - 'AC-037: esbuild pipeline emits docs/assets/neatracing.bundle.js (host) + neatracing.worker.js with alias neataptic -> src/browser-entry.ts and external fs/child_process/path (P3-S2-A)'
+  - 'AC-038: examples/neatRacing docs generated/refreshed via npm run docs with target registered (P3-S2-B)'
+  - 'AC-039: deprecation notices in examples/racing_curriculum/README.md + examples/README.md pointing to examples/neatRacing; no removal, no dual-path (P3-S2-C)'
+slices:
+  - slice_id: 'P3-S2-A'
+    title: 'esbuild bundle pipeline + build test'
+    status: '[DONE 2026-11-07]'
+    goal: implementing
+    estimate_hours: 3
+    files_to_change:
+      - 'scripts/build-neatracing.mjs'
+      - 'scripts/build-neatracing.test.mjs'
+    acceptance_criteria:
+      - 'AC-037: host + worker bundles emitted to docs/assets with IIFE format, externals, and alias; type check clean'
+    red_test:
+      - 'RED: build-neatracing.test.mjs fails before the script; asserts bundle outputs, externals, and alias wiring (build-variants style)'
+    parallelizable: true
+    dependencies:
+      - 'P3-S1-green'
+  - slice_id: 'P3-S2-B'
+    title: 'neatRacing folder docs via docs target'
+    status: '[DONE 2026-11-07]'
+    goal: implementing
+    estimate_hours: 2
+    files_to_change:
+      - 'examples/neatRacing/README.md'
+      - 'scripts/quality/docs-generator config (neatRacing target registration)'
+    acceptance_criteria:
+      - 'AC-038: npm run docs emits/refreshes neatRacing docs with educational-docs tone; no stale docs'
+    red_test:
+      - 'RED: docs spot-check fails while neatRacing target is missing from the docs generator config'
+    parallelizable: true
+    dependencies: []
+  - slice_id: 'P3-S2-C'
+    title: 'Deprecation notices only (no removal)'
+    status: '[DONE 2026-11-07]'
+    goal: implementing
+    estimate_hours: 2
+    files_to_change:
+      - 'examples/racing_curriculum/README.md'
+      - 'examples/README.md'
+      - 'examples/racing_curriculum/deprecation-notice.test.ts'
+    acceptance_criteria:
+      - 'AC-039: both notices point to examples/neatRacing as successor; racing_curriculum suites remain green; no dual-path code'
+    red_test:
+      - 'RED: deprecation-notice.test.ts fails before notices exist; asserts both notice texts via source inspection'
+    parallelizable: true
+    dependencies: []
+  - slice_id: 'P3-S2-green'
+    title: 'Step green validation: build + docs + deprecation prep'
+    status: '[PLANNED]'
+    goal: green-testing
+    estimate_hours: 1
+    files_to_change:
+      - 'plans/neatracing-voxel-racer.plans.md'
+    acceptance_criteria:
+      - 'Step 02 AC subset green: AC-037, AC-038, AC-039; build + docs + racing_curriculum suites green; manual browser check'
+    parallelizable: false
+    dependencies:
+      - 'P3-S2-A'
+      - 'P3-S2-B'
+      - 'P3-S2-C'
+```
+
+**User instruction:** Implement spec slice P3-S2: esbuild bundle pipeline, neatRacing docs target, and deprecation notices only; red -> implement -> green per slice.
+
+**Step objective:** Ship the example: host + worker bundles to docs/assets, docs generated via the docs target, and successor-pointing deprecation notices with no removal.
+
+**Stop conditions:**
+
+- **Done:** build + docs + racing_curriculum suites green; manual browser check of the bundle-served page; AC-037..AC-039 recorded.
+- **Blocked:** bundle externals or alias wiring fail — record and escalate via 00.cross-tier-helper.
+
+**Required validation:**
+
+- `npm run build:neatRacing`
+- `npx tsc -p tsconfig.neatRacing.json --noEmit`
+- `npm run docs`
+- `npm run jest:base -- --testPathPatterns="examples/racing_curriculum"`
+- manual: browser check of bundle-served game page
+````
+
+- **SUB-BLOCK B - the ARCHIVE-DEFERRED superseded 2026-11-07 STEP-01-CLOSED CURRENT BOUNDARY paragraph - BYTE-EXACT, APPENDED VERBATIM below (the single-line paragraph):** the recorded close-time target (the [COMPRESSED] pointer + the in-fence SUPERSEDED preamble + the Handoff-stack [ARCHIVE-DEFERRED] bullet): **SHA256 E47C01092B4DFBF1B12CF83675AF54CF072E1860E09FFCB8D385219DA2638BB4** over the paragraph content CR-stripped with NO trailing newline (the batch-161 single-line basis). VERIFICATION: the paragraph re-hashed from the PRE-CLOSE in-plan line (the plan bytes at this close's start, before any plan-side edit touched the Handoff fence) = byte-identical to the recorded target → **RECOVERED-VERIFIED, APPENDED VERBATIM below.** The line STAYS retained in the in-fence audit chain BYTE-UNTOUCHED in-plan (this close prepends the new PHASE-3 CLOSED record ABOVE it and flips the deferred markers only - the plan-edit ledger is in the batch-tail bullet).
+
+CURRENT BOUNDARY (2026-11-07, STEP 01 CLOSED [DONE 2026-11-07] — the USER-directed 07-logging STEP-01-CLOSE compression move per the batch-159 STEP-01-CLOSE precedent; PLAN-STATUS EDITS ONLY — the step-header flip [WIP]→[DONE 2026-11-07] + the full packet compression to the [COMPRESSED] pointer (the whole pre-close packet archived, NO inner step YAML retained in-plan — the batch-159 shape) + the Phase-3 placeholder_steps row-1 flip [WIP]→[DONE] + the superseded P3-S1-B BUDGET-EXHAUSTED HANDOFF boundary archived to logs evidence batch 165 sub-block B (byte-exact, hash-verified) + the Handoff refresh + the batch-165 [ARCHIVED] marker bullet + the close evidence row; NO production byte, NO test byte, NO git mutation; NO Step-02 status flip — the staging flip stays ORCHESTRATOR-OWNED per the batch-159 STEP-02-STAGING precedent; the (SUPERSEDED IN PLACE) audit chain below stands unchanged): Phase 3 — Polish + deprecation prep [WIP] — Step 01 (spec P3-S1) is CLOSED [DONE 2026-11-07] (all FOUR slices [DONE 2026-11-07] — P3-S1-A the adaptive-quality executor / P3-S1-B the AC-036 memory accounting / P3-S1-wiring the AC-035 runtime wiring / P3-S1-green the step-level green validation; the full outcomes recorded on the [COMPRESSED] pointer + the evidence rows); Phase 3 holds ONE [PLANNED] step — Step 02 (spec P3-S2) — and ZERO [WIP] steps; the phase stays [WIP] pending the orchestrator-owned Step-02 stage. THE NEXT BOUNDARY (staged): **the ORCHESTRATOR-OWNED STEP-02 (spec P3-S2) STAGING (the Step-02 heading + the step YAML + the placeholder_steps row 2 flipped [PLANNED]→[WIP] — one [WIP] step per phase; the FIRST slice P3-S2-A [WIP], P3-S2-B / P3-S2-C / P3-S2-green stay [PLANNED]) then the P3-S2-A dispatch** (the esbuild bundle pipeline slice per the Step 02 packet — the pre_execute_hook binds P3-S2-A; P3-S2-A's dependency on P3-S1-green is DISCHARGED by the recorded P3-S1-green step-close green pass; P3-S2-B / P3-S2-C are parallelizable with empty dependency lists, then P3-S2-green; the Required validation lanes = `npm run build:neatRacing` + `npx tsc -p tsconfig.neatRacing.json --noEmit` + `npm run docs` + the `examples/racing_curriculum` jest lane + the manual browser check of the bundle-served game page; AC-037 / AC-038 / AC-039 bind). TRIO STATE CARRY: (1) the PHASE-1 EXIT CHECK is APPROVED + DISCHARGED (2026-11-06); (2) the CORTEX INDEX REBUILD — 00-helping, `node rag-index/build-index.mjs` + `node rag-index/embed-index.mjs` — keeps its standing routed ownership and is NOT discharged by this close; (3) the PHASE-3 STAGING IS DONE (the 2026-11-07 [WIP] flips + the staging gate evidence rows). CARRIED STILL-OPEN ITEMS (none blocks the Step-02 staging/dispatch): the O-N1/O-N3/O-N5 residual ledger rows P-TURN-17..23 (routed observations, non-blocking), the stale @example band literals (right-world.builder.ts), O-8 citation drift, the MCP validation-allowlist degradation (RECORDED open in `.github/ai-learning/learning-log.jsonl`; the shell-direct fallback is the operative workaround), the runtime duplicate law constants retirement owed to the P2-S3-B wiring note, the rung-2 (2-car) drive-test suggestion (routed to the orchestrator), the STALE CORTEX INDEX (owned by 00-helping as above), and the Phase-2 evidence-ledger compression disposition (ORCHESTRATOR-OWNED at the Phase-3 close or the plan close) — the P3 execution evidence rows + the Step-01 slice PlanUpdates join the retained ledger per the batch-158 convention. UNTOUCHED by this close: the Phase 3 heading + the phase YAML (status [WIP] unchanged), the Step-02 packet (heading + YAML + placeholder row 2 + slice statuses stay [PLANNED], BYTE-UNTOUCHED), the AC register, README/Roadmap, every production/test byte; NO mutating git (the directive is git read-only; edits via the edit/create tool path only).
+
+- **THE PLAN-EDIT LEDGER (this close, PLAN-STATUS BYTES ONLY; the detail flips recorded here and marked in-place in the plan):** (1) the Phase-3 heading `### Phase 3 — Polish + deprecation prep [WIP]` → `[DONE 2026-11-07 — the ORCHESTRATOR-DIRECTED 07-logging PHASE-3 CLOSE (batch-158 phase-close shape); BOTH steps CLOSED [DONE 2026-11-07] via the [COMPRESSED] pointers + the retained evidence rows; the phase archives discharged to logs evidence batch 166; terminal per the next_phase mandate (LD-33)]` and the phase YAML `status: '[WIP]'` → `'[DONE]'`; (2) the Step-02 [COMPRESSED] pointer's ARCHIVE-DEFERRED clause flipped to the batch-166 DISCHARGED marker (prior deferred disposition retained in summary); (3) the in-fence SUPERSEDED-preamble ARCHIVE-DEFERRED clause flipped to the batch-166 DISCHARGED marker; (4) the NEW `CURRENT BOUNDARY (2026-11-07, PHASE-3 CLOSED ...)` paragraph prepended to the in-fence chain + a `(SUPERSEDED IN PLACE 2026-11-07 ...)` preamble inserted for the STEP-02-CLOSED paragraph (the E47C STEP-01-CLOSED paragraph line itself stays BYTE-UNTOUCHED); (5) the Handoff-stack `[ARCHIVE-DEFERRED 2026-11-07 — ...]` bullet flipped to the batch-166 `[ARCHIVED ... sub-block B]` marker + a NEW batch-166 discharge bullet appended to the stack; (6) the Handoff Context / Next-phase / Compressed-coverage-notes / Required-gates / Known-cautions lines refreshed + the NEW PHASE-3-CLOSE evidence row appended to `## Latest validation evidence`. LEARNING EVENTS: NONE OWED by this close (a planned phase close, not a routing/skill/model/output-contract change); `.github/ai-learning/learning-log.jsonl` UNTOUCHED.
+
+- **NEXT BOUNDARY (staged):** the batch-tail gate bullet (the plan-gate bundle re-run on the post-edit plan bytes + the post-append hash re-extraction + the post-close plan measurement) and then the plan-terminal resume actions (the plan + logs archive-pair move to plans/completed/ after the 00-helping CORTEX INDEX REBUILD owner confirmation - racing_curriculum removal stays the separate user-confirmed workstream, LD-33) stay ORCHESTRATOR-OWNED.
+
+- **THE GATES + THE POST-APPEND VERIFICATION (the batch tail, the close-time convention):** (1) GATES - ROUND 1 (the post-edit plan, pre-evidence-row): phase-compression PASS; log-completion-marker PASS; stale-wip-plans PASS (stalePlans [], 4 plans checked); consolidated slice-advancement (slice-id P3-S2-green, changed-files = the plan) pass:true 4/4 sub-gates (plan-sync / step-packet / plan-slice-quality / plan-command-lint; failedGates [] + erroredGates []; severity TRIVIAL). ROUND 2 (post-evidence-row + the Context counts patch re-run): identical verdicts - the same four PASS + slice-advancement 4/4 with the same empty failed/errored lists, zero drift. (2) POST-APPEND HASH RE-VERIFICATION (both sub-blocks re-extracted from the POST-APPEND logs bytes at the CR-stripped LF-joined UTF-8 basis): SUB-BLOCK A = the fenced 108-line packet → SHA256 08B0A9AA117BECEBC6712A324D8F6FEA87446B0F7ACF96A15F0CF65B2A945685 (1:1 vs the recorded close-time target - RECOVERED-VERIFIED EXACT stands); SUB-BLOCK B = the single-line paragraph → SHA256 E47C01092B4DFBF1B12CF83675AF54CF072E1860E09FFCB8D385219DA2638BB4 (1:1); the in-plan E47C paragraph line re-hashed post-edit = byte-identical (the audit-chain retention proof). (3) POST-CLOSE MEASUREMENTS: the plan = 3,864,389 bytes / 18,219 CR / 18,212 LF / 18,220 ReadAllLines (CR - LF = 7, the seven P1-era blank-line CR artefacts carry; CRLF discipline preserved) - pre-close 3,854,173 B / 18,212 CR / 18,205 LF / 18,213 RL [byte-count amendment recorded 2026-11-07: the measurement predates the final Context-counts patch of the close; the SETTLED plan = 3,864,426 bytes with the lines/CR/LF unchanged, so the ROUND-2 gates ran on the settled bytes]; the logs = 3,304,516 bytes / 20,068 CR = 20,068 LF (pure CRLF; pre-append 3,288,162 B / 19,941 CR-LF; the batch = +16,354 bytes / +127 lines) [settled-logs amendment recorded 2026-11-07: the batch total after the tail close-out = 3,306,450 bytes / 20,070 CR = 20,070 LF (+18,288 bytes / +129 lines); the batch-166 tail = the STOP sentence + the one-blank-line EOF convention preserved] (4) LEARNING EVENTS: NONE OWED (a planned phase close, not a routing/skill/model/output-contract change); .github/ai-learning/learning-log.jsonl UNTOUCHED. THIS CLOSE STOPS PER THE USER DIRECTIVE - no further file writes.
+

@@ -69,6 +69,71 @@ jest.mock('../host/mode-selector', () => ({
   createRaceModeSelector: jest.fn(),
 }));
 
+/**
+ * Phase-3 Step-01 (P3-S1-wiring) wiring doubles.
+ *
+ * The slice red_test note: "browser-entry.test.ts wiring contract fails
+ * while composerFrame.enabled is a hardcoded true and no controller tick
+ * exists - wiring doubles (P1-boot-glue invocationCallOrder precedent) mock
+ * the controller + composer modules and pin exactly one tickAdaptiveQuality
+ * per rendered frame (zero-step frames included) ahead of the composer
+ * draw, the stage-record-derived off-switch value handed to the frame
+ * (stage 0 true, stage 1 bloom-off false), and the clamped-negative-stage
+ * non-undefined knob."
+ *
+ * The factories below keep every warmup helper REAL through
+ * `requireActual` (the nine-program warmup registry contract must never
+ * drift) and replace only the eight pass-factory seams with `jest.fn()`
+ * spies; the composer seam is fully mocked so the composition attempt
+ * succeeds on the fake GL fixture. The adaptive-QUALITY controller is NOT
+ * mocked at module scope: its spies are installed per test with
+ * `jest.spyOn` and restored by `afterEach`, so every other describe keeps
+ * the REAL controller.
+ */
+jest.mock('../engine/passes/bloom.pass', () => ({
+  ...jest.requireActual('../engine/passes/bloom.pass'),
+  createBloomPass: jest.fn(),
+}));
+
+jest.mock('../engine/passes/car.pass', () => ({
+  ...jest.requireActual('../engine/passes/car.pass'),
+  createCarPass: jest.fn(),
+}));
+
+jest.mock('../engine/passes/glass.pass', () => ({
+  ...jest.requireActual('../engine/passes/glass.pass'),
+  createGlassPass: jest.fn(),
+}));
+
+jest.mock('../engine/passes/track.pass', () => ({
+  ...jest.requireActual('../engine/passes/track.pass'),
+  createTrackPass: jest.fn(),
+}));
+
+jest.mock('../track/grid.pass', () => ({
+  ...jest.requireActual('../track/grid.pass'),
+  createTrackGridPass: jest.fn(),
+}));
+
+jest.mock('../track/right-world.pass', () => ({
+  ...jest.requireActual('../track/right-world.pass'),
+  createRightWorldPass: jest.fn(),
+}));
+
+jest.mock('../engine/passes/pulse.pass', () => ({
+  ...jest.requireActual('../engine/passes/pulse.pass'),
+  createPulsePass: jest.fn(),
+}));
+
+jest.mock('../engine/passes/starfield.pass', () => ({
+  ...jest.requireActual('../engine/passes/starfield.pass'),
+  createStarfieldPass: jest.fn(),
+}));
+
+jest.mock('../host/frame-composer', () => ({
+  createFrameComposer: jest.fn(),
+}));
+
 import { afterEach, beforeEach, describe, expect, it } from '@jest/globals';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -122,6 +187,30 @@ import {
 import type { NeatRacingStart } from './browser-entry';
 import type { CanvasDimensions } from './canvas-dimensions.utils';
 import { updateFullWindowRendererSize } from './canvas-dimensions.utils';
+// The adaptive-quality controller ladder (the AC-035 ORACLE): the resolved
+// stage record's `bloomEnabled` value is what the composed frame must
+// carry. The controller functions are SPIED (never module-mocked) for the
+// wiring contract - the namespace import is the per-test spy target.
+import * as adaptiveQuality from '../engine/adaptive-quality';
+import { NEATRACING_ADAPTIVE_QUALITY_STAGES } from '../engine/adaptive-quality';
+// The composed-frame type + the composer seam double targets
+// (P3-S1-wiring): the composition attempt succeeds on the fake GL fixture
+// through these doubles.
+import { createFrameComposer } from '../host/frame-composer';
+import type {
+  NeatRacingFrameComposerFrame,
+} from '../host/frame-composer';
+// The pass-factory seam doubles (P3-S1-wiring): the factories themselves
+// are stubbed with inert pass doubles so the composition attempt never
+// touches the fake GL context beyond the capability gate.
+import { createBloomPass } from '../engine/passes/bloom.pass';
+import { createCarPass } from '../engine/passes/car.pass';
+import { createGlassPass } from '../engine/passes/glass.pass';
+import { createTrackPass } from '../engine/passes/track.pass';
+import { createTrackGridPass } from '../track/grid.pass';
+import { createRightWorldPass } from '../track/right-world.pass';
+import { createPulsePass } from '../engine/passes/pulse.pass';
+import { createStarfieldPass } from '../engine/passes/starfield.pass';
 
 const HOST_SHELL_PATH = resolve(
   process.cwd(),
@@ -133,6 +222,20 @@ const HOST_SHELL_PATH = resolve(
 /** Reads the source host shell (not a generated docs copy). */
 function readHostShell(): string {
   return readFileSync(HOST_SHELL_PATH, 'utf-8');
+}
+
+/** The frame-composer source path the AC-035 source pin reads. */
+const FRAME_COMPOSER_PATH = resolve(
+  process.cwd(),
+  'examples',
+  'neatRacing',
+  'host',
+  'frame-composer.ts',
+);
+
+/** Reads the frame-composer source (not a generated docs copy). */
+function readFrameComposerSource(): string {
+  return readFileSync(FRAME_COMPOSER_PATH, 'utf-8');
 }
 
 /** Resets the jsdom document to a minimal host shell between tests. */
@@ -165,6 +268,20 @@ const mockedUpdateFullWindowRendererSize = jest.mocked(
 /** Mount-seam doubles for the Step 14 boot composition (module-scope spies). */
 const mockedCreateHud = jest.mocked(createHud);
 const mockedCreateRaceModeSelector = jest.mocked(createRaceModeSelector);
+
+/** Composer + pass seam doubles for the P3-S1-wiring composition gate. */
+const mockedCreateFrameComposer = jest.mocked(createFrameComposer);
+const mockedCreateBloomPass = jest.mocked(createBloomPass);
+const mockedCreateCarPass = jest.mocked(createCarPass);
+const mockedCreateGlassPass = jest.mocked(createGlassPass);
+const mockedCreateTrackPass = jest.mocked(createTrackPass);
+const mockedCreateTrackGridPass = jest.mocked(createTrackGridPass);
+const mockedCreateRightWorldPass = jest.mocked(createRightWorldPass);
+const mockedCreatePulsePass = jest.mocked(createPulsePass);
+const mockedCreateStarfieldPass = jest.mocked(createStarfieldPass);
+
+/** Timestamp step (ms) between the driven frames of the wiring probe. */
+const WIRING_FRAME_STEP_MS = 1000 / 60;
 
 /** Timestamp handed to the captured RAF callback when tests drive frame one. */
 const DRIVEN_FRAME_TIMESTAMP_MS = 0;
@@ -1176,5 +1293,240 @@ describe('Neat Racing browser entry boot composition (Step 14, P1-boot-compositi
         RESERVED_HUD_OUTPUT_ID,
       );
     });
+  });
+});
+
+/**
+ * Phase-3 Step-01 (P3-S1-wiring) adaptive-quality controller wiring
+ * contract.
+ *
+ * RED while `composerFrame.enabled` is a hardcoded `true` in the browser
+ * entry's composer-frame construction and no controller tick exists, and
+ * while frame-composer.ts holds the independent
+ * `INITIAL_BAG_BLOOM_ENABLED = true` literal. The wiring doubles open the
+ * composition gate (a fake GL that presents `createShader`) and stub the
+ * eight pass factories + the composer seam with inert doubles (every
+ * warmup helper stays real), then pin:
+ *
+ * - exactly ONE `tickAdaptiveQuality` per RENDERED frame - the probe runs
+ *   on ZERO-step frames (the mocked worker advance releases no simulation
+ *   steps) so "zero-step frames included" is measured, not assumed -
+ *   AHEAD of the composer draw (invocationCallOrder);
+ * - the stage-record-derived off-switch HANDED TO THE COMPOSED FRAME:
+ *   stage 0 full-quality `true` and stage 1 bloom-off `false` once the
+ *   controller drops;
+ * - the defensively clamped negative-stage non-undefined knob;
+ * - and (the readHostShell readFileSync precedent) the source pin on
+ *   frame-composer.ts: the initial bloom-bag neutral must derive from the
+ *   controller stage ladder, never from an independent `true` literal.
+ */
+describe('Neat Racing adaptive-quality controller wiring (Phase-3 Step-01, P3-S1-wiring)', () => {
+  /**
+   * Inert pass double consumed only by the composer teardown: the
+   * composition stubs hand one to every pass factory. The composer seam
+   * never draws through a pass handle in these tests, so `draw` and
+   * `dispose` stay inert.
+   */
+  const inertPassDouble = {
+    draw: (): void => undefined,
+    dispose: (): void => undefined,
+  };
+
+  /** The composed frame capture seam installed by the composer double. */
+  let seamDrawFrame: jest.Mock;
+  /** RAF callbacks captured from the boot loop; tests drive them manually. */
+  let scheduledRafCallbacks: FrameRequestCallback[];
+
+  beforeEach(() => {
+    jest.resetAllMocks();
+
+    // Live-branch doubles PLUS the createShader capability so the
+    // composition attempt is ENTERED (the gate stays closed for every
+    // other describe's headless GL fixture, so the pass-factory doubles
+    // below never leak into other suites).
+    const compositionGl = {
+      clear: (): void => undefined,
+      clearColor: (): void => undefined,
+      drawArrays: (): void => undefined,
+      viewport: (): void => undefined,
+      createShader: (): unknown => ({}),
+    } as unknown as WebGL2RenderingContext;
+    mockedInitRenderingContext.mockReturnValue({
+      ok: true,
+      gl: compositionGl,
+      isContextLost: (): boolean => false,
+    });
+
+    mockedRunShaderWarmup.mockReturnValue({
+      warmedProgramCount: 0,
+      offscreenDrawCount: 0,
+    });
+    mockedUpdateFullWindowRendererSize.mockReturnValue(
+      createMockRendererSizeUpdate(),
+    );
+    // ZERO-step frames: the (mocked) worker advance releases NO simulation
+    // steps, yet every driven frame is still a RENDERED frame - the exact
+    // "zero-step frames included" surface the packet pins.
+    mockedAdvanceFrameSteps.mockReturnValue(0);
+    mockedCreateHud.mockReturnValue(createInertHud());
+    mockedCreateRaceModeSelector.mockReturnValue(createInertRaceModeSelector());
+
+    // The composer seam double: createFrameComposer succeeds and hands
+    // back a capture-only composer, so every composed frame is
+    // observable.
+    seamDrawFrame = jest.fn();
+    mockedCreateFrameComposer.mockImplementation(() => ({
+      drawFrame: seamDrawFrame,
+      dispose: (): void => undefined,
+    }));
+    // The eight pass-factory seams return inert doubles (compose-time per
+    // pass construction stays on the doubles, never on the fake GL).
+    mockedCreateBloomPass.mockReturnValue(
+      inertPassDouble as unknown as ReturnType<typeof createBloomPass>,
+    );
+    mockedCreateCarPass.mockReturnValue(
+      inertPassDouble as unknown as ReturnType<typeof createCarPass>,
+    );
+    mockedCreateGlassPass.mockReturnValue(
+      inertPassDouble as unknown as ReturnType<typeof createGlassPass>,
+    );
+    mockedCreateTrackPass.mockReturnValue(
+      inertPassDouble as unknown as ReturnType<typeof createTrackPass>,
+    );
+    mockedCreateTrackGridPass.mockReturnValue(
+      inertPassDouble as unknown as ReturnType<typeof createTrackGridPass>,
+    );
+    mockedCreateRightWorldPass.mockReturnValue(
+      inertPassDouble as unknown as ReturnType<typeof createRightWorldPass>,
+    );
+    mockedCreatePulsePass.mockReturnValue(
+      inertPassDouble as unknown as ReturnType<typeof createPulsePass>,
+    );
+    mockedCreateStarfieldPass.mockReturnValue(
+      inertPassDouble as unknown as ReturnType<typeof createStarfieldPass>,
+    );
+
+    // Replace the jsdom RAF implementation with a capturing stub so the
+    // boot loop's frames are driven manually instead of by timers.
+    scheduledRafCallbacks = [];
+    window.requestAnimationFrame = (callback: FrameRequestCallback): number => {
+      scheduledRafCallbacks.push(callback);
+      return scheduledRafCallbacks.length;
+    };
+
+    resetHostShell();
+  });
+
+  afterEach(() => {
+    // The controller spies are per-test `jest.spyOn` handles: restore them
+    // so every OTHER describe keeps the REAL controller (the module-scope
+    // jest.fn doubles above are re-stubbed by the next beforeEach).
+    jest.restoreAllMocks();
+  });
+
+  /**
+   * Drives `frameCount` rendered frames through the captured RAF chain,
+   * each at the pinned 60 Hz timestamp step from the base timestamp.
+   */
+  function driveWiringFrames(frameCount: number): void {
+    for (let frame = 0; frame < frameCount; frame += 1) {
+      scheduledRafCallbacks[frame]?.(
+        DRIVEN_FRAME_TIMESTAMP_MS + frame * WIRING_FRAME_STEP_MS,
+      );
+    }
+  }
+
+  /**
+   * The composed frame handed to the composer draw seam at `frameIndex`.
+   *
+   * Throws a legible error when the frame is missing, so a wiring failure
+   * never "passes" on an undefined knob.
+   */
+  function readDrawnFrameAt(frameIndex: number): NeatRacingFrameComposerFrame {
+    const frame = (seamDrawFrame.mock.calls.at(frameIndex)?.[0] ??
+      undefined) as NeatRacingFrameComposerFrame | undefined;
+    if (frame === undefined) {
+      throw new Error(`no composed frame was drawn at index ${frameIndex}`);
+    }
+    return frame;
+  }
+
+  it('ticks the adaptive-quality controller exactly once per rendered frame, ahead of the composer draw', () => {
+    const tickSpy = jest.spyOn(adaptiveQuality, 'tickAdaptiveQuality');
+    getBootStart()('neatracing-output');
+    driveWiringFrames(3);
+
+    expect(tickSpy).toHaveBeenCalledTimes(3);
+    expect(seamDrawFrame).toHaveBeenCalledTimes(3);
+    for (let frame = 0; frame < 3; frame += 1) {
+      expect(tickSpy.mock.invocationCallOrder[frame]).toBeLessThan(
+        seamDrawFrame.mock.invocationCallOrder[frame],
+      );
+    }
+  });
+
+  it('still ticks exactly once per rendered frame when the timestamp does not advance between frames', () => {
+    const tickSpy = jest.spyOn(adaptiveQuality, 'tickAdaptiveQuality');
+    getBootStart()('neatracing-output');
+    scheduledRafCallbacks[0]?.(DRIVEN_FRAME_TIMESTAMP_MS);
+    scheduledRafCallbacks[1]?.(DRIVEN_FRAME_TIMESTAMP_MS);
+
+    expect(tickSpy).toHaveBeenCalledTimes(2);
+    expect(seamDrawFrame).toHaveBeenCalledTimes(2);
+  });
+
+  it('hands the full-quality stage record knob to the composed frame while the controller holds stage 0', () => {
+    const tickSpy = jest.spyOn(adaptiveQuality, 'tickAdaptiveQuality');
+    tickSpy.mockReturnValue(0);
+    getBootStart()('neatracing-output');
+    driveWiringFrames(1);
+
+    expect(tickSpy).toHaveBeenCalledTimes(1);
+    expect(readDrawnFrameAt(0).enabled).toBe(
+      NEATRACING_ADAPTIVE_QUALITY_STAGES[0].bloomEnabled,
+    );
+  });
+
+  it('hands the bloom-off stage record knob to the composed frame once the controller drops to stage 1', () => {
+    const tickSpy = jest.spyOn(adaptiveQuality, 'tickAdaptiveQuality');
+    tickSpy.mockReturnValueOnce(0).mockReturnValueOnce(1);
+    getBootStart()('neatracing-output');
+    // The composer-frame bag is IDENTITY-STABLE (the zero per-frame
+    // allocation rule): the off-switch is stamped IN PLACE per rendered
+    // frame, so each frame's knob is read by value BEFORE the next frame
+    // refreshes the same bag.
+    driveWiringFrames(1);
+    expect(readDrawnFrameAt(0).enabled).toBe(
+      NEATRACING_ADAPTIVE_QUALITY_STAGES[0].bloomEnabled,
+    );
+
+    scheduledRafCallbacks[1]?.(
+      DRIVEN_FRAME_TIMESTAMP_MS + WIRING_FRAME_STEP_MS,
+    );
+    expect(readDrawnFrameAt(1).enabled).toBe(
+      NEATRACING_ADAPTIVE_QUALITY_STAGES[1].bloomEnabled,
+    );
+  });
+
+  it('keeps the composed frame knob defined when the controller stage resolves from a negative stage', () => {
+    const tickSpy = jest.spyOn(adaptiveQuality, 'tickAdaptiveQuality');
+    tickSpy.mockReturnValue(-1);
+    getBootStart()('neatracing-output');
+    driveWiringFrames(1);
+
+    expect(tickSpy).toHaveBeenCalledTimes(1);
+    expect(readDrawnFrameAt(0).enabled).toBeDefined();
+    expect(readDrawnFrameAt(0).enabled).toBe(
+      NEATRACING_ADAPTIVE_QUALITY_STAGES[0].bloomEnabled,
+    );
+  });
+
+  it('derives the frame-composer initial bloom-bag neutral from the adaptive-quality stage ladder (source pin)', () => {
+    const composerSource = readFrameComposerSource();
+
+    expect(composerSource).not.toMatch(
+      /INITIAL_BAG_BLOOM_ENABLED\s*(:\s*boolean\s*)?=\s*true/,
+    );
+    expect(composerSource).toMatch(/NEATRACING_ADAPTIVE_QUALITY_STAGES/);
   });
 });
