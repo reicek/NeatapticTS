@@ -67,8 +67,13 @@
  * @module
  */
 
+import { NGE_DNA_SCHEMA_VERSION } from '../../../src/neat/nge-dna/neat.nge-dna.constants';
 import type { NgeDnaCanonicalEnvelope } from '../../../src/neat/nge-dna/neat.nge-dna.types';
-import type { SplineSample, TrackSpec } from '../../racing_curriculum/track/track.generator.types';
+import Network from '../../../src/architecture/network';
+import type {
+  SplineSample,
+  TrackSpec,
+} from '../../racing_curriculum/track/track.generator.types';
 import {
   createInitialPhysicsCarState,
   stepPhysics,
@@ -76,6 +81,7 @@ import {
   type PhysicsCarSpawnPose,
 } from '../physics/physics.step.service';
 import {
+  deriveNeatRacingCarNetworkChildSeed,
   serializeNeatRacingReproducibilityTuple,
   type NeatRacingReproducibilityTuple,
 } from '../workers/simulation-worker/reproducibility.utils';
@@ -90,8 +96,10 @@ import {
 } from './oscillation-penalty.utils';
 import {
   NEATRACING_TEAM_LAYOUTS,
+  resolveNeatRacingObservationChannelCount,
   type NeatRacingObservationLevel,
 } from './observation.assembler';
+import { NEATRACING_NGE_CONTROLLER_OUTPUT_COUNT } from './nge.controller';
 
 /* ------------------------------------------------------------------------- *
  * Section 9.4 — the promotion law's named constants
@@ -178,17 +186,13 @@ export const NEATRACING_PROBE_SPAWN_SEED = 1337;
  * The names of the predicate's three conditions (in evaluation order).
  */
 export type NeatRacingPromotionConditionName =
-  | 'crossing'
-  | 'nodeCount'
-  | 'drivability';
+  'crossing' | 'nodeCount' | 'drivability';
 
 /**
  * The names of the drivability gate's three checks.
  */
 export type NeatRacingDrivabilityCheckName =
-  | 'speed'
-  | 'oscillation'
-  | 'offTrack';
+  'speed' | 'oscillation' | 'offTrack';
 
 /**
  * The drivability measurement of ONE completed lap (the crossing lap).
@@ -309,8 +313,7 @@ export interface NeatRacingPromotionRoundSnapshot {
  * explicit D4 fields (`seedNetwork` and `carriedInnovationCounter`), so the
  * round N+1 session is replayable from its own tuple alone.
  */
-export interface NeatRacingPromotionRoundTuple
-  extends NeatRacingReproducibilityTuple {
+export interface NeatRacingPromotionRoundTuple extends NeatRacingReproducibilityTuple {
   /** The fresh round's opponent snapshot (the new level's car count). */
   readonly opponentSnapshot: NeatRacingPromotionRoundSnapshot;
   /** The fresh round's seed network (D4). */
@@ -484,7 +487,8 @@ export function evaluateNeatRacingDrivabilityGate(
   const oscillationOk =
     measurement.oscillationMetric <= NEATRACING_DRIVABILITY_OSCILLATION_MAX;
   const offTrackOk =
-    measurement.offTrackFraction <= NEATRACING_DRIVABILITY_OFF_TRACK_MAX_FRACTION;
+    measurement.offTrackFraction <=
+    NEATRACING_DRIVABILITY_OFF_TRACK_MAX_FRACTION;
   const failedChecks: NeatRacingDrivabilityCheckName[] = [];
   if (!speedOk) {
     failedChecks.push('speed');
@@ -601,7 +605,12 @@ export function runNeatRacingScriptedBaselineProbeEpisode(
   const samples = options.trackSpec.splineSamples;
   const maxTicks = options.maxTicks ?? NEATRACING_PROBE_DEFAULT_MAX_TICKS;
   if (samples.length < NEATRACING_PROBE_MIN_SAMPLE_COUNT) {
-    return { meanLapSpeed: 0, lapTicks: 0, completedLap: false, consumedTicks: 0 };
+    return {
+      meanLapSpeed: 0,
+      lapTicks: 0,
+      completedLap: false,
+      consumedTicks: 0,
+    };
   }
 
   const controllerState = createNeatRacingScriptedControllerState();
@@ -621,7 +630,9 @@ export function runNeatRacingScriptedBaselineProbeEpisode(
     car = stepPhysics(car, control);
     forwardSpeedSum += car.speed;
     const sampleIndex = findClosestSplineSampleIndex(car, samples);
-    if (isFinishLineCrossing(furthestSampleIndex, sampleIndex, samples.length)) {
+    if (
+      isFinishLineCrossing(furthestSampleIndex, sampleIndex, samples.length)
+    ) {
       const lapTicks = tick + 1;
       return {
         meanLapSpeed: forwardSpeedSum / lapTicks,
@@ -749,6 +760,169 @@ export function buildNeatRacingNextRoundTuple(
     seedNetwork: options.seedNetwork,
     carriedInnovationCounter: options.carriedInnovationCounter,
   };
+}
+
+/**
+ * The frozen canonical NGE DNA envelope the promotion boundary ships with
+ * the seed network (D4).
+ *
+ * Educational note — why this is pinned BY VALUE here: the round boundary
+ * carries the crossing genome under the lane's CANONICAL `A.1.0` envelope, a
+ * frozen substrate/policy document that never mutates between rounds. It is
+ * deliberately a module-private constant rather than an import from the NGE
+ * DNA runtime: the browser bundle must not pull the DNA engine's
+ * `node:crypto` dependency (`neat.nge-dna.utils.ts` is its only consumer), so
+ * the canonical document is reproduced here while the crypto-bearing runtime
+ * stays out of the bundle. The schema version still comes from the repo's own
+ * crypto-free constants module, so there is ONE source of truth for it.
+ *
+ * Educational note — why the fingerprint is the RUNTIME's own digest: the
+ * envelope's `fingerprint` field is the SHA-256 hex digest of the canonical
+ * envelope content (the repo's `computeFingerprint` over the key-sorted
+ * canonical JSON), so the value pinned below is the digest the NGE runtime
+ * itself produces for exactly THIS content
+ * (`new NGE_DNA().toCanonical().fingerprint`). A label-shaped placeholder
+ * would misreport the genome identity, so the real digest is pinned instead.
+ */
+const NEATRACING_NGE_PROMOTION_ENVELOPE: NgeDnaCanonicalEnvelope =
+  Object.freeze({
+    schemaVersion: NGE_DNA_SCHEMA_VERSION,
+    compatibilityVersion: '1.0.0',
+    encodingMode: 'lossless',
+    fingerprint:
+      'b3a7c3cd77b9cee5c440924602a3a04e3cae98bfd39f82bd02bdb6f3bffb4328',
+    substrate: {
+      budgetOverride: {
+        maxEdges: 1024,
+        maxNodes: 512,
+      },
+      dimensions: 3,
+      normalization: 'unit-cube',
+      zonePartition: {
+        x: { count: 3 },
+        y: { count: 3 },
+        z: { count: 3 },
+      },
+    },
+    reproductionPolicy: {
+      assignedRegionStrategy: 'roundRobin',
+      mode: 'sexual',
+      modeIsEvolvable: false,
+      parthenogenesisMutationRate: 0.01,
+      polyandricDroneContributionFraction: 0.1,
+      polyandricDroneCount: 2,
+      queenBias: 1,
+      seedPolicy: {
+        siblingsDifferBySeed: true,
+        twinsAllowed: false,
+      },
+    },
+    rulePasses: [],
+    cppnPrograms: [],
+    moduleArchetypes: [],
+  } satisfies NgeDnaCanonicalEnvelope);
+
+/**
+ * The agent-car index whose network seeds the promotion boundary's
+ * `seedNetwork` payload (D4).
+ *
+ * Educational note — why index 1: car 0 of every round is the PLAYER's car
+ * (it never carries a network), so the promoted round's FIRST adaptation car
+ * is index 1 at every rung. The shipped genome therefore derives from the
+ * SAME child-seed derivation the live session will rebuild that car with
+ * (`deriveNeatRacingCarNetworkChildSeed` over the promoted tuple's seed), so
+ * the boundary payload and the session-built network share one deterministic
+ * source.
+ */
+const NEATRACING_PROMOTED_ROUND_SEED_AGENT_CAR_INDEX = 1;
+
+/**
+ * Serializes one network's connection weights into a fresh typed array.
+ *
+ * Educational note — why a manual positional walk: the D4 seed genome ships
+ * as a `Float32Array` weight vector plus the canonical envelope (NOT the
+ * `toJSON`-style compact serialization), so the boundary copies each
+ * connection weight positionally. The fresh array detaches the payload from
+ * the live network — later evolution of the source must never mutate the
+ * shipped genome.
+ *
+ * @param network - The network whose connection weights serialize.
+ * @returns The fresh weight vector (one entry per connection).
+ */
+function serializeNetworkWeightsToFloat32Array(network: Network): Float32Array {
+  const weights = new Float32Array(network.connections.length);
+  for (let index = 0; index < network.connections.length; index += 1) {
+    weights[index] = network.connections[index].weight;
+  }
+  return weights;
+}
+
+/** The promoted round-tuple builder's input (E6/D4). */
+export interface NeatRacingPromotedRoundTupleOptions {
+  /** The just-completed round's reproducibility tuple (the fresh base). */
+  readonly base: NeatRacingReproducibilityTuple;
+  /** The rung the promotion lands on (clamped onto the ladder). */
+  readonly targetLevel: number;
+  /** The innovation counter carried from the prior round. */
+  readonly carriedInnovationCounter: number;
+}
+
+/**
+ * Builds the PROMOTED round's fresh tuple from the boundary's own evidence
+ * (E6, D4, AC-031).
+ *
+ * Educational note — what makes this the promotion-flavored variant: unlike
+ * `buildNeatRacingNextRoundTuple` (which consumes an already-built seed
+ * payload), this builder DERIVES the seed network from the promoted round's
+ * own fingerprint — the first agent car's network is constructed from the
+ * promoted tuple's seed and the promoted LEVEL's observation width (the same
+ * width the live session rebuilds that car with), then its weights ship with
+ * the frozen canonical NGE envelope. The innovation counter stays an INPUT
+ * (the realm never reads a global): the host reads the live counter at the
+ * crossing and hands it in, so the boundary records exactly the value the
+ * prior round's evolution reached.
+ *
+ * @param options - The promoted tuple's build input.
+ * @returns The promoted round's fresh tuple (seed network and carried
+ *   innovation counter included).
+ * @throws {RangeError} When the derived network yields no finite weights
+ *   (the seed payload gate) or the carried counter is malformed (delegated
+ *   to `buildNeatRacingNextRoundTuple`).
+ *
+ * @example
+ * ```ts
+ * const promoted = buildNeatRacingPromotedRoundTuple({
+ *   base,
+ *   targetLevel: 2,
+ *   carriedInnovationCounter: 42,
+ * });
+ * promoted.seedNetwork.weights; // Float32Array (the car-1 genome)
+ * promoted.carriedInnovationCounter; // 42
+ * ```
+ */
+export function buildNeatRacingPromotedRoundTuple(
+  options: NeatRacingPromotedRoundTupleOptions,
+): NeatRacingPromotionRoundTuple {
+  const level = clampPromotionLevel(options.targetLevel);
+  const seedNetwork = new Network(
+    resolveNeatRacingObservationChannelCount(level),
+    NEATRACING_NGE_CONTROLLER_OUTPUT_COUNT,
+    {
+      seed: deriveNeatRacingCarNetworkChildSeed(
+        options.base.seed,
+        NEATRACING_PROMOTED_ROUND_SEED_AGENT_CAR_INDEX,
+      ),
+    },
+  );
+  return buildNeatRacingNextRoundTuple({
+    base: options.base,
+    targetLevel: level,
+    seedNetwork: createNeatRacingSeedNetworkPayload(
+      serializeNetworkWeightsToFloat32Array(seedNetwork),
+      NEATRACING_NGE_PROMOTION_ENVELOPE,
+    ),
+    carriedInnovationCounter: options.carriedInnovationCounter,
+  });
 }
 
 /**
@@ -1022,7 +1196,8 @@ function isFinishLineCrossing(
   sampleCount: number,
 ): boolean {
   const reachedLastSamples =
-    furthestSampleIndex >= sampleCount - 1 - NEATRACING_PROBE_LAP_WRAP_TOLERANCE;
+    furthestSampleIndex >=
+    sampleCount - 1 - NEATRACING_PROBE_LAP_WRAP_TOLERANCE;
   const returnedToFirstSamples =
     currentSampleIndex <= NEATRACING_PROBE_LAP_WRAP_TOLERANCE;
   return reachedLastSamples && returnedToFirstSamples;
@@ -1042,7 +1217,8 @@ function isPromotionRoundSnapshot(
   }
   const candidate = value as { level?: unknown; carCount?: unknown };
   return (
-    typeof candidate.level === 'number' && typeof candidate.carCount === 'number'
+    typeof candidate.level === 'number' &&
+    typeof candidate.carCount === 'number'
   );
 }
 
@@ -1122,7 +1298,11 @@ function canonicalizeEnvelopeJsonValue(value: unknown): unknown {
     }
     return canonical;
   }
-  if (value === null || typeof value === 'boolean' || typeof value === 'string') {
+  if (
+    value === null ||
+    typeof value === 'boolean' ||
+    typeof value === 'string'
+  ) {
     return value;
   }
   if (typeof value === 'number') {

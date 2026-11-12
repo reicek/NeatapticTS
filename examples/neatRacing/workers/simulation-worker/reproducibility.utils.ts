@@ -498,9 +498,7 @@ function canonicalizeReproducibilityObject(
   const canonical: Record<string, unknown> = {};
   const keys = Object.keys(value).toSorted();
   for (const key of keys) {
-    const canonicalValue = canonicalizeReproducibilityJsonValue(
-      value[key],
-    );
+    const canonicalValue = canonicalizeReproducibilityJsonValue(value[key]);
     if (canonicalValue === undefined) {
       continue;
     }
@@ -542,9 +540,7 @@ function canonicalizeReproducibilityJsonValue(value: unknown): unknown {
  * @throws {RangeError} When `seed` is not a finite number or `agentCount`
  *   is outside the packed fleet bounds.
  */
-function assertTupleNumericFields(
-  tuple: NeatRacingReproducibilityTuple,
-): void {
+function assertTupleNumericFields(tuple: NeatRacingReproducibilityTuple): void {
   if (typeof tuple.seed !== 'number' || !Number.isFinite(tuple.seed)) {
     throw new RangeError(
       'neatRacing reproducibility tuple serialization failed: seed must be a finite number',
@@ -569,9 +565,7 @@ function assertTupleNumericFields(
  * @throws {RangeError} When `packSchemaVersion` or `trackId` is not a
  *   non-empty string.
  */
-function assertTupleStringFields(
-  tuple: NeatRacingReproducibilityTuple,
-): void {
+function assertTupleStringFields(tuple: NeatRacingReproducibilityTuple): void {
   for (const [fieldName, fieldValue] of [
     ['packSchemaVersion', tuple.packSchemaVersion],
     ['trackId', tuple.trackId],
@@ -650,7 +644,9 @@ export function computeNeatRacingReproducibilityTupleFingerprint(
   tuple: NeatRacingReproducibilityTuple,
 ): number {
   const serialized = serializeNeatRacingReproducibilityTuple(tuple);
-  return foldTextIntoFnv1a(NEATRACING_BYTE_DIGEST_FNV_OFFSET_BASIS, serialized) >>> 0;
+  return (
+    foldTextIntoFnv1a(NEATRACING_BYTE_DIGEST_FNV_OFFSET_BASIS, serialized) >>> 0
+  );
 }
 
 /**
@@ -815,9 +811,6 @@ export function computeNeatRacingPackedFrameByteDigest(
     NEATRACING_BYTE_DIGEST_FNV_OFFSET_BASIS,
     frame,
   );
-  const channelsFolded = foldPackedFrameChannelsIntoDigest(
-    headerFolded,
-    frame,
-  );
+  const channelsFolded = foldPackedFrameChannelsIntoDigest(headerFolded, frame);
   return (channelsFolded >>> 0).toString(16).padStart(8, '0');
 }

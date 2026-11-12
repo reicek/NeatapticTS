@@ -239,11 +239,17 @@ function createMockGlHarness(): MockGlHarness {
       return index < 2;
     },
     useProgram: (program: { name?: string } | null): void => {
-      stateRestoreCalls.push({ method: 'useProgram', args: [program?.name ?? null] });
+      stateRestoreCalls.push({
+        method: 'useProgram',
+        args: [program?.name ?? null],
+      });
     },
     createVertexArray: (): object => ({}),
     bindVertexArray: (vao: { name?: string } | null): void => {
-      stateRestoreCalls.push({ method: 'bindVertexArray', args: [vao?.name ?? null] });
+      stateRestoreCalls.push({
+        method: 'bindVertexArray',
+        args: [vao?.name ?? null],
+      });
     },
     createBuffer: (): object => ({}),
     bindBuffer: (_target: number, buffer: { name?: string } | null): void => {
@@ -255,7 +261,10 @@ function createMockGlHarness(): MockGlHarness {
     bufferData: (): void => undefined,
     bufferSubData: (): void => undefined,
     enableVertexAttribArray: (index: number): void => {
-      stateRestoreCalls.push({ method: 'enableVertexAttribArray', args: [index] });
+      stateRestoreCalls.push({
+        method: 'enableVertexAttribArray',
+        args: [index],
+      });
     },
     disableVertexAttribArray: (index: number): void => {
       stateRestoreCalls.push({
@@ -272,7 +281,12 @@ function createMockGlHarness(): MockGlHarness {
       stateRestoreCalls.push({ method: 'disable', args: [token] });
     },
     blendFunc: (): void => undefined,
-    blendFuncSeparate: (srcRgb: number, dstRgb: number, srcAlpha: number, dstAlpha: number): void => {
+    blendFuncSeparate: (
+      srcRgb: number,
+      dstRgb: number,
+      srcAlpha: number,
+      dstAlpha: number,
+    ): void => {
       stateRestoreCalls.push({
         method: 'blendFuncSeparate',
         args: [srcRgb, dstRgb, srcAlpha, dstAlpha],
@@ -603,7 +617,9 @@ describe('neatRacing starfield pass (AC-004)', () => {
 
     it('keeps the gloom alpha scale bounded and subtler than the blink amplitude', () => {
       const samples = [0, 0.33, 0.71, 1.0, 2.5];
-      const gloomValues = samples.map((t) => computeStarfieldGloomAlphaScale(t));
+      const gloomValues = samples.map((t) =>
+        computeStarfieldGloomAlphaScale(t),
+      );
       const minGloom = Math.min(...gloomValues);
       const maxGloom = Math.max(...gloomValues);
 
@@ -665,7 +681,9 @@ describe('neatRacing starfield pass (AC-004)', () => {
 
       pass.draw(QUARTER_POSE);
 
-      expect(harness.uniform1fCalls.some((call) => call.name === 'u_timeSeconds')).toBe(true);
+      expect(
+        harness.uniform1fCalls.some((call) => call.name === 'u_timeSeconds'),
+      ).toBe(true);
       const blinkFreqCalls = harness.uniform1fCalls.filter(
         (call) => call.name === 'u_blinkAngularFrequency',
       );
@@ -782,7 +800,9 @@ describe('neatRacing starfield pass (AC-004)', () => {
 
       pass.draw(QUARTER_POSE);
 
-      const restoreCallNames = harness.stateRestoreCalls.map((call) => call.method);
+      const restoreCallNames = harness.stateRestoreCalls.map(
+        (call) => call.method,
+      );
       expect(restoreCallNames).toContain('useProgram');
       expect(restoreCallNames).toContain('bindBuffer');
       expect(restoreCallNames).toContain('activeTexture');

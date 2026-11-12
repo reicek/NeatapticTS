@@ -112,8 +112,7 @@ export interface NeatRacingEvalWorkerErrorPayload {
 
 /** sim → eval request union. */
 export type NeatRacingEvalWorkerRequest =
-  | { type: 'eval'; payload: NeatRacingEvalWorkerEvalPayload }
-  | { type: 'stop' };
+  { type: 'eval'; payload: NeatRacingEvalWorkerEvalPayload } | { type: 'stop' };
 
 /** eval → sim response union. */
 export type NeatRacingEvalWorkerResponse =
@@ -146,7 +145,11 @@ export function validateNeatRacingEvalWorkerEvalPayload(
   payload: unknown,
 ): NeatRacingEvalWorkerValidationError | null {
   // Step 1: Reject non-object payloads wholesale (arrays included).
-  if (payload === null || typeof payload !== 'object' || Array.isArray(payload)) {
+  if (
+    payload === null ||
+    typeof payload !== 'object' ||
+    Array.isArray(payload)
+  ) {
     return { error: 'eval worker eval failed: payload must be an object' };
   }
   const candidate = payload as Partial<NeatRacingEvalWorkerEvalPayload>;

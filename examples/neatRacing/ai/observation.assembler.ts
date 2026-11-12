@@ -453,8 +453,10 @@ export function assembleNeatRacingObservationVector(
   trackSpec: TrackSpec,
   options: NeatRacingObservationAssemblerOptions,
 ): Float32Array {
-  const observationContext =
-    createNeatRacingObservationContext(envState, trackSpec);
+  const observationContext = createNeatRacingObservationContext(
+    envState,
+    trackSpec,
+  );
 
   // Step 1: Assemble the 70-channel base block (scalars + look-ahead + memory).
   const baseChannels = collectNeatRacingBaseChannels(observationContext);
@@ -575,8 +577,10 @@ function resolveNeatRacingObservationState(
 ): ResolvedNeatRacingObservationState {
   const closestSplineSample =
     trackSpec.splineSamples[closestSplineSampleIndex]!;
-  const closestSplineSampleFrame =
-    resolveNeatRacingSplineSampleFrame(trackSpec.splineSamples, closestSplineSample.globalIndex);
+  const closestSplineSampleFrame = resolveNeatRacingSplineSampleFrame(
+    trackSpec.splineSamples,
+    closestSplineSample.globalIndex,
+  );
   const signedLateralOffsetWorld = resolveNeatRacingSignedLateralOffsetWorld(
     envState,
     closestSplineSample,
@@ -717,13 +721,11 @@ function resolveNeatRacingTrackBounds(
 function collectNeatRacingBaseChannels(
   observationContext: NeatRacingObservationContext,
 ): Float32Array {
-  const scalarChannels =
-    collectNeatRacingScalarChannels(observationContext);
+  const scalarChannels = collectNeatRacingScalarChannels(observationContext);
   const lookAheadChannels =
     collectNeatRacingLookAheadChannels(observationContext);
-  const memoryTraceChannels = collectNeatRacingMemoryTraceChannels(
-    observationContext,
-  );
+  const memoryTraceChannels =
+    collectNeatRacingMemoryTraceChannels(observationContext);
   const baseChannels = new Float32Array(
     NEATRACING_OBSERVATION_BASE_CHANNEL_COUNT,
   );
@@ -861,8 +863,7 @@ function collectNeatRacingLookAheadChannels(
     lookAheadOffset++
   ) {
     const channelOffset =
-      lookAheadOffset *
-      NEATRACING_OBSERVATION_CHANNELS_PER_LOOKAHEAD_SEGMENT;
+      lookAheadOffset * NEATRACING_OBSERVATION_CHANNELS_PER_LOOKAHEAD_SEGMENT;
     const splineSample = resolveNeatRacingLookAheadSample(
       observationContext,
       lookAheadOffset,
@@ -1088,10 +1089,12 @@ function resolveNeatRacingTrackedRivals(
   const focalCarIndex = envState.carIndex ?? 0;
   const focalTeamIndex = resolveNeatRacingFocalTeamIndex(envState);
 
-  return cars.filter(
-    (car, index) =>
-      index !== focalCarIndex && car.teamIndex !== focalTeamIndex,
-  ).slice(0, NEATRACING_OBSERVATION_RIVAL_GAP_SLOT_COUNT);
+  return cars
+    .filter(
+      (car, index) =>
+        index !== focalCarIndex && car.teamIndex !== focalTeamIndex,
+    )
+    .slice(0, NEATRACING_OBSERVATION_RIVAL_GAP_SLOT_COUNT);
 }
 
 /**
@@ -1400,9 +1403,7 @@ function resolveNeatRacingBoundaryBalance(
  * @param probabilityValue - Probability-like scalar.
  * @returns Symmetric normalized value.
  */
-function normalizeNeatRacingProbability(
-  probabilityValue: number,
-): number {
+function normalizeNeatRacingProbability(probabilityValue: number): number {
   return clampNeatRacingNormalizedValue(
     clamp01NeatRacing(probabilityValue) * 2 - 1,
   );
@@ -1415,10 +1416,7 @@ function normalizeNeatRacingProbability(
  * @param scale - Absolute scale corresponding to magnitude 1.
  * @returns Clamped normalized value.
  */
-function normalizeNeatRacingSignedValue(
-  value: number,
-  scale: number,
-): number {
+function normalizeNeatRacingSignedValue(value: number, scale: number): number {
   return clampNeatRacingNormalizedValue(value / scale);
 }
 

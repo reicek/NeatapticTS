@@ -64,8 +64,7 @@ import {
  * Default observation level for the NGE controller seam — the recycled solo
  * NGE driver default tier (`DEFAULT_CONTROLLER_TIER`).
  */
-export const NEATRACING_NGE_DEFAULT_OBSERVATION_LEVEL: NeatRacingObservationLevel =
-  1;
+export const NEATRACING_NGE_DEFAULT_OBSERVATION_LEVEL: NeatRacingObservationLevel = 1;
 
 /**
  * Number of controller output channels mapped to the control axes.
@@ -237,10 +236,12 @@ export function createNeatRacingNgeController(
   network: NeatRacingControllerNetwork,
   options: NeatRacingNgeControllerOptions = {},
 ): NeatRacingNgeController {
-  const controllerLevel = options.level ?? NEATRACING_NGE_DEFAULT_OBSERVATION_LEVEL;
+  const controllerLevel =
+    options.level ?? NEATRACING_NGE_DEFAULT_OBSERVATION_LEVEL;
   const radioDimension = options.radioDim ?? NEATRACING_NGE_RADIO_DIMENSION;
   const radioChannel =
-    options.radioChannel ?? createNeatRacingSingleCarRadioChannel(radioDimension);
+    options.radioChannel ??
+    createNeatRacingSingleCarRadioChannel(radioDimension);
 
   const computeTickResult = (
     envState: NeatRacingObservationState,

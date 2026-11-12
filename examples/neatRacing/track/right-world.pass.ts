@@ -74,7 +74,11 @@ import {
   PUBLIC_POSE_INDEX_WALK1,
   PUBLIC_POSE_INDEX_WALK2,
 } from './public.sprite';
-import type { PublicBillboard, PublicCamera, PublicSpriteFrame } from './public.sprite';
+import type {
+  PublicBillboard,
+  PublicCamera,
+  PublicSpriteFrame,
+} from './public.sprite';
 import type { TrackSlabBuildInput } from './track.slabs';
 import {
   NEATRACING_FOG_COLOR,
@@ -778,18 +782,12 @@ function buildAtlasTextureAndUvs(
   const frameCount = atlas.frames.length;
   const maxTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE) as number;
   const maxColumnsByGpu = Math.max(1, Math.floor(maxTextureSize / frameWidth));
-  const columns = Math.min(
-    maxColumnsByGpu,
-    Math.ceil(Math.sqrt(frameCount)),
-  );
+  const columns = Math.min(maxColumnsByGpu, Math.ceil(Math.sqrt(frameCount)));
   const rows = Math.ceil(frameCount / columns);
   const atlasWidth = columns * frameWidth;
   const atlasHeight = rows * frameHeight;
 
-  if (
-    atlasWidth > maxTextureSize ||
-    atlasHeight > maxTextureSize
-  ) {
+  if (atlasWidth > maxTextureSize || atlasHeight > maxTextureSize) {
     throw new Error(
       `neatRacing right-world pass: cannot pack ${frameCount} sprite frames ` +
         `(${frameWidth}x${frameHeight}) within GPU max texture size ${maxTextureSize}`,
@@ -870,7 +868,9 @@ function buildAtlasIndexTables(atlas: RightWorldSpriteAtlas): {
     const id = frame.id;
 
     const [direction, pose] = id.split('-');
-    const directionIndex = (DIRECTION_ORDER as readonly string[]).indexOf(direction);
+    const directionIndex = (DIRECTION_ORDER as readonly string[]).indexOf(
+      direction,
+    );
     let poseIndex = -1;
     if (pose === 'stand') {
       poseIndex = PUBLIC_POSE_INDEX_STAND;
@@ -1002,7 +1002,8 @@ function buildBillboardUpload(
     }
 
     const scale =
-      computeBillboardScale(distance) * NEATRACING_BILLBOARD_WORLD_PIXEL_SCALE_M;
+      computeBillboardScale(distance) *
+      NEATRACING_BILLBOARD_WORLD_PIXEL_SCALE_M;
     const halfW = (frame.width * scale) / 2;
     const fullH = frame.height * scale;
 
@@ -1176,10 +1177,7 @@ export function createRightWorldPass(
     billboardProgram,
     'u_viewProjection',
   );
-  const billboardAtlasLoc = gl.getUniformLocation(
-    billboardProgram,
-    'u_atlas',
-  );
+  const billboardAtlasLoc = gl.getUniformLocation(billboardProgram, 'u_atlas');
 
   const maxPropBoxCount = Math.max(
     1,
@@ -1193,7 +1191,9 @@ export function createRightWorldPass(
 
   const propVbo = gl.createBuffer();
   if (!propVbo) {
-    throw new Error('neatRacing right-world pass: createBuffer(prop) returned null');
+    throw new Error(
+      'neatRacing right-world pass: createBuffer(prop) returned null',
+    );
   }
   const propUpload = new Float32Array(maxPropBoxCount * FLOATS_PER_BOX);
   gl.bindBuffer(gl.ARRAY_BUFFER, propVbo);
@@ -1205,7 +1205,9 @@ export function createRightWorldPass(
 
   const billboardVbo = gl.createBuffer();
   if (!billboardVbo) {
-    throw new Error('neatRacing right-world pass: createBuffer(billboard) returned null');
+    throw new Error(
+      'neatRacing right-world pass: createBuffer(billboard) returned null',
+    );
   }
   gl.bindBuffer(gl.ARRAY_BUFFER, billboardVbo);
   gl.bufferData(
@@ -1247,9 +1249,15 @@ export function createRightWorldPass(
       const blendSrcAlpha = gl.getParameter(gl.BLEND_SRC_ALPHA) as number;
       const blendDstAlpha = gl.getParameter(gl.BLEND_DST_ALPHA) as number;
       const priorActiveTexture = gl.getParameter(gl.ACTIVE_TEXTURE) as number;
-      const priorProgram = gl.getParameter(gl.CURRENT_PROGRAM) as WebGLProgram | null;
-      const priorBuffer = gl.getParameter(gl.ARRAY_BUFFER_BINDING) as WebGLBuffer | null;
-      const priorTexture = gl.getParameter(gl.TEXTURE_BINDING_2D) as WebGLTexture | null;
+      const priorProgram = gl.getParameter(
+        gl.CURRENT_PROGRAM,
+      ) as WebGLProgram | null;
+      const priorBuffer = gl.getParameter(
+        gl.ARRAY_BUFFER_BINDING,
+      ) as WebGLBuffer | null;
+      const priorTexture = gl.getParameter(
+        gl.TEXTURE_BINDING_2D,
+      ) as WebGLTexture | null;
       const attrib0Enabled = gl.getVertexAttrib(
         0,
         gl.VERTEX_ATTRIB_ARRAY_ENABLED,
@@ -1258,12 +1266,12 @@ export function createRightWorldPass(
         1,
         gl.VERTEX_ATTRIB_ARRAY_ENABLED,
       ) as boolean;
-            const attrib2Enabled = gl.getVertexAttrib(
-              2,
-              gl.VERTEX_ATTRIB_ARRAY_ENABLED,
-            ) as boolean;
+      const attrib2Enabled = gl.getVertexAttrib(
+        2,
+        gl.VERTEX_ATTRIB_ARRAY_ENABLED,
+      ) as boolean;
 
-            // Defensive: this pass mixes solid props with camera-facing billboard
+      // Defensive: this pass mixes solid props with camera-facing billboard
       // quads that are double-sided by design. Disable face culling so a sprite
       // viewed from behind is not dropped.
       gl.disable(gl.CULL_FACE);
@@ -1316,59 +1324,59 @@ export function createRightWorldPass(
         PROP_FLOATS_PER_VERTEX * 4,
         3 * 4,
       );
-            gl.enableVertexAttribArray(2);
-            gl.vertexAttribPointer(
-              2,
-              1,
-              gl.FLOAT,
-              false,
-              PROP_FLOATS_PER_VERTEX * 4,
-              6 * 4,
-            );
-            if (propViewProjectionLoc) {
-              gl.uniformMatrix4fv(propViewProjectionLoc, false, state.viewProjection);
-            }
-            gl.uniform3f(
-              propLightingUniforms.uSunDirection,
-              NEATRACING_SUN_DIRECTION[0],
-              NEATRACING_SUN_DIRECTION[1],
-              NEATRACING_SUN_DIRECTION[2],
-            );
-            gl.uniform3f(
-              propLightingUniforms.uSunColor,
-              NEATRACING_SUN_COLOR[0],
-              NEATRACING_SUN_COLOR[1],
-              NEATRACING_SUN_COLOR[2],
-            );
-            gl.uniform3f(
-              propLightingUniforms.uHemisphereSky,
-              NEATRACING_HEMISPHERE_SKY_COLOR[0],
-              NEATRACING_HEMISPHERE_SKY_COLOR[1],
-              NEATRACING_HEMISPHERE_SKY_COLOR[2],
-            );
-            gl.uniform3f(
-              propLightingUniforms.uHemisphereGround,
-              NEATRACING_HEMISPHERE_GROUND_COLOR[0],
-              NEATRACING_HEMISPHERE_GROUND_COLOR[1],
-              NEATRACING_HEMISPHERE_GROUND_COLOR[2],
-            );
-            gl.uniform3f(
-              propLightingUniforms.uFogColor,
-              NEATRACING_FOG_COLOR[0],
-              NEATRACING_FOG_COLOR[1],
-              NEATRACING_FOG_COLOR[2],
-            );
-            gl.uniform1f(
-              propLightingUniforms.uFogDensity,
-              NEATRACING_FOG_DENSITY_1_PER_M,
-            );
-            gl.uniform3f(
-              propLightingUniforms.uCameraWorld,
-              state.cameraWorld[0],
-              state.cameraWorld[1],
-              state.cameraWorld[2],
-            );
-            gl.enable(gl.DEPTH_TEST);
+      gl.enableVertexAttribArray(2);
+      gl.vertexAttribPointer(
+        2,
+        1,
+        gl.FLOAT,
+        false,
+        PROP_FLOATS_PER_VERTEX * 4,
+        6 * 4,
+      );
+      if (propViewProjectionLoc) {
+        gl.uniformMatrix4fv(propViewProjectionLoc, false, state.viewProjection);
+      }
+      gl.uniform3f(
+        propLightingUniforms.uSunDirection,
+        NEATRACING_SUN_DIRECTION[0],
+        NEATRACING_SUN_DIRECTION[1],
+        NEATRACING_SUN_DIRECTION[2],
+      );
+      gl.uniform3f(
+        propLightingUniforms.uSunColor,
+        NEATRACING_SUN_COLOR[0],
+        NEATRACING_SUN_COLOR[1],
+        NEATRACING_SUN_COLOR[2],
+      );
+      gl.uniform3f(
+        propLightingUniforms.uHemisphereSky,
+        NEATRACING_HEMISPHERE_SKY_COLOR[0],
+        NEATRACING_HEMISPHERE_SKY_COLOR[1],
+        NEATRACING_HEMISPHERE_SKY_COLOR[2],
+      );
+      gl.uniform3f(
+        propLightingUniforms.uHemisphereGround,
+        NEATRACING_HEMISPHERE_GROUND_COLOR[0],
+        NEATRACING_HEMISPHERE_GROUND_COLOR[1],
+        NEATRACING_HEMISPHERE_GROUND_COLOR[2],
+      );
+      gl.uniform3f(
+        propLightingUniforms.uFogColor,
+        NEATRACING_FOG_COLOR[0],
+        NEATRACING_FOG_COLOR[1],
+        NEATRACING_FOG_COLOR[2],
+      );
+      gl.uniform1f(
+        propLightingUniforms.uFogDensity,
+        NEATRACING_FOG_DENSITY_1_PER_M,
+      );
+      gl.uniform3f(
+        propLightingUniforms.uCameraWorld,
+        state.cameraWorld[0],
+        state.cameraWorld[1],
+        state.cameraWorld[2],
+      );
+      gl.enable(gl.DEPTH_TEST);
       gl.depthMask(true);
       gl.disable(gl.BLEND);
       if (propVertexCount > 0) {
@@ -1497,7 +1505,12 @@ export function createRightWorldPass(
       } else {
         gl.disable(gl.BLEND);
       }
-      gl.blendFuncSeparate(blendSrcRgb, blendDstRgb, blendSrcAlpha, blendDstAlpha);
+      gl.blendFuncSeparate(
+        blendSrcRgb,
+        blendDstRgb,
+        blendSrcAlpha,
+        blendDstAlpha,
+      );
       gl.depthMask(depthMaskWas);
       gl.useProgram(priorProgram);
       gl.bindBuffer(gl.ARRAY_BUFFER, priorBuffer);

@@ -1543,6 +1543,39 @@ Proportional steering gain from wrapped heading error (rad^-1).
 
 Autopilot throttle axis under steering control (`[0, 1]`).
 
+### NEATRACING_AUTOPILOT_THROTTLE_CUT_GAIN_PER_SPEED_RATIO
+
+The throttle-cut gain from the relative speed excess over the
+curvature-derived target speed (1).
+
+THE PROPORTIONAL THROTTLE CUT (Step 24, `P4-S2-DRIVE-LAW`): the
+throttle sheds the speed excess through the SAME excess-ratio
+machinery the AC-084 brake law reads - the cut is the excess over the
+target speed as a ratio of that target - so the drive keeps slowing
+authority on the ONE axis the fleet-control map cannot strip (the
+AC-029 seam forces the brake to zero and drops the turn rate; the
+throttle and the steer pass through untouched).
+
+THE CEILING: the cut saturates at the full coast when the drive is
+`1 + 1/gain` times the target speed, so the gain sets the speed
+ceiling the throttle axis holds a corner at and the band between the
+target and the ceiling still runs on proportional power.
+
+THE VALUE (MEASURED CONSTRAINT, not tuned): the AC-084 note measured
+the R = 60 m fixture entering 31% over the target and running 3.13 m
+wide - OUTSIDE the 3 m AC-085 bound - so a ceiling that held a whole
+corner that far over the published target would keep the drive on the
+grip's losing side for the length of the corner. Eight puts the full
+coast at 12.5% over the target - well inside the measured wide-run
+account - and keeps a 12.5% band of proportional power between the
+target and the ceiling, so the convoy still cruises at full power on
+the straights the target speeds are published for.
+
+THE FLOOR-STRANDING GUARD: the cut is gated by the never-stop floor
+(the same gate the AC-084 brake law reads) - at or below the floor the
+AI never slows through the new axis either, and the AC-084
+never-brake-through-the-floor semantics stay untouched.
+
 ### NEATRACING_AUTOPILOT_TURN_RATE_PERCENT_SCALE
 
 The percent scale of the AI turn-rate channel (percent per unit of the

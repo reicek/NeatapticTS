@@ -535,21 +535,23 @@ Returns: A fresh boot session for the current boot call.
 createBootShellOverlays(): BootShellOverlays
 ```
 
-Mounts the HUD overlay and the race mode selector into the reserved host
-container at boot (AC-024 partial; batch 94 handoff) and returns the
-controllers.
+Mounts the HUD overlay, the race mode selector, and the track selector
+into the reserved host container at boot (AC-024 partial; batch 94
+handoff; AC-101 track selection) and returns the controllers.
 
-The HUD mounts first, then the race mode selector, mirroring the AC-024
-ordering (read model before control surface). The factories resolve the
-reserved {@link NEATRACING_HUD_OUTPUT_ID} container themselves and throw
-when the shell omits it (index.html owns the reservation), so the boot path
-owns only the ordering. Stubbed service doubles may mount nothing; the
-drive loop stays wired on inert fallback controllers in that case
+The HUD mounts first, then the race mode selector, then the track
+selector (the read model before the control surfaces), mirroring the
+overlay ordering. The factories resolve the reserved
+{@link NEATRACING_HUD_OUTPUT_ID} container themselves and throw when the
+shell omits it (index.html owns the reservation), so the boot path owns
+only the ordering. Stubbed service doubles may mount nothing; the drive
+loop stays wired on inert fallback controllers in that case
 (P1-drive-loop-live: AC-024 contract requires the wiring chain to survive
 undefined controllers).
 
-Returns: The mounted HUD and race-mode-selector controllers (inert
-fallback controllers when a mount factory yields nothing).
+Returns: The mounted HUD, race-mode-selector, and track-selector
+controllers (inert fallback controllers when a mount factory yields
+nothing or cannot resolve the shell container).
 
 ### createHudFallback
 
@@ -590,6 +592,19 @@ Parameters:
 - `session` - Boot session holding the surfaces to tear down.
 
 Returns: The stop handle.
+
+### createTrackSelectorFallback
+
+```ts
+createTrackSelectorFallback(): { readonly trackId: string; setSelectedTrack(trackId: string): void; onSwitch(listener: (trackId: string) => void): void; }
+```
+
+Inert track-selector fallback for stubbed mount surfaces (the catalog
+default — the retired `NEATRACING_DEMO_TRACK_ID` boot literal's catalog
+home; no dual path).
+
+Returns: A track-selector-compatible controller with a no-op switch
+carrier selected to the catalog default.
 
 ### finishFallbackBoot
 
@@ -677,6 +692,29 @@ Parameters:
 - `output` - Host container that will own the canvas.
 
 Returns: The freshly mounted game canvas.
+
+### mountNeatRacingTrackSelector
+
+```ts
+mountNeatRacingTrackSelector(): { readonly trackId: string; setSelectedTrack(trackId: string): void; onSwitch(listener: (trackId: string) => void): void; }
+```
+
+Mounts the track-selector overlay into the reserved HUD container,
+degrading to the inert fallback when the resolver-or-throw factory cannot
+mount (AC-101).
+
+WHY the real factory is caught here (the sibling overlays use the plain
+`??` tolerance instead): the track selector is a SECONDARY control — the
+race remains fully usable without it (the selection then simply never
+leaves the CATALOG DEFAULT track), and the sibling mount doubles are
+stubbed in the boot-composition suites while this factory runs REAL, so
+a stubbed shell (no reserved HUD container) must keep the boot alive on
+the inert fallback instead of failing it. The degradation is silent on
+purpose (the `??` fallback paths never warn either), and the live shell
+always reserves the container (index.html owns the reservation), so no
+real boot-order bug is hidden by this tolerance.
+
+Returns: The mounted track selector, or the inert fallback controller.
 
 ### multiplyViewProjectionInto
 
@@ -951,17 +989,28 @@ Returns: The index of the nearest chord.
 ```ts
 resolveNeatRacingAiModeGoalSessionForMode(
   mode: NeatRacingRaceMode,
+  bootLevel: NeatRacingObservationLevel | undefined,
 ): NeatRacingAiModeGoalSession | null
 ```
 
 Resolves the AI-mode goal session a mode switch must boot.
 
-A switch INTO `ai` boots a FRESH goal session on the start level; a
-switch to `manual` parks the AI-mode lifecycle (the adopted session stays
-adopted and NO further goal facts are fed), so the resolver returns null.
+A switch INTO `ai` boots a FRESH goal session; a switch to `manual`
+parks the AI-mode lifecycle (the adopted session stays adopted and NO
+further goal facts are fed), so the resolver returns null.
+
+Educational note — the carried boot level: the goal session is built at
+the level the ROUND boots (or switches) at, not the mode's default
+start level. The lifecycle's goals measure the observation roster the
+goal state materializes, so the lifecycle must describe the SAME level
+the player is driving (a switch through the debug deck's rung pins the
+carried level on the lifecycle too). The legacy two-arg-free call keeps
+the mode's default start level.
 
 Parameters:
 - `mode` - The UI race mode the host switched to.
+- `bootLevel` - The observation level the round boots (or switches)
+at; the mode's default start level when omitted.
 
 Returns: The fresh goal session, or null when the lifecycle parks.
 
@@ -969,6 +1018,7 @@ Example:
 
 ```ts
 const booted = resolveNeatRacingAiModeGoalSessionForMode('ai');
+const carried = resolveNeatRacingAiModeGoalSessionForMode('ai', 2);
 ```
 
 ### resolveNeatRacingAiModeRebaseRung
@@ -995,7 +1045,7 @@ Example:
 ```ts
 const decision = resolveNeatRacingAiModeRebaseRung(outcome);
 if (decision.rebaseRung !== null) {
-  rebaseHostRound(decision.rebaseRung);
+  rebaseRoundAtPromotion(decision.rebaseRung);
 }
 ```
 
@@ -1075,6 +1125,29 @@ const advance = resolveNeatRacingLapFactAdvance(0, 1);
 // { lapBaseline: 1, lapsSinceLastCrossing: 1, crossed: true }
 ```
 
+### resolveNeatRacingObservationRung
+
+```ts
+resolveNeatRacingObservationRung(
+  level: number,
+): NeatRacingObservationLevel
+```
+
+Narrows a round's boot level onto the observation ladder's rung.
+
+Educational note — why the narrowing is needed: the race rules carry the
+round's level as a plain NUMBER (the ladder's rung is a number there),
+while the adaptation session's observation level is the ladder's TYPED
+rung. Both ladders carry the same rungs (1, 2 and 3), so the round's own
+boot level narrows onto the observation rung unchanged; a level outside
+the ladder is CLAMPED onto it (a corrupted rules state can never seed the
+session with an unknown observation tier).
+
+Parameters:
+- `level` - The round's carried boot level.
+
+Returns: The observation rung the level names.
+
 ### resolveStarfieldBackingDimensions
 
 ```ts
@@ -1130,7 +1203,8 @@ right-world pass; the rivals (cars 1..n) are the worker's fleet.
 Parameters:
 - `gl` - Live WebGL2 context for the mounted canvas.
 - `session` - Boot session receiving teardown bookkeeping.
-- `overlays` - Boot-mounted HUD + race mode selector controllers.
+- `overlays` - Boot-mounted HUD + race mode + track selector
+controllers.
 - `canvas` - Mounted game canvas (aspect source for the camera).
 
 Returns: The drive session handed to the RAF loop.
@@ -1305,6 +1379,109 @@ Layer recipe describing one deterministic parallax starfield band.
 
 The fields mirror the flappy layer spec so the placement algorithm can be
 ported one-to-one; `id` names the layer for diagnostics and draw ordering.
+
+## browser-entry/debug-rung.utils.ts
+
+### NeatRacingDebugRungBootLevelSources
+
+The boot-level sources the precedence resolver reads, in the exact shape
+the host passes at the round boot.
+
+### resolveNeatRacingBootLevel
+
+```ts
+resolveNeatRacingBootLevel(
+  sources: NeatRacingDebugRungBootLevelSources,
+): number
+```
+
+Resolves the level the host boots a round at, from the sources in
+precedence order: the promotion ladder's pending level first, the debug
+rung second, the session level last.
+
+Educational note — THE LADDER KEEPS PRECEDENCE. A debug rung only seeds
+the boot when the promotion ladder is silent: a pending `nextRaceLevel`
+(a race-completion boundary set it) always boots first, so `?level` can
+never fight a freshly promoted round.
+Educational note — THE RUNG SEEDS A BOOT, IT GRANTS NO RUNG. The seeded
+level feeds the SAME boot path every round takes, so the observation
+tier and the fleet size still resolve through the ladder's own
+resolvers — a debug boot races the identical rules, it only opens the
+door to a rung.
+Educational note — THE DEFAULT IS BYTE-IDENTICAL. With a null debug rung
+this is exactly the host's former boot expression
+(`nextRaceLevel ?? sessionLevel`).
+
+Parameters:
+- `sources` - The boot-level sources: `nextRaceLevel` (the ladder's
+pending level, null until a race-completion boundary sets it),
+`debugRungLevel` (the rung resolved from the optional `?level`
+parameter, null when absent) and `sessionLevel` (the session level the
+boot falls back to).
+
+Returns: The boot level.
+
+Example:
+
+// The default boot (no ?level parameter) is byte-identical
+expect(resolveNeatRacingBootLevel({
+  nextRaceLevel: null,
+  debugRungLevel: null,
+  sessionLevel: 1,
+})).toBe(1);
+// A debug rung seeds only a silent ladder's boot
+expect(resolveNeatRacingBootLevel({
+  nextRaceLevel: null,
+  debugRungLevel: 3,
+  sessionLevel: 1,
+})).toBe(3);
+
+### resolveNeatRacingDebugRungLevel
+
+```ts
+resolveNeatRacingDebugRungLevel(
+  queryString: string,
+): number | null
+```
+
+Resolves the debug rung the OPTIONAL `level` query parameter names, or
+null when the parameter is absent, malformed or outside the ladder.
+
+Educational note — WHAT and WHY. The W2 debug rung lets a developer boot
+the racer straight at a rung (`?level=2`) so the rival-bearing manual
+rung is reachable in ONE boot — no promotion driving needed. The rung is
+a debug/harness affordance: it is read ONCE at the opening boot, it
+seeds a boot level, and it never writes the promotion ladder's state.
+THE DEFAULT: with no `level` parameter this resolver answers null and
+the host boots the byte-identical default (`nextRaceLevel` else the
+session level), so the shipped demo is unaffected. THE ACCEPTED RUNGS:
+exactly the ladder band, level 1 to `NEATRACING_PROMOTION_MAX_LEVEL`
+(1, 2, 3) — the ceiling is IMPORTED from the promotion ladder so a
+ladder change moves the seam. NOTHING IS COERCED: a fraction (`2.5`),
+a signed name (`-1`), a non-numeric name (`abc`) and an out-of-band name
+(`0` and above the ceiling) all answer null even though the LADDER'S own
+clamp would have coerced some of them — the debug rung is a key to a
+rung, not a re-derivation of it.
+WHEN: the host calls this exactly once per page boot, inside the live
+drive loop's round setup; the resolver may also be called from tests,
+scripts and embeddings because it reads nothing global.
+
+Parameters:
+- `queryString` - The boot query string, sampled from
+`window.location.search` by the host (a leading `?` is fine).
+
+Returns: The ladder rung (1..3) the parameter names, or null when the
+parameter is absent, malformed or out of the ladder band.
+
+Example:
+
+// The seeded rival-bearing rung
+expect(resolveNeatRacingDebugRungLevel('?level=2')).toBe(2);
+// The absent-parameter default stays byte-identical (null)
+expect(resolveNeatRacingDebugRungLevel('?track=demo')).toBeNull();
+// Malformed and out-of-ladder names are ignored, never coerced
+expect(resolveNeatRacingDebugRungLevel('?level=2.5')).toBeNull();
+expect(resolveNeatRacingDebugRungLevel('?level=9')).toBeNull();
 
 ## browser-entry/canvas-dimensions.utils.ts
 

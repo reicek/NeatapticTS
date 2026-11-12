@@ -247,7 +247,11 @@ function resolveSurfaceIndexAt(
   let inCurbBand = false;
   let inGrassApron = false;
 
-  for (let segmentIndex = 0; segmentIndex < edgeProfile.chords.length; segmentIndex += 1) {
+  for (
+    let segmentIndex = 0;
+    segmentIndex < edgeProfile.chords.length;
+    segmentIndex += 1
+  ) {
     const chord = edgeProfile.chords[segmentIndex];
     const segment = edgeProfile.segments[segmentIndex];
     if (chord === undefined || segment === undefined) {
@@ -485,13 +489,7 @@ function synthesizeTrackSlabLattice(spec: TrackSpec): TrackSlabLattice {
     dims: [cellsX, TRACK_SLAB_STACK_ROWS, cellsZ],
     symmetric: false,
     palette: buildTrackSlabLatticePalette(),
-    slices: paintTrackSlabSlices(
-      cellsX,
-      cellsZ,
-      originX,
-      originZ,
-      edgeProfile,
-    ),
+    slices: paintTrackSlabSlices(cellsX, cellsZ, originX, originZ, edgeProfile),
   };
 
   return {
@@ -610,7 +608,11 @@ export function classifyTrackSlabSurfaceAt(
   let inGrassApron = false;
   let minDistancePastEdgeM = Number.POSITIVE_INFINITY;
 
-  for (let segmentIndex = 0; segmentIndex < edgeProfile.chords.length; segmentIndex += 1) {
+  for (
+    let segmentIndex = 0;
+    segmentIndex < edgeProfile.chords.length;
+    segmentIndex += 1
+  ) {
     const chord = edgeProfile.chords[segmentIndex];
     const segment = edgeProfile.segments[segmentIndex];
     if (chord === undefined || segment === undefined) {

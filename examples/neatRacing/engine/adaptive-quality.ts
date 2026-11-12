@@ -244,10 +244,7 @@ export function tickAdaptiveQuality(
  * @param state - Controller state mutated in place.
  * @param frameMs - Latest frame delta in milliseconds.
  */
-function updateSmoothedFps(
-  state: AdaptiveQualityState,
-  frameMs: number,
-): void {
+function updateSmoothedFps(state: AdaptiveQualityState, frameMs: number): void {
   if (!Number.isFinite(frameMs) || frameMs <= 0) {
     return;
   }
@@ -275,9 +272,7 @@ function updateSmoothedFps(
  * @param state - Controller state mutated in place.
  * @returns The resolved stage index after the decision.
  */
-function decideAdaptiveQualityTransition(
-  state: AdaptiveQualityState,
-): number {
+function decideAdaptiveQualityTransition(state: AdaptiveQualityState): number {
   if (!Number.isFinite(state.smoothedFps)) {
     state.goodStreak = 0;
     return state.stage;

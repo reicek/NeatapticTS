@@ -237,13 +237,16 @@ function filterBleacherProps(
  * palette has to be known to the test. A palette change in the builder
  * surfaces as a loud failure of the stream test instead of a silent drift.
  */
-const NEATRACING_TEST_NEON_COLORS: readonly (readonly [number, number, number])[] =
-  [
-    [0, 255, 255],
-    [255, 0, 128],
-    [128, 0, 255],
-    [0, 255, 128],
-  ];
+const NEATRACING_TEST_NEON_COLORS: readonly (readonly [
+  number,
+  number,
+  number,
+])[] = [
+  [0, 255, 255],
+  [255, 0, 128],
+  [128, 0, 255],
+  [0, 255, 128],
+];
 
 /**
  * Test-local mirror of the builder's outer-ring archetype list.
@@ -1012,9 +1015,7 @@ describe('buildRightWorldProps (P1-right-world-props, AC-048)', () => {
       // margin, re-based onto the seam edge.
       const clearanceM = computeSeamClearanceBeyondEdge(spec, profile, prop);
 
-      expect(clearanceM).toBeGreaterThan(
-        NEATRACING_TEST_ROAD_RIBBON_MARGIN_M,
-      );
+      expect(clearanceM).toBeGreaterThan(NEATRACING_TEST_ROAD_RIBBON_MARGIN_M);
     }
   });
 
@@ -1029,15 +1030,20 @@ describe('buildRightWorldProps (P1-right-world-props, AC-048)', () => {
 describe('bleacher ring-side classification (P1-tron-bleachers, AC-053 + AC-063)', () => {
   it('emits bleacher props and classifies them on the outer ring side', () => {
     const props = buildRightWorldProps(FIXTURE_TRACK_BUILD_INPUT);
-    const bleachers = props.filter((prop) => (prop as unknown as { kind: string }).kind === 'bleacher');
+    const bleachers = props.filter(
+      (prop) => (prop as unknown as { kind: string }).kind === 'bleacher',
+    );
 
     // AC-053 + AC-063: the bleachers are the reserved outer-ring slots, so
     // the ring holds exactly the twenty reserved bleachers and every one of
     // them sits on the OUTER ring side.
-    expect(bleachers.length).toBe(NEATRACING_RIGHT_WORLD_BLEACHER_COUNT_EXPECTED);
+    expect(bleachers.length).toBe(
+      NEATRACING_RIGHT_WORLD_BLEACHER_COUNT_EXPECTED,
+    );
     expect(
       bleachers.every(
-        (prop) => (prop as unknown as { ringSide: string }).ringSide === 'outer',
+        (prop) =>
+          (prop as unknown as { ringSide: string }).ringSide === 'outer',
       ),
     ).toBe(true);
   });
@@ -1046,10 +1052,14 @@ describe('bleacher ring-side classification (P1-tron-bleachers, AC-053 + AC-063)
 describe('right-world prop half-size parity (P1-tron-bleachers, AC-052)', () => {
   it('provides a canonical half-size for every emitted prop kind', () => {
     const props = buildRightWorldProps(FIXTURE_TRACK_BUILD_INPUT);
-    const kinds = new Set(props.map((prop) => (prop as unknown as { kind: string }).kind));
+    const kinds = new Set(
+      props.map((prop) => (prop as unknown as { kind: string }).kind),
+    );
 
     for (const kind of kinds) {
-      const [hx, hy, hz] = resolvePropHalfSize(kind as Parameters<typeof resolvePropHalfSize>[0]);
+      const [hx, hy, hz] = resolvePropHalfSize(
+        kind as Parameters<typeof resolvePropHalfSize>[0],
+      );
       expect(hx).toBeGreaterThan(0);
       expect(hy).toBeGreaterThan(0);
       expect(hz).toBeGreaterThan(0);
@@ -1109,9 +1119,7 @@ describe('bleacher stepped geometry and support capacity (P1-bleacher-shape, AC-
       const seatVoxels = geometry.voxels.filter(
         (voxel) => voxel.role === 'seat',
       );
-      const seatHeights = new Set(
-        seatVoxels.map((voxel) => voxel.position[1]),
-      );
+      const seatHeights = new Set(seatVoxels.map((voxel) => voxel.position[1]));
 
       expect(seatVoxels.length).toBeGreaterThan(0);
       expect(seatHeights.size).toBeGreaterThanOrEqual(2);
@@ -1319,239 +1327,231 @@ function computeSeatLevels(
     .sort((a, b) => a.y - b.y);
 }
 
-describe(
-  'bleacher enlarged stadium geometry (fix-packet-P1-bleacher-shape-iteration-3, OBS-1)',
-  () => {
-    it('builds three flat bleacher levels with four stand-cell rows each and rising heights', () => {
-      const spec = generateTrack(FIXTURE_TRACK_BUILD_INPUT);
-      const props = buildRightWorldProps(FIXTURE_TRACK_BUILD_INPUT);
-      const bleachers = filterBleacherProps(props);
+describe('bleacher enlarged stadium geometry (fix-packet-P1-bleacher-shape-iteration-3, OBS-1)', () => {
+  it('builds three flat bleacher levels with four stand-cell rows each and rising heights', () => {
+    const spec = generateTrack(FIXTURE_TRACK_BUILD_INPUT);
+    const props = buildRightWorldProps(FIXTURE_TRACK_BUILD_INPUT);
+    const bleachers = filterBleacherProps(props);
 
-      expect(bleachers.length).toBeGreaterThan(0);
+    expect(bleachers.length).toBeGreaterThan(0);
 
-      for (const bleacher of bleachers) {
-        const sample = nearestSample(
-          spec.splineSamples,
-          bleacher.position[0],
-          bleacher.position[2],
-        );
-        const frame = resolveSplineSampleFrame(
-          spec.splineSamples,
-          sample.globalIndex,
-        );
-        const levels = computeSeatLevels(bleacher, frame);
+    for (const bleacher of bleachers) {
+      const sample = nearestSample(
+        spec.splineSamples,
+        bleacher.position[0],
+        bleacher.position[2],
+      );
+      const frame = resolveSplineSampleFrame(
+        spec.splineSamples,
+        sample.globalIndex,
+      );
+      const levels = computeSeatLevels(bleacher, frame);
 
-        expect(levels.length).toBe(3);
+      expect(levels.length).toBe(3);
 
-        for (let index = 0; index < levels.length - 1; index += 1) {
-          const lower = levels[index]!;
-          const upper = levels[index + 1]!;
-          expect(upper.rows).toBeGreaterThanOrEqual(4);
-          expect(lower.rows).toBeGreaterThanOrEqual(4);
-          expect(upper.y).toBeGreaterThan(lower.y);
-        }
+      for (let index = 0; index < levels.length - 1; index += 1) {
+        const lower = levels[index]!;
+        const upper = levels[index + 1]!;
+        expect(upper.rows).toBeGreaterThanOrEqual(4);
+        expect(lower.rows).toBeGreaterThanOrEqual(4);
+        expect(upper.y).toBeGreaterThan(lower.y);
       }
-    });
+    }
+  });
 
-    it('places stairs between consecutive seat levels', () => {
-      const props = buildRightWorldProps(FIXTURE_TRACK_BUILD_INPUT);
-      const bleachers = filterBleacherProps(props);
+  it('places stairs between consecutive seat levels', () => {
+    const props = buildRightWorldProps(FIXTURE_TRACK_BUILD_INPUT);
+    const bleachers = filterBleacherProps(props);
 
-      for (const bleacher of bleachers) {
-        const geometry = getBleacherGeometry(bleacher)!;
-        const seatHeights = Array.from(
-          new Set(
-            geometry.voxels
-              .filter((voxel) => voxel.role === 'seat')
-              .map((voxel) => voxel.position[1]),
-          ),
-        ).sort((a, b) => a - b);
+    for (const bleacher of bleachers) {
+      const geometry = getBleacherGeometry(bleacher)!;
+      const seatHeights = Array.from(
+        new Set(
+          geometry.voxels
+            .filter((voxel) => voxel.role === 'seat')
+            .map((voxel) => voxel.position[1]),
+        ),
+      ).sort((a, b) => a - b);
 
-        expect(seatHeights.length).toBeGreaterThanOrEqual(3);
+      expect(seatHeights.length).toBeGreaterThanOrEqual(3);
 
-        for (let index = 0; index < seatHeights.length - 1; index += 1) {
-          const lowHeight = seatHeights[index]!;
-          const highHeight = seatHeights[index + 1]!;
-          const hasStairBetween = geometry.voxels.some(
-            (voxel) =>
-              voxel.role === 'stair' &&
-              voxel.position[1] > lowHeight &&
-              voxel.position[1] < highHeight,
-          );
+      for (let index = 0; index < seatHeights.length - 1; index += 1) {
+        const lowHeight = seatHeights[index]!;
+        const highHeight = seatHeights[index + 1]!;
+        const hasStairBetween = geometry.voxels.some(
+          (voxel) =>
+            voxel.role === 'stair' &&
+            voxel.position[1] > lowHeight &&
+            voxel.position[1] < highHeight,
+        );
 
-          expect(hasStairBetween).toBe(true);
-        }
+        expect(hasStairBetween).toBe(true);
       }
-    });
+    }
+  });
 
-    it('reserves at least one free voxel row on each outer side of the bleacher', () => {
-      const spec = generateTrack(FIXTURE_TRACK_BUILD_INPUT);
-      const props = buildRightWorldProps(FIXTURE_TRACK_BUILD_INPUT);
-      const bleachers = filterBleacherProps(props);
+  it('reserves at least one free voxel row on each outer side of the bleacher', () => {
+    const spec = generateTrack(FIXTURE_TRACK_BUILD_INPUT);
+    const props = buildRightWorldProps(FIXTURE_TRACK_BUILD_INPUT);
+    const bleachers = filterBleacherProps(props);
 
-      for (const bleacher of bleachers) {
-        const sample = nearestSample(
-          spec.splineSamples,
-          bleacher.position[0],
-          bleacher.position[2],
-        );
-        const frame = resolveSplineSampleFrame(
-          spec.splineSamples,
-          sample.globalIndex,
-        );
-        const geometry = getBleacherGeometry(bleacher)!;
-        const allVoxels = geometry.voxels;
-        const seatVoxels = allVoxels.filter((voxel) => voxel.role === 'seat');
+    for (const bleacher of bleachers) {
+      const sample = nearestSample(
+        spec.splineSamples,
+        bleacher.position[0],
+        bleacher.position[2],
+      );
+      const frame = resolveSplineSampleFrame(
+        spec.splineSamples,
+        sample.globalIndex,
+      );
+      const geometry = getBleacherGeometry(bleacher)!;
+      const allVoxels = geometry.voxels;
+      const seatVoxels = allVoxels.filter((voxel) => voxel.role === 'seat');
 
-        const uOf = (voxel: BleacherVoxel): number => {
-          const dx = voxel.position[0] - bleacher.position[0];
-          const dz = voxel.position[2] - bleacher.position[2];
-          return dx * frame.normalX + dz * -frame.normalY;
-        };
+      const uOf = (voxel: BleacherVoxel): number => {
+        const dx = voxel.position[0] - bleacher.position[0];
+        const dz = voxel.position[2] - bleacher.position[2];
+        return dx * frame.normalX + dz * -frame.normalY;
+      };
 
-        const minU = Math.min(...allVoxels.map(uOf));
-        const maxU = Math.max(...allVoxels.map(uOf));
-        const minSeatU = Math.min(...seatVoxels.map(uOf));
-        const maxSeatU = Math.max(...seatVoxels.map(uOf));
+      const minU = Math.min(...allVoxels.map(uOf));
+      const maxU = Math.max(...allVoxels.map(uOf));
+      const minSeatU = Math.min(...seatVoxels.map(uOf));
+      const maxSeatU = Math.max(...seatVoxels.map(uOf));
 
-        // The projection of a world position back into the local frame keeps
-        // a double-precision residue of ~1e-15 m, so the free-row contract is
-        // asserted with a named tolerance. The measured free row stays a full
-        // meter - the tolerance only covers the projection residue.
-        expect(maxSeatU).toBeLessThanOrEqual(
-          maxU - 1.0 + NEATRACING_BLEACHER_FRAME_TOLERANCE_M,
-        );
-        expect(minSeatU).toBeGreaterThanOrEqual(
-          minU + 1.0 - NEATRACING_BLEACHER_FRAME_TOLERANCE_M,
-        );
+      // The projection of a world position back into the local frame keeps
+      // a double-precision residue of ~1e-15 m, so the free-row contract is
+      // asserted with a named tolerance. The measured free row stays a full
+      // meter - the tolerance only covers the projection residue.
+      expect(maxSeatU).toBeLessThanOrEqual(
+        maxU - 1.0 + NEATRACING_BLEACHER_FRAME_TOLERANCE_M,
+      );
+      expect(minSeatU).toBeGreaterThanOrEqual(
+        minU + 1.0 - NEATRACING_BLEACHER_FRAME_TOLERANCE_M,
+      );
+    }
+  });
+
+  it('gives each seat row at least two cells of depth', () => {
+    const spec = generateTrack(FIXTURE_TRACK_BUILD_INPUT);
+    const props = buildRightWorldProps(FIXTURE_TRACK_BUILD_INPUT);
+    const bleachers = filterBleacherProps(props);
+
+    for (const bleacher of bleachers) {
+      const sample = nearestSample(
+        spec.splineSamples,
+        bleacher.position[0],
+        bleacher.position[2],
+      );
+      const frame = resolveSplineSampleFrame(
+        spec.splineSamples,
+        sample.globalIndex,
+      );
+      const rows = computeSeatRows(bleacher, frame);
+
+      expect(rows.length).toBeGreaterThan(0);
+
+      for (const row of rows) {
+        expect(row.depth).toBeGreaterThanOrEqual(2.0);
       }
-    });
+    }
+  });
 
-    it('gives each seat row at least two cells of depth', () => {
-      const spec = generateTrack(FIXTURE_TRACK_BUILD_INPUT);
-      const props = buildRightWorldProps(FIXTURE_TRACK_BUILD_INPUT);
-      const bleachers = filterBleacherProps(props);
+  it('bleacher axis-aligned dimensions are visibly enlarged beyond the coarse [1.5,0.75,1] half-size and rise between flat levels', () => {
+    const spec = generateTrack(FIXTURE_TRACK_BUILD_INPUT);
+    const props = buildRightWorldProps(FIXTURE_TRACK_BUILD_INPUT);
+    const bleachers = filterBleacherProps(props);
 
-      for (const bleacher of bleachers) {
-        const sample = nearestSample(
-          spec.splineSamples,
-          bleacher.position[0],
-          bleacher.position[2],
-        );
-        const frame = resolveSplineSampleFrame(
-          spec.splineSamples,
-          sample.globalIndex,
-        );
-        const rows = computeSeatRows(bleacher, frame);
+    expect(bleachers.length).toBeGreaterThan(0);
 
-        expect(rows.length).toBeGreaterThan(0);
+    for (const bleacher of bleachers) {
+      const sample = nearestSample(
+        spec.splineSamples,
+        bleacher.position[0],
+        bleacher.position[2],
+      );
+      const frame = resolveSplineSampleFrame(
+        spec.splineSamples,
+        sample.globalIndex,
+      );
+      const geometry = getBleacherGeometry(bleacher)!;
 
-        for (const row of rows) {
-          expect(row.depth).toBeGreaterThanOrEqual(2.0);
-        }
+      const uOf = (voxel: BleacherVoxel): number => {
+        const dx = voxel.position[0] - bleacher.position[0];
+        const dz = voxel.position[2] - bleacher.position[2];
+        return dx * frame.normalX + dz * -frame.normalY;
+      };
+      const vOf = (voxel: BleacherVoxel): number => {
+        const dx = voxel.position[0] - bleacher.position[0];
+        const dz = voxel.position[2] - bleacher.position[2];
+        return dx * -frame.normalY + dz * -frame.normalX;
+      };
+
+      const us = geometry.voxels.map(uOf);
+      const vs = geometry.voxels.map(vOf);
+      const ys = geometry.voxels.map((voxel) => voxel.position[1]);
+      const uHalf = (Math.max(...us) - Math.min(...us)) / 2;
+      const vHalf = (Math.max(...vs) - Math.min(...vs)) / 2;
+      const yExtent = Math.max(...ys) - Math.min(...ys);
+
+      expect(uHalf).toBeGreaterThan(1.5);
+      expect(vHalf).toBeGreaterThan(1);
+      expect(yExtent).toBeGreaterThan(2);
+
+      const levels = computeSeatLevels(bleacher, frame);
+      for (let index = 0; index < levels.length - 1; index += 1) {
+        const rise = levels[index + 1]!.y - levels[index]!.y;
+        expect(rise).toBeGreaterThan(0.4);
       }
-    });
+    }
+  });
+});
 
-    it('bleacher axis-aligned dimensions are visibly enlarged beyond the coarse [1.5,0.75,1] half-size and rise between flat levels', () => {
-      const spec = generateTrack(FIXTURE_TRACK_BUILD_INPUT);
-      const props = buildRightWorldProps(FIXTURE_TRACK_BUILD_INPUT);
-      const bleachers = filterBleacherProps(props);
+describe('bleacher crowd geometry (fix-packet-P1-bleacher-crowd-iteration-1, OBS-A)', () => {
+  it('doubles bleacher level depth to at least four stand-cell rows per level', () => {
+    const spec = generateTrack(FIXTURE_TRACK_BUILD_INPUT);
+    const props = buildRightWorldProps(FIXTURE_TRACK_BUILD_INPUT);
+    const bleachers = filterBleacherProps(props);
 
-      expect(bleachers.length).toBeGreaterThan(0);
+    expect(bleachers.length).toBeGreaterThan(0);
 
-      for (const bleacher of bleachers) {
-        const sample = nearestSample(
-          spec.splineSamples,
-          bleacher.position[0],
-          bleacher.position[2],
-        );
-        const frame = resolveSplineSampleFrame(
-          spec.splineSamples,
-          sample.globalIndex,
-        );
-        const geometry = getBleacherGeometry(bleacher)!;
+    for (const bleacher of bleachers) {
+      const sample = nearestSample(
+        spec.splineSamples,
+        bleacher.position[0],
+        bleacher.position[2],
+      );
+      const frame = resolveSplineSampleFrame(
+        spec.splineSamples,
+        sample.globalIndex,
+      );
+      const geometry = getBleacherGeometry(bleacher)!;
+      const seats = geometry.voxels.filter((voxel) => voxel.role === 'seat');
 
-        const uOf = (voxel: BleacherVoxel): number => {
-          const dx = voxel.position[0] - bleacher.position[0];
-          const dz = voxel.position[2] - bleacher.position[2];
-          return dx * frame.normalX + dz * -frame.normalY;
-        };
-        const vOf = (voxel: BleacherVoxel): number => {
-          const dx = voxel.position[0] - bleacher.position[0];
-          const dz = voxel.position[2] - bleacher.position[2];
-          return dx * -frame.normalY + dz * -frame.normalX;
-        };
-
-        const us = geometry.voxels.map(uOf);
-        const vs = geometry.voxels.map(vOf);
-        const ys = geometry.voxels.map((voxel) => voxel.position[1]);
-        const uHalf = (Math.max(...us) - Math.min(...us)) / 2;
-        const vHalf = (Math.max(...vs) - Math.min(...vs)) / 2;
-        const yExtent = Math.max(...ys) - Math.min(...ys);
-
-        expect(uHalf).toBeGreaterThan(1.5);
-        expect(vHalf).toBeGreaterThan(1);
-        expect(yExtent).toBeGreaterThan(2);
-
-        const levels = computeSeatLevels(bleacher, frame);
-        for (let index = 0; index < levels.length - 1; index += 1) {
-          const rise = levels[index + 1]!.y - levels[index]!.y;
-          expect(rise).toBeGreaterThan(0.4);
-        }
+      // Group stand cells by level (rounded seat height) and count distinct
+      // front-to-back row positions (rounded u) inside each level. With the
+      // agents standing, each level must be deep enough for four rows.
+      const rowsPerLevel = new Map<number, Set<number>>();
+      for (const seat of seats) {
+        const dx = seat.position[0] - bleacher.position[0];
+        const dz = seat.position[2] - bleacher.position[2];
+        const u = dx * frame.normalX + dz * -frame.normalY;
+        const levelKey = Math.round(seat.position[1]);
+        const set = rowsPerLevel.get(levelKey) ?? new Set<number>();
+        set.add(Math.round(u));
+        rowsPerLevel.set(levelKey, set);
       }
-    });
-  },
-);
 
-describe(
-  'bleacher crowd geometry (fix-packet-P1-bleacher-crowd-iteration-1, OBS-A)',
-  () => {
-    it('doubles bleacher level depth to at least four stand-cell rows per level', () => {
-      const spec = generateTrack(FIXTURE_TRACK_BUILD_INPUT);
-      const props = buildRightWorldProps(FIXTURE_TRACK_BUILD_INPUT);
-      const bleachers = filterBleacherProps(props);
+      const rowCounts = Array.from(rowsPerLevel.values()).map(
+        (set) => set.size,
+      );
 
-      expect(bleachers.length).toBeGreaterThan(0);
-
-      for (const bleacher of bleachers) {
-        const sample = nearestSample(
-          spec.splineSamples,
-          bleacher.position[0],
-          bleacher.position[2],
-        );
-        const frame = resolveSplineSampleFrame(
-          spec.splineSamples,
-          sample.globalIndex,
-        );
-        const geometry = getBleacherGeometry(bleacher)!;
-        const seats = geometry.voxels.filter(
-          (voxel) => voxel.role === 'seat',
-        );
-
-        // Group stand cells by level (rounded seat height) and count distinct
-        // front-to-back row positions (rounded u) inside each level. With the
-        // agents standing, each level must be deep enough for four rows.
-        const rowsPerLevel = new Map<number, Set<number>>();
-        for (const seat of seats) {
-          const dx = seat.position[0] - bleacher.position[0];
-          const dz = seat.position[2] - bleacher.position[2];
-          const u = dx * frame.normalX + dz * -frame.normalY;
-          const levelKey = Math.round(seat.position[1]);
-          const set = rowsPerLevel.get(levelKey) ?? new Set<number>();
-          set.add(Math.round(u));
-          rowsPerLevel.set(levelKey, set);
-        }
-
-        const rowCounts = Array.from(rowsPerLevel.values()).map(
-          (set) => set.size,
-        );
-
-        expect(rowCounts.length).toBeGreaterThanOrEqual(3);
-        expect(Math.min(...rowCounts)).toBeGreaterThanOrEqual(4);
-      }
-    });
-  },
-);
+      expect(rowCounts.length).toBeGreaterThanOrEqual(3);
+      expect(Math.min(...rowCounts)).toBeGreaterThanOrEqual(4);
+    }
+  });
+});
 
 /**
  * Reads a named numeric export from a module namespace at RUNTIME.
@@ -1675,9 +1675,7 @@ interface MatchedSeatAnchor {
  * @param bleacher - Bleacher prop whose voxel geometry is inspected.
  * @returns The bleacher levels in ascending platform order.
  */
-function readBleacherSeatLevels(
-  bleacher: RightWorldProp,
-): BleacherSeatLevel[] {
+function readBleacherSeatLevels(bleacher: RightWorldProp): BleacherSeatLevel[] {
   const geometry = getBleacherGeometry(bleacher);
   const seats = (geometry?.voxels ?? []).filter(
     (voxel) => voxel.role === 'seat',
@@ -1811,114 +1809,114 @@ function computeMinPairwiseXzDistance(
   return minimum;
 }
 
-describe(
-  'bleacher seat anchor spread (RED-A, AC-072) and personal-space margin (AC-069)',
-  () => {
-    it('returns exactly four seat anchors per bleacher level and twelve anchors in total', () => {
-      const bleachers = filterBleacherProps(
-        buildRightWorldProps(FIXTURE_TRACK_BUILD_INPUT),
+describe('bleacher seat anchor spread (RED-A, AC-072) and personal-space margin (AC-069)', () => {
+  it('returns exactly four seat anchors per bleacher level and twelve anchors in total', () => {
+    const bleachers = filterBleacherProps(
+      buildRightWorldProps(FIXTURE_TRACK_BUILD_INPUT),
+    );
+
+    expect(bleachers.length).toBeGreaterThan(0);
+
+    const levelCounts: number[] = [];
+    const anchorsPerLevel: number[][] = [];
+    const anchorTotals: number[] = [];
+
+    for (const bleacher of bleachers) {
+      const levels = readBleacherSeatLevels(bleacher);
+      const seated = matchAnchorsToSeatCells(
+        levels,
+        getBleacherSeatAnchors(bleacher),
       );
 
-      expect(bleachers.length).toBeGreaterThan(0);
-
-      const levelCounts: number[] = [];
-      const anchorsPerLevel: number[][] = [];
-      const anchorTotals: number[] = [];
-
-      for (const bleacher of bleachers) {
-        const levels = readBleacherSeatLevels(bleacher);
-        const seated = matchAnchorsToSeatCells(
-          levels,
-          getBleacherSeatAnchors(bleacher),
-        );
-
-        levelCounts.push(levels.length);
-        anchorsPerLevel.push(
-          levels.map(
-            (level) =>
-              seated.filter((entry) => entry.levelIndex === level.levelIndex)
-                .length,
-          ),
-        );
-        anchorTotals.push(seated.length);
-      }
-
-      // RED-A (AC-072): the stock bleacher keeps its three flat levels ...
-      expect(levelCounts).toEqual(
-        bleachers.map(() => NEATRACING_BLEACHER_LEVEL_COUNT),
-      );
-      // ... every level carries EXACTLY four seated spectators ...
-      expect(anchorsPerLevel).toEqual(
-        bleachers.map(() =>
-          Array.from(
-            { length: NEATRACING_BLEACHER_LEVEL_COUNT },
-            () => NEATRACING_BLEACHER_SEATS_PER_LEVEL,
-          ),
+      levelCounts.push(levels.length);
+      anchorsPerLevel.push(
+        levels.map(
+          (level) =>
+            seated.filter((entry) => entry.levelIndex === level.levelIndex)
+              .length,
         ),
       );
-      // ... so a bleacher emits 3 x 4 = 12 seat anchors. Today the anchor set
-      // carries one anchor per front-row cell, so a level emits seven
-      // anchors and the bleacher emits 21.
-      expect(anchorTotals).toEqual(
-        bleachers.map(
-          () =>
-            NEATRACING_BLEACHER_LEVEL_COUNT * NEATRACING_BLEACHER_SEATS_PER_LEVEL,
+      anchorTotals.push(seated.length);
+    }
+
+    // RED-A (AC-072): the stock bleacher keeps its three flat levels ...
+    expect(levelCounts).toEqual(
+      bleachers.map(() => NEATRACING_BLEACHER_LEVEL_COUNT),
+    );
+    // ... every level carries EXACTLY four seated spectators ...
+    expect(anchorsPerLevel).toEqual(
+      bleachers.map(() =>
+        Array.from(
+          { length: NEATRACING_BLEACHER_LEVEL_COUNT },
+          () => NEATRACING_BLEACHER_SEATS_PER_LEVEL,
         ),
+      ),
+    );
+    // ... so a bleacher emits 3 x 4 = 12 seat anchors. Today the anchor set
+    // carries one anchor per front-row cell, so a level emits seven
+    // anchors and the bleacher emits 21.
+    expect(anchorTotals).toEqual(
+      bleachers.map(
+        () =>
+          NEATRACING_BLEACHER_LEVEL_COUNT * NEATRACING_BLEACHER_SEATS_PER_LEVEL,
+      ),
+    );
+  });
+
+  it('keeps the named bleacher seat constants in step with the anchor contract', () => {
+    // The RED-A expectations are pinned on the CONTRACT numbers - four
+    // seats per level and three levels - so they stay a pin on the
+    // contract instead of following the implementation. The production
+    // exports carry the same numbers, and this cross-check fails LOUDLY
+    // when a named constant drifts away from the contract, instead of
+    // letting the implementation quietly redefine its own expectation.
+    expect(rightWorldBuilderModule.NEATRACING_BLEACHER_SEATS_PER_LEVEL).toBe(
+      NEATRACING_BLEACHER_SEATS_PER_LEVEL,
+    );
+    expect(rightWorldBuilderModule.NEATRACING_BLEACHER_LEVEL_COUNT).toBe(
+      NEATRACING_BLEACHER_LEVEL_COUNT,
+    );
+  });
+
+  it('spreads the four anchors of a level evenly across the full front row', () => {
+    const bleachers = filterBleacherProps(
+      buildRightWorldProps(FIXTURE_TRACK_BUILD_INPUT),
+    );
+
+    expect(bleachers.length).toBeGreaterThan(0);
+
+    const violations: string[] = [];
+
+    for (const bleacher of bleachers) {
+      const levels = readBleacherSeatLevels(bleacher);
+      const seated = matchAnchorsToSeatCells(
+        levels,
+        getBleacherSeatAnchors(bleacher),
       );
-    });
 
-    it('keeps the named bleacher seat constants in step with the anchor contract', () => {
-      // The RED-A expectations are pinned on the CONTRACT numbers - four
-      // seats per level and three levels - so they stay a pin on the
-      // contract instead of following the implementation. The production
-      // exports carry the same numbers, and this cross-check fails LOUDLY
-      // when a named constant drifts away from the contract, instead of
-      // letting the implementation quietly redefine its own expectation.
-      expect(
-        rightWorldBuilderModule.NEATRACING_BLEACHER_SEATS_PER_LEVEL,
-      ).toBe(NEATRACING_BLEACHER_SEATS_PER_LEVEL);
-      expect(rightWorldBuilderModule.NEATRACING_BLEACHER_LEVEL_COUNT).toBe(
-        NEATRACING_BLEACHER_LEVEL_COUNT,
-      );
-    });
-
-    it('spreads the four anchors of a level evenly across the full front row', () => {
-      const bleachers = filterBleacherProps(
-        buildRightWorldProps(FIXTURE_TRACK_BUILD_INPUT),
-      );
-
-      expect(bleachers.length).toBeGreaterThan(0);
-
-      const violations: string[] = [];
-
-      for (const bleacher of bleachers) {
-        const levels = readBleacherSeatLevels(bleacher);
-        const seated = matchAnchorsToSeatCells(
-          levels,
-          getBleacherSeatAnchors(bleacher),
+      for (const level of levels) {
+        const levelAnchors = seated.filter(
+          (entry) => entry.levelIndex === level.levelIndex,
+        );
+        const cellIndices = levelAnchors.map((entry) => entry.cellIndex);
+        const expectedCellIndices = evenlySpacedCellIndices(
+          level.frontRow.length,
         );
 
-        for (const level of levels) {
-          const levelAnchors = seated.filter(
-            (entry) => entry.levelIndex === level.levelIndex,
+        // RED-A (AC-072): the anchors of a level are the evenly spaced
+        // subset of that level's front-row cell lattice - the first
+        // anchor on the FIRST cell, the last on the LAST cell. Today the
+        // anchor set carries EVERY front-row cell of the level.
+        if (cellIndices.join(',') !== expectedCellIndices.join(',')) {
+          violations.push(
+            `level=${level.levelIndex} cells=[${cellIndices.join(',')}] expected=[${expectedCellIndices.join(',')}]`,
           );
-          const cellIndices = levelAnchors.map((entry) => entry.cellIndex);
-          const expectedCellIndices = evenlySpacedCellIndices(
-            level.frontRow.length,
-          );
+        }
 
-          // RED-A (AC-072): the anchors of a level are the evenly spaced
-          // subset of that level's front-row cell lattice - the first
-          // anchor on the FIRST cell, the last on the LAST cell. Today the
-          // anchor set carries EVERY front-row cell of the level.
-          if (cellIndices.join(',') !== expectedCellIndices.join(',')) {
-            violations.push(
-              `level=${level.levelIndex} cells=[${cellIndices.join(',')}] expected=[${expectedCellIndices.join(',')}]`,
-            );
-          }
-
-          // ... and the realized world-space gaps between them are equal.
-          const gaps = levelAnchors.slice(1).map((entry, index) =>
+        // ... and the realized world-space gaps between them are equal.
+        const gaps = levelAnchors
+          .slice(1)
+          .map((entry, index) =>
             Math.hypot(
               entry.position[0] - levelAnchors[index]!.position[0],
               entry.position[1] - levelAnchors[index]!.position[1],
@@ -1926,937 +1924,922 @@ describe(
             ),
           );
 
-          if (gaps.length > 0) {
-            const spread = Math.max(...gaps) - Math.min(...gaps);
-            if (spread > NEATRACING_BLEACHER_FRAME_TOLERANCE_M) {
-              violations.push(
-                `level=${level.levelIndex} gaps=[${gaps.map((gap) => gap.toFixed(12)).join(',')}]`,
-              );
-            }
+        if (gaps.length > 0) {
+          const spread = Math.max(...gaps) - Math.min(...gaps);
+          if (spread > NEATRACING_BLEACHER_FRAME_TOLERANCE_M) {
+            violations.push(
+              `level=${level.levelIndex} gaps=[${gaps.map((gap) => gap.toFixed(12)).join(',')}]`,
+            );
           }
         }
       }
+    }
 
+    expect(violations).toEqual([]);
+  });
+
+  it('places every narrowed seat anchor in the front-most seat row of its bleacher level', () => {
+    const spec = generateTrack(FIXTURE_TRACK_BUILD_INPUT);
+    const bleachers = filterBleacherProps(
+      buildRightWorldProps(FIXTURE_TRACK_BUILD_INPUT),
+    );
+
+    expect(bleachers.length).toBeGreaterThan(0);
+
+    for (const bleacher of bleachers) {
+      const frame = resolveBleacherFrame(spec, bleacher);
+      const geometry = getBleacherGeometry(bleacher)!;
+      const seats = geometry.voxels.filter((voxel) => voxel.role === 'seat');
+      const frontUByLevel = new Map<number, number>();
+
+      for (const seat of seats) {
+        const levelKey = Math.round(seat.position[1] - bleacher.position[1]);
+        const u = Math.round(computeBleacherU(bleacher, frame, seat.position));
+        const current = frontUByLevel.get(levelKey);
+        if (current === undefined || u > current) {
+          frontUByLevel.set(levelKey, u);
+        }
+      }
+
+      const violations: string[] = [];
+      for (const anchor of getBleacherSeatAnchors(bleacher)) {
+        const levelKey = Math.round(anchor[1] - bleacher.position[1]);
+        const u = Math.round(computeBleacherU(bleacher, frame, anchor));
+        if (u !== frontUByLevel.get(levelKey)) {
+          violations.push(`level=${levelKey} u=${u}`);
+        }
+      }
+
+      // AC-069: the seat row of each level is the FRONT-MOST one, toward
+      // the track. Today the anchor set also carries the three back rows
+      // of every level.
       expect(violations).toEqual([]);
-    });
+    }
+  });
 
-    it('places every narrowed seat anchor in the front-most seat row of its bleacher level', () => {
-      const spec = generateTrack(FIXTURE_TRACK_BUILD_INPUT);
-      const bleachers = filterBleacherProps(
-        buildRightWorldProps(FIXTURE_TRACK_BUILD_INPUT),
+  it('emits the seat anchors level-major in ascending platform order', () => {
+    const bleachers = filterBleacherProps(
+      buildRightWorldProps(FIXTURE_TRACK_BUILD_INPUT),
+    );
+
+    expect(bleachers.length).toBeGreaterThan(0);
+
+    const levelSequences: number[][] = [];
+
+    for (const bleacher of bleachers) {
+      const levels = readBleacherSeatLevels(bleacher);
+      const seated = matchAnchorsToSeatCells(
+        levels,
+        getBleacherSeatAnchors(bleacher),
       );
 
-      expect(bleachers.length).toBeGreaterThan(0);
+      levelSequences.push(seated.map((entry) => entry.levelIndex));
+    }
 
-      for (const bleacher of bleachers) {
-        const frame = resolveBleacherFrame(spec, bleacher);
-        const geometry = getBleacherGeometry(bleacher)!;
-        const seats = geometry.voxels.filter(
-          (voxel) => voxel.role === 'seat',
-        );
-        const frontUByLevel = new Map<number, number>();
+    // RED-A (AC-072): the anchors are emitted LEVEL-MAJOR in ascending
+    // platform order, so a sequential consumer walks the lowest platform
+    // first and then climbs the stand. Today they are emitted
+    // level-interleaved (level 0, 1, 2, 0, 1, 2, ...), the order the
+    // retired AC-069 clause demanded.
+    const expectedSequence = Array.from(
+      { length: NEATRACING_BLEACHER_LEVEL_COUNT },
+      (_unused, levelIndex) =>
+        Array.from(
+          { length: NEATRACING_BLEACHER_SEATS_PER_LEVEL },
+          () => levelIndex,
+        ),
+    ).flat();
 
-        for (const seat of seats) {
-          const levelKey = Math.round(
-            seat.position[1] - bleacher.position[1],
-          );
-          const u = Math.round(
-            computeBleacherU(bleacher, frame, seat.position),
-          );
-          const current = frontUByLevel.get(levelKey);
-          if (current === undefined || u > current) {
-            frontUByLevel.set(levelKey, u);
-          }
-        }
+    expect(levelSequences).toEqual(bleachers.map(() => expectedSequence));
+  });
 
-        const violations: string[] = [];
-        for (const anchor of getBleacherSeatAnchors(bleacher)) {
-          const levelKey = Math.round(
-            anchor[1] - bleacher.position[1],
-          );
-          const u = Math.round(computeBleacherU(bleacher, frame, anchor));
-          if (u !== frontUByLevel.get(levelKey)) {
-            violations.push(`level=${levelKey} u=${u}`);
-          }
-        }
+  it('applies the personal-space margin through the named NEATRACING_ROBOT_PERSONAL_SPACE_EPSILON_M constant', () => {
+    const moduleExports = rightWorldBuilderModule as unknown as Record<
+      string,
+      unknown
+    >;
+    const epsilon = readNamedNumericExport(
+      moduleExports,
+      'NEATRACING_ROBOT_PERSONAL_SPACE_EPSILON_M',
+    );
 
-        // AC-069: the seat row of each level is the FRONT-MOST one, toward
-        // the track. Today the anchor set also carries the three back rows
-        // of every level.
-        expect(violations).toEqual([]);
-      }
-    });
+    // AC-069: the 1 m personal-space comparison must go through a NAMED
+    // margin constant so the nominal lattice is not rejected by
+    // double-precision noise. The builder exports that constant since
+    // this slice, so the contract is live.
+    expect(typeof epsilon).toBe('number');
+    expect(epsilon).toBeGreaterThanOrEqual(1e-12);
+  });
 
-    it('emits the seat anchors level-major in ascending platform order', () => {
-      const bleachers = filterBleacherProps(
-        buildRightWorldProps(FIXTURE_TRACK_BUILD_INPUT),
+  it('retains every narrowed front-row seat anchor under the personal-space filter', () => {
+    const spec = generateTrack(FIXTURE_TRACK_BUILD_INPUT);
+    const bleachers = filterBleacherProps(
+      buildRightWorldProps(FIXTURE_TRACK_BUILD_INPUT),
+    );
+
+    expect(bleachers.length).toBeGreaterThan(0);
+
+    for (const bleacher of bleachers) {
+      const frame = resolveBleacherFrame(spec, bleacher);
+      const frontRowPositions = computeFrontSeatRowPositions(bleacher, frame);
+      const retained = filterRobotsByPersonalSpace(
+        frontRowPositions.map((position) => ({ position })),
       );
 
-      expect(bleachers.length).toBeGreaterThan(0);
+      // AC-069: the personal-space comparison must not knife-edge-truncate
+      // the narrowed front row. Today the strict `distance < 1.0`
+      // comparison drops every second cell of the mathematically 1.0 m
+      // lattice, so only 12 of the 21 front-row seats survive.
+      expect(retained.length).toBe(frontRowPositions.length);
+      // ... and the realized clearance must stay at the effective 1 m, so
+      // AC-065 is not relaxed. The 1e-9 tolerance matches the AC-069 RED.
+      expect(
+        computeMinPairwiseXzDistance(retained.map((robot) => robot.position)),
+      ).toBeGreaterThanOrEqual(NEATRACING_ROBOT_PERSONAL_SPACE_M - 1e-9);
+    }
+  });
+});
 
-      const levelSequences: number[][] = [];
-
-      for (const bleacher of bleachers) {
-        const levels = readBleacherSeatLevels(bleacher);
-        const seated = matchAnchorsToSeatCells(
-          levels,
-          getBleacherSeatAnchors(bleacher),
-        );
-
-        levelSequences.push(seated.map((entry) => entry.levelIndex));
-      }
-
-      // RED-A (AC-072): the anchors are emitted LEVEL-MAJOR in ascending
-      // platform order, so a sequential consumer walks the lowest platform
-      // first and then climbs the stand. Today they are emitted
-      // level-interleaved (level 0, 1, 2, 0, 1, 2, ...), the order the
-      // retired AC-069 clause demanded.
-      const expectedSequence = Array.from(
-        { length: NEATRACING_BLEACHER_LEVEL_COUNT },
-        (_unused, levelIndex) =>
-          Array.from(
-            { length: NEATRACING_BLEACHER_SEATS_PER_LEVEL },
-            () => levelIndex,
-          ),
-      ).flat();
-
-      expect(levelSequences).toEqual(bleachers.map(() => expectedSequence));
-    });
-
-    it('applies the personal-space margin through the named NEATRACING_ROBOT_PERSONAL_SPACE_EPSILON_M constant', () => {
-      const moduleExports =
-        rightWorldBuilderModule as unknown as Record<string, unknown>;
-      const epsilon = readNamedNumericExport(
-        moduleExports,
-        'NEATRACING_ROBOT_PERSONAL_SPACE_EPSILON_M',
-      );
-
-      // AC-069: the 1 m personal-space comparison must go through a NAMED
-      // margin constant so the nominal lattice is not rejected by
-      // double-precision noise. The builder exports that constant since
-      // this slice, so the contract is live.
-      expect(typeof epsilon).toBe('number');
-      expect(epsilon).toBeGreaterThanOrEqual(1e-12);
-    });
-
-    it('retains every narrowed front-row seat anchor under the personal-space filter', () => {
-      const spec = generateTrack(FIXTURE_TRACK_BUILD_INPUT);
-      const bleachers = filterBleacherProps(
-        buildRightWorldProps(FIXTURE_TRACK_BUILD_INPUT),
-      );
-
-      expect(bleachers.length).toBeGreaterThan(0);
-
-      for (const bleacher of bleachers) {
-        const frame = resolveBleacherFrame(spec, bleacher);
-        const frontRowPositions = computeFrontSeatRowPositions(
-          bleacher,
-          frame,
-        );
-        const retained = filterRobotsByPersonalSpace(
-          frontRowPositions.map((position) => ({ position })),
-        );
-
-        // AC-069: the personal-space comparison must not knife-edge-truncate
-        // the narrowed front row. Today the strict `distance < 1.0`
-        // comparison drops every second cell of the mathematically 1.0 m
-        // lattice, so only 12 of the 21 front-row seats survive.
-        expect(retained.length).toBe(frontRowPositions.length);
-        // ... and the realized clearance must stay at the effective 1 m, so
-        // AC-065 is not relaxed. The 1e-9 tolerance matches the AC-069 RED.
-        expect(
-          computeMinPairwiseXzDistance(
-            retained.map((robot) => robot.position),
-          ),
-        ).toBeGreaterThanOrEqual(NEATRACING_ROBOT_PERSONAL_SPACE_M - 1e-9);
-      }
-    });
-  },
-);
-
-describe(
-  'bleacher count contract and named crowd-host rule (RED-B, AC-073)',
-  () => {
-    it('emits exactly twenty bleacher props for every fixture seed', () => {
-      const counts = NEATRACING_CROWD_FIXTURE_SEEDS.map((seed) => {
-        const props = buildRightWorldProps({
-          seed,
-          ...NEATRACING_CROWD_BUILD_INPUT,
-        });
-
-        return filterBleacherProps(props).length;
+describe('bleacher count contract and named crowd-host rule (RED-B, AC-073)', () => {
+  it('emits exactly twenty bleacher props for every fixture seed', () => {
+    const counts = NEATRACING_CROWD_FIXTURE_SEEDS.map((seed) => {
+      const props = buildRightWorldProps({
+        seed,
+        ...NEATRACING_CROWD_BUILD_INPUT,
       });
 
-      // RED-B (AC-073): the right world carries EXACTLY twenty bleacher props
-      // and the count is SEED-INVARIANT, so the retired random 1-in-4
-      // archetype draw never produces a bleacher - the bleacher slots are
-      // reserved BY CONSTRUCTION at evenly spaced outer-ring slot indices.
-      // The count no longer varies with the seed: every seed reserves the
-      // same twenty slots.
-      expect(counts).toEqual(
-        NEATRACING_CROWD_FIXTURE_SEEDS.map(
-          () => NEATRACING_RIGHT_WORLD_BLEACHER_COUNT_EXPECTED,
-        ),
-      );
+      return filterBleacherProps(props).length;
     });
 
-    it('derives the bleacher count from the named NEATRACING_RIGHT_WORLD_BLEACHER_COUNT constant', () => {
-      const moduleExports =
-        rightWorldBuilderModule as unknown as Record<string, unknown>;
-      const count = readNamedNumericExport(
-        moduleExports,
-        'NEATRACING_RIGHT_WORLD_BLEACHER_COUNT',
-      );
-      const observed = filterBleacherProps(
-        buildRightWorldProps({
-          seed: 42,
-          ...NEATRACING_CROWD_BUILD_INPUT,
-        }),
-      ).length;
+    // RED-B (AC-073): the right world carries EXACTLY twenty bleacher props
+    // and the count is SEED-INVARIANT, so the retired random 1-in-4
+    // archetype draw never produces a bleacher - the bleacher slots are
+    // reserved BY CONSTRUCTION at evenly spaced outer-ring slot indices.
+    // The count no longer varies with the seed: every seed reserves the
+    // same twenty slots.
+    expect(counts).toEqual(
+      NEATRACING_CROWD_FIXTURE_SEEDS.map(
+        () => NEATRACING_RIGHT_WORLD_BLEACHER_COUNT_EXPECTED,
+      ),
+    );
+  });
 
-      // RED-B (AC-073): the bleacher count comes from the NAMED constant
-      // NEATRACING_RIGHT_WORLD_BLEACHER_COUNT = 20, and the emitted world
-      // matches that constant.
-      expect(count).toBe(NEATRACING_RIGHT_WORLD_BLEACHER_COUNT_EXPECTED);
-      expect(count).toBe(observed);
-    });
+  it('derives the bleacher count from the named NEATRACING_RIGHT_WORLD_BLEACHER_COUNT constant', () => {
+    const moduleExports = rightWorldBuilderModule as unknown as Record<
+      string,
+      unknown
+    >;
+    const count = readNamedNumericExport(
+      moduleExports,
+      'NEATRACING_RIGHT_WORLD_BLEACHER_COUNT',
+    );
+    const observed = filterBleacherProps(
+      buildRightWorldProps({
+        seed: 42,
+        ...NEATRACING_CROWD_BUILD_INPUT,
+      }),
+    ).length;
 
-    it('keeps the reserved bleachers in their reserved slot order', () => {
-      // The retired single-host ordering helper is GONE: the bleachers keep
-      // the order of their reserved slots, so the rule-selected host is not
-      // moved into the first bleacher slot any more. The replayed emission
-      // pins the reserved slots, so a reordering breaks the comparison.
-      const violations: string[] = [];
+    // RED-B (AC-073): the bleacher count comes from the NAMED constant
+    // NEATRACING_RIGHT_WORLD_BLEACHER_COUNT = 20, and the emitted world
+    // matches that constant.
+    expect(count).toBe(NEATRACING_RIGHT_WORLD_BLEACHER_COUNT_EXPECTED);
+    expect(count).toBe(observed);
+  });
 
-      for (const input of NEATRACING_STREAM_FIXTURE_INPUTS) {
-        const production = buildRightWorldProps(input);
-        const replayed = replayEmittedProps(input);
+  it('keeps the reserved bleachers in their reserved slot order', () => {
+    // The retired single-host ordering helper is GONE: the bleachers keep
+    // the order of their reserved slots, so the rule-selected host is not
+    // moved into the first bleacher slot any more. The replayed emission
+    // pins the reserved slots, so a reordering breaks the comparison.
+    const violations: string[] = [];
 
-        const productionBleachers = production
-          .filter((prop) => (prop as unknown as { kind: string }).kind === 'bleacher')
-          .map((prop) =>
-            propStreamKey({
-              kind: (prop as unknown as { kind: string }).kind,
-              x: prop.position[0],
-              z: prop.position[2],
-              color: prop.color,
-            }),
-          );
-        const replayedBleachers = replayed
-          .filter((prop) => prop.kind === 'bleacher')
-          .map((prop) => propStreamKey(prop));
+    for (const input of NEATRACING_STREAM_FIXTURE_INPUTS) {
+      const production = buildRightWorldProps(input);
+      const replayed = replayEmittedProps(input);
 
-        if (productionBleachers.join('|') !== replayedBleachers.join('|')) {
-          violations.push(
-            `seed=${input.seed} bucket=${input.sizeBucket}`,
-          );
-        }
-      }
-
-      expect(violations).toEqual([]);
-    });
-
-    it('still selects the rule-selected crowd host among the bleachers', () => {
-      const missing: string[] = [];
-
-      for (const input of NEATRACING_STREAM_FIXTURE_INPUTS) {
-        const production = buildRightWorldProps(input);
-        const host = selectBleacherHostProp(production);
-
-        // The named rule (largest hosting footprint area, ties broken by the
-        // lowest prop index) is RETAINED; only the MOVE of the host into the
-        // first bleacher slot is retired.
-        if (!host || !production.includes(host)) {
-          missing.push(`seed=${input.seed} bucket=${input.sizeBucket}`);
-        }
-      }
-
-      expect(missing).toEqual([]);
-    });
-
-    it('selects the bleacher of the first reserved slot as the crowd host', () => {
-      // The retired ordering helper moved the host into the first bleacher
-      // slot. The replacement is the CONSTRUCTION itself: every bleacher is
-      // the SAME stand, so the hosting footprint area ties for all of them
-      // and the documented tie-break (the lowest prop index) picks the
-      // bleacher of the FIRST reserved slot. The seat-anchor consumer fills
-      // the seats in prop order, so the host is the bleacher whose seats are
-      // consumed first and the host always receives its spectators.
-      const violations: string[] = [];
-
-      for (const input of NEATRACING_STREAM_FIXTURE_INPUTS) {
-        const production = buildRightWorldProps(input);
-        const bleachers = filterBleacherProps(production);
-        const host = selectBleacherHostProp(production);
-        const firstBleacher = bleachers[0];
-
-        if (!host || !firstBleacher || host !== firstBleacher) {
-          violations.push(`seed=${input.seed} bucket=${input.sizeBucket}`);
-          continue;
-        }
-
-        const areas = new Set(
-          bleachers.map((bleacher) =>
-            getBleacherHostingFootprintArea(bleacher),
-          ),
-        );
-        if (areas.size !== 1) {
-          violations.push(
-            `seed=${input.seed} bucket=${input.sizeBucket} areas=${areas.size}`,
-          );
-        }
-
-        // The hosting area is the STAND footprint measured in the bleacher's
-        // own local frame, so it equals the named footprint product and does
-        // not change with the rotation of the stand.
-        const area = getBleacherHostingFootprintArea(firstBleacher);
-        if (
-          area !==
-          NEATRACING_RIGHT_WORLD_BLEACHER_FOOTPRINT_WIDTH_M *
-            NEATRACING_RIGHT_WORLD_BLEACHER_FOOTPRINT_DEPTH_M
-        ) {
-          violations.push(
-            `seed=${input.seed} bucket=${input.sizeBucket} area=${area}`,
-          );
-        }
-      }
-
-      expect(violations).toEqual([]);
-    });
-
-    it('pins the named outer-ring rule constants', () => {
-      // The ring rule is driven by NAMED constants, so a silent change of a
-      // rule input shows up here instead of quietly reshaping the world.
-      expect(NEATRACING_RIGHT_WORLD_BLEACHER_COUNT).toBe(20);
-      expect(NEATRACING_RIGHT_WORLD_PEOPLE_RING_COUNT).toBe(10);
-      expect(NEATRACING_RIGHT_WORLD_SAMPLES_PER_RING_SLOT).toBe(10);
-      expect(NEATRACING_RIGHT_WORLD_MIN_RING_BLOCKS).toBe(2);
-      expect(NEATRACING_RIGHT_WORLD_BLEACHER_FOOTPRINT_WIDTH_M).toBe(9);
-      expect(NEATRACING_RIGHT_WORLD_BLEACHER_FOOTPRINT_DEPTH_M).toBe(14);
-      // The separation floor is the sum of the two circumradii of the
-      // footprint, rounded UP to the next tenth of a meter.
-      expect(NEATRACING_RIGHT_WORLD_BLEACHER_MIN_SEPARATION_M).toBe(16.7);
-    });
-
-    it('reserves the bleacher slots at one even stride across the whole ring', () => {
-      // The reserved slots are spread over the ring at ONE even stride, so
-      // the twenty bleachers sit evenly along the track. The rule is checked
-      // against the PRODUCTION selector, so a silent change of the stride
-      // shows up here instead of quietly bunching the stands.
-      const slotCount = resolveOuterRingSlotCount(108);
-      const reserved = selectBleacherSlotIndices(slotCount);
-
-      // The reachable slot count is two blocks of twenty: twenty bleachers
-      // and twenty scenery props.
-      expect(slotCount).toBe(NEATRACING_RIGHT_WORLD_BLEACHER_COUNT * 2);
-      expect(reserved).toHaveLength(NEATRACING_RIGHT_WORLD_BLEACHER_COUNT);
-      // Every reserved slot is a distinct slot of the ring.
-      expect(new Set(reserved).size).toBe(
-        NEATRACING_RIGHT_WORLD_BLEACHER_COUNT,
-      );
-      // The reserved slots start at the first slot of the ring and stay
-      // inside it.
-      expect(reserved[0]).toBe(0);
-      expect(Math.max(...reserved)).toBeLessThan(slotCount);
-      // The stride between two reserved slots is the same everywhere.
-      const strides = reserved
-        .slice(1)
-        .map((slot, index) => slot - reserved[index]!);
-      expect(new Set(strides).size).toBe(1);
-      expect(strides[0]).toBe(
-        slotCount / NEATRACING_RIGHT_WORLD_BLEACHER_COUNT,
-      );
-    });
-
-    it('keeps every pair of bleachers separated in world space', () => {
-      // AC-073: no two bleachers overlap in world space. Two bleachers whose
-      // FOOTPRINT CENTRES are closer than the sum of their circumradii COULD
-      // overlap, so the named separation floor is a sufficient no-overlap
-      // condition. The contract measures the footprint centres - the
-      // quantity the floor is derived from - and the prop anchors as well:
-      // the anchor sits 2.5 m in front of the footprint centre, so the
-      // anchor distance is a proxy that is only sufficient 5 m above the
-      // floor, while the centre distance IS the floor.
-      // The bleacher count is NEVER lowered to fit a short track: the
-      // reserved slots are fixed, and the realized separation is measured
-      // per fixture below, so a track that is too short for twenty stands
-      // shows up here as a violation instead of a silently reduced count.
-      //
-      // The sweep covers the AC seed set {0, 7, 42, 61, 123, 1337, 2777,
-      // 4242} of the count contract, so the no-overlap clause is proven on
-      // the SAME seeds the count is seed-invariant on, and it keeps the
-      // reachable-configuration tuple set on top.
-      const inputs: readonly TrackSlabBuildInput[] = [
-        ...NEATRACING_STREAM_FIXTURE_INPUTS,
-        ...NEATRACING_CROWD_FIXTURE_SEEDS.map((seed) => ({
-          seed,
-          ...NEATRACING_CROWD_BUILD_INPUT,
-        })),
-      ];
-      const violations: string[] = [];
-
-      for (const input of inputs) {
-        const bleachers = filterBleacherProps(buildRightWorldProps(input));
-
-        for (let i = 0; i < bleachers.length; i += 1) {
-          for (let j = i + 1; j < bleachers.length; j += 1) {
-            const left = bleachers[i]!;
-            const right = bleachers[j]!;
-            const anchorDistance = Math.hypot(
-              left.position[0] - right.position[0],
-              left.position[2] - right.position[2],
-            );
-            const leftCentre = bleacherFootprintCentre(left);
-            const rightCentre = bleacherFootprintCentre(right);
-            const centreDistance = Math.hypot(
-              leftCentre[0] - rightCentre[0],
-              leftCentre[1] - rightCentre[1],
-            );
-
-            if (
-              anchorDistance < NEATRACING_RIGHT_WORLD_BLEACHER_MIN_SEPARATION_M
-            ) {
-              violations.push(
-                `seed=${input.seed} bucket=${input.sizeBucket} pair=${i},${j} anchorDistance=${anchorDistance.toFixed(3)}`,
-              );
-            }
-            if (
-              centreDistance < NEATRACING_RIGHT_WORLD_BLEACHER_MIN_SEPARATION_M
-            ) {
-              violations.push(
-                `seed=${input.seed} bucket=${input.sizeBucket} pair=${i},${j} centreDistance=${centreDistance.toFixed(3)}`,
-              );
-            }
-          }
-        }
-      }
-
-      expect(violations).toEqual([]);
-    });
-
-    it('emits exactly twenty bleacher props in every reachable track configuration', () => {
-      const counts = NEATRACING_STREAM_FIXTURE_INPUTS.map(
-        (input) => filterBleacherProps(buildRightWorldProps(input)).length,
-      );
-
-      // RED-B (AC-073): the bleacher slots are reserved BY CONSTRUCTION at
-      // evenly spaced outer-ring slot indices, so EVERY reachable track
-      // configuration carries the same twenty bleachers. The count does not
-      // change with the reachable configuration any more.
-      expect(counts).toEqual(
-        NEATRACING_STREAM_FIXTURE_INPUTS.map(
-          () => NEATRACING_RIGHT_WORLD_BLEACHER_COUNT_EXPECTED,
-        ),
-      );
-    });
-  },
-);
-
-describe(
-  'inner-ring pit people band (AC-074, P1-crowd2-bleacher-count)',
-  () => {
-    it('carries the mechanic, crew and team-banner prop kinds on the inner ring', () => {
-      const violations: string[] = [];
-
-      for (const seed of NEATRACING_CROWD_FIXTURE_SEEDS) {
-        const props = buildRightWorldProps({
-          seed,
-          ...NEATRACING_CROWD_BUILD_INPUT,
-        });
-        const innerKinds = new Set(
-          props
-            .filter(
-              (prop) =>
-                (prop as unknown as { ringSide: string }).ringSide === 'inner',
-            )
-            .map((prop) => (prop as unknown as { kind: string }).kind),
-        );
-
-        for (const required of NEATRACING_TEST_INNER_RING_PEOPLE_KINDS) {
-          if (!innerKinds.has(required)) {
-            violations.push(`seed=${seed} missing=${required}`);
-          }
-        }
-      }
-
-      // AC-074: the three people kinds are re-authored on the INNER ring, so
-      // the assembled scene carries the mechanic, the crew, and the team
-      // banner props at every seed.
-      expect(violations).toEqual([]);
-    });
-
-    it('emits one people prop per bleacher pair and keeps the world inside the density budget', () => {
-      const violations: string[] = [];
-
-      for (const seed of NEATRACING_CROWD_FIXTURE_SEEDS) {
-        const props = buildRightWorldProps({
-          seed,
-          ...NEATRACING_CROWD_BUILD_INPUT,
-        });
-        const innerCount = props.filter(
-          (prop) => (prop as unknown as { ringSide: string }).ringSide === 'inner',
-        ).length;
-        const bleacherCount = props.filter(
+      const productionBleachers = production
+        .filter(
           (prop) => (prop as unknown as { kind: string }).kind === 'bleacher',
-        ).length;
+        )
+        .map((prop) =>
+          propStreamKey({
+            kind: (prop as unknown as { kind: string }).kind,
+            x: prop.position[0],
+            z: prop.position[2],
+            color: prop.color,
+          }),
+        );
+      const replayedBleachers = replayed
+        .filter((prop) => prop.kind === 'bleacher')
+        .map((prop) => propStreamKey(prop));
 
-        // The pit band places one prop at every midpoint between two
-        // reserved bleacher slots, so the band holds one prop per bleacher
-        // PAIR.
-        if (innerCount !== Math.floor(bleacherCount / 2)) {
-          violations.push(
-            `seed=${seed} inner=${innerCount} bleachers=${bleacherCount}`,
-          );
-        }
-        // The emitted band size also matches the PRODUCTION band constant,
-        // so the two rings cannot drift apart silently.
-        if (innerCount !== NEATRACING_RIGHT_WORLD_PEOPLE_RING_COUNT) {
-          violations.push(
-            `seed=${seed} inner=${innerCount} expected=${NEATRACING_RIGHT_WORLD_PEOPLE_RING_COUNT}`,
-          );
-        }
-        // The named density budget covers BOTH rings, so the outer ring
-        // reserves the pit band before it counts its own slots.
-        if (props.length > NEATRACING_RIGHT_WORLD_PROP_DENSITY_BUDGET) {
-          violations.push(`seed=${seed} props=${props.length}`);
-        }
+      if (productionBleachers.join('|') !== replayedBleachers.join('|')) {
+        violations.push(`seed=${input.seed} bucket=${input.sizeBucket}`);
+      }
+    }
+
+    expect(violations).toEqual([]);
+  });
+
+  it('still selects the rule-selected crowd host among the bleachers', () => {
+    const missing: string[] = [];
+
+    for (const input of NEATRACING_STREAM_FIXTURE_INPUTS) {
+      const production = buildRightWorldProps(input);
+      const host = selectBleacherHostProp(production);
+
+      // The named rule (largest hosting footprint area, ties broken by the
+      // lowest prop index) is RETAINED; only the MOVE of the host into the
+      // first bleacher slot is retired.
+      if (!host || !production.includes(host)) {
+        missing.push(`seed=${input.seed} bucket=${input.sizeBucket}`);
+      }
+    }
+
+    expect(missing).toEqual([]);
+  });
+
+  it('selects the bleacher of the first reserved slot as the crowd host', () => {
+    // The retired ordering helper moved the host into the first bleacher
+    // slot. The replacement is the CONSTRUCTION itself: every bleacher is
+    // the SAME stand, so the hosting footprint area ties for all of them
+    // and the documented tie-break (the lowest prop index) picks the
+    // bleacher of the FIRST reserved slot. The seat-anchor consumer fills
+    // the seats in prop order, so the host is the bleacher whose seats are
+    // consumed first and the host always receives its spectators.
+    const violations: string[] = [];
+
+    for (const input of NEATRACING_STREAM_FIXTURE_INPUTS) {
+      const production = buildRightWorldProps(input);
+      const bleachers = filterBleacherProps(production);
+      const host = selectBleacherHostProp(production);
+      const firstBleacher = bleachers[0];
+
+      if (!host || !firstBleacher || host !== firstBleacher) {
+        violations.push(`seed=${input.seed} bucket=${input.sizeBucket}`);
+        continue;
       }
 
-      expect(violations).toEqual([]);
-      // The band size is pinned against the PRODUCTION constant and not
-      // against a literal that repeats the same arithmetic: the test-local
-      // mirror states what the band must hold, the production constant
-      // states what it does hold.
-      expect(NEATRACING_TEST_PEOPLE_RING_COUNT).toBe(
-        NEATRACING_RIGHT_WORLD_PEOPLE_RING_COUNT,
+      const areas = new Set(
+        bleachers.map((bleacher) => getBleacherHostingFootprintArea(bleacher)),
       );
-    });
+      if (areas.size !== 1) {
+        violations.push(
+          `seed=${input.seed} bucket=${input.sizeBucket} areas=${areas.size}`,
+        );
+      }
 
-    it('keeps every bleacher on the outer ring', () => {
-      const violations: string[] = [];
+      // The hosting area is the STAND footprint measured in the bleacher's
+      // own local frame, so it equals the named footprint product and does
+      // not change with the rotation of the stand.
+      const area = getBleacherHostingFootprintArea(firstBleacher);
+      if (
+        area !==
+        NEATRACING_RIGHT_WORLD_BLEACHER_FOOTPRINT_WIDTH_M *
+          NEATRACING_RIGHT_WORLD_BLEACHER_FOOTPRINT_DEPTH_M
+      ) {
+        violations.push(
+          `seed=${input.seed} bucket=${input.sizeBucket} area=${area}`,
+        );
+      }
+    }
 
-      for (const seed of NEATRACING_CROWD_FIXTURE_SEEDS) {
-        const props = buildRightWorldProps({
-          seed,
-          ...NEATRACING_CROWD_BUILD_INPUT,
-        });
+    expect(violations).toEqual([]);
+  });
 
-        for (const prop of props) {
+  it('pins the named outer-ring rule constants', () => {
+    // The ring rule is driven by NAMED constants, so a silent change of a
+    // rule input shows up here instead of quietly reshaping the world.
+    expect(NEATRACING_RIGHT_WORLD_BLEACHER_COUNT).toBe(20);
+    expect(NEATRACING_RIGHT_WORLD_PEOPLE_RING_COUNT).toBe(10);
+    expect(NEATRACING_RIGHT_WORLD_SAMPLES_PER_RING_SLOT).toBe(10);
+    expect(NEATRACING_RIGHT_WORLD_MIN_RING_BLOCKS).toBe(2);
+    expect(NEATRACING_RIGHT_WORLD_BLEACHER_FOOTPRINT_WIDTH_M).toBe(9);
+    expect(NEATRACING_RIGHT_WORLD_BLEACHER_FOOTPRINT_DEPTH_M).toBe(14);
+    // The separation floor is the sum of the two circumradii of the
+    // footprint, rounded UP to the next tenth of a meter.
+    expect(NEATRACING_RIGHT_WORLD_BLEACHER_MIN_SEPARATION_M).toBe(16.7);
+  });
+
+  it('reserves the bleacher slots at one even stride across the whole ring', () => {
+    // The reserved slots are spread over the ring at ONE even stride, so
+    // the twenty bleachers sit evenly along the track. The rule is checked
+    // against the PRODUCTION selector, so a silent change of the stride
+    // shows up here instead of quietly bunching the stands.
+    const slotCount = resolveOuterRingSlotCount(108);
+    const reserved = selectBleacherSlotIndices(slotCount);
+
+    // The reachable slot count is two blocks of twenty: twenty bleachers
+    // and twenty scenery props.
+    expect(slotCount).toBe(NEATRACING_RIGHT_WORLD_BLEACHER_COUNT * 2);
+    expect(reserved).toHaveLength(NEATRACING_RIGHT_WORLD_BLEACHER_COUNT);
+    // Every reserved slot is a distinct slot of the ring.
+    expect(new Set(reserved).size).toBe(NEATRACING_RIGHT_WORLD_BLEACHER_COUNT);
+    // The reserved slots start at the first slot of the ring and stay
+    // inside it.
+    expect(reserved[0]).toBe(0);
+    expect(Math.max(...reserved)).toBeLessThan(slotCount);
+    // The stride between two reserved slots is the same everywhere.
+    const strides = reserved
+      .slice(1)
+      .map((slot, index) => slot - reserved[index]!);
+    expect(new Set(strides).size).toBe(1);
+    expect(strides[0]).toBe(slotCount / NEATRACING_RIGHT_WORLD_BLEACHER_COUNT);
+  });
+
+  it('keeps every pair of bleachers separated in world space', () => {
+    // AC-073: no two bleachers overlap in world space. Two bleachers whose
+    // FOOTPRINT CENTRES are closer than the sum of their circumradii COULD
+    // overlap, so the named separation floor is a sufficient no-overlap
+    // condition. The contract measures the footprint centres - the
+    // quantity the floor is derived from - and the prop anchors as well:
+    // the anchor sits 2.5 m in front of the footprint centre, so the
+    // anchor distance is a proxy that is only sufficient 5 m above the
+    // floor, while the centre distance IS the floor.
+    // The bleacher count is NEVER lowered to fit a short track: the
+    // reserved slots are fixed, and the realized separation is measured
+    // per fixture below, so a track that is too short for twenty stands
+    // shows up here as a violation instead of a silently reduced count.
+    //
+    // The sweep covers the AC seed set {0, 7, 42, 61, 123, 1337, 2777,
+    // 4242} of the count contract, so the no-overlap clause is proven on
+    // the SAME seeds the count is seed-invariant on, and it keeps the
+    // reachable-configuration tuple set on top.
+    const inputs: readonly TrackSlabBuildInput[] = [
+      ...NEATRACING_STREAM_FIXTURE_INPUTS,
+      ...NEATRACING_CROWD_FIXTURE_SEEDS.map((seed) => ({
+        seed,
+        ...NEATRACING_CROWD_BUILD_INPUT,
+      })),
+    ];
+    const violations: string[] = [];
+
+    for (const input of inputs) {
+      const bleachers = filterBleacherProps(buildRightWorldProps(input));
+
+      for (let i = 0; i < bleachers.length; i += 1) {
+        for (let j = i + 1; j < bleachers.length; j += 1) {
+          const left = bleachers[i]!;
+          const right = bleachers[j]!;
+          const anchorDistance = Math.hypot(
+            left.position[0] - right.position[0],
+            left.position[2] - right.position[2],
+          );
+          const leftCentre = bleacherFootprintCentre(left);
+          const rightCentre = bleacherFootprintCentre(right);
+          const centreDistance = Math.hypot(
+            leftCentre[0] - rightCentre[0],
+            leftCentre[1] - rightCentre[1],
+          );
+
           if (
-            (prop as unknown as { kind: string }).kind === 'bleacher' &&
-            (prop as unknown as { ringSide: string }).ringSide !== 'outer'
+            anchorDistance < NEATRACING_RIGHT_WORLD_BLEACHER_MIN_SEPARATION_M
           ) {
-            violations.push(`seed=${seed}`);
+            violations.push(
+              `seed=${input.seed} bucket=${input.sizeBucket} pair=${i},${j} anchorDistance=${anchorDistance.toFixed(3)}`,
+            );
+          }
+          if (
+            centreDistance < NEATRACING_RIGHT_WORLD_BLEACHER_MIN_SEPARATION_M
+          ) {
+            violations.push(
+              `seed=${input.seed} bucket=${input.sizeBucket} pair=${i},${j} centreDistance=${centreDistance.toFixed(3)}`,
+            );
           }
         }
       }
+    }
 
-      expect(violations).toEqual([]);
-    });
+    expect(violations).toEqual([]);
+  });
 
-    it('measures the road-edge offset of every prop at the track sample it was placed on', () => {
-      // The AC-074 road-edge metric is measured at the NEAREST track sample
-      // of a prop. The metric is only exact when that nearest sample IS the
-      // track sample the prop was placed on, so the identity is pinned here
-      // instead of being left to a comment: a track shape that puts a prop
-      // nearer a different sample fails this test loudly.
-      const violations: string[] = [];
-      const inputs: readonly TrackSlabBuildInput[] = [
-        ...NEATRACING_STREAM_FIXTURE_INPUTS,
-        ...NEATRACING_CROWD_FIXTURE_SEEDS.map((seed) => ({
-          seed,
-          ...NEATRACING_CROWD_BUILD_INPUT,
-        })),
-      ];
+  it('emits exactly twenty bleacher props in every reachable track configuration', () => {
+    const counts = NEATRACING_STREAM_FIXTURE_INPUTS.map(
+      (input) => filterBleacherProps(buildRightWorldProps(input)).length,
+    );
 
-      for (const input of inputs) {
-        const samples = generateTrack(input).splineSamples;
-        const props = buildRightWorldProps(input);
-        const outerSlotCount = resolveOuterRingSlotCount(samples.length);
-        const bleacherSlotIndices = selectBleacherSlotIndices(outerSlotCount);
-        const peopleSampleIndices = selectPeopleRingSampleIndices(
-          samples,
-          bleacherSlotIndices,
-          outerSlotCount,
-        );
-        const outerProps = props.filter(
-          (prop) =>
-            (prop as unknown as { ringSide: string }).ringSide === 'outer',
-        );
-        const innerProps = props.filter(
-          (prop) =>
-            (prop as unknown as { ringSide: string }).ringSide === 'inner',
-        );
+    // RED-B (AC-073): the bleacher slots are reserved BY CONSTRUCTION at
+    // evenly spaced outer-ring slot indices, so EVERY reachable track
+    // configuration carries the same twenty bleachers. The count does not
+    // change with the reachable configuration any more.
+    expect(counts).toEqual(
+      NEATRACING_STREAM_FIXTURE_INPUTS.map(
+        () => NEATRACING_RIGHT_WORLD_BLEACHER_COUNT_EXPECTED,
+      ),
+    );
+  });
+});
 
-        outerProps.forEach((prop, index) => {
-          const placement = samples[
-            Math.floor((index * samples.length) / outerSlotCount)
-          ]!;
+describe('inner-ring pit people band (AC-074, P1-crowd2-bleacher-count)', () => {
+  it('carries the mechanic, crew and team-banner prop kinds on the inner ring', () => {
+    const violations: string[] = [];
 
-          if (
-            nearestSample(samples, prop.position[0], prop.position[2]) !==
-            placement
-          ) {
-            violations.push(
-              `seed=${input.seed} bucket=${input.sizeBucket} outer=${index}`,
-            );
-          }
-        });
-
-        innerProps.forEach((prop, index) => {
-          const placement = samples[peopleSampleIndices[index]!]!;
-
-          if (
-            nearestSample(samples, prop.position[0], prop.position[2]) !==
-            placement
-          ) {
-            violations.push(
-              `seed=${input.seed} bucket=${input.sizeBucket} inner=${index}`,
-            );
-          }
-        });
-      }
-
-      expect(violations).toEqual([]);
-    });
-
-    it('places the inner-ring people props closer to the road than the bleachers', () => {
-      const violations: string[] = [];
-
-      for (const seed of NEATRACING_CROWD_FIXTURE_SEEDS) {
-        const spec = generateTrack({
-          seed,
-          ...NEATRACING_CROWD_BUILD_INPUT,
-        });
-        const profile = resolveTrackEdgeProfile(spec.segments);
-        const props = buildRightWorldProps({
-          seed,
-          ...NEATRACING_CROWD_BUILD_INPUT,
-        });
-        const innerClearances = props
+    for (const seed of NEATRACING_CROWD_FIXTURE_SEEDS) {
+      const props = buildRightWorldProps({
+        seed,
+        ...NEATRACING_CROWD_BUILD_INPUT,
+      });
+      const innerKinds = new Set(
+        props
           .filter(
             (prop) =>
               (prop as unknown as { ringSide: string }).ringSide === 'inner',
           )
-          .map((prop) => computeSeamClearanceBeyondEdge(spec, profile, prop));
-        const bleacherClearances = props
-          .filter(
-            (prop) =>
-              (prop as unknown as { kind: string }).kind === 'bleacher',
-          )
-          .map((prop) => computeSeamClearanceBeyondEdge(spec, profile, prop));
+          .map((prop) => (prop as unknown as { kind: string }).kind),
+      );
 
-        // AC-074: the pit band sits CLOSER to the road EDGE than the
-        // bleachers. The clearance is measured beyond the SEAM EDGE - the
-        // ONE edge the road publishes - so the two bands are compared on
-        // the same scale.
-        const innerMax = Math.max(...innerClearances);
-        const bleacherMin = Math.min(...bleacherClearances);
-
-        if (innerMax >= bleacherMin) {
-          violations.push(
-            `seed=${seed} innerMax=${innerMax.toFixed(2)} bleacherMin=${bleacherMin.toFixed(2)}`,
-          );
-        }
-
-        // The two bands also sit in their OWN corridors, re-pinned to the
-        // MEASURED post-14V corridors on the seam scale: the pit props
-        // 14.06 m to 16.11 m and the bleachers 18.39 m to 22.59 m beyond
-        // the SEAM edge. The retired corridors - the pit props 3 m to 5 m
-        // and the bleachers 6 m to 10 m beyond the road edge - pinned the
-        // retired spline-normal distance model.
-        for (const clearance of innerClearances) {
-          if (
-            clearance < NEATRACING_TEST_INNER_BAND_CORRIDOR_MIN_M - 1e-9 ||
-            clearance > NEATRACING_TEST_INNER_BAND_CORRIDOR_MAX_M + 1e-9
-          ) {
-            violations.push(
-              `seed=${seed} innerClearance=${clearance.toFixed(3)}`,
-            );
-          }
-        }
-        for (const clearance of bleacherClearances) {
-          if (
-            clearance < NEATRACING_TEST_BLEACHER_BAND_CORRIDOR_MIN_M - 1e-9 ||
-            clearance > NEATRACING_TEST_BLEACHER_BAND_CORRIDOR_MAX_M + 1e-9
-          ) {
-            violations.push(
-              `seed=${seed} bleacherClearance=${clearance.toFixed(3)}`,
-            );
-          }
+      for (const required of NEATRACING_TEST_INNER_RING_PEOPLE_KINDS) {
+        if (!innerKinds.has(required)) {
+          violations.push(`seed=${seed} missing=${required}`);
         }
       }
+    }
 
-      expect(violations).toEqual([]);
-    });
-  },
-);
+    // AC-074: the three people kinds are re-authored on the INNER ring, so
+    // the assembled scene carries the mechanic, the crew, and the team
+    // banner props at every seed.
+    expect(violations).toEqual([]);
+  });
 
-describe(
-  'prop emission RNG stream preservation (AC-069/AC-070, B5)',
-  () => {
-    it('emits every prop exactly as the replayed xorshift32 stream predicts', () => {
-      // B5: the reserved bleacher slot consumes its kind draw like every
-      // other slot, so the stream never shifts. The replay below re-derives
-      // the seed, the PRNG, the station mapping, and the per-slot draw order
-      // (offset, kind, colour) and compares the result with the production
-      // output. A reservation that skipped a draw, reordered a draw, or
-      // changed a colour would shift every later slot and fail here.
-      const mismatches: string[] = [];
+  it('emits one people prop per bleacher pair and keeps the world inside the density budget', () => {
+    const violations: string[] = [];
 
-      for (const input of NEATRACING_STREAM_FIXTURE_INPUTS) {
-        const production = buildRightWorldProps(input);
-        const replayed = replayEmittedProps(input);
+    for (const seed of NEATRACING_CROWD_FIXTURE_SEEDS) {
+      const props = buildRightWorldProps({
+        seed,
+        ...NEATRACING_CROWD_BUILD_INPUT,
+      });
+      const innerCount = props.filter(
+        (prop) =>
+          (prop as unknown as { ringSide: string }).ringSide === 'inner',
+      ).length;
+      const bleacherCount = props.filter(
+        (prop) => (prop as unknown as { kind: string }).kind === 'bleacher',
+      ).length;
 
-        const productionKeys = production
-          .map((prop) =>
-            propStreamKey({
-              kind: (prop as unknown as { kind: string }).kind,
-              x: prop.position[0],
-              z: prop.position[2],
-              color: prop.color,
-            }),
-          )
-          .sort();
-        const replayedKeys = replayed.map((prop) => propStreamKey(prop)).sort();
+      // The pit band places one prop at every midpoint between two
+      // reserved bleacher slots, so the band holds one prop per bleacher
+      // PAIR.
+      if (innerCount !== Math.floor(bleacherCount / 2)) {
+        violations.push(
+          `seed=${seed} inner=${innerCount} bleachers=${bleacherCount}`,
+        );
+      }
+      // The emitted band size also matches the PRODUCTION band constant,
+      // so the two rings cannot drift apart silently.
+      if (innerCount !== NEATRACING_RIGHT_WORLD_PEOPLE_RING_COUNT) {
+        violations.push(
+          `seed=${seed} inner=${innerCount} expected=${NEATRACING_RIGHT_WORLD_PEOPLE_RING_COUNT}`,
+        );
+      }
+      // The named density budget covers BOTH rings, so the outer ring
+      // reserves the pit band before it counts its own slots.
+      if (props.length > NEATRACING_RIGHT_WORLD_PROP_DENSITY_BUDGET) {
+        violations.push(`seed=${seed} props=${props.length}`);
+      }
+    }
 
+    expect(violations).toEqual([]);
+    // The band size is pinned against the PRODUCTION constant and not
+    // against a literal that repeats the same arithmetic: the test-local
+    // mirror states what the band must hold, the production constant
+    // states what it does hold.
+    expect(NEATRACING_TEST_PEOPLE_RING_COUNT).toBe(
+      NEATRACING_RIGHT_WORLD_PEOPLE_RING_COUNT,
+    );
+  });
+
+  it('keeps every bleacher on the outer ring', () => {
+    const violations: string[] = [];
+
+    for (const seed of NEATRACING_CROWD_FIXTURE_SEEDS) {
+      const props = buildRightWorldProps({
+        seed,
+        ...NEATRACING_CROWD_BUILD_INPUT,
+      });
+
+      for (const prop of props) {
         if (
-          productionKeys.length !== replayedKeys.length ||
-          productionKeys.some((key, index) => key !== replayedKeys[index])
+          (prop as unknown as { kind: string }).kind === 'bleacher' &&
+          (prop as unknown as { ringSide: string }).ringSide !== 'outer'
         ) {
-          mismatches.push(
-            `seed=${input.seed} bucket=${input.sizeBucket} production=[${productionKeys.join(' ')}] replayed=[${replayedKeys.join(' ')}]`,
-          );
+          violations.push(`seed=${seed}`);
         }
       }
+    }
 
-      expect(mismatches).toEqual([]);
-    });
+    expect(violations).toEqual([]);
+  });
 
-    it('burns the three draws of an inner-ring slot even when its track sample is missing', () => {
-      // The inner ring consumes EXACTLY three draws per slot - offset,
-      // archetype, colour - so a missing track sample can never shift the
-      // draw sequence of the following slots. The missing-sample branch is
-      // unreachable on a reachable track, so the contract is pinned here
-      // with a deliberately out-of-range sample index: the slot AFTER the
-      // missing one has to consume the SAME draws as it does when the
-      // skipped slot does have a track sample.
-      const input = NEATRACING_STREAM_FIXTURE_INPUTS[0]!;
+  it('measures the road-edge offset of every prop at the track sample it was placed on', () => {
+    // The AC-074 road-edge metric is measured at the NEAREST track sample
+    // of a prop. The metric is only exact when that nearest sample IS the
+    // track sample the prop was placed on, so the identity is pinned here
+    // instead of being left to a comment: a track shape that puts a prop
+    // nearer a different sample fails this test loudly.
+    const violations: string[] = [];
+    const inputs: readonly TrackSlabBuildInput[] = [
+      ...NEATRACING_STREAM_FIXTURE_INPUTS,
+      ...NEATRACING_CROWD_FIXTURE_SEEDS.map((seed) => ({
+        seed,
+        ...NEATRACING_CROWD_BUILD_INPUT,
+      })),
+    ];
+
+    for (const input of inputs) {
       const samples = generateTrack(input).splineSamples;
-      // The plan is the PRODUCTION PIT BAND, not the retired probe: the
-      // retired `baseOffset: 3 / offsetRange: 2` literals put the WHOLE
-      // band UNDER the USER-NAMED 10 m floor, so `max(10, 3 + roll * 2)`
-      // clamped EVERY slot to the floor - the clearance draw could not
-      // move the band at all, so the position comparison below could not
-      // observe the draw it claims to pin. The re-pinned band is 14 m ..
-      // 16 m, which NEVER clamps at the floor.
-      //
-      // BASIS: the `P1-prop-clearance-repin` ORCHESTRATOR ADVANCE row of
-      // `plans/neatracing-voxel-racer.plans.md` and the P-PC-R row of the
-      // Step 14V CLEARANCE GREEN-slice ledger - the pit band is placed
-      // in the 14 m .. 16 m corridor beyond the seam edge (the pit
-      // band 3 -> 10.5 -> 14, the range 2 unchanged).
-      const plan = {
-        baseOffset: NEATRACING_TEST_PEOPLE_RING_BASE_CLEARANCE_M,
-        offsetRange: NEATRACING_TEST_PEOPLE_RING_CLEARANCE_RANGE_M,
-      };
-      const seeded = (): (() => number) =>
-        replayDeterministicRandom(replayRightWorldSeed(input));
-
-      const withMissingSample = emitRightWorldPeopleRing(samples, seeded(), {
-        ...plan,
-        sampleIndices: [0, samples.length + 1000, 1],
-      });
-      const withPresentSample = emitRightWorldPeopleRing(samples, seeded(), {
-        ...plan,
-        sampleIndices: [0, 2, 1],
-      });
-
-      // The skipped slot burns its three draws, so the third slot of both
-      // runs sits on the same draw positions and comes out identical. A
-      // skipped slot that burned NO draws would move the third slot onto
-      // the draws of the second one and fail here.
-      expect(withMissingSample).toHaveLength(2);
-      expect(withPresentSample).toHaveLength(3);
-      expect(withMissingSample[1]!.position).toEqual(
-        withPresentSample[2]!.position,
+      const props = buildRightWorldProps(input);
+      const outerSlotCount = resolveOuterRingSlotCount(samples.length);
+      const bleacherSlotIndices = selectBleacherSlotIndices(outerSlotCount);
+      const peopleSampleIndices = selectPeopleRingSampleIndices(
+        samples,
+        bleacherSlotIndices,
+        outerSlotCount,
       );
-      expect(withMissingSample[1]!.color).toEqual(
-        withPresentSample[2]!.color,
+      const outerProps = props.filter(
+        (prop) =>
+          (prop as unknown as { ringSide: string }).ringSide === 'outer',
       );
-      // ... and the compared slots really are DIFFERENT props, so the
-      // comparison above is not vacuous.
-      expect(withPresentSample[1]!.position).not.toEqual(
-        withPresentSample[2]!.position,
+      const innerProps = props.filter(
+        (prop) =>
+          (prop as unknown as { ringSide: string }).ringSide === 'inner',
       );
-    });
 
-    it('keeps the non-bleacher props in their emission order', () => {
-      // The retired crowd-host reorder is GONE, so the non-bleacher props
-      // are never moved at all: they keep their emission order, slot for
-      // slot.
-      const orderViolations: string[] = [];
-
-      for (const input of NEATRACING_STREAM_FIXTURE_INPUTS) {
-        const production = buildRightWorldProps(input);
-        const replayed = replayEmittedProps(input);
-
-        const productionKeys = production
-          .filter((prop) => (prop as unknown as { kind: string }).kind !== 'bleacher')
-          .map((prop) =>
-            propStreamKey({
-              kind: (prop as unknown as { kind: string }).kind,
-              x: prop.position[0],
-              z: prop.position[2],
-              color: prop.color,
-            }),
-          );
-        const replayedKeys = replayed
-          .filter((prop) => prop.kind !== 'bleacher')
-          .map((prop) => propStreamKey(prop));
+      outerProps.forEach((prop, index) => {
+        const placement =
+          samples[Math.floor((index * samples.length) / outerSlotCount)]!;
 
         if (
-          productionKeys.length !== replayedKeys.length ||
-          productionKeys.some((key, index) => key !== replayedKeys[index])
+          nearestSample(samples, prop.position[0], prop.position[2]) !==
+          placement
         ) {
-          orderViolations.push(
-            `seed=${input.seed} bucket=${input.sizeBucket}`,
+          violations.push(
+            `seed=${input.seed} bucket=${input.sizeBucket} outer=${index}`,
+          );
+        }
+      });
+
+      innerProps.forEach((prop, index) => {
+        const placement = samples[peopleSampleIndices[index]!]!;
+
+        if (
+          nearestSample(samples, prop.position[0], prop.position[2]) !==
+          placement
+        ) {
+          violations.push(
+            `seed=${input.seed} bucket=${input.sizeBucket} inner=${index}`,
+          );
+        }
+      });
+    }
+
+    expect(violations).toEqual([]);
+  });
+
+  it('places the inner-ring people props closer to the road than the bleachers', () => {
+    const violations: string[] = [];
+
+    for (const seed of NEATRACING_CROWD_FIXTURE_SEEDS) {
+      const spec = generateTrack({
+        seed,
+        ...NEATRACING_CROWD_BUILD_INPUT,
+      });
+      const profile = resolveTrackEdgeProfile(spec.segments);
+      const props = buildRightWorldProps({
+        seed,
+        ...NEATRACING_CROWD_BUILD_INPUT,
+      });
+      const innerClearances = props
+        .filter(
+          (prop) =>
+            (prop as unknown as { ringSide: string }).ringSide === 'inner',
+        )
+        .map((prop) => computeSeamClearanceBeyondEdge(spec, profile, prop));
+      const bleacherClearances = props
+        .filter(
+          (prop) => (prop as unknown as { kind: string }).kind === 'bleacher',
+        )
+        .map((prop) => computeSeamClearanceBeyondEdge(spec, profile, prop));
+
+      // AC-074: the pit band sits CLOSER to the road EDGE than the
+      // bleachers. The clearance is measured beyond the SEAM EDGE - the
+      // ONE edge the road publishes - so the two bands are compared on
+      // the same scale.
+      const innerMax = Math.max(...innerClearances);
+      const bleacherMin = Math.min(...bleacherClearances);
+
+      if (innerMax >= bleacherMin) {
+        violations.push(
+          `seed=${seed} innerMax=${innerMax.toFixed(2)} bleacherMin=${bleacherMin.toFixed(2)}`,
+        );
+      }
+
+      // The two bands also sit in their OWN corridors, re-pinned to the
+      // MEASURED post-14V corridors on the seam scale: the pit props
+      // 14.06 m to 16.11 m and the bleachers 18.39 m to 22.59 m beyond
+      // the SEAM edge. The retired corridors - the pit props 3 m to 5 m
+      // and the bleachers 6 m to 10 m beyond the road edge - pinned the
+      // retired spline-normal distance model.
+      for (const clearance of innerClearances) {
+        if (
+          clearance < NEATRACING_TEST_INNER_BAND_CORRIDOR_MIN_M - 1e-9 ||
+          clearance > NEATRACING_TEST_INNER_BAND_CORRIDOR_MAX_M + 1e-9
+        ) {
+          violations.push(
+            `seed=${seed} innerClearance=${clearance.toFixed(3)}`,
           );
         }
       }
+      for (const clearance of bleacherClearances) {
+        if (
+          clearance < NEATRACING_TEST_BLEACHER_BAND_CORRIDOR_MIN_M - 1e-9 ||
+          clearance > NEATRACING_TEST_BLEACHER_BAND_CORRIDOR_MAX_M + 1e-9
+        ) {
+          violations.push(
+            `seed=${seed} bleacherClearance=${clearance.toFixed(3)}`,
+          );
+        }
+      }
+    }
 
-      expect(orderViolations).toEqual([]);
+    expect(violations).toEqual([]);
+  });
+});
+
+describe('prop emission RNG stream preservation (AC-069/AC-070, B5)', () => {
+  it('emits every prop exactly as the replayed xorshift32 stream predicts', () => {
+    // B5: the reserved bleacher slot consumes its kind draw like every
+    // other slot, so the stream never shifts. The replay below re-derives
+    // the seed, the PRNG, the station mapping, and the per-slot draw order
+    // (offset, kind, colour) and compares the result with the production
+    // output. A reservation that skipped a draw, reordered a draw, or
+    // changed a colour would shift every later slot and fail here.
+    const mismatches: string[] = [];
+
+    for (const input of NEATRACING_STREAM_FIXTURE_INPUTS) {
+      const production = buildRightWorldProps(input);
+      const replayed = replayEmittedProps(input);
+
+      const productionKeys = production
+        .map((prop) =>
+          propStreamKey({
+            kind: (prop as unknown as { kind: string }).kind,
+            x: prop.position[0],
+            z: prop.position[2],
+            color: prop.color,
+          }),
+        )
+        .sort();
+      const replayedKeys = replayed.map((prop) => propStreamKey(prop)).sort();
+
+      if (
+        productionKeys.length !== replayedKeys.length ||
+        productionKeys.some((key, index) => key !== replayedKeys[index])
+      ) {
+        mismatches.push(
+          `seed=${input.seed} bucket=${input.sizeBucket} production=[${productionKeys.join(' ')}] replayed=[${replayedKeys.join(' ')}]`,
+        );
+      }
+    }
+
+    expect(mismatches).toEqual([]);
+  });
+
+  it('burns the three draws of an inner-ring slot even when its track sample is missing', () => {
+    // The inner ring consumes EXACTLY three draws per slot - offset,
+    // archetype, colour - so a missing track sample can never shift the
+    // draw sequence of the following slots. The missing-sample branch is
+    // unreachable on a reachable track, so the contract is pinned here
+    // with a deliberately out-of-range sample index: the slot AFTER the
+    // missing one has to consume the SAME draws as it does when the
+    // skipped slot does have a track sample.
+    const input = NEATRACING_STREAM_FIXTURE_INPUTS[0]!;
+    const samples = generateTrack(input).splineSamples;
+    // The plan is the PRODUCTION PIT BAND, not the retired probe: the
+    // retired `baseOffset: 3 / offsetRange: 2` literals put the WHOLE
+    // band UNDER the USER-NAMED 10 m floor, so `max(10, 3 + roll * 2)`
+    // clamped EVERY slot to the floor - the clearance draw could not
+    // move the band at all, so the position comparison below could not
+    // observe the draw it claims to pin. The re-pinned band is 14 m ..
+    // 16 m, which NEVER clamps at the floor.
+    //
+    // BASIS: the `P1-prop-clearance-repin` ORCHESTRATOR ADVANCE row of
+    // `plans/neatracing-voxel-racer.plans.md` and the P-PC-R row of the
+    // Step 14V CLEARANCE GREEN-slice ledger - the pit band is placed
+    // in the 14 m .. 16 m corridor beyond the seam edge (the pit
+    // band 3 -> 10.5 -> 14, the range 2 unchanged).
+    const plan = {
+      baseOffset: NEATRACING_TEST_PEOPLE_RING_BASE_CLEARANCE_M,
+      offsetRange: NEATRACING_TEST_PEOPLE_RING_CLEARANCE_RANGE_M,
+    };
+    const seeded = (): (() => number) =>
+      replayDeterministicRandom(replayRightWorldSeed(input));
+
+    const withMissingSample = emitRightWorldPeopleRing(samples, seeded(), {
+      ...plan,
+      sampleIndices: [0, samples.length + 1000, 1],
+    });
+    const withPresentSample = emitRightWorldPeopleRing(samples, seeded(), {
+      ...plan,
+      sampleIndices: [0, 2, 1],
     });
 
-    it('keeps the stream stable when the reserved slot is not the first outer slot', () => {
-      // The reachable track geometry reserves evenly spaced outer slots, so
-      // a skipped archetype draw shifts EVERY later prop deterministically -
-      // the stream defect is directly observable in the reachable space.
-      // This contract drives the production ring emitter with a reserved
-      // slot that is NOT the first one, so the same shift is asserted at a
-      // known interior position of the ring.
-      //
-      // The ring band is the re-pinned Step 14V CLEARANCE band beyond the
-      // SEAM edge (12 m + 0..4 m), so the clearance draw of a slot really
-      // moves the slot: a band clamped to the floor would leave the draw
-      // vacuous.
-      const input = NEATRACING_STREAM_FIXTURE_INPUTS[0]!;
-      const spec = generateTrack(input);
-      const samples = spec.splineSamples;
-      const seam = resolveRightWorldSeam(spec.segments);
-      const reservedBleacherSlot = 1;
-      const plan = {
-        slotCount: 4,
-        kinds: NEATRACING_TEST_OUTER_RING_KINDS,
-        baseOffset: NEATRACING_TEST_OUTER_RING_BASE_CLEARANCE_M,
-        offsetRange: NEATRACING_TEST_OUTER_RING_CLEARANCE_RANGE_M,
-        reservedBleacherSlots: [reservedBleacherSlot],
-      };
-      const seeded = (): (() => number) =>
-        replayDeterministicRandom(replayRightWorldSeed(input));
+    // The skipped slot burns its three draws, so the third slot of both
+    // runs sits on the same draw positions and comes out identical. A
+    // skipped slot that burned NO draws would move the third slot onto
+    // the draws of the second one and fail here.
+    expect(withMissingSample).toHaveLength(2);
+    expect(withPresentSample).toHaveLength(3);
+    expect(withMissingSample[1]!.position).toEqual(
+      withPresentSample[2]!.position,
+    );
+    expect(withMissingSample[1]!.color).toEqual(withPresentSample[2]!.color);
+    // ... and the compared slots really are DIFFERENT props, so the
+    // comparison above is not vacuous.
+    expect(withPresentSample[1]!.position).not.toEqual(
+      withPresentSample[2]!.position,
+    );
+  });
 
-      const production = propStreamKeys(
-        emitRightWorldRing(samples, seeded(), plan),
-      );
-      const stable = replayRingProps(seam, samples, seeded(), plan).map(
-        (prop) => propStreamKey(prop),
-      );
-      const shifted = replayRingProps(seam, samples, seeded(), {
-        ...plan,
-        skipArchetypeDrawAt: reservedBleacherSlot,
-      }).map((prop) => propStreamKey(prop));
+  it('keeps the non-bleacher props in their emission order', () => {
+    // The retired crowd-host reorder is GONE, so the non-bleacher props
+    // are never moved at all: they keep their emission order, slot for
+    // slot.
+    const orderViolations: string[] = [];
 
-      // The reservation is not the terminal slot, so a skipped archetype
-      // draw has to move the later slots - that is what gives the
-      // comparison below its teeth.
-      expect(reservedBleacherSlot).toBeLessThan(plan.slotCount - 1);
-      expect(stable).toEqual(production);
-      expect(shifted).not.toEqual(production);
-    });
+    for (const input of NEATRACING_STREAM_FIXTURE_INPUTS) {
+      const production = buildRightWorldProps(input);
+      const replayed = replayEmittedProps(input);
 
-    it('pins the reserved bleachers of every reachable track configuration', () => {
-      // Tripwire for the reachable space: the track generator emits 6..8
-      // spline segments of 18 samples, so the reachable sample counts are
-      // 108, 126, and 144. The outer ring is divided into whole bleacher
-      // blocks, so every reachable configuration carries the same forty
-      // outer slots - TWENTY reserved bleachers plus twenty scenery slots -
-      // and the same ten inner-ring pit props. A change to the track
-      // generator, to the density budget, or to the ring split fails this
-      // test instead of silently weakening the bleacher-count contract.
-      const reachable: readonly {
-        readonly sampleCount: number;
-        readonly innerPropCount: number;
-        readonly outerPropCount: number;
-        readonly bleacherCount: number;
-      }[] = [
-        { sampleCount: 108, innerPropCount: 10, outerPropCount: 40, bleacherCount: 20 },
-        { sampleCount: 126, innerPropCount: 10, outerPropCount: 40, bleacherCount: 20 },
-        { sampleCount: 144, innerPropCount: 10, outerPropCount: 40, bleacherCount: 20 },
-      ];
+      const productionKeys = production
+        .filter(
+          (prop) => (prop as unknown as { kind: string }).kind !== 'bleacher',
+        )
+        .map((prop) =>
+          propStreamKey({
+            kind: (prop as unknown as { kind: string }).kind,
+            x: prop.position[0],
+            z: prop.position[2],
+            color: prop.color,
+          }),
+        );
+      const replayedKeys = replayed
+        .filter((prop) => prop.kind !== 'bleacher')
+        .map((prop) => propStreamKey(prop));
 
-      const derived = deriveReachableRingConfigurations(
-        NEATRACING_STREAM_FIXTURE_INPUTS,
-      );
+      if (
+        productionKeys.length !== replayedKeys.length ||
+        productionKeys.some((key, index) => key !== replayedKeys[index])
+      ) {
+        orderViolations.push(`seed=${input.seed} bucket=${input.sizeBucket}`);
+      }
+    }
 
-      expect(
-        derived.map(
-          (entry) =>
-            `${entry.sampleCount}/${entry.innerPropCount}/${entry.outerPropCount}/${entry.bleacherCount}`,
-        ),
-      ).toEqual(
-        reachable.map(
-          (entry) =>
-            `${entry.sampleCount}/${entry.innerPropCount}/${entry.outerPropCount}/${entry.bleacherCount}`,
-        ),
-      );
-      // The bleacher count is the NAMED constant in every reachable
-      // configuration, independently of the seed and of the sample count.
-      expect(derived.map((entry) => entry.bleacherCount)).toEqual(
-        derived.map(() => NEATRACING_RIGHT_WORLD_BLEACHER_COUNT),
-      );
-    });
+    expect(orderViolations).toEqual([]);
+  });
 
-    it('derives the reachable ring configuration from the track generator', () => {
-      // The pinned table above only holds while the track generator and the
-      // density budget keep the reachable space at those three ring
-      // configurations. This contract derives the reachable set from the
-      // PRODUCTION emission - the prop counts are read back from the emitted
-      // props, not re-derived here - so a silent change to the ring split,
-      // to the density budget, or to the track generator is caught instead
-      // of being mirrored by the test.
-      const derived = deriveReachableRingConfigurations(
-        NEATRACING_STREAM_FIXTURE_INPUTS,
-      );
+  it('keeps the stream stable when the reserved slot is not the first outer slot', () => {
+    // The reachable track geometry reserves evenly spaced outer slots, so
+    // a skipped archetype draw shifts EVERY later prop deterministically -
+    // the stream defect is directly observable in the reachable space.
+    // This contract drives the production ring emitter with a reserved
+    // slot that is NOT the first one, so the same shift is asserted at a
+    // known interior position of the ring.
+    //
+    // The ring band is the re-pinned Step 14V CLEARANCE band beyond the
+    // SEAM edge (12 m + 0..4 m), so the clearance draw of a slot really
+    // moves the slot: a band clamped to the floor would leave the draw
+    // vacuous.
+    const input = NEATRACING_STREAM_FIXTURE_INPUTS[0]!;
+    const spec = generateTrack(input);
+    const samples = spec.splineSamples;
+    const seam = resolveRightWorldSeam(spec.segments);
+    const reservedBleacherSlot = 1;
+    const plan = {
+      slotCount: 4,
+      kinds: NEATRACING_TEST_OUTER_RING_KINDS,
+      baseOffset: NEATRACING_TEST_OUTER_RING_BASE_CLEARANCE_M,
+      offsetRange: NEATRACING_TEST_OUTER_RING_CLEARANCE_RANGE_M,
+      reservedBleacherSlots: [reservedBleacherSlot],
+    };
+    const seeded = (): (() => number) =>
+      replayDeterministicRandom(replayRightWorldSeed(input));
 
-      expect(derived.length).toBeGreaterThan(0);
-      // The inner pit band is back: it carries one people prop per bleacher
-      // PAIR, so it holds half as many props as the outer ring holds
-      // bleachers.
-      expect(derived.map((entry) => entry.innerPropCount)).toEqual(
-        derived.map(
-          (entry) => Math.floor(entry.bleacherCount / 2),
-        ),
-      );
-      // The outer ring is divided into whole bleacher blocks, so its slot
-      // count is a whole multiple of the bleacher count and always offers
-      // at least twenty bleacher slots.
-      expect(
-        derived.map((entry) => entry.outerPropCount % entry.bleacherCount),
-      ).toEqual(derived.map(() => 0));
-      expect(derived.map((entry) => entry.outerPropCount)).toEqual(
-        derived.map((entry) => entry.bleacherCount * 2),
-      );
-      // The whole emission stays inside the named density budget.
-      expect(
-        derived.every(
-          (entry) =>
-            entry.innerPropCount + entry.outerPropCount <=
-            NEATRACING_RIGHT_WORLD_PROP_DENSITY_BUDGET,
-        ),
-      ).toBe(true);
-    });
-  },
-);
+    const production = propStreamKeys(
+      emitRightWorldRing(samples, seeded(), plan),
+    );
+    const stable = replayRingProps(seam, samples, seeded(), plan).map((prop) =>
+      propStreamKey(prop),
+    );
+    const shifted = replayRingProps(seam, samples, seeded(), {
+      ...plan,
+      skipArchetypeDrawAt: reservedBleacherSlot,
+    }).map((prop) => propStreamKey(prop));
+
+    // The reservation is not the terminal slot, so a skipped archetype
+    // draw has to move the later slots - that is what gives the
+    // comparison below its teeth.
+    expect(reservedBleacherSlot).toBeLessThan(plan.slotCount - 1);
+    expect(stable).toEqual(production);
+    expect(shifted).not.toEqual(production);
+  });
+
+  it('pins the reserved bleachers of every reachable track configuration', () => {
+    // Tripwire for the reachable space: the track generator emits 6..8
+    // spline segments of 18 samples, so the reachable sample counts are
+    // 108, 126, and 144. The outer ring is divided into whole bleacher
+    // blocks, so every reachable configuration carries the same forty
+    // outer slots - TWENTY reserved bleachers plus twenty scenery slots -
+    // and the same ten inner-ring pit props. A change to the track
+    // generator, to the density budget, or to the ring split fails this
+    // test instead of silently weakening the bleacher-count contract.
+    const reachable: readonly {
+      readonly sampleCount: number;
+      readonly innerPropCount: number;
+      readonly outerPropCount: number;
+      readonly bleacherCount: number;
+    }[] = [
+      {
+        sampleCount: 108,
+        innerPropCount: 10,
+        outerPropCount: 40,
+        bleacherCount: 20,
+      },
+      {
+        sampleCount: 126,
+        innerPropCount: 10,
+        outerPropCount: 40,
+        bleacherCount: 20,
+      },
+      {
+        sampleCount: 144,
+        innerPropCount: 10,
+        outerPropCount: 40,
+        bleacherCount: 20,
+      },
+    ];
+
+    const derived = deriveReachableRingConfigurations(
+      NEATRACING_STREAM_FIXTURE_INPUTS,
+    );
+
+    expect(
+      derived.map(
+        (entry) =>
+          `${entry.sampleCount}/${entry.innerPropCount}/${entry.outerPropCount}/${entry.bleacherCount}`,
+      ),
+    ).toEqual(
+      reachable.map(
+        (entry) =>
+          `${entry.sampleCount}/${entry.innerPropCount}/${entry.outerPropCount}/${entry.bleacherCount}`,
+      ),
+    );
+    // The bleacher count is the NAMED constant in every reachable
+    // configuration, independently of the seed and of the sample count.
+    expect(derived.map((entry) => entry.bleacherCount)).toEqual(
+      derived.map(() => NEATRACING_RIGHT_WORLD_BLEACHER_COUNT),
+    );
+  });
+
+  it('derives the reachable ring configuration from the track generator', () => {
+    // The pinned table above only holds while the track generator and the
+    // density budget keep the reachable space at those three ring
+    // configurations. This contract derives the reachable set from the
+    // PRODUCTION emission - the prop counts are read back from the emitted
+    // props, not re-derived here - so a silent change to the ring split,
+    // to the density budget, or to the track generator is caught instead
+    // of being mirrored by the test.
+    const derived = deriveReachableRingConfigurations(
+      NEATRACING_STREAM_FIXTURE_INPUTS,
+    );
+
+    expect(derived.length).toBeGreaterThan(0);
+    // The inner pit band is back: it carries one people prop per bleacher
+    // PAIR, so it holds half as many props as the outer ring holds
+    // bleachers.
+    expect(derived.map((entry) => entry.innerPropCount)).toEqual(
+      derived.map((entry) => Math.floor(entry.bleacherCount / 2)),
+    );
+    // The outer ring is divided into whole bleacher blocks, so its slot
+    // count is a whole multiple of the bleacher count and always offers
+    // at least twenty bleacher slots.
+    expect(
+      derived.map((entry) => entry.outerPropCount % entry.bleacherCount),
+    ).toEqual(derived.map(() => 0));
+    expect(derived.map((entry) => entry.outerPropCount)).toEqual(
+      derived.map((entry) => entry.bleacherCount * 2),
+    );
+    // The whole emission stays inside the named density budget.
+    expect(
+      derived.every(
+        (entry) =>
+          entry.innerPropCount + entry.outerPropCount <=
+          NEATRACING_RIGHT_WORLD_PROP_DENSITY_BUDGET,
+      ),
+    ).toBe(true);
+  });
+});
 
 /**
  * The USER-NAMED prop-clearance floor (Step 14V, AC-096).
@@ -2944,8 +2927,7 @@ const measurePropClearances = (
       worldZ,
     );
     const nearestChordM =
-      nearest.distanceM -
-      resolveTrackEdgeHalfWidthM(nearestChord, nearestSide);
+      nearest.distanceM - resolveTrackEdgeHalfWidthM(nearestChord, nearestSide);
 
     return {
       kind: propKindOf(prop),
@@ -3181,303 +3163,279 @@ const measurePropBodyClearances = (
  * against the ONE seam edge, read through BOTH of the road's own readers
  * of it.
  */
-describe(
-  'right-world prop clearance beyond the SEAM edge (Step 14V, slice P1-prop-clearance-red, AC-096)',
-  () => {
-    describe('RED-1 (the USER-NAMED 10 m floor on the SEAM edge)', () => {
-      // [RED-14V-PROP-1-SEAM-FLOOR]
-      it('AC-096: EVERY right-world prop stands at least 10 m beyond the SEAM edge (RED-14V-PROP-1-SEAM-FLOOR)', () => {
-        // Arrange
-        const input = { seed: 42, ...NEATRACING_CROWD_BUILD_INPUT };
-        const spec = generateTrack(input);
-        const profile = resolveTrackEdgeProfile(spec.segments);
-        const props = buildRightWorldProps(input);
+describe('right-world prop clearance beyond the SEAM edge (Step 14V, slice P1-prop-clearance-red, AC-096)', () => {
+  describe('RED-1 (the USER-NAMED 10 m floor on the SEAM edge)', () => {
+    // [RED-14V-PROP-1-SEAM-FLOOR]
+    it('AC-096: EVERY right-world prop stands at least 10 m beyond the SEAM edge (RED-14V-PROP-1-SEAM-FLOOR)', () => {
+      // Arrange
+      const input = { seed: 42, ...NEATRACING_CROWD_BUILD_INPUT };
+      const spec = generateTrack(input);
+      const profile = resolveTrackEdgeProfile(spec.segments);
+      const props = buildRightWorldProps(input);
 
-        // NON-VACUITY GUARD (asserted BEFORE the relational clause): the
-        // lane MUST really place props (an empty prop list would satisfy
-        // the floor vacuously) and it MUST really measure a distance (a
-        // zero reading would satisfy the floor vacuously).
-        expect(props.length).toBeGreaterThan(0);
-        expect(profile.chords.length).toBeGreaterThan(0);
-        expect(
-          profile.chords.every(
-            (chord) =>
-              chord.innerHalfWidthM > 0 && chord.outerHalfWidthM > 0,
-          ),
-        ).toBe(true);
+      // NON-VACUITY GUARD (asserted BEFORE the relational clause): the
+      // lane MUST really place props (an empty prop list would satisfy
+      // the floor vacuously) and it MUST really measure a distance (a
+      // zero reading would satisfy the floor vacuously).
+      expect(props.length).toBeGreaterThan(0);
+      expect(profile.chords.length).toBeGreaterThan(0);
+      expect(
+        profile.chords.every(
+          (chord) => chord.innerHalfWidthM > 0 && chord.outerHalfWidthM > 0,
+        ),
+      ).toBe(true);
 
-        // Act
-        const readings = measurePropClearances(spec, profile, props);
+      // Act
+      const readings = measurePropClearances(spec, profile, props);
 
-        expect(readings.length).toBe(props.length);
-        expect(
-          readings.every(
-            (row) =>
-              Number.isFinite(row.unionM) &&
-              Number.isFinite(row.nearestChordM),
-          ),
-        ).toBe(true);
+      expect(readings.length).toBe(props.length);
+      expect(
+        readings.every(
+          (row) =>
+            Number.isFinite(row.unionM) && Number.isFinite(row.nearestChordM),
+        ),
+      ).toBe(true);
 
-        // Assert
-        // The floor is the USER-NAMED 10 m and is NEVER widened by a
-        // tolerance: a residual violation is a NAMED, MEASURED violation.
-        const kinds = [...new Set(readings.map((row) => row.kind))];
-        const violationLines = kinds
-          .map((kind) =>
-            summarizeGroupViolations(
-              `kind=${kind}`,
-              readings
-                .filter((row) => row.kind === kind)
-                .map((row) => ({
-                  clearanceM: row.unionM,
-                  propLabel: `${row.kind}#${row.index}`,
-                })),
-            ),
-          )
-          .filter((line): line is string => line !== null);
-
-        expect(violationLines).toEqual([]);
-      });
-    });
-
-    describe('RED-2 (the floor holds at EVERY seed and for EVERY prop kind)', () => {
-      // [RED-14V-PROP-2-SEED-BREADTH]
-      it('AC-096: the 10 m floor holds at EVERY published seed and for EVERY prop kind, and the measured worst is reported per seed and per kind (RED-14V-PROP-2-SEED-BREADTH)', () => {
-        // Arrange
-        const seedLines: string[] = [];
-        const kindRows = new Map<
-          string,
-          { clearanceM: number; propLabel: string }[]
-        >();
-
-        // Act - the whole published seed set, NOT one hand-picked seed.
-        for (const seed of NEATRACING_CROWD_FIXTURE_SEEDS) {
-          const input = { seed, ...NEATRACING_CROWD_BUILD_INPUT };
-          const spec = generateTrack(input);
-          const profile = resolveTrackEdgeProfile(spec.segments);
-          const props = buildRightWorldProps(input);
-          const readings = measurePropClearances(spec, profile, props);
-
-          const seedLine = summarizeGroupViolations(
-            `seed=${seed}`,
-            readings.map((row) => ({
-              clearanceM: row.unionM,
-              propLabel: `${row.kind}#${row.index}`,
-            })),
-          );
-
-          if (seedLine !== null) {
-            seedLines.push(seedLine);
-          }
-
-          for (const row of readings) {
-            const rows = kindRows.get(row.kind) ?? [];
-
-            rows.push({
-              clearanceM: row.unionM,
-              propLabel: `${row.kind}#${row.index}@seed${seed}`,
-            });
-            kindRows.set(row.kind, rows);
-          }
-        }
-
-        // NON-VACUITY GUARD (asserted BEFORE the relational clause): the
-        // sweep MUST really cover more than one seed and more than one
-        // prop kind - a single-seed, single-kind sweep would satisfy the
-        // breadth clause vacuously.
-        expect(NEATRACING_CROWD_FIXTURE_SEEDS.length).toBeGreaterThan(1);
-        expect(kindRows.size).toBeGreaterThan(1);
-
-        // Assert
-        const kindLines = [...kindRows.entries()]
-          .map(([kind, rows]) =>
-            summarizeGroupViolations(`kind=${kind}`, rows),
-          )
-          .filter((line): line is string => line !== null);
-
-        expect([...seedLines, ...kindLines]).toEqual([]);
-      });
-    });
-
-    describe(
-      'RED-3 (the prop count, the bleacher count and the determinism are PRESERVED - a LABELLED PRESERVATION GUARD, NEVER counted as a RED)',
-      () => {
-        // [RED-14V-PROP-3-COUNT-PRESERVED]
-        it('AC-096: the right world keeps its reserved prop count, its reserved bleacher count and its density budget (RED-14V-PROP-3-COUNT-PRESERVED)', () => {
-          // Arrange
-          const input = { seed: 42, ...NEATRACING_CROWD_BUILD_INPUT };
-          const spec = generateTrack(input);
-          const props = buildRightWorldProps(input);
-          const expectedPropCount =
-            resolveOuterRingSlotCount(spec.splineSamples.length) +
-            NEATRACING_RIGHT_WORLD_PEOPLE_RING_COUNT;
-          const bleachers = props.filter(
-            (prop) => propKindOf(prop) === 'bleacher',
-          );
-
-          // Assert - no prop is dropped, merged or duplicated to satisfy
-          // the clearance floor.
-          expect(props.length).toBe(expectedPropCount);
-          expect(bleachers.length).toBe(
-            NEATRACING_RIGHT_WORLD_BLEACHER_COUNT,
-          );
-          expect(props.length).toBeLessThanOrEqual(
-            NEATRACING_RIGHT_WORLD_PROP_DENSITY_BUDGET,
-          );
-        });
-
-        // [RED-14V-PROP-3-DETERMINISM-PRESERVED]
-        it('AC-096: the same determinism tuple still yields the same prop list, byte for byte (RED-14V-PROP-3-DETERMINISM-PRESERVED)', () => {
-          // Arrange
-          const input = { seed: 42, ...NEATRACING_CROWD_BUILD_INPUT };
-
-          // Act
-          const first = buildRightWorldProps(input);
-          const second = buildRightWorldProps(input);
-
-          // Assert
-          expect(JSON.stringify(second)).toBe(JSON.stringify(first));
-        });
-      },
-    );
-
-    describe('RED-4 (the world reads the SAME edge as the road)', () => {
-      // [RED-14V-PROP-4-ONE-SEAM]
-      it('AC-095: the clearance is measured against the ONE seam edge - BOTH of the road\'s own readers of it clear the floor (RED-14V-PROP-4-ONE-SEAM)', () => {
-        // Arrange
-        const input = { seed: 42, ...NEATRACING_CROWD_BUILD_INPUT };
-        const spec = generateTrack(input);
-        const profile = resolveTrackEdgeProfile(spec.segments);
-        const props = buildRightWorldProps(input);
-        const readings = measurePropClearances(spec, profile, props);
-
-        // NON-VACUITY GUARD (asserted BEFORE the relational clause): the
-        // lane MUST really compare TWO DIFFERENT readers of the ONE seam
-        // edge. The union reader is a MINIMUM over EVERY published chord,
-        // so it can never report MORE clearance than the nearest-chord
-        // reader, and the seam publishes more than one chord - so the two
-        // readers consult DIFFERENT chord sets and comparing one reader
-        // with itself would satisfy the clause below vacuously.
-        expect(profile.chords.length).toBeGreaterThan(1);
-
-        for (const row of readings) {
-          expect(row.unionM).toBeLessThanOrEqual(
-            row.nearestChordM + CLEARANCE_TOLERANCE_M,
-          );
-        }
-
-        // Assert - BOTH readers of the ONE seam edge must clear the
-        // USER-NAMED floor, so the world and the road can never disagree
-        // about where the edge is.
-        const kinds = [...new Set(readings.map((row) => row.kind))];
-        const violationLines = kinds
-          .map((kind) =>
-            summarizeGroupViolations(
-              `kind=${kind}`,
-              readings
-                .filter((row) => row.kind === kind)
-                .map((row) => ({
-                  clearanceM: Math.min(row.unionM, row.nearestChordM),
-                  propLabel: `${row.kind}#${row.index}`,
-                })),
-            ),
-          )
-          .filter((line): line is string => line !== null);
-
-        expect(violationLines).toEqual([]);
-      });
-    });
-
-    describe(
-      'RED-5 share (the BODY-LEVEL floor - the P-PC-R body-level lane)',
-      () => {
-        // [RED-14V-PROP-5-BODY-LEVEL]
-        it('AC-096: EVERY right-world prop BODY clears the USER-NAMED 10 m floor, read at the placed body\'s nearest surface toward the road (RED-14V-PROP-5-BODY-LEVEL)', () => {
-          // Arrange
-          const seedLines: string[] = [];
-          const kindRows = new Map<
-            string,
-            { clearanceM: number; propLabel: string }[]
-          >();
-          let sampledPoints = 0;
-          let nearestSurfaceGapM = 0;
-
-          // Act - the whole published seed set, NOT one hand-picked seed.
-          for (const seed of NEATRACING_CROWD_FIXTURE_SEEDS) {
-            const input = { seed, ...NEATRACING_CROWD_BUILD_INPUT };
-            const spec = generateTrack(input);
-            const profile = resolveTrackEdgeProfile(spec.segments);
-            const props = buildRightWorldProps(input);
-            const anchorReadings = measurePropClearances(spec, profile, props);
-            const bodyReadings = measurePropBodyClearances(
-              spec,
-              profile,
-              props,
-            );
-
-            for (const [position, body] of bodyReadings.entries()) {
-              const anchor = anchorReadings[position]!;
-
-              nearestSurfaceGapM = Math.max(
-                nearestSurfaceGapM,
-                anchor.unionM - body.bodyM,
-              );
-            }
-
-            sampledPoints += bodyReadings.reduce(
-              (total, row) => total + row.sampledPoints,
-              0,
-            );
-
-            const seedLine = summarizeGroupViolations(
-              `seed=${seed}`,
-              bodyReadings.map((row) => ({
-                clearanceM: row.bodyM,
+      // Assert
+      // The floor is the USER-NAMED 10 m and is NEVER widened by a
+      // tolerance: a residual violation is a NAMED, MEASURED violation.
+      const kinds = [...new Set(readings.map((row) => row.kind))];
+      const violationLines = kinds
+        .map((kind) =>
+          summarizeGroupViolations(
+            `kind=${kind}`,
+            readings
+              .filter((row) => row.kind === kind)
+              .map((row) => ({
+                clearanceM: row.unionM,
                 propLabel: `${row.kind}#${row.index}`,
               })),
-            );
+          ),
+        )
+        .filter((line): line is string => line !== null);
 
-            if (seedLine !== null) {
-              seedLines.push(seedLine);
-            }
+      expect(violationLines).toEqual([]);
+    });
+  });
 
-            for (const row of bodyReadings) {
-              const rows = kindRows.get(row.kind) ?? [];
+  describe('RED-2 (the floor holds at EVERY seed and for EVERY prop kind)', () => {
+    // [RED-14V-PROP-2-SEED-BREADTH]
+    it('AC-096: the 10 m floor holds at EVERY published seed and for EVERY prop kind, and the measured worst is reported per seed and per kind (RED-14V-PROP-2-SEED-BREADTH)', () => {
+      // Arrange
+      const seedLines: string[] = [];
+      const kindRows = new Map<
+        string,
+        { clearanceM: number; propLabel: string }[]
+      >();
 
-              rows.push({
-                clearanceM: row.bodyM,
-                propLabel: `${row.kind}#${row.index}@seed${seed}`,
-              });
-              kindRows.set(row.kind, rows);
-            }
-          }
+      // Act - the whole published seed set, NOT one hand-picked seed.
+      for (const seed of NEATRACING_CROWD_FIXTURE_SEEDS) {
+        const input = { seed, ...NEATRACING_CROWD_BUILD_INPUT };
+        const spec = generateTrack(input);
+        const profile = resolveTrackEdgeProfile(spec.segments);
+        const props = buildRightWorldProps(input);
+        const readings = measurePropClearances(spec, profile, props);
 
-          // NON-VACUITY GUARDS (asserted BEFORE the relational clause): the
-          // sweep MUST really place props over more than one seed and more
-          // than one prop kind, the lane MUST really SAMPLE the bodies, and
-          // it MUST really read a surface NEARER than the anchor - a lane
-          // that measured the anchor would satisfy the floor with the
-          // numbers the anchor-level lanes already pin.
-          expect(NEATRACING_CROWD_FIXTURE_SEEDS.length).toBeGreaterThan(1);
-          expect(kindRows.size).toBeGreaterThan(1);
-          expect(sampledPoints).toBeGreaterThan(0);
-          expect(nearestSurfaceGapM).toBeGreaterThan(
-            NEATRACING_PROP_BODY_SURFACE_MARGIN_M,
+        const seedLine = summarizeGroupViolations(
+          `seed=${seed}`,
+          readings.map((row) => ({
+            clearanceM: row.unionM,
+            propLabel: `${row.kind}#${row.index}`,
+          })),
+        );
+
+        if (seedLine !== null) {
+          seedLines.push(seedLine);
+        }
+
+        for (const row of readings) {
+          const rows = kindRows.get(row.kind) ?? [];
+
+          rows.push({
+            clearanceM: row.unionM,
+            propLabel: `${row.kind}#${row.index}@seed${seed}`,
+          });
+          kindRows.set(row.kind, rows);
+        }
+      }
+
+      // NON-VACUITY GUARD (asserted BEFORE the relational clause): the
+      // sweep MUST really cover more than one seed and more than one
+      // prop kind - a single-seed, single-kind sweep would satisfy the
+      // breadth clause vacuously.
+      expect(NEATRACING_CROWD_FIXTURE_SEEDS.length).toBeGreaterThan(1);
+      expect(kindRows.size).toBeGreaterThan(1);
+
+      // Assert
+      const kindLines = [...kindRows.entries()]
+        .map(([kind, rows]) => summarizeGroupViolations(`kind=${kind}`, rows))
+        .filter((line): line is string => line !== null);
+
+      expect([...seedLines, ...kindLines]).toEqual([]);
+    });
+  });
+
+  describe('RED-3 (the prop count, the bleacher count and the determinism are PRESERVED - a LABELLED PRESERVATION GUARD, NEVER counted as a RED)', () => {
+    // [RED-14V-PROP-3-COUNT-PRESERVED]
+    it('AC-096: the right world keeps its reserved prop count, its reserved bleacher count and its density budget (RED-14V-PROP-3-COUNT-PRESERVED)', () => {
+      // Arrange
+      const input = { seed: 42, ...NEATRACING_CROWD_BUILD_INPUT };
+      const spec = generateTrack(input);
+      const props = buildRightWorldProps(input);
+      const expectedPropCount =
+        resolveOuterRingSlotCount(spec.splineSamples.length) +
+        NEATRACING_RIGHT_WORLD_PEOPLE_RING_COUNT;
+      const bleachers = props.filter((prop) => propKindOf(prop) === 'bleacher');
+
+      // Assert - no prop is dropped, merged or duplicated to satisfy
+      // the clearance floor.
+      expect(props.length).toBe(expectedPropCount);
+      expect(bleachers.length).toBe(NEATRACING_RIGHT_WORLD_BLEACHER_COUNT);
+      expect(props.length).toBeLessThanOrEqual(
+        NEATRACING_RIGHT_WORLD_PROP_DENSITY_BUDGET,
+      );
+    });
+
+    // [RED-14V-PROP-3-DETERMINISM-PRESERVED]
+    it('AC-096: the same determinism tuple still yields the same prop list, byte for byte (RED-14V-PROP-3-DETERMINISM-PRESERVED)', () => {
+      // Arrange
+      const input = { seed: 42, ...NEATRACING_CROWD_BUILD_INPUT };
+
+      // Act
+      const first = buildRightWorldProps(input);
+      const second = buildRightWorldProps(input);
+
+      // Assert
+      expect(JSON.stringify(second)).toBe(JSON.stringify(first));
+    });
+  });
+
+  describe('RED-4 (the world reads the SAME edge as the road)', () => {
+    // [RED-14V-PROP-4-ONE-SEAM]
+    it("AC-095: the clearance is measured against the ONE seam edge - BOTH of the road's own readers of it clear the floor (RED-14V-PROP-4-ONE-SEAM)", () => {
+      // Arrange
+      const input = { seed: 42, ...NEATRACING_CROWD_BUILD_INPUT };
+      const spec = generateTrack(input);
+      const profile = resolveTrackEdgeProfile(spec.segments);
+      const props = buildRightWorldProps(input);
+      const readings = measurePropClearances(spec, profile, props);
+
+      // NON-VACUITY GUARD (asserted BEFORE the relational clause): the
+      // lane MUST really compare TWO DIFFERENT readers of the ONE seam
+      // edge. The union reader is a MINIMUM over EVERY published chord,
+      // so it can never report MORE clearance than the nearest-chord
+      // reader, and the seam publishes more than one chord - so the two
+      // readers consult DIFFERENT chord sets and comparing one reader
+      // with itself would satisfy the clause below vacuously.
+      expect(profile.chords.length).toBeGreaterThan(1);
+
+      for (const row of readings) {
+        expect(row.unionM).toBeLessThanOrEqual(
+          row.nearestChordM + CLEARANCE_TOLERANCE_M,
+        );
+      }
+
+      // Assert - BOTH readers of the ONE seam edge must clear the
+      // USER-NAMED floor, so the world and the road can never disagree
+      // about where the edge is.
+      const kinds = [...new Set(readings.map((row) => row.kind))];
+      const violationLines = kinds
+        .map((kind) =>
+          summarizeGroupViolations(
+            `kind=${kind}`,
+            readings
+              .filter((row) => row.kind === kind)
+              .map((row) => ({
+                clearanceM: Math.min(row.unionM, row.nearestChordM),
+                propLabel: `${row.kind}#${row.index}`,
+              })),
+          ),
+        )
+        .filter((line): line is string => line !== null);
+
+      expect(violationLines).toEqual([]);
+    });
+  });
+
+  describe('RED-5 share (the BODY-LEVEL floor - the P-PC-R body-level lane)', () => {
+    // [RED-14V-PROP-5-BODY-LEVEL]
+    it("AC-096: EVERY right-world prop BODY clears the USER-NAMED 10 m floor, read at the placed body's nearest surface toward the road (RED-14V-PROP-5-BODY-LEVEL)", () => {
+      // Arrange
+      const seedLines: string[] = [];
+      const kindRows = new Map<
+        string,
+        { clearanceM: number; propLabel: string }[]
+      >();
+      let sampledPoints = 0;
+      let nearestSurfaceGapM = 0;
+
+      // Act - the whole published seed set, NOT one hand-picked seed.
+      for (const seed of NEATRACING_CROWD_FIXTURE_SEEDS) {
+        const input = { seed, ...NEATRACING_CROWD_BUILD_INPUT };
+        const spec = generateTrack(input);
+        const profile = resolveTrackEdgeProfile(spec.segments);
+        const props = buildRightWorldProps(input);
+        const anchorReadings = measurePropClearances(spec, profile, props);
+        const bodyReadings = measurePropBodyClearances(spec, profile, props);
+
+        for (const [position, body] of bodyReadings.entries()) {
+          const anchor = anchorReadings[position]!;
+
+          nearestSurfaceGapM = Math.max(
+            nearestSurfaceGapM,
+            anchor.unionM - body.bodyM,
           );
+        }
 
-          // Assert - the BODY of every prop clears the USER-NAMED floor.
-          // The floor is NEVER widened by a tolerance and NO prop is ever
-          // dropped to satisfy it.
-          const kindLines = [...kindRows.entries()]
-            .map(([kind, rows]) =>
-              summarizeGroupViolations(`kind=${kind}`, rows),
-            )
-            .filter((line): line is string => line !== null);
+        sampledPoints += bodyReadings.reduce(
+          (total, row) => total + row.sampledPoints,
+          0,
+        );
 
-          expect([...seedLines, ...kindLines]).toEqual([]);
-        });
-      },
-    );
-  },
-);
+        const seedLine = summarizeGroupViolations(
+          `seed=${seed}`,
+          bodyReadings.map((row) => ({
+            clearanceM: row.bodyM,
+            propLabel: `${row.kind}#${row.index}`,
+          })),
+        );
 
+        if (seedLine !== null) {
+          seedLines.push(seedLine);
+        }
+
+        for (const row of bodyReadings) {
+          const rows = kindRows.get(row.kind) ?? [];
+
+          rows.push({
+            clearanceM: row.bodyM,
+            propLabel: `${row.kind}#${row.index}@seed${seed}`,
+          });
+          kindRows.set(row.kind, rows);
+        }
+      }
+
+      // NON-VACUITY GUARDS (asserted BEFORE the relational clause): the
+      // sweep MUST really place props over more than one seed and more
+      // than one prop kind, the lane MUST really SAMPLE the bodies, and
+      // it MUST really read a surface NEARER than the anchor - a lane
+      // that measured the anchor would satisfy the floor with the
+      // numbers the anchor-level lanes already pin.
+      expect(NEATRACING_CROWD_FIXTURE_SEEDS.length).toBeGreaterThan(1);
+      expect(kindRows.size).toBeGreaterThan(1);
+      expect(sampledPoints).toBeGreaterThan(0);
+      expect(nearestSurfaceGapM).toBeGreaterThan(
+        NEATRACING_PROP_BODY_SURFACE_MARGIN_M,
+      );
+
+      // Assert - the BODY of every prop clears the USER-NAMED floor.
+      // The floor is NEVER widened by a tolerance and NO prop is ever
+      // dropped to satisfy it.
+      const kindLines = [...kindRows.entries()]
+        .map(([kind, rows]) => summarizeGroupViolations(`kind=${kind}`, rows))
+        .filter((line): line is string => line !== null);
+
+      expect([...seedLines, ...kindLines]).toEqual([]);
+    });
+  });
+});

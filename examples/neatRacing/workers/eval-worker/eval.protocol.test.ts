@@ -9,9 +9,7 @@ import {
   NEATRACING_EVAL_WORKER_PARALLEL_VARIANT_COUNT,
   runBoundedConcurrency,
 } from './eval.protocol';
-import type {
-  NeatRacingEvalVariantUnit,
-} from './eval-worker';
+import type { NeatRacingEvalVariantUnit } from './eval-worker';
 import type {
   NeatRacingEvalWorkerRequest,
   NeatRacingEvalWorkerResponse,
@@ -98,16 +96,19 @@ const EVAL_TEST_REQUEST_TICK = 96;
  * @param overrides - Per-test overrides; unset fields fall back to fixtures.
  * @returns A well-formed eval request payload.
  */
-function createEvalTestFixturePayload(overrides: {
-  seed?: number;
-  requestTick?: number;
-  variants?: readonly NeatRacingEvalWorkerVariant[];
-} = {}): NeatRacingEvalWorkerEvalPayloadFixture {
+function createEvalTestFixturePayload(
+  overrides: {
+    seed?: number;
+    requestTick?: number;
+    variants?: readonly NeatRacingEvalWorkerVariant[];
+  } = {},
+): NeatRacingEvalWorkerEvalPayloadFixture {
   return {
     seed: overrides.seed ?? EVAL_TEST_SEED,
     requestTick: overrides.requestTick ?? EVAL_TEST_REQUEST_TICK,
-    variants:
-      overrides.variants ?? [{ variantIndex: 0, snapshot: { kind: 'fixture' } }],
+    variants: overrides.variants ?? [
+      { variantIndex: 0, snapshot: { kind: 'fixture' } },
+    ],
   };
 }
 
@@ -296,8 +297,11 @@ describe('NEATRACING_EVAL_WORKER_INTERNALS', () => {
         EVAL_TEST_SEED,
         NEATRACING_VARIANT_STREAM_SURFACE_TAG,
       );
-      const patchStridedSlotSeed =
-        deriveNeatRacingVariantStreamChildSeed(EVAL_TEST_SEED, 2, 500);
+      const patchStridedSlotSeed = deriveNeatRacingVariantStreamChildSeed(
+        EVAL_TEST_SEED,
+        2,
+        500,
+      );
       expect(patchStridedSlotSeed).toBe((streamBase + 2 * 2000) >>> 0);
       // The patchSize widened the stride above the offset base...
       expect(patchStridedSlotSeed).not.toBe((streamBase + 2 * 1000) >>> 0);
@@ -307,8 +311,9 @@ describe('NEATRACING_EVAL_WORKER_INTERNALS', () => {
       );
 
       expect(responses[0].type).toBe('result');
-      const payload = (responses[0] as { payload: NeatRacingEvalWorkerResultPayload })
-        .payload;
+      const payload = (
+        responses[0] as { payload: NeatRacingEvalWorkerResultPayload }
+      ).payload;
       const expectedScores = variants.map((variant) =>
         createNeatRacingXorShift32Stream(
           deriveNeatRacingVariantStreamChildSeed(
@@ -361,8 +366,9 @@ describe('NEATRACING_EVAL_WORKER_INTERNALS', () => {
       const responses = await requestPromise;
       expect(responses).toHaveLength(1);
       expect(responses[0].type).toBe('result');
-      const payload = (responses[0] as { payload: NeatRacingEvalWorkerResultPayload })
-        .payload;
+      const payload = (
+        responses[0] as { payload: NeatRacingEvalWorkerResultPayload }
+      ).payload;
       expect(payload.results).toHaveLength(batchCount);
       payload.results.forEach((result, index) => {
         expect(result.variantIndex).toBe(index);
@@ -397,11 +403,12 @@ describe('NEATRACING_EVAL_WORKER_INTERNALS', () => {
       const responses = await requestPromise;
       expect(responses).toHaveLength(1);
       expect(responses[0].type).toBe('result');
-      const payload = (responses[0] as { payload: NeatRacingEvalWorkerResultPayload })
-        .payload;
-      expect(
-        payload.results.map((result) => result.variantIndex),
-      ).toEqual([0, 1, 2, 3]);
+      const payload = (
+        responses[0] as { payload: NeatRacingEvalWorkerResultPayload }
+      ).payload;
+      expect(payload.results.map((result) => result.variantIndex)).toEqual([
+        0, 1, 2, 3,
+      ]);
       expect(payload.results.map((result) => result.score)).toEqual([
         0, 1, 2, 3,
       ]);
@@ -592,8 +599,9 @@ describe('NEATRACING_EVAL_WORKER_INTERNALS', () => {
         (call) => call[0] as NeatRacingEvalWorkerResponse,
       );
       expect(posts[0].type).toBe('result');
-      const resultPayload = (posts[0] as { payload: NeatRacingEvalWorkerResultPayload })
-        .payload;
+      const resultPayload = (
+        posts[0] as { payload: NeatRacingEvalWorkerResultPayload }
+      ).payload;
       expect(resultPayload.seed).toBe(EVAL_TEST_SEED);
       expect(resultPayload.requestTick).toBe(EVAL_TEST_REQUEST_TICK);
       expect(resultPayload.results).toHaveLength(1);

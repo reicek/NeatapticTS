@@ -144,7 +144,8 @@ export function computeNeatRacingShapedFitness(
 
   // Step 2: shape the three contract terms (the accumulation order is pinned:
   // position term, then the time penalty, then the progress bonus).
-  const positionTerm = NEATRACING_FITNESS_WEIGHT_POSITION * (maxCars - position);
+  const positionTerm =
+    NEATRACING_FITNESS_WEIGHT_POSITION * (maxCars - position);
   const timeTerm = NEATRACING_FITNESS_WEIGHT_TIME * timeSeconds;
   const lapProgressTerm =
     NEATRACING_FITNESS_WEIGHT_LAP_PROGRESS * lapProgress01;

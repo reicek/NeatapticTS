@@ -15,6 +15,14 @@
  * matte slab below never shows through as a black outline. There are no
  * vertical pillars or side faces.
  *
+ * THE START LINE IS AN ALONG-TRACK BAND: the GREEN 2-hex start line (plan
+ * slice P5-S27-2, AC-104) is painted across the roadway in the EXISTING
+ * green fill + edge tokens. It rides on a NEW along-track classification
+ * (`./road-edge.start-line` - the forward arc length along the published
+ * closed spline polyline), so the EXPORTED `TileColorway` surface stays at
+ * its FOUR members: the band tiles keep their 'road' colorway and the
+ * green/yellow/red border rings beyond the track edge stay untouched.
+ *
  * The honeycomb lattice is derived from the same track geometry that builds
  * the 0.5 m slab ribbon, so the paint aligns with the ribbon and its edge
  * markers rather than being a separate approximation. The sampled lattice
@@ -38,6 +46,11 @@
  */
 
 import { generateTrack } from '../../racing_curriculum/track/track.generator';
+import {
+  isWithinStartLineBand,
+  projectOntoClosedSpline,
+  resolveStartLineBandDepthM,
+} from './road-edge.start-line';
 import { resolveTrackEdgeProfile } from './track.edge';
 import type { TrackEdgeProfile } from './track.edge';
 import {
@@ -76,44 +89,60 @@ export const NEATRACING_ROAD_EDGE_HEX_INNER_RADIUS_M = 0.75;
 export const NEATRACING_ROAD_EDGE_PAINT_Y_OFFSET_M = 0.02;
 
 /** Darker teal roadway fill color (0-255 RGB). */
-export const NEATRACING_ROAD_EDGE_FILL_COLOR: readonly [number, number, number] = [
-  20, 120, 120,
-];
+export const NEATRACING_ROAD_EDGE_FILL_COLOR: readonly [
+  number,
+  number,
+  number,
+] = [20, 120, 120];
 
 /** Bright cyan roadway edge color (0-255 RGB). Its Rec.709 luma exceeds the bloom threshold. */
-export const NEATRACING_ROAD_EDGE_EDGE_COLOR: readonly [number, number, number] = [
-  60, 255, 255,
-];
+export const NEATRACING_ROAD_EDGE_EDGE_COLOR: readonly [
+  number,
+  number,
+  number,
+] = [60, 255, 255];
 
 /** Darker red border-line fill color (0-255 RGB). */
-export const NEATRACING_ROAD_EDGE_RED_FILL_COLOR: readonly [number, number, number] = [
-  160, 30, 30,
-];
+export const NEATRACING_ROAD_EDGE_RED_FILL_COLOR: readonly [
+  number,
+  number,
+  number,
+] = [160, 30, 30];
 
 /** Bright red border-line edge color (0-255 RGB). */
-export const NEATRACING_ROAD_EDGE_RED_EDGE_COLOR: readonly [number, number, number] = [
-  255, 60, 60,
-];
+export const NEATRACING_ROAD_EDGE_RED_EDGE_COLOR: readonly [
+  number,
+  number,
+  number,
+] = [255, 60, 60];
 
 /** Darker yellow border-line fill color (0-255 RGB). */
-export const NEATRACING_ROAD_EDGE_YELLOW_FILL_COLOR: readonly [number, number, number] = [
-  160, 160, 30,
-];
+export const NEATRACING_ROAD_EDGE_YELLOW_FILL_COLOR: readonly [
+  number,
+  number,
+  number,
+] = [160, 160, 30];
 
 /** Bright yellow border-line edge color (0-255 RGB). */
-export const NEATRACING_ROAD_EDGE_YELLOW_EDGE_COLOR: readonly [number, number, number] = [
-  255, 255, 60,
-];
+export const NEATRACING_ROAD_EDGE_YELLOW_EDGE_COLOR: readonly [
+  number,
+  number,
+  number,
+] = [255, 255, 60];
 
 /** Darker green border-line fill color (0-255 RGB). */
-export const NEATRACING_ROAD_EDGE_GREEN_FILL_COLOR: readonly [number, number, number] = [
-  30, 160, 30,
-];
+export const NEATRACING_ROAD_EDGE_GREEN_FILL_COLOR: readonly [
+  number,
+  number,
+  number,
+] = [30, 160, 30];
 
 /** Bright green border-line edge color (0-255 RGB). */
-export const NEATRACING_ROAD_EDGE_GREEN_EDGE_COLOR: readonly [number, number, number] = [
-  60, 255, 60,
-];
+export const NEATRACING_ROAD_EDGE_GREEN_EDGE_COLOR: readonly [
+  number,
+  number,
+  number,
+] = [60, 255, 60];
 
 /** One interleaved vertex: world position plus 0-255 RGB color. */
 export interface RoadEdgeHexVertex {
@@ -165,6 +194,15 @@ export interface RoadEdgeHexLatticeTile {
   readonly z: number;
   /** Colorway classification. */
   readonly colorway: TileColorway;
+  /**
+   * Whether this tile carries the GREEN start-line band paint.
+   *
+   * The band is a NEW ALONG-TRACK classification, so it rides BESIDE the
+   * border colorway and never inside it: a band tile KEEPS its 'road'
+   * colorway and the EXPORTED `TileColorway` surface stays at its four
+   * members.
+   */
+  readonly startLineBand: boolean;
 }
 
 /** Complete deterministic honeycomb lattice including fill and stroke geometry. */
@@ -229,6 +267,17 @@ export const ROAD_EDGE_BORDER_YELLOW_M = 4;
  */
 export const ROAD_EDGE_BORDER_RED_M = 6;
 
+/**
+ * The forward depth of the GREEN start-line band along the track axis, in
+ * meters: TWO hexes deep (2 x NEATRACING_ROAD_EDGE_HEX_DIAMETER_M = 4.0 m).
+ *
+ * The depth is DERIVED from the hex diameter, so the band can never drift
+ * away from the tile size it is painted on.
+ */
+const START_LINE_BAND_DEPTH_M = resolveStartLineBandDepthM(
+  NEATRACING_ROAD_EDGE_HEX_DIAMETER_M,
+);
+
 /** Precedence used to choose the visible color of a shared edge. */
 const COLORWAY_PRECEDENCE: Readonly<Record<TileColorway, number>> = {
   road: 0,
@@ -236,6 +285,17 @@ const COLORWAY_PRECEDENCE: Readonly<Record<TileColorway, number>> = {
   yellow: 2,
   red: 3,
 };
+
+/**
+ * Precedence of the GREEN start-line band paint.
+ *
+ * The band lives INSIDE the roadway (its tiles keep the 'road' colorway), so
+ * it outranks the plain road paint - the band owns the shared edges it
+ * touches and the stripe keeps a crisp outline - and it stays BELOW the
+ * border ladder, so the green/yellow/red rings never lose a shared edge to
+ * the start line.
+ */
+const START_LINE_BAND_PRECEDENCE = 0.5;
 
 /**
  * Axial neighbor directions for a flat-topped hex grid. Each entry maps a
@@ -269,10 +329,7 @@ export function buildRoadEdgeHexVoxels(
   const lattice = buildRoadEdgeHexLattice(input);
 
   return {
-    triangles: [
-      ...lattice.fillTriangles,
-      ...lattice.edgeTriangles,
-    ],
+    triangles: [...lattice.fillTriangles, ...lattice.edgeTriangles],
   };
 }
 
@@ -315,13 +372,14 @@ export function buildRoadEdgeHexLattice(
       // Canonical ownership: emit a shared edge only from the lexicographically
       // smaller tile. Boundary edges are always emitted by the lone tile.
       const isOwner =
-        !neighbor || tile.q < neighborQ || (tile.q === neighborQ && tile.r < neighborR);
+        !neighbor ||
+        tile.q < neighborQ ||
+        (tile.q === neighborQ && tile.r < neighborR);
       if (!isOwner) {
         continue;
       }
 
-      const neighborColorway: TileColorway | null = neighbor?.colorway ?? null;
-      const edgeColor = resolveEdgeColor(tile.colorway, neighborColorway);
+      const edgeColor = resolveEdgeColor(tile, neighbor ?? null);
       const [p1, p2] = tileOuterEdgeVertices(tile, edge[0], edge[1]);
 
       edges.push({
@@ -382,10 +440,8 @@ function collectHoneycombTiles(
 
   for (let q = qMin; q <= qMax; q++) {
     const z0 = (Math.sqrt(3) / 2) * outerR * q;
-    const rMin =
-      Math.floor((bounds.minZ - z0) / (outerR * Math.sqrt(3))) - pad;
-    const rMax =
-      Math.ceil((bounds.maxZ - z0) / (outerR * Math.sqrt(3))) + pad;
+    const rMin = Math.floor((bounds.minZ - z0) / (outerR * Math.sqrt(3))) - pad;
+    const rMax = Math.ceil((bounds.maxZ - z0) / (outerR * Math.sqrt(3))) + pad;
 
     for (let r = rMin; r <= rMax; r++) {
       const [x, z] = axialToWorld(q, r);
@@ -417,7 +473,17 @@ function collectHoneycombTiles(
       }
       seen.add(key);
 
-      tiles.push({ q, r, x, z, colorway });
+      // THE START LINE IS AN ALONG-TRACK CLASSIFICATION: it rides beside the
+      // border colorway, so the road tiles keep their 'road' colorway and
+      // the EXPORTED `TileColorway` surface stays at its four members.
+      const startLineBand =
+        colorway === 'road' &&
+        isWithinStartLineBand(
+          projectOntoClosedSpline(spec.splineSamples, x, z).arcM,
+          START_LINE_BAND_DEPTH_M,
+        );
+
+      tiles.push({ q, r, x, z, colorway, startLineBand });
     }
   }
 
@@ -515,9 +581,11 @@ function measureTrackBorderBandBounds(
  * Exported as a test seam so contract tests can verify lattice alignment
  * without reverse-engineering centers from overlapping triangle vertices.
  */
-export function collectRoadEdgeTileCenters(
-  input: TrackSlabBuildInput,
-): Array<{ readonly x: number; readonly z: number; readonly colorway: TileColorway }> {
+export function collectRoadEdgeTileCenters(input: TrackSlabBuildInput): Array<{
+  readonly x: number;
+  readonly z: number;
+  readonly colorway: TileColorway;
+}> {
   const lattice = buildRoadEdgeHexLattice(input);
 
   return lattice.tiles.map(({ x, z, colorway }) => ({
@@ -534,7 +602,7 @@ function axialToWorld(q: number, r: number): readonly [number, number] {
   const outerR = NEATRACING_ROAD_EDGE_HEX_OUTER_RADIUS_M;
   return [
     outerR * 1.5 * q,
-    outerR * (Math.sqrt(3) / 2 * q + Math.sqrt(3) * r),
+    outerR * ((Math.sqrt(3) / 2) * q + Math.sqrt(3) * r),
   ] as const;
 }
 
@@ -547,36 +615,84 @@ function tileKey(q: number, r: number): string {
  */
 function colorwayToColors(
   colorway: TileColorway,
-): readonly [readonly [number, number, number], readonly [number, number, number]] {
+): readonly [
+  readonly [number, number, number],
+  readonly [number, number, number],
+] {
   if (colorway === 'red') {
-    return [NEATRACING_ROAD_EDGE_RED_FILL_COLOR, NEATRACING_ROAD_EDGE_RED_EDGE_COLOR];
+    return [
+      NEATRACING_ROAD_EDGE_RED_FILL_COLOR,
+      NEATRACING_ROAD_EDGE_RED_EDGE_COLOR,
+    ];
   }
   if (colorway === 'yellow') {
-    return [NEATRACING_ROAD_EDGE_YELLOW_FILL_COLOR, NEATRACING_ROAD_EDGE_YELLOW_EDGE_COLOR];
+    return [
+      NEATRACING_ROAD_EDGE_YELLOW_FILL_COLOR,
+      NEATRACING_ROAD_EDGE_YELLOW_EDGE_COLOR,
+    ];
   }
   if (colorway === 'green') {
-    return [NEATRACING_ROAD_EDGE_GREEN_FILL_COLOR, NEATRACING_ROAD_EDGE_GREEN_EDGE_COLOR];
+    return [
+      NEATRACING_ROAD_EDGE_GREEN_FILL_COLOR,
+      NEATRACING_ROAD_EDGE_GREEN_EDGE_COLOR,
+    ];
   }
   return [NEATRACING_ROAD_EDGE_FILL_COLOR, NEATRACING_ROAD_EDGE_EDGE_COLOR];
 }
 
 /**
- * Chooses the visible color for a shared edge. The colorway with higher
+ * The FILL color of one tile.
+ *
+ * The start-line band paints in the EXISTING green fill token, so the band
+ * reads as a green stripe across the racing line without a new palette.
+ */
+function tileFillColor(
+  tile: RoadEdgeHexLatticeTile,
+): readonly [number, number, number] {
+  return tile.startLineBand
+    ? NEATRACING_ROAD_EDGE_GREEN_FILL_COLOR
+    : colorwayToColors(tile.colorway)[0];
+}
+
+/**
+ * The EDGE (stroke) color of one tile.
+ */
+function tileEdgeColor(
+  tile: RoadEdgeHexLatticeTile,
+): readonly [number, number, number] {
+  return tile.startLineBand
+    ? NEATRACING_ROAD_EDGE_GREEN_EDGE_COLOR
+    : colorwayToColors(tile.colorway)[1];
+}
+
+/**
+ * The paint PRECEDENCE of one tile: the border ladder rank of its colorway,
+ * or the start-line band rank when the tile carries the band paint.
+ */
+function tilePaintPrecedence(tile: RoadEdgeHexLatticeTile): number {
+  return tile.startLineBand
+    ? START_LINE_BAND_PRECEDENCE
+    : COLORWAY_PRECEDENCE[tile.colorway];
+}
+
+/**
+ * Chooses the visible color for a shared edge. The paint with higher
  * precedence wins, matching the border-line ordering (road → red → yellow →
- * green). Boundary edges use the tile's own edge color.
+ * green) with the start-line band sitting between the plain road paint and
+ * the border ladder. Boundary edges use the tile's own edge color.
  */
 function resolveEdgeColor(
-  colorway: TileColorway,
-  neighborColorway: TileColorway | null,
+  tile: RoadEdgeHexLatticeTile,
+  neighborTile: RoadEdgeHexLatticeTile | null,
 ): readonly [number, number, number] {
-  const edgeColor = colorwayToColors(colorway)[1];
-  if (!neighborColorway) {
+  const edgeColor = tileEdgeColor(tile);
+  if (!neighborTile) {
     return edgeColor;
   }
 
-  return COLORWAY_PRECEDENCE[colorway] >= COLORWAY_PRECEDENCE[neighborColorway]
+  return tilePaintPrecedence(tile) >= tilePaintPrecedence(neighborTile)
     ? edgeColor
-    : colorwayToColors(neighborColorway)[1];
+    : tileEdgeColor(neighborTile);
 }
 
 /**
@@ -590,7 +706,7 @@ function appendTileFillTriangles(
   // Single-plane paint (OBS-23): the darker fill ends exactly at the inner
   // radius and abuts the bright stroke ring on the same y plane.
   const innerR = NEATRACING_ROAD_EDGE_HEX_INNER_RADIUS_M;
-  const [fillColor] = colorwayToColors(tile.colorway);
+  const fillColor = tileFillColor(tile);
   const center: readonly [number, number, number] = [tile.x, paintY, tile.z];
   const inner = hexVertices(tile.x, tile.z, innerR, paintY);
 

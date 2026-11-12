@@ -12,6 +12,7 @@ import {
   summarizeIssues,
   writeReport,
 } from './customization-utils.mjs';
+import { lintPlanYamlBlock } from './plan-yaml-lint.mjs';
 
 const GOAL_VALUES = new Set([
   'planning',
@@ -170,7 +171,7 @@ export async function validatePlanText(text, planFilePath) {
   issues.length = 0;
   phases = [...extractPhaseBlocks(planText)].map((phaseBlock) => ({
     ...phaseBlock,
-    stepBlocks: [...extractStepBlocks(phaseBlock.body)],
+    stepBlocks: [...extractStepBlocks(phaseBlock.body, phaseBlock.bodyOffset)],
   }));
 
   if (phases.length === 0 && !isArchivedClosedPlan) {
@@ -241,6 +242,11 @@ function* extractPhaseBlocks(text) {
   if (!implementationMatch?.groups) return;
 
   const implementationBody = implementationMatch.groups.body;
+  // Character offset of the implementation body inside the full plan text, so
+  // findings can be reported with file-absolute line numbers.
+  const implementationOffset =
+    (implementationMatch.index ?? 0) +
+    (implementationMatch[0].length - implementationBody.length);
   const phasePattern =
     /^### Phase (?<phase>[A-Z0-9]+) — (?<title>.+?) \[(?<status>PLANNED|WIP|DONE)\]\s*$/gmu;
   const matches = [...implementationBody.matchAll(phasePattern)];
@@ -253,19 +259,25 @@ function* extractPhaseBlocks(text) {
     const nextMatch = matches.at(matchIndex + 1);
     const bodyEnd = nextMatch?.index ?? implementationBody.length;
     const phaseBody = implementationBody.slice(bodyStart, bodyEnd);
-    const metadata = parseMetadataBlock(phaseBody);
+    const parsed = parseMetadataBlock(
+      phaseBody,
+      implementationOffset + bodyStart,
+    );
     const phaseLabel = match.groups.phase;
     yield {
       headingPhase: /^\d+$/u.test(phaseLabel) ? Number(phaseLabel) : phaseLabel,
       headingTitle: match.groups.title,
       headingStatus: match.groups.status,
       body: phaseBody,
-      metadata,
+      bodyOffset: implementationOffset + bodyStart,
+      metadata: parsed.metadata,
+      rawYaml: parsed.rawYaml,
+      yamlContentStartLine: parsed.contentStartLine,
     };
   }
 }
 
-function* extractStepBlocks(phaseBody) {
+function* extractStepBlocks(phaseBody, bodyOffset = 0) {
   const stepPattern =
     /^#### Step (?<step>\d{2,})\s*[:\-—]\s*(?<title>.+?) \[(?<status>PLANNED|WIP|DONE)\]\s*$/gmu;
   const matches = [...phaseBody.matchAll(stepPattern)];
@@ -278,23 +290,94 @@ function* extractStepBlocks(phaseBody) {
     const nextMatch = matches.at(matchIndex + 1);
     const bodyEnd = nextMatch?.index ?? phaseBody.length;
     const stepBody = phaseBody.slice(bodyStart, bodyEnd);
+    const parsed = parseMetadataBlock(stepBody, bodyOffset + bodyStart);
     yield {
       headingStep: Number(match.groups.step),
       headingTitle: match.groups.title,
       headingStatus: match.groups.status,
       body: stepBody,
-      metadata: parseMetadataBlock(stepBody),
+      bodyOffset: bodyOffset + bodyStart,
+      metadata: parsed.metadata,
+      rawYaml: parsed.rawYaml,
+      yamlContentStartLine: parsed.contentStartLine,
     };
   }
 }
 
-function parseMetadataBlock(body) {
+/**
+ * Parses the YAML metadata block of a phase or step body.
+ *
+ * The parse is fail-loudly: a malformed block is reported as a parse error
+ * instead of degrading into a partially populated object. The block is also
+ * linted against its own raw text so an over-indented `- id:` item cannot slip
+ * through as a "successfully parsed" packet.
+ *
+ * @param {string} body - Phase or step body text.
+ * @param {number} bodyOffset - Character offset of `body` inside the plan text.
+ * @returns {{metadata: object|null, rawYaml: string|null, contentStartLine: number|null}}
+ *   Parsed metadata, the raw YAML text, and the file-absolute line of the first
+ *   YAML content line.
+ */
+function parseMetadataBlock(body, bodyOffset = 0) {
   const match = /^\s*```yaml\r?\n(?<yaml>[\s\S]*?)\r?\n```/mu.exec(body);
-  if (!match?.groups) return null;
+  if (!match?.groups) {
+    return { metadata: null, rawYaml: null, contentStartLine: null };
+  }
+  const rawYaml = match.groups.yaml;
+  const prefixMatch = /^\s*```yaml\r?\n/u.exec(match[0]);
+  const yamlOffset =
+    bodyOffset + (match.index ?? 0) + (prefixMatch?.[0].length ?? 0);
+  const contentStartLine = lineNumberAt(planText, yamlOffset);
   try {
-    return parsePlanYamlBlock(match.groups.yaml);
+    return {
+      metadata: parsePlanYamlBlock(rawYaml, {
+        file: planPath,
+        startLine: contentStartLine,
+      }),
+      rawYaml,
+      contentStartLine,
+    };
   } catch (error) {
-    return { __parseError: String(error) };
+    return {
+      metadata: { __parseError: String(error) },
+      rawYaml,
+      contentStartLine,
+    };
+  }
+}
+
+/**
+ * Returns the 1-based line number of a character offset inside the plan text.
+ *
+ * @param {string} text - Plan text.
+ * @param {number} charOffset - Character offset.
+ * @returns {number} 1-based line number.
+ */
+function lineNumberAt(text, charOffset) {
+  if (!text) return 1;
+  return text.slice(0, Math.max(0, charOffset)).split(/\r?\n/u).length;
+}
+
+/**
+ * Reports the structural lint findings for a phase or step packet.
+ *
+ * @param {object} block - Phase or step block.
+ * @param {string} blockPath - Issue path of the block.
+ */
+function reportYamlLintFindings(block, blockPath) {
+  if (!block.rawYaml) return;
+  const findings = lintPlanYamlBlock(block.rawYaml, null, {
+    file: planPath,
+    startLine: block.yamlContentStartLine ?? 1,
+  });
+  for (const finding of findings) {
+    issues.push(
+      issue(
+        finding.severity === 'warning' ? 'warning' : 'error',
+        `${blockPath}:${finding.line ?? '?'}`,
+        finding.message,
+      ),
+    );
   }
 }
 
@@ -355,6 +438,7 @@ async function validatePhase(phaseBlock, previousPhaseLabel) {
     return;
   }
 
+  reportYamlLintFindings(phaseBlock, phasePath);
   await validatePhasePacket(phaseBlock, phasePath);
 }
 
@@ -629,6 +713,8 @@ async function validateStepPacketInPhase(
       issues.push(issue('error', stepPath, `${MIGRATION_HINT} (step-level)`));
       continue;
     }
+
+    reportYamlLintFindings(stepBlock, stepPath);
 
     for (const key of STEP_REQUIRED_KEYS) {
       if (

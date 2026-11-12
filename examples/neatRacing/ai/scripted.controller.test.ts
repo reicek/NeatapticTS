@@ -160,9 +160,9 @@ describe('per-course throttle profile (AC-028 table)', () => {
     // Same course bytes → the identical table through a fresh derivation.
     expect([...rebuilt.entries()]).toEqual([...first.entries()]);
     // Same layout instance → the SAME memoized table object.
-    expect(resolveNeatRacingScriptedThrottleProfile(STRAIGHT_LOOP_SAMPLES)).toBe(
-      first,
-    );
+    expect(
+      resolveNeatRacingScriptedThrottleProfile(STRAIGHT_LOOP_SAMPLES),
+    ).toBe(first);
   });
 
   it('keys the table by segment metadata without a density assumption', () => {
@@ -195,7 +195,10 @@ describe('per-course throttle profile (AC-028 table)', () => {
 
     // First-principles: the circle publishes binding ≈ sqrt(aLimit · R).
     expect(bindingSpeed).toBeCloseTo(
-      Math.sqrt(NEATRACING_RACING_LINE_LATERAL_ACCELERATION_LIMIT_M_PER_S2 * CIRCLE_RADIUS_M),
+      Math.sqrt(
+        NEATRACING_RACING_LINE_LATERAL_ACCELERATION_LIMIT_M_PER_S2 *
+          CIRCLE_RADIUS_M,
+      ),
       6,
     );
     expect(circularEntry).toBeCloseTo(
@@ -220,9 +223,12 @@ describe('per-course throttle profile (AC-028 table)', () => {
     for (const profile of profiles) {
       for (const throttle of profile.values()) {
         expect(throttle).toBeGreaterThanOrEqual(
-          NEATRACING_SCRIPTED_PROFILE_MIN_FACTOR * NEATRACING_SCRIPTED_THROTTLE_CONSTANT,
+          NEATRACING_SCRIPTED_PROFILE_MIN_FACTOR *
+            NEATRACING_SCRIPTED_THROTTLE_CONSTANT,
         );
-        expect(throttle).toBeLessThanOrEqual(NEATRACING_SCRIPTED_THROTTLE_CONSTANT);
+        expect(throttle).toBeLessThanOrEqual(
+          NEATRACING_SCRIPTED_THROTTLE_CONSTANT,
+        );
       }
     }
   });
@@ -413,7 +419,9 @@ describe('computeNeatRacingScriptedControl (recycled waypoint plan)', () => {
     );
 
     expect(car).toEqual(carSnapshot);
-    expect(CIRCULAR_LOOP_TRACK_SPEC.splineSamples.length).toBe(sampleCountBefore);
+    expect(CIRCULAR_LOOP_TRACK_SPEC.splineSamples.length).toBe(
+      sampleCountBefore,
+    );
   });
 
   it('is deterministic across repeated identical calls', () => {

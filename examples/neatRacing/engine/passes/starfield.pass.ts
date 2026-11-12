@@ -394,7 +394,8 @@ export function computeStarfieldBlinkPhaseOffset(
   state ^= state << NEATRACING_STARFIELD_XORSHIFT_LEFT_SHIFT_PRIMARY;
   state ^= state >>> NEATRACING_STARFIELD_XORSHIFT_RIGHT_SHIFT;
   state ^= state << NEATRACING_STARFIELD_XORSHIFT_LEFT_SHIFT_FINAL;
-  const normalized = (state >>> 0) / NEATRACING_STARFIELD_UNSIGNED_NORMALIZATION_DIVISOR;
+  const normalized =
+    (state >>> 0) / NEATRACING_STARFIELD_UNSIGNED_NORMALIZATION_DIVISOR;
   return normalized * 2.0 * Math.PI;
 }
 
@@ -427,7 +428,7 @@ export function computeStarfieldBlink(
  */
 export function computeStarfieldGloomAlphaScale(timeSeconds: number): number {
   const gloomAngularFrequency =
-    2.0 * Math.PI / NEATRACING_STARFIELD_GLOOM_PERIOD_SECONDS;
+    (2.0 * Math.PI) / NEATRACING_STARFIELD_GLOOM_PERIOD_SECONDS;
   return (
     1.0 -
     NEATRACING_STARFIELD_GLOOM_AMPLITUDE *
@@ -616,11 +617,7 @@ function createLayerVertexArray(
   const vertices = packLayerVertices(layout);
   context.bindVertexArray(vertexArrayObject);
   context.bindBuffer(context.ARRAY_BUFFER, buffer);
-  context.bufferData(
-    context.ARRAY_BUFFER,
-    vertices,
-    context.STATIC_DRAW,
-  );
+  context.bufferData(context.ARRAY_BUFFER, vertices, context.STATIC_DRAW);
   context.enableVertexAttribArray(STAR_POSITION_ATTRIBUTE_LOCATION);
   context.vertexAttribPointer(
     STAR_POSITION_ATTRIBUTE_LOCATION,
@@ -911,11 +908,7 @@ export function createStarfieldPass(
           context.ARRAY_BUFFER_BINDING,
         ) as WebGLBuffer | null;
         context.bindBuffer(context.ARRAY_BUFFER, target.buffer);
-        context.bufferSubData(
-          context.ARRAY_BUFFER,
-          0,
-          target.vertices,
-        );
+        context.bufferSubData(context.ARRAY_BUFFER, 0, target.vertices);
         context.bindBuffer(context.ARRAY_BUFFER, priorBuffer);
         target.maxYPx = newMaxYPx;
       }
@@ -931,12 +924,8 @@ export function createStarfieldPass(
       const depthMaskWas = context.getParameter(
         context.DEPTH_WRITEMASK,
       ) as boolean;
-      const blendSrcRgb = context.getParameter(
-        context.BLEND_SRC_RGB,
-      ) as number;
-      const blendDstRgb = context.getParameter(
-        context.BLEND_DST_RGB,
-      ) as number;
+      const blendSrcRgb = context.getParameter(context.BLEND_SRC_RGB) as number;
+      const blendDstRgb = context.getParameter(context.BLEND_DST_RGB) as number;
       const blendSrcAlpha = context.getParameter(
         context.BLEND_SRC_ALPHA,
       ) as number;

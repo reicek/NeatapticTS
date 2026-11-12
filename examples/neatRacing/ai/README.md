@@ -900,6 +900,46 @@ const nextRound = buildNeatRacingNextRoundTuple({
 nextRound.agentCount; // 2 (the level-2 car count)
 ```
 
+### buildNeatRacingPromotedRoundTuple
+
+```ts
+buildNeatRacingPromotedRoundTuple(
+  options: NeatRacingPromotedRoundTupleOptions,
+): NeatRacingPromotionRoundTuple
+```
+
+Builds the PROMOTED round's fresh tuple from the boundary's own evidence
+(E6, D4, AC-031).
+
+Educational note — what makes this the promotion-flavored variant: unlike
+`buildNeatRacingNextRoundTuple` (which consumes an already-built seed
+payload), this builder DERIVES the seed network from the promoted round's
+own fingerprint — the first agent car's network is constructed from the
+promoted tuple's seed and the promoted LEVEL's observation width (the same
+width the live session rebuilds that car with), then its weights ship with
+the frozen canonical NGE envelope. The innovation counter stays an INPUT
+(the realm never reads a global): the host reads the live counter at the
+crossing and hands it in, so the boundary records exactly the value the
+prior round's evolution reached.
+
+Parameters:
+- `options` - The promoted tuple's build input.
+
+Returns: The promoted round's fresh tuple (seed network and carried
+innovation counter included).
+
+Example:
+
+```ts
+const promoted = buildNeatRacingPromotedRoundTuple({
+  base,
+  targetLevel: 2,
+  carriedInnovationCounter: 42,
+});
+promoted.seedNetwork.weights; // Float32Array (the car-1 genome)
+promoted.carriedInnovationCounter; // 42
+```
+
 ### canonicalizeEnvelopeJsonValue
 
 ```ts
@@ -1273,6 +1313,10 @@ The drivability gate's verdict over the crossing lap.
 
 The fresh round tuple's build input.
 
+### NeatRacingPromotedRoundTupleOptions
+
+The promoted round-tuple builder's input (E6/D4).
+
 ### NeatRacingPromotionConditionName
 
 The names of the predicate's three conditions (in evaluation order).
@@ -1498,6 +1542,28 @@ Example:
 serializeNeatRacingPromotionRoundTuple(nextRound);
 // '{"seed":1,...,"seedNetwork":{"weights":"0000803f",...},"carriedInnovationCounter":42}'
 ```
+
+### serializeNetworkWeightsToFloat32Array
+
+```ts
+serializeNetworkWeightsToFloat32Array(
+  network: default,
+): Float32Array<ArrayBufferLike>
+```
+
+Serializes one network's connection weights into a fresh typed array.
+
+Educational note — why a manual positional walk: the D4 seed genome ships
+as a `Float32Array` weight vector plus the canonical envelope (NOT the
+`toJSON`-style compact serialization), so the boundary copies each
+connection weight positionally. The fresh array detaches the payload from
+the live network — later evolution of the source must never mutate the
+shipped genome.
+
+Parameters:
+- `network` - The network whose connection weights serialize.
+
+Returns: The fresh weight vector (one entry per connection).
 
 ## ai/rival.propagation.ts
 
@@ -2081,6 +2147,25 @@ Parameters:
 
 Returns: Array of output vectors, one per sample observation.
 
+### createIdleOscillationEngagement
+
+```ts
+createIdleOscillationEngagement(
+  level: number,
+): OscillationEngagement
+```
+
+Builds the idle engagement verdict of a fresh engine.
+
+The shared predicate is evaluated against an empty network, so the hard
+node-count gate keeps the law fully disengaged until the engine's first
+real tick evaluates it.
+
+Parameters:
+- `level` - The session level whose TP-07 node threshold gates the law.
+
+Returns: The fully disengaged engagement verdict.
+
 ### createNeatRacingPerCarAdaptationEngines
 
 ```ts
@@ -2176,10 +2261,10 @@ if (!telemetry.withinTickBudget) { /* eval-side cost telemetry *\/ }
 
 ```ts
 createTelemetry(
-  telemetry: Omit<NeatRacingAdaptationTelemetry, "adaptationPhase" | "stabilizationTicksSinceGrowth" | "tickCostMs" | "withinTickBudget">,
+  telemetry: Omit<NeatRacingAdaptationTelemetry, "adaptationPhase" | "stabilizationTicksSinceGrowth" | "tickCostMs" | "withinTickBudget" | "oscillationEngagement">,
   adaptationPhase: "growth" | "stabilization",
   stabilizationTicksSinceGrowth: number,
-): Omit<NeatRacingAdaptationTelemetry, "tickCostMs" | "withinTickBudget">
+): Omit<NeatRacingAdaptationTelemetry, "tickCostMs" | "withinTickBudget" | "oscillationEngagement">
 ```
 
 Stamps the phase fields onto a telemetry record (recycled helper).
@@ -2273,6 +2358,33 @@ Parameters:
 - `scoreHistory` - Rolling score window.
 
 Returns: Combined trend/complexity score.
+
+### evaluateTickOscillationEngagement
+
+```ts
+evaluateTickOscillationEngagement(
+  network: default,
+  evidenceWindow: readonly (number | NeatRacingQualitySignal)[],
+  state: OscillationPredicateState,
+  level: number,
+): OscillationEngagement
+```
+
+Evaluates the SHARED AC-030 oscillation predicate for ONE adaptation tick.
+
+The metric is the maximum of the steering oscillation and the score-window
+oscillation, computed from the PRE-mutation network's forward-pass outputs
+over the evidence window.  The steering deadband already lives inside
+{@link detectSteeringOscillation}, so a gentle correction yields a metric of
+exactly 0 and never engages the law.
+
+Parameters:
+- `network` - The PRE-mutation network of the tick.
+- `evidenceWindow` - The tick's evidence window.
+- `state` - The previous tick's predicate state (the hysteresis memory).
+- `level` - The session level whose TP-07 node threshold gates the law.
+
+Returns: The engagement verdict of the tick, carrying the next state.
 
 ### isCadenceReady
 
@@ -2391,19 +2503,16 @@ trend remains the dominant signal.
 
 ### RACING_OSCILLATION_COMMIT_THRESHOLD
 
-Oscillation gate for the growth-commit threshold boost.  The small additive
-{@link RACING_OSCILLATION_IMPROVEMENT_THRESHOLD_BOOST} is only applied when
-the maximum of steering and score-window oscillation exceeds this value;
-below the gate the threshold is left unchanged.  This is a gate, not a
-multiplier.
+Oscillation gate of the additive growth-commit threshold boost: the boost is
+granted only while the oscillation metric is strictly ABOVE this value.
+At or below the gate the growth-commit threshold is left unchanged.
 
 ### RACING_OSCILLATION_IMPROVEMENT_THRESHOLD_BOOST
 
-Small additive boost added to the growth commit threshold when the
-oscillation metric is above {@link RACING_OSCILLATION_COMMIT_THRESHOLD}.  It
-is not multiplied by the metric; it is a fixed nudge that makes structural
-commits slightly harder during unstable reward windows without creating a
-death spiral for young networks.
+Small additive boost added to the growth-commit threshold while the shared
+predicate is engaged and the oscillation metric is above
+{@link RACING_OSCILLATION_COMMIT_THRESHOLD}.  The boost is scaled by the
+hysteresis ramp (never a step change) and is NOT multiplied by the metric.
 
 ### RACING_OSCILLATION_MIN_MEAN_STEERING
 
@@ -2412,19 +2521,12 @@ to contribute to the oscillation metric.  Gentle corrections below this
 deadband are treated as smooth steering, so legitimate S-curves through
 chicanes are not penalized the same as aggressive zig-zags.
 
-### RACING_OSCILLATION_MIN_NEURONS
-
-Minimum live neuron count at which oscillation penalties and the growth-commit
-threshold boost are applied.  Newborn and baby networks (< 200 neurons)
-naturally oscillate while learning to steer, so the adaptation loop must not
-penalize them until they reach the child tier.
-
 ### RACING_OSCILLATION_PENALTY_WEIGHT
 
-Weight applied to steering- and score-window oscillation penalties in the
-racing trend evaluator.  A positive weight penalizes wild steering swings and
-reward oscillation, steering evolution toward smooth, consistent driving
-behavior.
+Weight applied to the oscillation metric when the shared predicate removes
+score from a baseline or a variant (AC-030).  The penalty is MULTIPLICATIVE
+and PROPORTIONAL to the score, so it damps oscillation without inverting a
+positive score into a negative one.
 
 ### RACING_VARIANT_SCORER
 
@@ -2438,11 +2540,11 @@ RACING_VARIANT_SCORER(
 Racing-specific variant scorer for the NGE grow-stabilize cycle.
 
 This is a {@link VariantScorer}-compatible wrapper around
-{@link scoreRacingVariant}.  Because the variant-scorer contract only passes
-`outputs` and `target`, the wrapper uses a default neuron count of
-`Number.POSITIVE_INFINITY` so direct callers continue to apply the
-oscillation penalty.  The runtime engine calls {@link scoreRacingVariant}
-directly with the live candidate size to tier-gate young networks.
+{@link scoreRacingVariant}.  The variant-scorer contract only passes
+`outputs` and `target`, so the wrapper adds nothing: the AC-030
+oscillation penalty is applied by the runtime engine (the shared
+predicate's engagement, evaluated ONCE per adaptation tick), never inside
+the scorer.
 
 Parameters:
 - `outputs` - Stack of network output vectors, one per input sample.
@@ -2612,28 +2714,6 @@ Parameters:
 
 Returns: Input vector suitable for `network.activate`.
 
-### resolveOscillationThresholdBoost
-
-```ts
-resolveOscillationThresholdBoost(
-  oscillationMetric: number,
-  neuronCount: number,
-): number
-```
-
-Resolves the oscillation-driven additive boost for the growth-commit
-improvement threshold.  The boost is only returned when the network has
-reached the child tier (200+ neurons) and the oscillation metric is above the
-commit gate; otherwise it returns zero so young or smooth networks are not
-saddled with an extra growth bar.
-
-Parameters:
-- `oscillationMetric` - Maximum of steering and score-window oscillation.
-- `neuronCount` - Live neuron count of the candidate network.
-
-Returns: Additive threshold boost (0 or
- *    {@link RACING_OSCILLATION_IMPROVEMENT_THRESHOLD_BOOST} ).
-
 ### resolveSampleIndices
 
 ```ts
@@ -2657,7 +2737,6 @@ Returns: Array of indices into the score history.
 scoreRacingVariant(
   outputs: readonly number[][],
   _target: readonly number[],
-  neuronCount: number,
 ): number
 ```
 
@@ -2677,11 +2756,16 @@ intentionally not used here; the score is derived from the candidate
 network's own forward-pass outputs so that it lives in the same space as
 the pre-mutation baseline.
 
+The scorer is PURE: it carries NO oscillation penalty of its own.  The
+AC-030 law lives in the shared predicate
+(`./oscillation-penalty.utils`), whose engagement the runtime engine
+evaluates ONCE per adaptation tick and applies symmetrically to the
+baseline and the variant score.  A second penalty inside the scorer would
+double-penalize the live path and mix two score spaces.
+
 Parameters:
 - `outputs` - Stack of network output vectors, one per input sample.
 - `_target` - Scalar target value for each sample (unused).
-- `neuronCount` - Live neuron count used to tier-gate the oscillation
- *   penalty. Penalty is skipped below  {@link RACING_OSCILLATION_MIN_NEURONS} .
 
 Returns: Positive racing-trend quality score (higher is better).
 
@@ -3908,6 +3992,450 @@ Parameters:
 - `sampleIndex` - Raw (possibly out-of-range) sample index.
 
 Returns: The wrapped index in `[0, sampleCount)`.
+
+## ai/panel.network.transport.ts
+
+The panel network transport codec for the Neat Racing AI-mode network
+panel (Step 24C, slice P4-S2C-transport).
+
+Two pure laws over the sim worker's `panel-network` reply envelope:
+
+1. The idempotent restore: `restoreNeatRacingPanelNetworkFromReply`
+   validates the envelope's self-describing shape (the worker's
+   `NEATRACING_PANEL_NETWORK_ENVELOPE_KIND` discriminator, an integer
+   rival car index, positive channel/output counts and the EXISTING
+   serialized-network hex law) and rebuilds a REAL `Network` whose
+   positional connection weights byte-match the encoded spawn mind.
+   The rebuild is IDEMPOTENT: the same envelope always rebuilds a
+   structurally identical network (the constructor is a deterministic
+   input-to-output layer build — same sizes, same connection order), so
+   the weights ride positional assignment over
+   `network.connections[i].weight`.
+
+2. The carrier match: `resolveNeatRacingPanelFeedNetwork` hands the
+   elected panel candidate ONLY a resolution whose car index equals the
+   elected candidate's agent id; a pending (missing) resolution or a
+   foreign car's resolution feeds the candidate's OWN network field (the
+   F3 network-less-winner fallback law — the idle path stays).
+
+The hex law is the established serialized-network envelope law
+(promotion.rules.ts / rival.propagation.ts: lowercase hex, two
+characters per byte, no separators, native byte order, one or more whole
+float32 values) mirrored locally with the one-serialization-path
+per-payload precedent. Same-runtime byte parity only, never
+cross-environment exact.
+
+### decodeHexAsFloat32Array
+
+```ts
+decodeHexAsFloat32Array(
+  hex: string,
+): Float32Array<ArrayBufferLike>
+```
+
+Decodes a byte-exact hex string back into its `Float32Array`.
+
+The caller's hex law guard (lowercase, non-empty, whole float32 values)
+rejects every malformed string BEFORE the decode, so the decode itself
+stays total on guarded input.
+
+Parameters:
+- `hex` - The guarded hex string (lowercase, a multiple of eight
+characters).
+
+Returns: The decoded weights (native byte order).
+
+### NeatRacingPanelNetworkResolution
+
+The restored elected-winner resolution bound by its carrier car index.
+
+### PanelNetworkReplyGuardView
+
+The guard view of the validated envelope (the payload's own shape).
+
+### resolveNeatRacingPanelFeedNetwork
+
+```ts
+resolveNeatRacingPanelFeedNetwork(
+  elected: NeatRacingNetworkPanelCandidate,
+  resolution: NeatRacingPanelNetworkResolution | undefined,
+): default | undefined
+```
+
+Resolves the network the elected panel candidate is fed with (P4-S2C,
+Step 24C — the docked-right panel network transport).
+
+Educational note — THE CARRIER MATCH: only a resolution whose car index
+equals the elected candidate's agent id feeds that candidate. A pending
+resolution (undefined) and a foreign car's resolution both fall back to
+the candidate's OWN network field — the F3 law: a network-less winner is
+never replaced by a networked runner-up (AC-034).
+
+Parameters:
+- `elected` - The elected panel candidate (the most-forward rival).
+- `resolution` - The restored resolution (undefined while the
+transport is pending).
+
+Returns: The network the candidate is fed with, or undefined when the
+candidate owns none.
+
+Example:
+
+```ts
+const feed = resolveNeatRacingPanelFeedNetwork(winner, resolution);
+```
+
+### restoreNeatRacingPanelNetworkFromReply
+
+```ts
+restoreNeatRacingPanelNetworkFromReply(
+  payload: unknown,
+): NeatRacingPanelNetworkResolution
+```
+
+Restores the sim worker's panel-network reply envelope into a REAL
+network (P4-S2C, Step 24C — the docked-right panel network transport).
+
+Educational note — WHY THE REBUILD IS IDEMPOTENT: the rebuilt network's
+STRUCTURE comes from the envelope's own dimensions (the channel count and
+the output count), never from a random seed, so the same envelope always
+yields the same connection count and the same connection order; the
+weights then ride positional assignment over `network.connections[i]
+.weight`. The rebuild therefore reproduces the worker's serialized mind
+byte-for-byte — same-runtime parity, never cross-environment exact.
+
+Parameters:
+- `payload` - The reply envelope (the worker's `panel-network`
+payload); every malformed shape is a loud rejection.
+
+Returns: The restored resolution (the carrier car index and the rebuilt
+network).
+
+Example:
+
+```ts
+const resolution = restoreNeatRacingPanelNetworkFromReply(reply.payload);
+console.log(resolution.carIndex, resolution.network.connections.length);
+```
+
+## ai/racing-adaptation.session.ts
+
+NeatRacing HOST ADAPTATION SESSION (Phase 4, Step 23, slice
+`P4-S1-eval-wiring`).
+
+THE SESSION (spec section 9.2, AC-043 session half): the AI lane needs ONE
+owner that spans the whole adaptation lifecycle, and this module is that
+owner:
+
+- it boots ONE eval-worker session per AI-lane lifecycle (the §9.2
+  two-worker split: the simulation lane stays 60 Hz physics + per-tick
+  control, everything growth/variant lives in the eval worker);
+- it drives ONE runtime-adaptation engine per AGENT car (the engines are
+  created ONCE — their hysteresis, cooldown and AC-030 predicate memory
+  live in their closures and are never rebuilt per tick);
+- it evaluates the BOUNDED per-car variant window through the eval worker
+  (the §9.6 shaped-fitness window: one slot per car, never more than
+  `NEATRACING_EVAL_WORKER_PARALLEL_VARIANT_COUNT` slots);
+- it publishes the CURRENTLY adopted per-car network through the
+  simulation-worker fleet-control seam (the AC-029 adopted-snapshot law:
+  the relay reads the LIVE network of a car, never a cached copy).
+
+LANE ISOLATION (LD-12): car 0 is the HUMAN sample. It owns NO network and
+its engine is never driven (it is NEVER adapted), but it IS scored in the
+shaped-fitness window, because the fitness law ranks the WHOLE grid.
+
+THE AC-030 OSCILLATION LAW IS NOT RE-DERIVED HERE: the shared predicate
+lives in `./oscillation-penalty.utils` and the ENGINE evaluates it EXACTLY
+ONCE per adaptation tick; this session only REPORTS the engagement the
+engine produced (a second evaluation would advance the hysteresis ramp
+twice and break the law's single-evaluation invariant).
+
+THE EVAL WORKER'S ROLE IN THIS SLICE: the engine's `evaluateScore` hook is
+SYNCHRONOUS and the engine creates its candidate INTERNALLY, so the async
+eval worker CANNOT score the engine's candidate before the engine's commit
+decision. The eval worker therefore evaluates the SESSION-LEVEL variant
+window (the per-car shaped fitness), while the engine owns growth, its own
+score windows, exhaustion, commit and rollback.
+
+THE ROUND-BOUNDARY LAW: the eval protocol's `stop` request is TERMINAL and
+discards the in-flight window. A `reset()` therefore stops the outgoing
+session (so a window that is still in flight can never publish into the
+new round) and boots a FRESH session — it never leaves a terminal session
+behind.
+
+D1: no `Math.random` anywhere — every stream comes from the AC-026
+reproducibility tuple (the per-car `car-<i>` network seeds and the
+`adaptation-<i>` engine seeds).
+
+### assertNeatRacingAdaptationSessionOptions
+
+```ts
+assertNeatRacingAdaptationSessionOptions(
+  carCount: number,
+  maxCars: number,
+): void
+```
+
+Guards the session options: the fleet size must be a positive integer and
+the grid the shaped fitness ranks against must cover the fleet.
+
+Parameters:
+- `carCount` - The fleet size (car 0 is the human sample).
+- `maxCars` - The grid size the position term ranks against.
+
+### assertNeatRacingAdaptationTickCars
+
+```ts
+assertNeatRacingAdaptationTickCars(
+  cars: readonly NeatRacingAdaptationCarInput[],
+  carCount: number,
+): void
+```
+
+Guards the per-car inputs of one tick: every car index must name a car of
+the session's fleet.
+
+Parameters:
+- `cars` - The per-car inputs of the tick.
+- `carCount` - The fleet size of the session.
+
+### buildNeatRacingAdaptationVariantWindow
+
+```ts
+buildNeatRacingAdaptationVariantWindow(
+  cars: readonly NeatRacingAdaptationCarInput[],
+): readonly NeatRacingEvalWorkerVariant[]
+```
+
+Builds the BOUNDED per-car variant window of one tick.
+
+Educational note (TP-18): the window holds one slot per car and never
+more than `NEATRACING_EVAL_WORKER_PARALLEL_VARIANT_COUNT` slots, so the
+eval worker's dispatch stays inside the adaptation-tick budget.
+
+Parameters:
+- `cars` - The per-car inputs of the tick.
+
+Returns: The variant slots to dispatch.
+
+### createNeatRacingAdaptationCarStates
+
+```ts
+createNeatRacingAdaptationCarStates(
+  tuple: NeatRacingReproducibilityTuple,
+  carCount: number,
+  level: NeatRacingObservationLevel,
+): Map<number, NeatRacingAdaptationCarState>
+```
+
+Builds the per-car state of the session: ONE network and ONE engine per
+car.
+
+Educational note: the human sample (car 0) owns NO network — it replays
+the recorded human input — while every agent car owns its OWN network
+instance, seeded from the §9.7.2 `car-<i>` child seed so every car draws
+from its own stream inside the reproducibility tuple (D1). The engine of
+car 0 is created (the `adaptation-<i>` table stays aligned with the fleet
+index) but is NEVER driven.
+
+Parameters:
+- `tuple` - The AC-026 reproducibility tuple.
+- `carCount` - The fleet size.
+- `level` - The observation ladder level (selects the network width).
+
+Returns: The per-car state map, keyed by car index.
+
+### createNeatRacingAdaptationEvalWorker
+
+```ts
+createNeatRacingAdaptationEvalWorker(
+  maxCars: number,
+): NeatRacingEvalWorkerSession
+```
+
+Boots the eval-worker session of the session and binds the §9.6 shaped
+fitness as its variant evaluation unit.
+
+Parameters:
+- `maxCars` - The grid size the shaped fitness ranks the position
+against.
+
+Returns: The fresh eval-worker session (in the `ready` phase).
+
+### createNeatRacingAdaptationSession
+
+```ts
+createNeatRacingAdaptationSession(
+  options: NeatRacingAdaptationSessionOptions,
+): NeatRacingAdaptationSession
+```
+
+Creates the host adaptation session of one AI-lane lifecycle.
+
+Educational note — what the session owns: ONE eval-worker session (the
+§9.2 growth/variant side), ONE runtime-adaptation engine per agent car
+(the growth side), the BOUNDED per-car variant window that the eval
+worker scores with the §9.6 shaped fitness, and the fleet-control seam
+that publishes the CURRENTLY adopted per-car network to the simulation
+lane (the AC-029 adopted-snapshot law).
+
+LANE ISOLATION (LD-12): car 0 is the human sample — it owns no network
+and its engine is never driven, but it IS scored in the shaped-fitness
+window.
+
+Parameters:
+- `options` - The session options (the tuple, the track geometry, the
+level, the fleet size and the grid size).
+
+Returns: The adaptation session (its seam controller, its tick driver, its
+snapshot and its reset).
+
+Example:
+
+```ts
+const session = createNeatRacingAdaptationSession({
+  tuple,
+  trackSpec,
+  level: 1,
+  carCount: 3,
+});
+const results = await session.adaptOnTick({
+  tick: 0,
+  cars: [
+    { carIndex: 0, scoreHistory: [], position: 2, timeSeconds: 30, lapProgress01: 0.5 },
+    { carIndex: 1, scoreHistory: [], position: 1, timeSeconds: 28, lapProgress01: 0.6 },
+  ],
+});
+const control = session.controller.computeControl(fleet, 1);
+```
+
+### NeatRacingAdaptationCarInput
+
+The per-car input of one adaptation tick.
+
+### NeatRacingAdaptationCarState
+
+The per-car state of one adaptation session.
+
+### NeatRacingAdaptationDrivingRecord
+
+The driving record one variant slot carries across the eval wire.
+
+Educational note: the eval protocol transports the slot payload verbatim
+(`snapshot: unknown`), so the slot carries the three terms the §9.6
+shaped fitness is a pure function of.
+
+### NeatRacingAdaptationSession
+
+The host adaptation session surface the AI lane consumes.
+
+### NeatRacingAdaptationSessionOptions
+
+The construction options of one host adaptation session.
+
+### NeatRacingAdaptationSessionSnapshot
+
+The plain-data snapshot of one adaptation session.
+
+### NeatRacingAdaptationSessionTickInput
+
+The input of one adaptation tick.
+
+### NeatRacingAdaptationSessionTickResult
+
+The per-car outcome of one adaptation tick.
+
+### readNeatRacingAdaptationDrivingRecord
+
+```ts
+readNeatRacingAdaptationDrivingRecord(
+  variant: NeatRacingEvalWorkerVariant,
+): NeatRacingAdaptationDrivingRecord
+```
+
+Reads the driving record out of one variant slot.
+
+Educational note: the eval protocol transports the slot payload verbatim
+(`snapshot: unknown`), so the unit validates the shape it consumes instead
+of trusting the wire.
+
+Parameters:
+- `variant` - The variant slot as received on the wire.
+
+Returns: The driving record of the slot.
+
+### readNeatRacingAdaptationEvalWindow
+
+```ts
+readNeatRacingAdaptationEvalWindow(
+  responses: readonly NeatRacingEvalWorkerResponse[],
+): readonly NeatRacingEvalWorkerVariantResult[] | null
+```
+
+Reads the scored window out of the eval worker's reply.
+
+Educational note: the protocol answers a malformed window with ONE error
+reply (a loud session failure) and answers a cancelled round with NO
+reply at all (the window published nothing).
+
+Parameters:
+- `responses` - The replies the eval worker returned.
+
+Returns: The scored slots, or null when the round was cancelled.
+
+### readNeatRacingAdaptationNullable
+
+```ts
+readNeatRacingAdaptationNullable(
+  source: ReadonlyMap<number, T>,
+  carCount: number,
+): readonly (T | null)[]
+```
+
+Reads a per-car map as a dense array indexed by car index, keeping the
+absent cars explicitly null.
+
+Parameters:
+- `source` - The per-car map.
+- `carCount` - The fleet size.
+
+Returns: The dense per-car values (null for a car without an entry).
+
+### readNeatRacingAdaptationNumbers
+
+```ts
+readNeatRacingAdaptationNumbers(
+  source: ReadonlyMap<number, number>,
+  carCount: number,
+): readonly number[]
+```
+
+Reads a per-car numeric map as a dense array indexed by car index.
+
+Parameters:
+- `source` - The per-car map.
+- `carCount` - The fleet size.
+
+Returns: The dense per-car values (0 for a car without an entry).
+
+### stopNeatRacingAdaptationEvalWorker
+
+```ts
+stopNeatRacingAdaptationEvalWorker(
+  session: NeatRacingEvalWorkerSession,
+): void
+```
+
+Stops an eval-worker session.
+
+Educational note: the protocol's `stop` request is TERMINAL and discards
+the in-flight window (E11(d)), so a reset that stops the outgoing session
+guarantees that no superseded round can publish into the new one.
+
+Parameters:
+- `session` - The session to stop.
+
+Returns: Nothing (the session is stopped in place).
 
 ## ai/fitness.shaping.utils.ts
 

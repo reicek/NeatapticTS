@@ -286,9 +286,7 @@ describe('neatracing-packed-v1 frame pack service', () => {
           cars: createDemoFleet(3),
           rules: createFixtureRules('running', null),
         }),
-      ).toThrow(
-        'frame pack failed: car count exceeds the packer carCapacity',
-      );
+      ).toThrow('frame pack failed: car count exceeds the packer carCapacity');
     });
 
     it('guards non-finite channel values with named static errors', () => {
@@ -353,14 +351,22 @@ describe('neatracing-packed-v1 frame pack service', () => {
           carCapacity: 1,
           poolSlots: NEATRACING_FRAME_PACK_MAX_POOL_SLOTS + 1,
         }),
-      ).toThrow('frame pack pool failed: poolSlots must be an integer in [1, 4]');
+      ).toThrow(
+        'frame pack pool failed: poolSlots must be an integer in [1, 4]',
+      );
     });
   });
 
   describe('pack/unpack round-trip', () => {
     it('round-trips a single car exactly on Float32-exact fixtures', () => {
-      const snapshot = createNeatRacingFramePackPool({ carCapacity: 1 }).unpackFrame(
-        packFixtureFrame(1, createDemoFleet(1), createFixtureRules('running', null)),
+      const snapshot = createNeatRacingFramePackPool({
+        carCapacity: 1,
+      }).unpackFrame(
+        packFixtureFrame(
+          1,
+          createDemoFleet(1),
+          createFixtureRules('running', null),
+        ),
       );
       expect(snapshot.cars).toEqual([createFixtureCarState(0)]);
     });
@@ -385,9 +391,9 @@ describe('neatracing-packed-v1 frame pack service', () => {
         createDemoFleet(1),
         createFixtureRules('raceComplete', 2),
       );
-      const snapshot = createNeatRacingFramePackPool({ carCapacity: 1 }).unpackFrame(
-        frame,
-      );
+      const snapshot = createNeatRacingFramePackPool({
+        carCapacity: 1,
+      }).unpackFrame(frame);
       expect([
         snapshot.fromTick,
         snapshot.toTick,
@@ -397,7 +403,16 @@ describe('neatracing-packed-v1 frame pack service', () => {
         snapshot.rules.lapsCompleted,
         snapshot.rules.raceStatus,
         snapshot.rules.nextRaceLevel,
-      ]).toEqual([10, 13, 1, NEATRACING_DEFAULT_FEATURE_FLAG_BITFIELD, 2, 1, 'raceComplete', 2]);
+      ]).toEqual([
+        10,
+        13,
+        1,
+        NEATRACING_DEFAULT_FEATURE_FLAG_BITFIELD,
+        2,
+        1,
+        'raceComplete',
+        2,
+      ]);
     });
 
     it('round-trips race status codes and the null-level sentinel', () => {

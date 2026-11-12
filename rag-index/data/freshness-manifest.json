@@ -1,11 +1,11 @@
 {
-  "lastReindex": 1794092480059,
+  "lastReindex": 1794441675336,
   "updatedBy": "validate-index.mjs",
   "families": {
     "readme": {
       "fresh": true,
       "stalePaths": [],
-      "lastReindex": 1794092480059,
+      "lastReindex": 1794441675336,
       "maxSyncWaitMs": 0,
       "max_age_ms": null,
       "gated": true
@@ -13,15 +13,20 @@
     "ts-source": {
       "fresh": true,
       "stalePaths": [],
-      "lastReindex": 1794092480059,
+      "lastReindex": 1794441675336,
       "maxSyncWaitMs": 0,
       "max_age_ms": null,
       "gated": true
     },
     "plan": {
-      "fresh": true,
-      "stalePaths": [],
-      "lastReindex": 1794092480059,
+      "fresh": false,
+      "stalePaths": [
+        "plans/README.md",
+        "plans/Roadmap.md",
+        "plans/neatracing-voxel-racer.logs.md",
+        "plans/neatracing-voxel-racer.plans.md"
+      ],
+      "lastReindex": 1794441675336,
       "maxSyncWaitMs": 60000,
       "max_age_ms": null,
       "gated": true
@@ -29,15 +34,20 @@
     "completed-plan": {
       "fresh": true,
       "stalePaths": [],
-      "lastReindex": 1794092480059,
+      "lastReindex": 1794441675336,
       "maxSyncWaitMs": 0,
       "max_age_ms": null,
       "gated": false
     },
     "demo": {
-      "fresh": true,
-      "stalePaths": [],
-      "lastReindex": 1794092480059,
+      "fresh": false,
+      "stalePaths": [
+        "examples/neatRacing/browser-entry/browser-entry.ts",
+        "examples/neatRacing/track/road-edge.ts",
+        "examples/neatRacing/workers/simulation-worker/simulation-worker.test.ts",
+        "examples/neatRacing/workers/simulation-worker/simulation-worker.ts"
+      ],
+      "lastReindex": 1794441675336,
       "maxSyncWaitMs": 0,
       "max_age_ms": null,
       "gated": true
@@ -45,7 +55,7 @@
     "benchmark": {
       "fresh": true,
       "stalePaths": [],
-      "lastReindex": 1794092480059,
+      "lastReindex": 1794441675336,
       "maxSyncWaitMs": 0,
       "max_age_ms": null,
       "gated": true
@@ -53,7 +63,7 @@
     "root-doc": {
       "fresh": true,
       "stalePaths": [],
-      "lastReindex": 1794092480059,
+      "lastReindex": 1794441675336,
       "maxSyncWaitMs": 0,
       "max_age_ms": null,
       "gated": true
@@ -61,7 +71,7 @@
     "skill": {
       "fresh": true,
       "stalePaths": [],
-      "lastReindex": 1794092480059,
+      "lastReindex": 1794441675336,
       "maxSyncWaitMs": 0,
       "max_age_ms": null,
       "gated": true
@@ -69,7 +79,7 @@
     "agent": {
       "fresh": true,
       "stalePaths": [],
-      "lastReindex": 1794092480059,
+      "lastReindex": 1794441675336,
       "maxSyncWaitMs": 0,
       "max_age_ms": null,
       "gated": true
@@ -77,7 +87,7 @@
     "copilot-instructions": {
       "fresh": true,
       "stalePaths": [],
-      "lastReindex": 1794092480059,
+      "lastReindex": 1794441675336,
       "maxSyncWaitMs": 0,
       "max_age_ms": null,
       "gated": true

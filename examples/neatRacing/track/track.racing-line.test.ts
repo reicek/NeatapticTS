@@ -181,10 +181,7 @@ const buildStadiumFixture = (): StadiumFixture => {
   // The right half-circle, centred at (straightSamples, 0).
   for (let step = 1; step <= FIXTURE_ARC_SAMPLES; step += 1) {
     const angle = -Math.PI / 2 + (step * Math.PI) / FIXTURE_ARC_SAMPLES;
-    push(
-      straightSamples + radius * Math.cos(angle),
-      radius * Math.sin(angle),
-    );
+    push(straightSamples + radius * Math.cos(angle), radius * Math.sin(angle));
   }
   // The top straight, travelled along -x at y = +radius (the last sample
   // sits exactly on the left corner's start).
@@ -201,9 +198,14 @@ const buildStadiumFixture = (): StadiumFixture => {
   const firstStraightEnd = straightSamples;
   const firstCornerStart = firstStraightEnd + 1;
   const straightMiddleStart =
-    Math.floor((firstStraightEnd - FIXTURE_STRAIGHT_MIDDLE_SAMPLE_COUNT) / 2) + 1;
+    Math.floor((firstStraightEnd - FIXTURE_STRAIGHT_MIDDLE_SAMPLE_COUNT) / 2) +
+    1;
   const straightSampleIndices: number[] = [];
-  for (let offset = 0; offset < FIXTURE_STRAIGHT_MIDDLE_SAMPLE_COUNT; offset += 1) {
+  for (
+    let offset = 0;
+    offset < FIXTURE_STRAIGHT_MIDDLE_SAMPLE_COUNT;
+    offset += 1
+  ) {
     straightSampleIndices.push(straightMiddleStart + offset);
   }
 
@@ -224,9 +226,8 @@ const STADIUM = buildStadiumFixture();
  * @param line - The racing-line table to read.
  * @returns The largest `|offsetM|` in the table (m).
  */
-const maxAbsOffsetMOf = (
-  line: readonly TrackRacingLinePoint[],
-): number => Math.max(...line.map((point) => Math.abs(point.offsetM)));
+const maxAbsOffsetMOf = (line: readonly TrackRacingLinePoint[]): number =>
+  Math.max(...line.map((point) => Math.abs(point.offsetM)));
 
 /**
  * The racing-line contracts (Step 14M, slice `P1-ai-centerline-red`).
@@ -259,8 +260,8 @@ describe('buildTrackRacingLine (Step 14M, slice P1-ai-centerline-red)', () => {
 
       // Assert
       const worstStraightOffsetM = Math.max(
-        ...STADIUM.straightSampleIndices.map(
-          (index) => Math.abs(line[index].offsetM),
+        ...STADIUM.straightSampleIndices.map((index) =>
+          Math.abs(line[index].offsetM),
         ),
       );
       expect(worstStraightOffsetM).toBeLessThanOrEqual(OFFSET_TOLERANCE_M);
@@ -327,9 +328,8 @@ describe('buildTrackRacingLine (Step 14M, slice P1-ai-centerline-red)', () => {
 
       // Assert
       const worstDeltaM = Math.max(
-        ...line.map(
-          (point: TrackRacingLinePoint, index: number) =>
-            Math.abs(point.offsetM - rotatedLine[index].offsetM),
+        ...line.map((point: TrackRacingLinePoint, index: number) =>
+          Math.abs(point.offsetM - rotatedLine[index].offsetM),
         ),
       );
       expect(worstDeltaM).toBeLessThanOrEqual(OFFSET_TOLERANCE_M);
@@ -341,8 +341,8 @@ describe('buildTrackRacingLine (Step 14M, slice P1-ai-centerline-red)', () => {
       const line = buildTrackRacingLine(STADIUM.samples);
 
       // Assert
-      const straightTargetSpeed = line[STADIUM.straightSampleIndices[0]]
-        .targetSpeedUnitsPerS;
+      const straightTargetSpeed =
+        line[STADIUM.straightSampleIndices[0]].targetSpeedUnitsPerS;
       const cornerTargetSpeed =
         line[STADIUM.apexSampleIndex].targetSpeedUnitsPerS;
       expect(cornerTargetSpeed).toBeLessThan(straightTargetSpeed);
@@ -530,151 +530,145 @@ const unclampedOffsetMOf = (point: TrackRacingLinePoint): number => {
  * AC-095 (the seam is closed - the ONE edge): the bound the racing line
  * is clamped by is the SAME edge the containment bound reads.
  */
-describe(
-  'the racing-line clamp reads the SEAM pair (Step 14V, slice P1-prop-clearance-red, AC-095)',
-  () => {
-    describe('RED-5 (the clamp is bounded by the ASYMMETRIC pair)', () => {
-      // [RED-14V-RL-5-OUTER-BOUND]
-      it('AC-095: the outer-side corner is bounded by the seam OUTER half-width (RED-14V-RL-5-OUTER-BOUND)', () => {
-        // Arrange
-        const profile = resolveTrackEdgeProfile(HOOK.segments);
-        const splineEdges = resolveTrackSplineEdges(HOOK.samples, profile);
-        const line = buildTrackRacingLine(HOOK.samples);
-        const apexIndex = HOOK.concaveApexIndex;
-        const apexPoint = line[apexIndex]!;
-        const apexEdge = splineEdges[apexIndex]!;
+describe('the racing-line clamp reads the SEAM pair (Step 14V, slice P1-prop-clearance-red, AC-095)', () => {
+  describe('RED-5 (the clamp is bounded by the ASYMMETRIC pair)', () => {
+    // [RED-14V-RL-5-OUTER-BOUND]
+    it('AC-095: the outer-side corner is bounded by the seam OUTER half-width (RED-14V-RL-5-OUTER-BOUND)', () => {
+      // Arrange
+      const profile = resolveTrackEdgeProfile(HOOK.segments);
+      const splineEdges = resolveTrackSplineEdges(HOOK.samples, profile);
+      const line = buildTrackRacingLine(HOOK.samples);
+      const apexIndex = HOOK.concaveApexIndex;
+      const apexPoint = line[apexIndex]!;
+      const apexEdge = splineEdges[apexIndex]!;
 
-        // NON-VACUITY GUARD (asserted BEFORE the relational clause): the
-        // probed corner REALLY binds the offset. The UNCLAMPED offset
-        // (recomputed from the PUBLISHED curvature through the NAMED gain
-        // and threshold) must exceed the seam's outer half-width, the seam
-        // must publish an ASYMMETRIC pair there, and the probe's offset
-        // must sit on the loop-global OUTER side - otherwise the bound
-        // clause below would be satisfied vacuously.
-        expect(apexEdge.outerHalfWidthM).toBeGreaterThan(
-          apexEdge.innerHalfWidthM,
-        );
-        expect(
-          Math.abs(unclampedOffsetMOf(apexPoint)),
-        ).toBeGreaterThan(apexEdge.outerHalfWidthM);
-        expect(Math.sign(apexPoint.offsetM)).toBe(profile.outerSideSign);
+      // NON-VACUITY GUARD (asserted BEFORE the relational clause): the
+      // probed corner REALLY binds the offset. The UNCLAMPED offset
+      // (recomputed from the PUBLISHED curvature through the NAMED gain
+      // and threshold) must exceed the seam's outer half-width, the seam
+      // must publish an ASYMMETRIC pair there, and the probe's offset
+      // must sit on the loop-global OUTER side - otherwise the bound
+      // clause below would be satisfied vacuously.
+      expect(apexEdge.outerHalfWidthM).toBeGreaterThan(
+        apexEdge.innerHalfWidthM,
+      );
+      expect(Math.abs(unclampedOffsetMOf(apexPoint))).toBeGreaterThan(
+        apexEdge.outerHalfWidthM,
+      );
+      expect(Math.sign(apexPoint.offsetM)).toBe(profile.outerSideSign);
 
-        // Assert
-        // TODAY the published offset is clamped to the RETIRED symmetric
-        // `sample.width / 2` (1.500000 m), so the AI line can NOT use the
-        // widened outer corner. The seam's published outer half-width at
-        // this corner is 1.625000 m, and THAT is the bound the AI gets
-        // once the clamp is re-based on the seam pair.
-        const boundDeltaM = Math.abs(
-          Math.abs(apexPoint.offsetM) - apexEdge.outerHalfWidthM,
-        );
-        expect(boundDeltaM).toBeLessThanOrEqual(OFFSET_TOLERANCE_M);
-      });
-
-      // [RED-14V-RL-5-SIDE-BOUND]
-      it('AC-095: the published offset never exceeds the bound that applies on ITS side, and the inner side is NOT widened (RED-14V-RL-5-SIDE-BOUND)', () => {
-        // Arrange
-        const profile = resolveTrackEdgeProfile(HOOK.segments);
-        const splineEdges = resolveTrackSplineEdges(HOOK.samples, profile);
-        const line = buildTrackRacingLine(HOOK.samples);
-
-        // Act
-        const violations: string[] = [];
-
-        line.forEach((point, index) => {
-          if (point.offsetM === 0) {
-            return;
-          }
-
-          const edge = splineEdges[index]!;
-          const boundM =
-            Math.sign(point.offsetM) === profile.outerSideSign
-              ? edge.outerHalfWidthM
-              : edge.innerHalfWidthM;
-
-          if (Math.abs(point.offsetM) > boundM + OFFSET_TOLERANCE_M) {
-            violations.push(
-              `index=${index} offset=${point.offsetM.toFixed(9)} bound=${boundM.toFixed(9)}`,
-            );
-          }
-        });
-
-        // Assert - the SAFETY half of RED-5: the offset never leaves the
-        // half-width that applies on its own side (GREEN today and after
-        // the re-base).
-        expect(violations).toEqual([]);
-
-        // And the INNER side is NOT widened for the AI: at the convex
-        // (inner-side) apex the published offset is exactly the seam's
-        // INNER half-width.
-        const innerApexPoint = line[HOOK.convexApexIndex]!;
-        const innerApexEdge = splineEdges[HOOK.convexApexIndex]!;
-        expect(
-          Math.abs(
-            Math.abs(innerApexPoint.offsetM) -
-              innerApexEdge.innerHalfWidthM,
-          ),
-        ).toBeLessThanOrEqual(OFFSET_TOLERANCE_M);
-      });
+      // Assert
+      // TODAY the published offset is clamped to the RETIRED symmetric
+      // `sample.width / 2` (1.500000 m), so the AI line can NOT use the
+      // widened outer corner. The seam's published outer half-width at
+      // this corner is 1.625000 m, and THAT is the bound the AI gets
+      // once the clamp is re-based on the seam pair.
+      const boundDeltaM = Math.abs(
+        Math.abs(apexPoint.offsetM) - apexEdge.outerHalfWidthM,
+      );
+      expect(boundDeltaM).toBeLessThanOrEqual(OFFSET_TOLERANCE_M);
     });
 
-    describe('RED-4 (the world reads the SAME edge as the road)', () => {
-      // [RED-14V-RL-4-ONE-SEAM]
-      it('AC-095: the racing line is bounded by the ONE seam edge the CONTAINMENT BOUND reads (RED-14V-RL-4-ONE-SEAM)', () => {
-        // Arrange
-        const profile = resolveTrackEdgeProfile(HOOK.segments);
-        const line = buildTrackRacingLine(HOOK.samples);
-        const apexIndex = HOOK.concaveApexIndex;
-        const apexSample = HOOK.samples[apexIndex]!;
-        const apexFrame = resolveSplineSampleFrame(HOOK.samples, apexIndex);
-        const apexOffsetM = line[apexIndex]!.offsetM;
+    // [RED-14V-RL-5-SIDE-BOUND]
+    it('AC-095: the published offset never exceeds the bound that applies on ITS side, and the inner side is NOT widened (RED-14V-RL-5-SIDE-BOUND)', () => {
+      // Arrange
+      const profile = resolveTrackEdgeProfile(HOOK.segments);
+      const splineEdges = resolveTrackSplineEdges(HOOK.samples, profile);
+      const line = buildTrackRacingLine(HOOK.samples);
 
-        // The CONTAINMENT BOUND's own reader of the ONE seam edge: the
-        // NEAREST chord of the published profile, measured with that
-        // chord's PUBLISHED side half-width. The probe is the racing
-        // line's OWN point (the sample offset along the left normal), so
-        // the reader is asked about the very place the clamp bounds.
-        const probeX = apexSample.x + apexOffsetM * apexFrame.normalX;
-        const probeY = apexSample.y + apexOffsetM * apexFrame.normalY;
-        const nearest = resolveNearestTrackChord(profile, probeX, probeY);
-        const nearestChord = profile.chords[nearest.segmentIndex]!;
-        const probeSide = resolveTrackEdgeSideAtWorldZ(
-          profile,
-          nearest.segmentIndex,
-          probeX,
-          -probeY,
-        );
-        const containmentBoundM = resolveTrackEdgeHalfWidthM(
-          nearestChord,
-          probeSide,
-        );
+      // Act
+      const violations: string[] = [];
 
-        // NON-VACUITY GUARD (asserted BEFORE the relational clause): the
-        // lane really compares TWO DIFFERENT readers - the racing line's
-        // OWN clamp and the containment bound's reader of the seam - and
-        // the seam really publishes an ASYMMETRIC pair at the probe, so
-        // the bound that applies is a SPECIFIC number and NOT the retired
-        // symmetric `width / 2`.
-        expect(nearestChord.outerHalfWidthM).toBeGreaterThan(
-          nearestChord.innerHalfWidthM,
-        );
-        expect(
-          Math.abs(containmentBoundM - nearestChord.innerHalfWidthM),
-        ).toBeGreaterThan(OFFSET_TOLERANCE_M);
+      line.forEach((point, index) => {
+        if (point.offsetM === 0) {
+          return;
+        }
 
-        // Assert
-        // TODAY the racing line's clamp is the RETIRED symmetric
-        // `sample.width / 2` (1.500000 m), so the bound the AI really
-        // gets is NOT the seam edge the road reads (1.625000 m). After the
-        // re-base the two are ONE edge.
-        const boundDeltaM = Math.abs(
-          Math.abs(apexOffsetM) - containmentBoundM,
-        );
-        expect(boundDeltaM).toBeLessThanOrEqual(OFFSET_TOLERANCE_M);
+        const edge = splineEdges[index]!;
+        const boundM =
+          Math.sign(point.offsetM) === profile.outerSideSign
+            ? edge.outerHalfWidthM
+            : edge.innerHalfWidthM;
+
+        if (Math.abs(point.offsetM) > boundM + OFFSET_TOLERANCE_M) {
+          violations.push(
+            `index=${index} offset=${point.offsetM.toFixed(9)} bound=${boundM.toFixed(9)}`,
+          );
+        }
       });
+
+      // Assert - the SAFETY half of RED-5: the offset never leaves the
+      // half-width that applies on its own side (GREEN today and after
+      // the re-base).
+      expect(violations).toEqual([]);
+
+      // And the INNER side is NOT widened for the AI: at the convex
+      // (inner-side) apex the published offset is exactly the seam's
+      // INNER half-width.
+      const innerApexPoint = line[HOOK.convexApexIndex]!;
+      const innerApexEdge = splineEdges[HOOK.convexApexIndex]!;
+      expect(
+        Math.abs(
+          Math.abs(innerApexPoint.offsetM) - innerApexEdge.innerHalfWidthM,
+        ),
+      ).toBeLessThanOrEqual(OFFSET_TOLERANCE_M);
     });
-  },
-);
+  });
+
+  describe('RED-4 (the world reads the SAME edge as the road)', () => {
+    // [RED-14V-RL-4-ONE-SEAM]
+    it('AC-095: the racing line is bounded by the ONE seam edge the CONTAINMENT BOUND reads (RED-14V-RL-4-ONE-SEAM)', () => {
+      // Arrange
+      const profile = resolveTrackEdgeProfile(HOOK.segments);
+      const line = buildTrackRacingLine(HOOK.samples);
+      const apexIndex = HOOK.concaveApexIndex;
+      const apexSample = HOOK.samples[apexIndex]!;
+      const apexFrame = resolveSplineSampleFrame(HOOK.samples, apexIndex);
+      const apexOffsetM = line[apexIndex]!.offsetM;
+
+      // The CONTAINMENT BOUND's own reader of the ONE seam edge: the
+      // NEAREST chord of the published profile, measured with that
+      // chord's PUBLISHED side half-width. The probe is the racing
+      // line's OWN point (the sample offset along the left normal), so
+      // the reader is asked about the very place the clamp bounds.
+      const probeX = apexSample.x + apexOffsetM * apexFrame.normalX;
+      const probeY = apexSample.y + apexOffsetM * apexFrame.normalY;
+      const nearest = resolveNearestTrackChord(profile, probeX, probeY);
+      const nearestChord = profile.chords[nearest.segmentIndex]!;
+      const probeSide = resolveTrackEdgeSideAtWorldZ(
+        profile,
+        nearest.segmentIndex,
+        probeX,
+        -probeY,
+      );
+      const containmentBoundM = resolveTrackEdgeHalfWidthM(
+        nearestChord,
+        probeSide,
+      );
+
+      // NON-VACUITY GUARD (asserted BEFORE the relational clause): the
+      // lane really compares TWO DIFFERENT readers - the racing line's
+      // OWN clamp and the containment bound's reader of the seam - and
+      // the seam really publishes an ASYMMETRIC pair at the probe, so
+      // the bound that applies is a SPECIFIC number and NOT the retired
+      // symmetric `width / 2`.
+      expect(nearestChord.outerHalfWidthM).toBeGreaterThan(
+        nearestChord.innerHalfWidthM,
+      );
+      expect(
+        Math.abs(containmentBoundM - nearestChord.innerHalfWidthM),
+      ).toBeGreaterThan(OFFSET_TOLERANCE_M);
+
+      // Assert
+      // TODAY the racing line's clamp is the RETIRED symmetric
+      // `sample.width / 2` (1.500000 m), so the bound the AI really
+      // gets is NOT the seam edge the road reads (1.625000 m). After the
+      // re-base the two are ONE edge.
+      const boundDeltaM = Math.abs(Math.abs(apexOffsetM) - containmentBoundM);
+      expect(boundDeltaM).toBeLessThanOrEqual(OFFSET_TOLERANCE_M);
+    });
+  });
+});
 
 /**
  * The PRODUCTION layout the CONTROL-ring lane reads.

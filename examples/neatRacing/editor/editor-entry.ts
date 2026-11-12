@@ -95,11 +95,11 @@ import {
   createEditorVoxelPicker,
 } from './editor.edit.loop';
 import type { EditorEditLoop } from './editor.edit.loop';
-import { createEditorLiveSave, createEditorLiveSymmetry } from './editor.live.save';
-import type {
-  EditorLiveSave,
-  EditorLiveSaveFetch,
+import {
+  createEditorLiveSave,
+  createEditorLiveSymmetry,
 } from './editor.live.save';
+import type { EditorLiveSave, EditorLiveSaveFetch } from './editor.live.save';
 
 /**
  * Editor state container shared by the tool slices (AC-020 partial).

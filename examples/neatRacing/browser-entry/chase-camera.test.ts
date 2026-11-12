@@ -428,9 +428,7 @@ interface MeasuredReleaseTrace {
  * @returns The exported number, or `NaN` when the name is absent.
  */
 function readNumericExport(name: string): number {
-  const value = (chaseCameraModule as unknown as Record<string, unknown>)[
-    name
-  ];
+  const value = (chaseCameraModule as unknown as Record<string, unknown>)[name];
   return typeof value === 'number' && Number.isFinite(value)
     ? value
     : Number.NaN;
@@ -538,7 +536,8 @@ function releaseFromMeasuredHold(
     travelHeadingRad: MEASURED_NOSE_HEADING_RAD,
   });
   const offsetAfterRad = released.offsetRad;
-  const closeFraction = 1 - Math.abs(offsetAfterRad) / Math.abs(offsetBeforeRad);
+  const closeFraction =
+    1 - Math.abs(offsetAfterRad) / Math.abs(offsetBeforeRad);
   return { offsetBeforeRad, offsetAfterRad, closeFraction };
 }
 
@@ -704,10 +703,9 @@ describe('chase camera (P1-drift-rewire-red; Step 14P; RED-3 .. RED-7)', () => {
         CAR_Y,
       );
       // Assert
-      expect(signedShortestDeltaRad(noseBearingRad, travelBearingRad)).toBeCloseTo(
-        MEASURED_PUBLISHED_SLIP_RAD,
-        CAMERA_PRECISION_DIGITS,
-      );
+      expect(
+        signedShortestDeltaRad(noseBearingRad, travelBearingRad),
+      ).toBeCloseTo(MEASURED_PUBLISHED_SLIP_RAD, CAMERA_PRECISION_DIGITS);
     });
 
     // [RED-4-LOOK-TARGET]
@@ -779,7 +777,8 @@ describe('chase camera (P1-drift-rewire-red; Step 14P; RED-3 .. RED-7)', () => {
         measuredStep(1, 1, MEASURED_SPEED_MPS * 2),
       );
       // Act
-      const followRateRatio = Math.abs(fast.offsetRad) / Math.abs(slow.offsetRad);
+      const followRateRatio =
+        Math.abs(fast.offsetRad) / Math.abs(slow.offsetRad);
       // Assert: a fixed time constant would leave the ratio at 1.0.
       expect(followRateRatio).toBeCloseTo(2, 1);
     });
@@ -824,7 +823,9 @@ describe('chase camera (P1-drift-rewire-red; Step 14P; RED-3 .. RED-7)', () => {
       expect(Math.abs(releasedAgain.offsetRad)).toBeLessThan(
         Math.abs(released.offsetRad),
       );
-      expect(Math.sign(releasedAgain.offsetRad)).toBe(Math.sign(slid.offsetRad));
+      expect(Math.sign(releasedAgain.offsetRad)).toBe(
+        Math.sign(slid.offsetRad),
+      );
     });
   });
 
@@ -1054,9 +1055,7 @@ describe('drift camera (P1-driftcam-red; Step 14X; RED-1 .. RED-4)', () => {
       // clause: the camera must react LESS to the same slide.
       expect(responseRad).toBeGreaterThan(0);
       expect(MEASURED_PRE_WAVE_FIRST_TICK_OFFSET_RAD).toBeGreaterThan(0);
-      expect(responseRad).toBeLessThan(
-        MEASURED_PRE_WAVE_FIRST_TICK_OFFSET_RAD,
-      );
+      expect(responseRad).toBeLessThan(MEASURED_PRE_WAVE_FIRST_TICK_OFFSET_RAD);
     });
 
     // [RED-2-SLOWER-TIME-TO-CAP]
@@ -1181,12 +1180,7 @@ describe('drift camera (P1-driftcam-red; Step 14X; RED-1 .. RED-4)', () => {
         typeof NEATRACING_CHASE_CAMERA_LOOKAHEAD,
       ];
       // Assert
-      expect(publishedTypes).toEqual([
-        'number',
-        'number',
-        'number',
-        'number',
-      ]);
+      expect(publishedTypes).toEqual(['number', 'number', 'number', 'number']);
     });
 
     // [RED-4-PUBLISHED-FUNCTIONS]
@@ -1214,13 +1208,10 @@ describe('drift camera (P1-driftcam-red; Step 14X; RED-1 .. RED-4)', () => {
         createChaseCameraFollowState(),
         measuredStep(1, 1),
       );
-      const straight = stepChaseCameraFollow(
-        createChaseCameraFollowState(),
-        {
-          ...measuredStep(1, 1),
-          travelHeadingRad: MEASURED_NOSE_HEADING_RAD,
-        },
-      );
+      const straight = stepChaseCameraFollow(createChaseCameraFollowState(), {
+        ...measuredStep(1, 1),
+        travelHeadingRad: MEASURED_NOSE_HEADING_RAD,
+      });
       // Act
       // Assert
       expect(slid.offsetRad).not.toBe(0);

@@ -325,14 +325,13 @@ export function createEditorLiveSymmetry(
   const base = config.base ?? createEditorSymmetry();
   // Step 1: Resolve the two frozen policies the toggle selects between.
   // The base policy already carries the editor's mirror-Y/mirror-Z flags.
-  const enabled =
-    base.mirrorX
-      ? base
-      : createEditorSymmetry({
-          mirrorX: true,
-          mirrorY: base.mirrorY,
-          mirrorZ: base.mirrorZ,
-        });
+  const enabled = base.mirrorX
+    ? base
+    : createEditorSymmetry({
+        mirrorX: true,
+        mirrorY: base.mirrorY,
+        mirrorZ: base.mirrorZ,
+      });
   const disabled = base.mirrorX
     ? createEditorSymmetry({
         mirrorX: false,
@@ -537,7 +536,10 @@ export function isEditorVolumeMirrorSymmetric(volume: Uint8Array): boolean {
         NEATRACING_EDITOR_VOLUME_SLICE_STRIDE * z +
         NEATRACING_EDITOR_VOLUME_ROW_STRIDE * y;
       for (let x = 0; x < SYMMETRIC_STORED_WIDTH; x += 1) {
-        if (volume[rowStart + x] !== volume[rowStart + NEATRACING_EDITOR_VOLUME_EDGE - 1 - x]) {
+        if (
+          volume[rowStart + x] !==
+          volume[rowStart + NEATRACING_EDITOR_VOLUME_EDGE - 1 - x]
+        ) {
           return false;
         }
       }
@@ -767,8 +769,7 @@ export function createEditorLiveSave(
       bytes,
       symmetric,
       error: null,
-      rebuild:
-        rebuildCode === REBUILD_COALESCED_CODE ? 'coalesced' : 'started',
+      rebuild: rebuildCode === REBUILD_COALESCED_CODE ? 'coalesced' : 'started',
     };
   }
 

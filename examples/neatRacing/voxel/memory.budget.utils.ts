@@ -141,7 +141,8 @@ export const NEATRACING_VOXEL_RUNTIME_MODEL_MEMORY_BUDGET_BYTES = 2_621_440;
  * exactly on this allowance, which
  * {@linkcode accountEditorMemory} asserts.
  */
-export const NEATRACING_EDITOR_MEMORY_EXCEPTION_ALLOWANCE_BYTES = 8 * 1024 * 1024;
+export const NEATRACING_EDITOR_MEMORY_EXCEPTION_ALLOWANCE_BYTES =
+  8 * 1024 * 1024;
 
 /** Rejection code: the named runtime memory budget was exceeded. */
 const CODE_MEMORY_BUDGET_EXCEEDED = 'VOXEL_MEMORY_BUDGET_EXCEEDED';
@@ -369,7 +370,11 @@ export function accountVoxelModelMemory(
     vertexDataBytes +
     mesherMaskPeakBytes;
   const retainedAfterBootBytes = vertexDataBytes + paletteBytes;
-  const retainedManifest = buildRetainedManifest(model, sliceBufferBytes, vertexDataBytes);
+  const retainedManifest = buildRetainedManifest(
+    model,
+    sliceBufferBytes,
+    vertexDataBytes,
+  );
   const denseGridBuffersRetained = countDenseGridBuffers(
     retainedManifest,
     denseGridBytes,
@@ -576,8 +581,7 @@ export function assertVoxelRuntimeMemoryWithinBudget(
 export function assertSparseVoxelRetention(
   account: VoxelModelMemoryAccount,
 ): true {
-  const denseGridBytes =
-    account.dims[0] * account.dims[1] * account.dims[2];
+  const denseGridBytes = account.dims[0] * account.dims[1] * account.dims[2];
   for (const entry of account.retainedManifest) {
     // The explicit flag is authoritative for every buffer class; the
     // byte-length inference skips the palette, whose fixed 5-byte entry
@@ -652,7 +656,10 @@ function assertValidModelMemoryInput(model: VoxelModelMemoryInput): void {
       'a memory account needs a non-empty model label',
     );
   }
-  if (!Array.isArray(model.dims) || model.dims.length !== NEATRACING_VOXEL_DIM_COUNT) {
+  if (
+    !Array.isArray(model.dims) ||
+    model.dims.length !== NEATRACING_VOXEL_DIM_COUNT
+  ) {
     throw new VoxelMemoryBudgetError(
       CODE_MEMORY_ACCOUNT_INVALID,
       `model "${model.label}" must declare ${NEATRACING_VOXEL_DIM_COUNT} grid dims; received ${String(model.dims)}`,
@@ -672,7 +679,10 @@ function assertValidModelMemoryInput(model: VoxelModelMemoryInput): void {
       `model "${model.label}" has an invalid quad count ${model.quadCount}; it must be a non-negative integer`,
     );
   }
-  if (!Number.isInteger(model.paletteEntryCount) || model.paletteEntryCount < 0) {
+  if (
+    !Number.isInteger(model.paletteEntryCount) ||
+    model.paletteEntryCount < 0
+  ) {
     throw new VoxelMemoryBudgetError(
       CODE_MEMORY_ACCOUNT_INVALID,
       `model "${model.label}" has an invalid palette entry count ${model.paletteEntryCount}; it must be a non-negative integer`,

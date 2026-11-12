@@ -53,7 +53,9 @@ describe('decoration.lod (P1-decoration-scale, AC-051)', () => {
         FIXTURE_CAMERA,
       );
 
-      expect(selected.length).toBeLessThanOrEqual(NEATRACING_DECORATION_LOD_BUDGET);
+      expect(selected.length).toBeLessThanOrEqual(
+        NEATRACING_DECORATION_LOD_BUDGET,
+      );
     });
 
     it('honors an explicit smaller budget', () => {
@@ -70,7 +72,9 @@ describe('decoration.lod (P1-decoration-scale, AC-051)', () => {
 
   describe('distance scaling', () => {
     it('returns a larger scale near the camera than far away', () => {
-      const near = computeDecorationScale(NEATRACING_DECORATION_NEAR_REFERENCE_M);
+      const near = computeDecorationScale(
+        NEATRACING_DECORATION_NEAR_REFERENCE_M,
+      );
       const far = computeDecorationScale(NEATRACING_DECORATION_CULL_DISTANCE_M);
 
       expect(near).toBeGreaterThan(far);
@@ -85,7 +89,9 @@ describe('decoration.lod (P1-decoration-scale, AC-051)', () => {
     });
 
     it('uses the near reference as a unit scale anchor', () => {
-      const scale = computeDecorationScale(NEATRACING_DECORATION_NEAR_REFERENCE_M);
+      const scale = computeDecorationScale(
+        NEATRACING_DECORATION_NEAR_REFERENCE_M,
+      );
 
       expect(scale).toBeCloseTo(1, 6);
     });
@@ -99,7 +105,9 @@ describe('decoration.lod (P1-decoration-scale, AC-051)', () => {
     });
 
     it('marks decorations beyond the cull distance as not visible', () => {
-      const lod = computeDecorationLod(NEATRACING_DECORATION_CULL_DISTANCE_M + 1);
+      const lod = computeDecorationLod(
+        NEATRACING_DECORATION_CULL_DISTANCE_M + 1,
+      );
 
       expect(lod.visible).toBe(false);
     });
@@ -130,7 +138,9 @@ describe('decoration.lod (P1-decoration-scale, AC-051)', () => {
 
     it('documents the P1 decision as 2D-preferred with disabled voxel fallback', () => {
       expect(NEATRACING_DECORATION_P1_DECISION.preferredMode).toBe('2d');
-      expect(NEATRACING_DECORATION_P1_DECISION.voxelFallbackThresholdM).toBeNull();
+      expect(
+        NEATRACING_DECORATION_P1_DECISION.voxelFallbackThresholdM,
+      ).toBeNull();
     });
   });
 

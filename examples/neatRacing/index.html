@@ -77,6 +77,33 @@
       #neatracing-hud-output > * {
         pointer-events: auto;
       }
+
+      #neatracing-network-panel {
+        /* The docked-right shelf anchor (P4-S2C 1a): the network panel is
+           absolutely positioned inside this full-viewport overlay layer and
+           its slot geometry (left/top/width/height) is owned by the JS
+           shelf resolver — this rule carries the structural anchor and
+           pointer pass-through only, never a second JS-vs-CSS sizing
+           authority. */
+        position: absolute;
+        pointer-events: none;
+      }
+
+      #neatracing-network-panel-fullscreen-toggle {
+        /* The AI-mode panel's fullscreen toggle control anchor (the P4-S4
+           fullscreen-surface fix packet iteration 1 — the re-homed AC-103
+           affordance): the button mounts as a DIRECT child of the
+           full-viewport hud-output layer, so the `> *` subtree rule above
+           re-enables pointer events for the control's OWN compact hit
+           area (never an oversized pass-through-blocking wrapper). This
+           rule carries the structural anchor and positioning only — the
+           panel slot geometry stays JS-owned (never a second JS-vs-CSS
+           sizing authority) and the panel shell's pointer-events:none
+           pass-through law above stays byte-unchanged. */
+        position: absolute;
+        right: 8px;
+        bottom: 8px;
+      }
     </style>
   </head>
   <body>

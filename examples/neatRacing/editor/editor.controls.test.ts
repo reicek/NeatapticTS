@@ -129,7 +129,9 @@ function createModelStoreFetch(
     if (url.endsWith(MODEL_LIST_PATH)) {
       return { ok: true, json: async () => ({ models }) };
     }
-    const modelName = decodeURIComponent(url.slice(`${MODEL_LIST_PATH}/`.length));
+    const modelName = decodeURIComponent(
+      url.slice(`${MODEL_LIST_PATH}/`.length),
+    );
     const document =
       modelName === SECOND_MODEL_NAME
         ? SECOND_MODEL_DOCUMENT
@@ -415,7 +417,8 @@ describe('Neat Racing editor controls (slice P1-editor-controls)', () => {
       await controls.whenIdle();
       expect({
         selectedModel: toolframe.state.snapshot().model,
-        dropdownUnchanged: toolframe.controls.modelSelect.value === dropdownBefore,
+        dropdownUnchanged:
+          toolframe.controls.modelSelect.value === dropdownBefore,
       }).toEqual({
         selectedModel: null,
         dropdownUnchanged: true,
@@ -483,7 +486,9 @@ describe('Neat Racing editor controls (slice P1-editor-controls)', () => {
     });
 
     it('paints the working volume with the selected palette entry', () => {
-      const session = bootEditorSession({ fetch: createEmptyModelStoreFetch() });
+      const session = bootEditorSession({
+        fetch: createEmptyModelStoreFetch(),
+      });
       const paletteIndex = session.controls.addPaletteEntry([...RED_ENTRY]);
       session.controls.selectPaletteEntry(paletteIndex);
       const canvas = document.getElementById('neatracing-editor-canvas');
@@ -498,7 +503,9 @@ describe('Neat Racing editor controls (slice P1-editor-controls)', () => {
     });
 
     it('paints the mirrored voxel pair the symmetry surface expands', () => {
-      const session = bootEditorSession({ fetch: createEmptyModelStoreFetch() });
+      const session = bootEditorSession({
+        fetch: createEmptyModelStoreFetch(),
+      });
       session.controls.addPaletteEntry([...RED_ENTRY]);
       const canvas = document.getElementById('neatracing-editor-canvas');
       canvas?.dispatchEvent(

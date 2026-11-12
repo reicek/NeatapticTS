@@ -131,7 +131,10 @@ export interface NeatRacingAiModeGoalSession {
  */
 export type NeatRacingAiModeGoalPhase =
   | { readonly kind: 'lapFloor'; readonly remainingLaps: number }
-  | { readonly kind: 'chasingGoal'; readonly promotionTargetLevel: NeatRacingObservationLevel }
+  | {
+      readonly kind: 'chasingGoal';
+      readonly promotionTargetLevel: NeatRacingObservationLevel;
+    }
   | { readonly kind: 'unboundedCap' };
 
 /**
@@ -330,7 +333,8 @@ export function describeNeatRacingAiModeGoalPhase(
   }
   if (session.level < NEATRACING_PROMOTION_MAX_LEVEL) {
     // The branch proves the rung is 1 or 2, so the next rung is 2 or 3.
-    const promotionTargetLevel: NeatRacingObservationLevel = session.level === 1 ? 2 : 3;
+    const promotionTargetLevel: NeatRacingObservationLevel =
+      session.level === 1 ? 2 : 3;
     return { kind: 'chasingGoal', promotionTargetLevel };
   }
   return { kind: 'unboundedCap' };
@@ -407,14 +411,18 @@ export function recordNeatRacingAiModeGoalCrossing(
     ? Math.max(0, Math.floor(normalizedLapsSinceLastCrossing))
     : 0;
   const sessionLaps: number = session.sessionLaps + completedLaps;
-  const evaluation: NeatRacingPromotionEvaluation = evaluateNeatRacingPromotion({
-    level: session.level,
-    sessionLaps,
-    nodeCount: finiteOrNaN(crossing.nodeCount),
-    forwardCrossing: true,
-    lapsSinceLastCrossing: normalizedLapsSinceLastCrossing,
-    drivability: normalizeNeatRacingAiModeGoalDrivability(crossing.drivability),
-  });
+  const evaluation: NeatRacingPromotionEvaluation = evaluateNeatRacingPromotion(
+    {
+      level: session.level,
+      sessionLaps,
+      nodeCount: finiteOrNaN(crossing.nodeCount),
+      forwardCrossing: true,
+      lapsSinceLastCrossing: normalizedLapsSinceLastCrossing,
+      drivability: normalizeNeatRacingAiModeGoalDrivability(
+        crossing.drivability,
+      ),
+    },
+  );
   if (evaluation.promoted) {
     return {
       kind: 'promoted',
@@ -428,7 +436,11 @@ export function recordNeatRacingAiModeGoalCrossing(
   if (completedLaps === 0) {
     return { kind: 'crossingWithoutLap', session, evaluation };
   }
-  return { kind: 'lapCounted', session: { ...session, sessionLaps }, evaluation };
+  return {
+    kind: 'lapCounted',
+    session: { ...session, sessionLaps },
+    evaluation,
+  };
 }
 
 /**
@@ -512,16 +524,28 @@ function resolveLadderRung(level: number): NeatRacingObservationLevel {
  * @throws {RangeError} When the record is null, not an object, an array,
  *   carries an out-of-band rung, or a negative/non-finite lap count.
  */
-function assertAiModeGoalSession(session: unknown): asserts session is NeatRacingAiModeGoalSession {
-  if (typeof session !== 'object' || session === null || Array.isArray(session)) {
-    throw new RangeError('neatracing ai-mode goals failed: the session record must be an object');
+function assertAiModeGoalSession(
+  session: unknown,
+): asserts session is NeatRacingAiModeGoalSession {
+  if (
+    typeof session !== 'object' ||
+    session === null ||
+    Array.isArray(session)
+  ) {
+    throw new RangeError(
+      'neatracing ai-mode goals failed: the session record must be an object',
+    );
   }
   if (!('level' in session)) {
-    throw new RangeError('neatracing ai-mode goals failed: the session record must carry a level');
+    throw new RangeError(
+      'neatracing ai-mode goals failed: the session record must carry a level',
+    );
   }
   assertAiModeGoalLevel(session.level);
   if (!('sessionLaps' in session)) {
-    throw new RangeError('neatracing ai-mode goals failed: the session record must carry a lap count');
+    throw new RangeError(
+      'neatracing ai-mode goals failed: the session record must carry a lap count',
+    );
   }
   assertAiModeGoalLapCount(session.sessionLaps);
 }
@@ -537,7 +561,9 @@ function assertAiModeGoalSession(session: unknown): asserts session is NeatRacin
  * @throws {RangeError} When the rung is not an integer between 1 and
  *   `NEATRACING_PROMOTION_MAX_LEVEL`.
  */
-function assertAiModeGoalLevel(level: unknown): asserts level is NeatRacingObservationLevel {
+function assertAiModeGoalLevel(
+  level: unknown,
+): asserts level is NeatRacingObservationLevel {
   if (
     typeof level !== 'number' ||
     !Number.isInteger(level) ||
@@ -560,8 +586,14 @@ function assertAiModeGoalLevel(level: unknown): asserts level is NeatRacingObser
  * @throws {RangeError} When the lap count is not a finite, non-negative
  *   integer.
  */
-function assertAiModeGoalLapCount(sessionLaps: unknown): asserts sessionLaps is number {
-  if (typeof sessionLaps !== 'number' || !Number.isInteger(sessionLaps) || sessionLaps < 0) {
+function assertAiModeGoalLapCount(
+  sessionLaps: unknown,
+): asserts sessionLaps is number {
+  if (
+    typeof sessionLaps !== 'number' ||
+    !Number.isInteger(sessionLaps) ||
+    sessionLaps < 0
+  ) {
     throw new RangeError(
       'neatracing ai-mode goals failed: the session lap count must be a finite, non-negative integer',
     );

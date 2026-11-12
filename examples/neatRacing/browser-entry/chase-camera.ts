@@ -435,13 +435,11 @@ export function resolveChaseCameraBasis(
   // The ground-plane handedness seam: the scene mirrors the top-down y
   // into z. The signed zero is normalized so the world origin maps to +0.
   const carSceneZ = carY === 0 ? 0 : -carY;
-  basis.cameraWorld[0] =
-    carX - forwardX * NEATRACING_CHASE_CAMERA_BACK;
+  basis.cameraWorld[0] = carX - forwardX * NEATRACING_CHASE_CAMERA_BACK;
   basis.cameraWorld[1] = NEATRACING_CHASE_CAMERA_HEIGHT;
   basis.cameraWorld[2] =
     carSceneZ - sceneForwardZ * NEATRACING_CHASE_CAMERA_BACK;
-  basis.lookTarget[0] =
-    carX + forwardX * NEATRACING_CHASE_CAMERA_LOOKAHEAD;
+  basis.lookTarget[0] = carX + forwardX * NEATRACING_CHASE_CAMERA_LOOKAHEAD;
   basis.lookTarget[1] = NEATRACING_CHASE_CAMERA_HEIGHT / 2;
   basis.lookTarget[2] =
     carSceneZ + sceneForwardZ * NEATRACING_CHASE_CAMERA_LOOKAHEAD;

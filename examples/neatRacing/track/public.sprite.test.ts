@@ -313,7 +313,7 @@ function expectedCameraRelativeDirection(
   const phi = Math.atan2(lateral, along);
   const step = Math.PI / 4;
   const fullTurn = 2 * Math.PI;
-  const relative = ((Math.PI - phi) % fullTurn + fullTurn) % fullTurn;
+  const relative = (((Math.PI - phi) % fullTurn) + fullTurn) % fullTurn;
 
   return ROBOT_DIRECTION_ORDER[Math.round(relative / step) % 8]!;
 }
@@ -398,14 +398,16 @@ function seatedSpectatorBillboard(
 function buildPublicRuntimeIndexTable(
   atlas: ReturnType<typeof loadPublicSpriteAtlas>,
 ): Int16Array {
-  const table = new Int16Array(
-    DIRECTION_ORDER.length * PUBLIC_POSE_COUNT,
-  ).fill(-1);
+  const table = new Int16Array(DIRECTION_ORDER.length * PUBLIC_POSE_COUNT).fill(
+    -1,
+  );
 
   for (let frameIndex = 0; frameIndex < atlas.frames.length; frameIndex += 1) {
     const frame = atlas.frames[frameIndex]!;
     const [direction, pose] = frame.id.split('-');
-    const directionIndex = (DIRECTION_ORDER as readonly string[]).indexOf(direction);
+    const directionIndex = (DIRECTION_ORDER as readonly string[]).indexOf(
+      direction,
+    );
     let poseIndex = -1;
     if (pose === 'stand') {
       poseIndex = PUBLIC_POSE_INDEX_STAND;
@@ -429,7 +431,12 @@ function buildPublicRuntimeIndexTable(
  * off-bleacher WALKERS, the off-bleacher STANDING spectators, and the
  * inner-ring MECHANICS.
  */
-const PUBLIC_RUNTIME_ROLE_SET = ['seated', 'walker', 'standing', 'mechanic'] as const;
+const PUBLIC_RUNTIME_ROLE_SET = [
+  'seated',
+  'walker',
+  'standing',
+  'mechanic',
+] as const;
 
 /** One role of the public runtime role set. */
 type PublicRuntimeRole = (typeof PUBLIC_RUNTIME_ROLE_SET)[number];
@@ -616,29 +623,29 @@ describe('public.sprite (P1-neatenstein-public, AC-049)', () => {
       expect(frameA.height).toBeGreaterThan(0);
     });
 
-        it('stores decoded rows top-to-bottom so UV v=0 maps to the sprite top (OBS-6)', () => {
-          const atlas = loadPublicSpriteAtlas();
-          const frame = atlas.frames[0]!;
-          const rowHasOpaquePixel = (row: Uint8ClampedArray): boolean => {
-            for (let index = 3; index < row.length; index += 4) {
-              if (row[index]! >= 32) {
-                return true;
-              }
-            }
-            return false;
-          };
-          const topRow = frame.rgba.subarray(0, frame.width * 4);
-          const bottomRow = frame.rgba.subarray(
-            (frame.height - 1) * frame.width * 4,
-            frame.height * frame.width * 4,
-          );
+    it('stores decoded rows top-to-bottom so UV v=0 maps to the sprite top (OBS-6)', () => {
+      const atlas = loadPublicSpriteAtlas();
+      const frame = atlas.frames[0]!;
+      const rowHasOpaquePixel = (row: Uint8ClampedArray): boolean => {
+        for (let index = 3; index < row.length; index += 4) {
+          if (row[index]! >= 32) {
+            return true;
+          }
+        }
+        return false;
+      };
+      const topRow = frame.rgba.subarray(0, frame.width * 4);
+      const bottomRow = frame.rgba.subarray(
+        (frame.height - 1) * frame.width * 4,
+        frame.height * frame.width * 4,
+      );
 
-          expect(rowHasOpaquePixel(topRow)).toBe(true);
-          expect(rowHasOpaquePixel(bottomRow)).toBe(true);
-        });
-      });
+      expect(rowHasOpaquePixel(topRow)).toBe(true);
+      expect(rowHasOpaquePixel(bottomRow)).toBe(true);
+    });
+  });
 
-      describe('billboard placement and scale', () => {
+  describe('billboard placement and scale', () => {
     it('places billboards on the right side with positive screen-space quads', () => {
       const atlas = loadPublicSpriteAtlas();
       const billboards = buildPublicBillboards(FIXTURE, FIXTURE_CAMERA, atlas);
@@ -704,7 +711,8 @@ describe('public.sprite (P1-neatenstein-public, AC-049)', () => {
       const billboards = buildPublicBillboards(FIXTURE, FIXTURE_CAMERA, atlas);
 
       const all2D = billboards.every(
-        (billboard) => !('voxels' in billboard) && !('voxelSnapshot' in billboard),
+        (billboard) =>
+          !('voxels' in billboard) && !('voxelSnapshot' in billboard),
       );
 
       expect(all2D).toBe(true);
@@ -726,15 +734,17 @@ describe('public.sprite perspective scale (P1-sprite-perspective-scale, AC-054)'
     // A voxel of the same world width as the sprite follows pure perspective.
     const voxelWorldWidth = frame.width * worldPixelScale;
     const voxelScreenRatio =
-      (voxelWorldWidth * focal / nearDistance) /
-      (voxelWorldWidth * focal / farDistance);
+      (voxelWorldWidth * focal) /
+      nearDistance /
+      ((voxelWorldWidth * focal) / farDistance);
 
     // The billboard is scaled by computeBillboardScale, then perspective-projected.
     const billboardWorldWidth = (distance: number) =>
       frame.width * worldPixelScale * computeBillboardScale(distance);
     const billboardScreenRatio =
-      (billboardWorldWidth(nearDistance) * focal / nearDistance) /
-      (billboardWorldWidth(farDistance) * focal / farDistance);
+      (billboardWorldWidth(nearDistance) * focal) /
+      nearDistance /
+      ((billboardWorldWidth(farDistance) * focal) / farDistance);
 
     expect(billboardScreenRatio).toBeCloseTo(voxelScreenRatio, 6);
   });
@@ -752,11 +762,11 @@ describe('public.sprite perspective scale (P1-sprite-perspective-scale, AC-054)'
     const distance = 25;
 
     const preHalvedWorldWidth = frame.width * worldPixelScale;
-    const preHalvedScreenWidth = preHalvedWorldWidth * focal / distance;
+    const preHalvedScreenWidth = (preHalvedWorldWidth * focal) / distance;
 
     const billboardWorldWidth =
       frame.width * worldPixelScale * computeBillboardScale(distance);
-    const billboardScreenWidth = billboardWorldWidth * focal / distance;
+    const billboardScreenWidth = (billboardWorldWidth * focal) / distance;
 
     expect(billboardScreenWidth).toBeCloseTo(
       preHalvedScreenWidth * NEATRACING_PUBLIC_BILLBOARD_WORLD_SCALE,
@@ -772,11 +782,16 @@ describe('public.sprite elevation anchor (P1-sprite-elevation, AC-052)', () => {
     const props = buildRightWorldProps(FIXTURE);
 
     const allRestOnSurface = billboards.every((billboard) => {
-      const frame = atlas.frames.find((candidate) => candidate.id === billboard.frameId);
+      const frame = atlas.frames.find(
+        (candidate) => candidate.id === billboard.frameId,
+      );
       if (!frame) {
         return false;
       }
-      const [halfWidth, halfDepth] = billboardHalfSize(frame, billboard.distance);
+      const [halfWidth, halfDepth] = billboardHalfSize(
+        frame,
+        billboard.distance,
+      );
       const [bx, by, bz] = billboard.position;
       const billboardBottom = by;
 
@@ -815,11 +830,16 @@ describe('public.sprite elevation anchor (P1-sprite-elevation, AC-052)', () => {
     const props = buildRightWorldProps(FIXTURE);
 
     const intersects = billboards.some((billboard) => {
-      const frame = atlas.frames.find((candidate) => candidate.id === billboard.frameId);
+      const frame = atlas.frames.find(
+        (candidate) => candidate.id === billboard.frameId,
+      );
       if (!frame) {
         return false;
       }
-      const [halfWidth, halfDepth] = billboardHalfSize(frame, billboard.distance);
+      const [halfWidth, halfDepth] = billboardHalfSize(
+        frame,
+        billboard.distance,
+      );
       const [bx, by, bz] = billboard.position;
       const billboardYMin = by;
       const billboardYMax = by + 2 * halfDepth;
@@ -858,11 +878,16 @@ describe('public.sprite elevation anchor (P1-sprite-elevation, AC-052)', () => {
     expect(bleachers.length).toBeGreaterThan(0);
 
     const seatedCount = billboards.filter((billboard) => {
-      const frame = atlas.frames.find((candidate) => candidate.id === billboard.frameId);
+      const frame = atlas.frames.find(
+        (candidate) => candidate.id === billboard.frameId,
+      );
       if (!frame) {
         return false;
       }
-      const [halfWidth, halfDepth] = billboardHalfSize(frame, billboard.distance);
+      const [halfWidth, halfDepth] = billboardHalfSize(
+        frame,
+        billboard.distance,
+      );
       const [bx, by, bz] = billboard.position;
 
       return bleachers.some((bleacher) => {
@@ -911,7 +936,8 @@ describe('public.sprite 8-direction frames and look-at-car gaze (P1-sprite-direc
   it('exports a helper to map a world yaw to one of the 8 sprite directions', () => {
     expect(publicSprite).toHaveProperty('resolveDirectionId');
     expect(
-      typeof (publicSprite as unknown as Record<string, unknown>).resolveDirectionId,
+      typeof (publicSprite as unknown as Record<string, unknown>)
+        .resolveDirectionId,
     ).toBe('function');
   });
 
@@ -930,54 +956,54 @@ describe('public.sprite 8-direction frames and look-at-car gaze (P1-sprite-direc
     }
   });
 
-      it('recomputes seated gaze frame index when the live car moves (OBS-3)', () => {
-      const atlas = loadPublicSpriteAtlas();
-      const table = buildPublicRuntimeIndexTable(atlas);
-      const billboard = {
-        position: [0, 0, 0] as const,
-        runtimeRole: 'seated' as const,
-        seed: 1,
-        index: 0,
-        walkDirectionIndex: 0,
-        frameId: 'front-stand',
-        scale: 1,
-        distance: 10,
-        quad: [0, 0, 1, 1] as const,
-      };
+  it('recomputes seated gaze frame index when the live car moves (OBS-3)', () => {
+    const atlas = loadPublicSpriteAtlas();
+    const table = buildPublicRuntimeIndexTable(atlas);
+    const billboard = {
+      position: [0, 0, 0] as const,
+      runtimeRole: 'seated' as const,
+      seed: 1,
+      index: 0,
+      walkDirectionIndex: 0,
+      frameId: 'front-stand',
+      scale: 1,
+      distance: 10,
+      quad: [0, 0, 1, 1] as const,
+    };
 
-      const indexA = computePublicRuntimeFrameIndex(
-        billboard,
-        [0, 2, -10],
-        [0, 0, 10],
-        0,
-        table,
-      );
-      const indexB = computePublicRuntimeFrameIndex(
-        billboard,
-        [0, 2, -10],
-        [10, 0, 0],
-        0,
-        table,
-      );
+    const indexA = computePublicRuntimeFrameIndex(
+      billboard,
+      [0, 2, -10],
+      [0, 0, 10],
+      0,
+      table,
+    );
+    const indexB = computePublicRuntimeFrameIndex(
+      billboard,
+      [0, 2, -10],
+      [10, 0, 0],
+      0,
+      table,
+    );
 
-      expect(indexA).toBeGreaterThanOrEqual(0);
-      expect(indexB).toBeGreaterThanOrEqual(0);
-      expect(indexA).not.toBe(indexB);
-      });
+    expect(indexA).toBeGreaterThanOrEqual(0);
+    expect(indexB).toBeGreaterThanOrEqual(0);
+    expect(indexA).not.toBe(indexB);
+  });
 
-      it('walk frame changes with time and stays deterministic for a fixed clock (OBS-2)', () => {
-      const atlas = loadPublicSpriteAtlas();
-      const frame0 = selectPublicWalkFrame(atlas, FIXTURE.seed, 0, 0);
-      const frameLater = selectPublicWalkFrame(atlas, FIXTURE.seed, 0, 2.5);
-      const frame0Again = selectPublicWalkFrame(atlas, FIXTURE.seed, 0, 0);
+  it('walk frame changes with time and stays deterministic for a fixed clock (OBS-2)', () => {
+    const atlas = loadPublicSpriteAtlas();
+    const frame0 = selectPublicWalkFrame(atlas, FIXTURE.seed, 0, 0);
+    const frameLater = selectPublicWalkFrame(atlas, FIXTURE.seed, 0, 2.5);
+    const frame0Again = selectPublicWalkFrame(atlas, FIXTURE.seed, 0, 0);
 
-      expect(frame0).toMatch(/walk/);
-      expect(frameLater).toMatch(/walk/);
-      expect(frame0).not.toBe(frameLater);
-      expect(frame0Again).toBe(frame0);
-      });
+    expect(frame0).toMatch(/walk/);
+    expect(frameLater).toMatch(/walk/);
+    expect(frame0).not.toBe(frameLater);
+    expect(frame0Again).toBe(frame0);
+  });
 
-      it('recomputes the seated spectator frame when the camera heading changes', () => {
+  it('recomputes the seated spectator frame when the camera heading changes', () => {
     const atlas = loadPublicSpriteAtlas();
     const table = buildPublicRuntimeIndexTable(atlas);
     const billboards = buildPublicBillboards(FIXTURE, FIXTURE_CAMERA, atlas);
@@ -1051,18 +1077,14 @@ describe('public.sprite 8-direction frames and look-at-car gaze (P1-sprite-direc
     // yaw in the opposite compass).
     // Here the spectator looks back at the camera along the camera axis, so
     // a north-looking camera MUST see direction index 0.
-    expect(
-      directionOfRuntimeFrameIndex(atlas, frameFacingNorth),
-    ).toBe(
+    expect(directionOfRuntimeFrameIndex(atlas, frameFacingNorth)).toBe(
       expectedCameraRelativeDirection(
         cameraForwardNorth,
         spectator.position,
         FIXTURE_CAR_POSITION,
       ),
     );
-    expect(directionOfRuntimeFrameIndex(atlas, frameFacingNorth)).toBe(
-      'front',
-    );
+    expect(directionOfRuntimeFrameIndex(atlas, frameFacingNorth)).toBe('front');
     // The atlas is color-major (6 accents x 8 directions x 3 poses), so the
     // direction x pose slot survives the per-robot color offset in the low
     // bits: slot 0 is direction 0 with the stand pose.
@@ -1087,12 +1109,14 @@ describe('public.sprite 8-direction frames and look-at-car gaze (P1-sprite-direc
 
     if (typeof helper === 'function') {
       const atlas = loadPublicSpriteAtlas();
-      const result = (helper as (
-        atlas: unknown,
-        seed: number,
-        index: number,
-        timeSeconds: number,
-      ) => string | { id: string })(atlas, FIXTURE.seed, 0, 0);
+      const result = (
+        helper as (
+          atlas: unknown,
+          seed: number,
+          index: number,
+          timeSeconds: number,
+        ) => string | { id: string }
+      )(atlas, FIXTURE.seed, 0, 0);
       const frameId = typeof result === 'string' ? result : result.id;
 
       expect(frameId).toMatch(/walk/);
@@ -1100,225 +1124,222 @@ describe('public.sprite 8-direction frames and look-at-car gaze (P1-sprite-direc
   });
 });
 
-describe(
-  'public.sprite camera-relative spectator facing (P1-crowd-facing-relative, AC-068)',
-  () => {
-    it('resolves the build-time seated frame to the front frame for a spectator directly in front of a north-looking camera', () => {
-      const atlas = loadPublicSpriteAtlas();
-      const billboards = buildPublicBillboards(FIXTURE, FIXTURE_CAMERA, atlas);
-      const spectator = billboards.find(
-        (billboard) => billboard.runtimeRole === 'seated',
-      );
+describe('public.sprite camera-relative spectator facing (P1-crowd-facing-relative, AC-068)', () => {
+  it('resolves the build-time seated frame to the front frame for a spectator directly in front of a north-looking camera', () => {
+    const atlas = loadPublicSpriteAtlas();
+    const billboards = buildPublicBillboards(FIXTURE, FIXTURE_CAMERA, atlas);
+    const spectator = billboards.find(
+      (billboard) => billboard.runtimeRole === 'seated',
+    );
 
-      if (!spectator) {
-        throw new Error('no seated spectator billboard was built');
-      }
+    if (!spectator) {
+      throw new Error('no seated spectator billboard was built');
+    }
 
-      const [spectatorX, , spectatorZ] = spectator.position;
-      // The camera is placed due south of that spectator and looks north
-      // (+Z), so the spectator looks straight back at the camera and must
-      // resolve to the 'front' frame (direction index 0).
-      const cameraBehindSpectator = {
-        position: [spectatorX, 2, spectatorZ - 10] as const,
-        forward: [0, 0, 1] as const,
-        right: [1, 0, 0] as const,
-        near: 0.1,
-        far: 1000,
-        fovDegrees: 60,
-      } as const;
-      const rebuilt = buildPublicBillboards(
-        FIXTURE,
-        cameraBehindSpectator,
-        atlas,
-      );
-      const rebuiltSpectator = rebuilt.find(
-        (billboard) =>
-          billboard.runtimeRole === 'seated' &&
-          billboard.position[0] === spectatorX &&
-          billboard.position[2] === spectatorZ,
-      );
+    const [spectatorX, , spectatorZ] = spectator.position;
+    // The camera is placed due south of that spectator and looks north
+    // (+Z), so the spectator looks straight back at the camera and must
+    // resolve to the 'front' frame (direction index 0).
+    const cameraBehindSpectator = {
+      position: [spectatorX, 2, spectatorZ - 10] as const,
+      forward: [0, 0, 1] as const,
+      right: [1, 0, 0] as const,
+      near: 0.1,
+      far: 1000,
+      fovDegrees: 60,
+    } as const;
+    const rebuilt = buildPublicBillboards(
+      FIXTURE,
+      cameraBehindSpectator,
+      atlas,
+    );
+    const rebuiltSpectator = rebuilt.find(
+      (billboard) =>
+        billboard.runtimeRole === 'seated' &&
+        billboard.position[0] === spectatorX &&
+        billboard.position[2] === spectatorZ,
+    );
 
-      if (!rebuiltSpectator) {
-        throw new Error('the rebuilt scene lost the seated spectator');
-      }
+    if (!rebuiltSpectator) {
+      throw new Error('the rebuilt scene lost the seated spectator');
+    }
 
-      expect(rebuiltSpectator.frameId).toBe('front-stand');
-    });
+    expect(rebuiltSpectator.frameId).toBe('front-stand');
+  });
 
-    it('rotates the build-time seated frame by 90 degrees when the camera heading rotates', () => {
-      const atlas = loadPublicSpriteAtlas();
-      const northBillboards = buildPublicBillboards(FIXTURE, FIXTURE_CAMERA, atlas);
-      const eastBillboards = buildPublicBillboards(
-        FIXTURE,
-        { ...FIXTURE_CAMERA, forward: [1, 0, 0] as const },
-        atlas,
-      );
-      const northSpectator = northBillboards.find(
-        (billboard) => billboard.runtimeRole === 'seated',
-      );
-      const eastSpectator = eastBillboards.find(
-        (billboard) => billboard.runtimeRole === 'seated',
-      );
+  it('rotates the build-time seated frame by 90 degrees when the camera heading rotates', () => {
+    const atlas = loadPublicSpriteAtlas();
+    const northBillboards = buildPublicBillboards(
+      FIXTURE,
+      FIXTURE_CAMERA,
+      atlas,
+    );
+    const eastBillboards = buildPublicBillboards(
+      FIXTURE,
+      { ...FIXTURE_CAMERA, forward: [1, 0, 0] as const },
+      atlas,
+    );
+    const northSpectator = northBillboards.find(
+      (billboard) => billboard.runtimeRole === 'seated',
+    );
+    const eastSpectator = eastBillboards.find(
+      (billboard) => billboard.runtimeRole === 'seated',
+    );
 
-      if (!northSpectator || !eastSpectator) {
-        throw new Error('no seated spectator billboard was built');
-      }
+    if (!northSpectator || !eastSpectator) {
+      throw new Error('no seated spectator billboard was built');
+    }
 
-      // Same camera position and same car bearing, two camera headings: the
-      // build-time frame must rotate with the heading, by exactly 2 atlas
-      // steps (90 degrees) for a 90 degrees camera rotation.
-      expect(
-        directionStepDistance(
-          directionFromPublicFrameId(northSpectator.frameId),
-          directionFromPublicFrameId(eastSpectator.frameId),
-        ),
-      ).toBe(2);
-    });
+    // Same camera position and same car bearing, two camera headings: the
+    // build-time frame must rotate with the heading, by exactly 2 atlas
+    // steps (90 degrees) for a 90 degrees camera rotation.
+    expect(
+      directionStepDistance(
+        directionFromPublicFrameId(northSpectator.frameId),
+        directionFromPublicFrameId(eastSpectator.frameId),
+      ),
+    ).toBe(2);
+  });
 
-    it('agrees with the build-time frame id when the car sits at the camera position', () => {
-      const atlas = loadPublicSpriteAtlas();
-      const table = buildPublicRuntimeIndexTable(atlas);
-      const billboards = buildPublicBillboards(FIXTURE, FIXTURE_CAMERA, atlas);
-      const spectator = billboards.find(
-        (billboard) => billboard.runtimeRole === 'seated',
-      );
+  it('agrees with the build-time frame id when the car sits at the camera position', () => {
+    const atlas = loadPublicSpriteAtlas();
+    const table = buildPublicRuntimeIndexTable(atlas);
+    const billboards = buildPublicBillboards(FIXTURE, FIXTURE_CAMERA, atlas);
+    const spectator = billboards.find(
+      (billboard) => billboard.runtimeRole === 'seated',
+    );
 
-      if (!spectator) {
-        throw new Error('no seated spectator billboard was built');
-      }
+    if (!spectator) {
+      throw new Error('no seated spectator billboard was built');
+    }
 
-      // With the car at the camera position, the runtime camera-relative
-      // conversion must reproduce the static build-time frame, so the
-      // sprite never flips between the built frame and the drawn frame.
-      const runtimeIndex = computeCameraAwareRuntimeFrameIndex(
-        spectator,
-        FIXTURE_CAMERA.position,
-        FIXTURE_CAMERA.position,
-        0,
-        table,
-        FIXTURE_CAMERA.forward,
-      );
+    // With the car at the camera position, the runtime camera-relative
+    // conversion must reproduce the static build-time frame, so the
+    // sprite never flips between the built frame and the drawn frame.
+    const runtimeIndex = computeCameraAwareRuntimeFrameIndex(
+      spectator,
+      FIXTURE_CAMERA.position,
+      FIXTURE_CAMERA.position,
+      0,
+      table,
+      FIXTURE_CAMERA.forward,
+    );
 
-      expect(directionOfRuntimeFrameIndex(atlas, runtimeIndex)).toBe(
-        directionFromPublicFrameId(spectator.frameId),
-      );
-    });
+    expect(directionOfRuntimeFrameIndex(atlas, runtimeIndex)).toBe(
+      directionFromPublicFrameId(spectator.frameId),
+    );
+  });
 
-    it('falls back to the camera-to-car bearing when no camera heading is supplied', () => {
-      const atlas = loadPublicSpriteAtlas();
-      const table = buildPublicRuntimeIndexTable(atlas);
-      // Legacy five-argument call: the camera heading falls back to the
-      // camera->car bearing (+Z here), so the spectator 5 m north of the car
-      // looks back at the camera and resolves to the 'front' frame.
-      const frameIndex = computePublicRuntimeFrameIndex(
-        seatedSpectatorBillboard([0, 0, 5]),
-        FIXTURE_CAMERA.position,
-        FIXTURE_CAR_POSITION,
-        0,
-        table,
-      );
+  it('falls back to the camera-to-car bearing when no camera heading is supplied', () => {
+    const atlas = loadPublicSpriteAtlas();
+    const table = buildPublicRuntimeIndexTable(atlas);
+    // Legacy five-argument call: the camera heading falls back to the
+    // camera->car bearing (+Z here), so the spectator 5 m north of the car
+    // looks back at the camera and resolves to the 'front' frame.
+    const frameIndex = computePublicRuntimeFrameIndex(
+      seatedSpectatorBillboard([0, 0, 5]),
+      FIXTURE_CAMERA.position,
+      FIXTURE_CAR_POSITION,
+      0,
+      table,
+    );
 
-      expect(directionOfRuntimeFrameIndex(atlas, frameIndex)).toBe('front');
-    });
+    expect(directionOfRuntimeFrameIndex(atlas, frameIndex)).toBe('front');
+  });
 
-    it('renders a spectator facing the camera screen-left as the left frame (AC-068, lateral handedness)', () => {
-      const atlas = loadPublicSpriteAtlas();
-      const table = buildPublicRuntimeIndexTable(atlas);
-      // The spectator sits 5 m north of the car, so it looks back due south
-      // (-Z). The neatRacing camera right axis is (-forwardZ, 0, forwardX),
-      // so a camera looking toward +X has its screen-right on +Z and sees
-      // the south-facing spectator on its screen-LEFT, while a camera
-      // looking toward -X has its screen-right on -Z and sees the same
-      // spectator on its screen-RIGHT.
-      const spectator = seatedSpectatorBillboard([0, 0, 5]);
-      const frameLookingEast = computeCameraAwareRuntimeFrameIndex(
-        spectator,
-        FIXTURE_CAMERA.position,
-        FIXTURE_CAR_POSITION,
-        0,
-        table,
-        [1, 0, 0],
-      );
-      const frameLookingWest = computeCameraAwareRuntimeFrameIndex(
-        spectator,
-        FIXTURE_CAMERA.position,
-        FIXTURE_CAR_POSITION,
-        0,
-        table,
-        [-1, 0, 0],
-      );
+  it('renders a spectator facing the camera screen-left as the left frame (AC-068, lateral handedness)', () => {
+    const atlas = loadPublicSpriteAtlas();
+    const table = buildPublicRuntimeIndexTable(atlas);
+    // The spectator sits 5 m north of the car, so it looks back due south
+    // (-Z). The neatRacing camera right axis is (-forwardZ, 0, forwardX),
+    // so a camera looking toward +X has its screen-right on +Z and sees
+    // the south-facing spectator on its screen-LEFT, while a camera
+    // looking toward -X has its screen-right on -Z and sees the same
+    // spectator on its screen-RIGHT.
+    const spectator = seatedSpectatorBillboard([0, 0, 5]);
+    const frameLookingEast = computeCameraAwareRuntimeFrameIndex(
+      spectator,
+      FIXTURE_CAMERA.position,
+      FIXTURE_CAR_POSITION,
+      0,
+      table,
+      [1, 0, 0],
+    );
+    const frameLookingWest = computeCameraAwareRuntimeFrameIndex(
+      spectator,
+      FIXTURE_CAMERA.position,
+      FIXTURE_CAR_POSITION,
+      0,
+      table,
+      [-1, 0, 0],
+    );
 
-      expect(directionOfRuntimeFrameIndex(atlas, frameLookingEast)).toBe(
-        'left',
-      );
-      expect(directionOfRuntimeFrameIndex(atlas, frameLookingWest)).toBe(
-        'right',
-      );
-    });
+    expect(directionOfRuntimeFrameIndex(atlas, frameLookingEast)).toBe('left');
+    expect(directionOfRuntimeFrameIndex(atlas, frameLookingWest)).toBe('right');
+  });
 
-    it('resolves the build-time seated frame to the lateral stand frames (AC-068, lateral handedness)', () => {
-      const atlas = loadPublicSpriteAtlas();
-      const billboards = buildPublicBillboards(FIXTURE, FIXTURE_CAMERA, atlas);
-      const spectator = billboards.find(
-        (billboard) => billboard.runtimeRole === 'seated',
-      );
+  it('resolves the build-time seated frame to the lateral stand frames (AC-068, lateral handedness)', () => {
+    const atlas = loadPublicSpriteAtlas();
+    const billboards = buildPublicBillboards(FIXTURE, FIXTURE_CAMERA, atlas);
+    const spectator = billboards.find(
+      (billboard) => billboard.runtimeRole === 'seated',
+    );
 
-      if (!spectator) {
-        throw new Error('no seated spectator billboard was built');
-      }
+    if (!spectator) {
+      throw new Error('no seated spectator billboard was built');
+    }
 
-      const [spectatorX, , spectatorZ] = spectator.position;
-      // The camera is placed due south of that spectator, so the spectator
-      // looks straight back at the camera (due south, -Z). The camera right
-      // axis is (-forwardZ, 0, forwardX): a camera looking toward +X sees
-      // the spectator on its screen-LEFT and a camera looking toward -X sees
-      // the same spectator on its screen-RIGHT.
-      const cameraLookingEast = {
-        position: [spectatorX, 2, spectatorZ - 10] as const,
-        forward: [1, 0, 0] as const,
-        right: [0, 0, 1] as const,
-        near: 0.1,
-        far: 1000,
-        fovDegrees: 60,
-      } as const;
-      const cameraLookingWest = {
-        position: [spectatorX, 2, spectatorZ - 10] as const,
-        forward: [-1, 0, 0] as const,
-        right: [0, 0, -1] as const,
-        near: 0.1,
-        far: 1000,
-        fovDegrees: 60,
-      } as const;
-      const eastSpectator = buildPublicBillboards(
-        FIXTURE,
-        cameraLookingEast,
-        atlas,
-      ).find(
-        (billboard) =>
-          billboard.runtimeRole === 'seated' &&
-          billboard.position[0] === spectatorX &&
-          billboard.position[2] === spectatorZ,
-      );
-      const westSpectator = buildPublicBillboards(
-        FIXTURE,
-        cameraLookingWest,
-        atlas,
-      ).find(
-        (billboard) =>
-          billboard.runtimeRole === 'seated' &&
-          billboard.position[0] === spectatorX &&
-          billboard.position[2] === spectatorZ,
-      );
+    const [spectatorX, , spectatorZ] = spectator.position;
+    // The camera is placed due south of that spectator, so the spectator
+    // looks straight back at the camera (due south, -Z). The camera right
+    // axis is (-forwardZ, 0, forwardX): a camera looking toward +X sees
+    // the spectator on its screen-LEFT and a camera looking toward -X sees
+    // the same spectator on its screen-RIGHT.
+    const cameraLookingEast = {
+      position: [spectatorX, 2, spectatorZ - 10] as const,
+      forward: [1, 0, 0] as const,
+      right: [0, 0, 1] as const,
+      near: 0.1,
+      far: 1000,
+      fovDegrees: 60,
+    } as const;
+    const cameraLookingWest = {
+      position: [spectatorX, 2, spectatorZ - 10] as const,
+      forward: [-1, 0, 0] as const,
+      right: [0, 0, -1] as const,
+      near: 0.1,
+      far: 1000,
+      fovDegrees: 60,
+    } as const;
+    const eastSpectator = buildPublicBillboards(
+      FIXTURE,
+      cameraLookingEast,
+      atlas,
+    ).find(
+      (billboard) =>
+        billboard.runtimeRole === 'seated' &&
+        billboard.position[0] === spectatorX &&
+        billboard.position[2] === spectatorZ,
+    );
+    const westSpectator = buildPublicBillboards(
+      FIXTURE,
+      cameraLookingWest,
+      atlas,
+    ).find(
+      (billboard) =>
+        billboard.runtimeRole === 'seated' &&
+        billboard.position[0] === spectatorX &&
+        billboard.position[2] === spectatorZ,
+    );
 
-      if (!eastSpectator || !westSpectator) {
-        throw new Error('the rebuilt scene lost the seated spectator');
-      }
+    if (!eastSpectator || !westSpectator) {
+      throw new Error('the rebuilt scene lost the seated spectator');
+    }
 
-      expect(eastSpectator.frameId).toBe('left-stand');
-      expect(westSpectator.frameId).toBe('right-stand');
-    });
-  },
-);
+    expect(eastSpectator.frameId).toBe('left-stand');
+    expect(westSpectator.frameId).toBe('right-stand');
+  });
+});
 
 describe('public.sprite neon palette color diversity (P1-sprite-directional-walk-look, AC-062)', () => {
   it('includes at least three distinct neon accent hues across the public atlas', () => {
@@ -1335,17 +1356,151 @@ describe('public.sprite neon palette color diversity (P1-sprite-directional-walk
   });
 });
 
-describe(
-  'public.sprite per-robot color identity (fix-packet-P1-bleacher-shape-iteration-3, OBS-2)',
-  () => {
-    it('keeps the same accent color for a seated robot when the car moves to a different direction', () => {
-      const atlas = loadPublicSpriteAtlas();
-      const table = buildPublicRuntimeIndexTable(atlas);
+describe('public.sprite per-robot color identity (fix-packet-P1-bleacher-shape-iteration-3, OBS-2)', () => {
+  it('keeps the same accent color for a seated robot when the car moves to a different direction', () => {
+    const atlas = loadPublicSpriteAtlas();
+    const table = buildPublicRuntimeIndexTable(atlas);
+    const billboard = {
+      position: [0, 0, 0] as const,
+      runtimeRole: 'seated' as const,
+      seed: 1,
+      index: 0,
+      walkDirectionIndex: 0,
+      frameId: 'front-stand',
+      scale: 1,
+      distance: 10,
+      quad: [0, 0, 1, 1] as const,
+    };
+
+    const indexA = computePublicRuntimeFrameIndex(
+      billboard,
+      [0, 2, -10],
+      [0, 0, 10],
+      0,
+      table,
+    );
+    const indexB = computePublicRuntimeFrameIndex(
+      billboard,
+      [0, 2, -10],
+      [10, 0, 0],
+      0,
+      table,
+    );
+
+    const frameA = atlas.frames[indexA];
+    const frameB = atlas.frames[indexB];
+    if (!frameA || !frameB) {
+      throw new Error('runtime frame index out of bounds');
+    }
+
+    const hueA = dominantAccentHue(frameA.rgba);
+    const hueB = dominantAccentHue(frameB.rgba);
+
+    expect(hueA).not.toBeNull();
+    expect(hueB).toBe(hueA);
+  });
+
+  it('keeps the same accent color for a walker across walk cycle time', () => {
+    const atlas = loadPublicSpriteAtlas();
+    const table = buildPublicRuntimeIndexTable(atlas);
+    const billboard = {
+      position: [0, 0, 0] as const,
+      runtimeRole: 'walker' as const,
+      seed: 1,
+      index: 0,
+      walkDirectionIndex: 0,
+      frameId: 'front-walk1',
+      scale: 1,
+      distance: 10,
+      quad: [0, 0, 1, 1] as const,
+    };
+
+    const indexA = computePublicRuntimeFrameIndex(
+      billboard,
+      [0, 2, -10],
+      [0, 0, 10],
+      0,
+      table,
+    );
+    const indexB = computePublicRuntimeFrameIndex(
+      billboard,
+      [0, 2, -10],
+      [0, 0, 10],
+      2.5,
+      table,
+    );
+
+    const frameA = atlas.frames[indexA];
+    const frameB = atlas.frames[indexB];
+    if (!frameA || !frameB) {
+      throw new Error('runtime frame index out of bounds');
+    }
+
+    const hueA = dominantAccentHue(frameA.rgba);
+    const hueB = dominantAccentHue(frameB.rgba);
+
+    expect(hueA).not.toBeNull();
+    expect(hueB).toBe(hueA);
+  });
+
+  it('keeps the same accent color across all 8 atlas directions for one robot', () => {
+    const atlas = loadPublicSpriteAtlas();
+    const table = buildPublicRuntimeIndexTable(atlas);
+    const billboard = {
+      position: [0, 0, 0] as const,
+      runtimeRole: 'seated' as const,
+      seed: 1,
+      index: 0,
+      walkDirectionIndex: 0,
+      frameId: 'front-stand',
+      scale: 1,
+      distance: 10,
+      quad: [0, 0, 1, 1] as const,
+    };
+
+    const carPositions: readonly (readonly [number, number, number])[] = [
+      [0, 0, 10],
+      [10, 0, 10],
+      [10, 0, 0],
+      [10, 0, -10],
+      [0, 0, -10],
+      [-10, 0, -10],
+      [-10, 0, 0],
+      [-10, 0, 10],
+    ];
+
+    const hues: (number | null)[] = [];
+    for (const carPosition of carPositions) {
+      const frameIndex = computePublicRuntimeFrameIndex(
+        billboard,
+        [0, 2, -10] as const,
+        carPosition,
+        0,
+        table,
+      );
+      const frame = atlas.frames[frameIndex];
+      if (!frame) {
+        throw new Error('runtime frame index out of bounds');
+      }
+      hues.push(dominantAccentHue(frame.rgba));
+    }
+
+    const nonNullHues = hues.filter((hue): hue is number => hue !== null);
+    expect(nonNullHues.length).toBe(8);
+    expect(new Set(nonNullHues).size).toBe(1);
+  });
+
+  it('gives different robots different accent colors', () => {
+    const atlas = loadPublicSpriteAtlas();
+    const table = buildPublicRuntimeIndexTable(atlas);
+    const hues: (number | null)[] = [];
+
+    for (let index = 0; index < 8; index += 1) {
       const billboard = {
         position: [0, 0, 0] as const,
         runtimeRole: 'seated' as const,
         seed: 1,
-        index: 0,
+        index,
         walkDirectionIndex: 0,
         frameId: 'front-stand',
         scale: 1,
@@ -1353,324 +1508,178 @@ describe(
         quad: [0, 0, 1, 1] as const,
       };
 
-      const indexA = computePublicRuntimeFrameIndex(
+      const frameIndex = computePublicRuntimeFrameIndex(
         billboard,
-        [0, 2, -10],
+        [0, 2, -10] as const,
         [0, 0, 10],
         0,
         table,
       );
-      const indexB = computePublicRuntimeFrameIndex(
-        billboard,
-        [0, 2, -10],
-        [10, 0, 0],
-        0,
-        table,
-      );
-
-      const frameA = atlas.frames[indexA];
-      const frameB = atlas.frames[indexB];
-      if (!frameA || !frameB) {
+      const frame = atlas.frames[frameIndex];
+      if (!frame) {
         throw new Error('runtime frame index out of bounds');
       }
+      hues.push(dominantAccentHue(frame.rgba));
+    }
 
-      const hueA = dominantAccentHue(frameA.rgba);
-      const hueB = dominantAccentHue(frameB.rgba);
+    const nonNullHues = hues.filter((hue): hue is number => hue !== null);
+    expect(nonNullHues.length).toBeGreaterThan(0);
+    expect(new Set(nonNullHues).size).toBeGreaterThanOrEqual(2);
+  });
+});
 
-      expect(hueA).not.toBeNull();
-      expect(hueB).toBe(hueA);
-    });
+describe('public.sprite public runtime role set (P1-crowd2-red-contracts, AC-074 role set)', () => {
+  it('resolves the seated, walker, standing and mechanic roles through the single role resolver', () => {
+    const resolvedRoles = PUBLIC_RUNTIME_ROLE_SET.map((role) =>
+      resolvePublicRuntimeRole(publicRuntimeRoleCarrier(role)),
+    );
 
-    it('keeps the same accent color for a walker across walk cycle time', () => {
-      const atlas = loadPublicSpriteAtlas();
-      const table = buildPublicRuntimeIndexTable(atlas);
-      const billboard = {
-        position: [0, 0, 0] as const,
-        runtimeRole: 'walker' as const,
-        seed: 1,
-        index: 0,
-        walkDirectionIndex: 0,
-        frameId: 'front-walk1',
-        scale: 1,
-        distance: 10,
-        quad: [0, 0, 1, 1] as const,
-      };
+    expect(resolvedRoles).toEqual([...PUBLIC_RUNTIME_ROLE_SET]);
+  });
 
-      const indexA = computePublicRuntimeFrameIndex(
-        billboard,
-        [0, 2, -10],
-        [0, 0, 10],
+  it('renders the seated, standing and mechanic roles on the stand pose', () => {
+    const atlas = loadPublicSpriteAtlas();
+    const table = buildPublicRuntimeIndexTable(atlas);
+    const cameraForward: readonly [number, number, number] = [0, 0, 1];
+
+    const seatedPose = poseIndexOfRuntimeFrameIndex(
+      computePublicRuntimeFrameIndex(
+        publicRuntimeRoleBillboard('seated'),
+        FIXTURE_CAMERA.position,
+        FIXTURE_CAR_POSITION,
         0,
         table,
-      );
-      const indexB = computePublicRuntimeFrameIndex(
-        billboard,
-        [0, 2, -10],
-        [0, 0, 10],
-        2.5,
+        cameraForward,
+      ),
+    );
+    const standingPose = poseIndexOfRuntimeFrameIndex(
+      computePublicRuntimeFrameIndex(
+        publicRuntimeRoleBillboard('standing'),
+        FIXTURE_CAMERA.position,
+        FIXTURE_CAR_POSITION,
+        0,
         table,
-      );
+        cameraForward,
+      ),
+    );
+    const mechanicPose = poseIndexOfRuntimeFrameIndex(
+      computePublicRuntimeFrameIndex(
+        publicRuntimeRoleBillboard('mechanic'),
+        FIXTURE_CAMERA.position,
+        FIXTURE_CAR_POSITION,
+        0,
+        table,
+        cameraForward,
+      ),
+    );
 
-      const frameA = atlas.frames[indexA];
-      const frameB = atlas.frames[indexB];
-      if (!frameA || !frameB) {
-        throw new Error('runtime frame index out of bounds');
-      }
+    // AC-074 (role set): the standing spectators and the inner-ring
+    // mechanics are STANDING agents, so the frame-index helper must render
+    // them on the public stand frames instead of the walk cycle. The
+    // helper resolves the role through resolvePublicRuntimeRole, so the
+    // resolver and the helper must agree on EVERY role of the set.
+    expect(seatedPose).toBe(PUBLIC_POSE_INDEX_STAND);
+    expect(standingPose).toBe(PUBLIC_POSE_INDEX_STAND);
+    expect(mechanicPose).toBe(PUBLIC_POSE_INDEX_STAND);
+  });
 
-      const hueA = dominantAccentHue(frameA.rgba);
-      const hueB = dominantAccentHue(frameB.rgba);
+  it('renders the walker role on the slow walk-cycle pose', () => {
+    const atlas = loadPublicSpriteAtlas();
+    const table = buildPublicRuntimeIndexTable(atlas);
+    const cameraForward: readonly [number, number, number] = [0, 0, 1];
 
-      expect(hueA).not.toBeNull();
-      expect(hueB).toBe(hueA);
-    });
+    const walkerPose = poseIndexOfRuntimeFrameIndex(
+      computePublicRuntimeFrameIndex(
+        publicRuntimeRoleBillboard('walker'),
+        FIXTURE_CAMERA.position,
+        FIXTURE_CAR_POSITION,
+        0,
+        table,
+        cameraForward,
+      ),
+    );
 
-    it('keeps the same accent color across all 8 atlas directions for one robot', () => {
-      const atlas = loadPublicSpriteAtlas();
-      const table = buildPublicRuntimeIndexTable(atlas);
-      const billboard = {
-        position: [0, 0, 0] as const,
-        runtimeRole: 'seated' as const,
-        seed: 1,
-        index: 0,
-        walkDirectionIndex: 0,
-        frameId: 'front-stand',
-        scale: 1,
-        distance: 10,
-        quad: [0, 0, 1, 1] as const,
-      };
+    // AC-074 (role set): the walkers keep their slow walk cycle, so the
+    // walker role is the ONLY role of the set that renders a walk frame.
+    expect(walkerPose).toBe(PUBLIC_POSE_INDEX_WALK1);
+  });
+});
 
-      const carPositions: readonly (readonly [number, number, number])[] = [
-        [0, 0, 10],
-        [10, 0, 10],
-        [10, 0, 0],
-        [10, 0, -10],
-        [0, 0, -10],
-        [-10, 0, -10],
-        [-10, 0, 0],
-        [-10, 0, 10],
-      ];
+describe('public.sprite crowd sprite world scale (P1-sprite-scale-red-contracts, AC-077, RED-A)', () => {
+  it('exports the named NEATRACING_PUBLIC_BILLBOARD_WORLD_SCALE lever as 0.5 (RED-A)', () => {
+    // AC-077: the halving has EXACTLY ONE source of truth - a NAMED
+    // exported constant. The assertion reads the module namespace, so a
+    // missing export fails THIS contract instead of breaking the import of
+    // the whole test file.
+    expect(publicSprite).toHaveProperty(
+      'NEATRACING_PUBLIC_BILLBOARD_WORLD_SCALE',
+      0.5,
+    );
+  });
 
-      const hues: (number | null)[] = [];
-      for (const carPosition of carPositions) {
-        const frameIndex = computePublicRuntimeFrameIndex(
-          billboard,
-          [0, 2, -10] as const,
-          carPosition,
-          0,
-          table,
-        );
-        const frame = atlas.frames[frameIndex];
-        if (!frame) {
-          throw new Error('runtime frame index out of bounds');
-        }
-        hues.push(dominantAccentHue(frame.rgba));
-      }
+  it('returns exactly the named world scale for every camera distance (RED-A)', () => {
+    // The scale stays DISTANCE-INDEPENDENT: the perspective shrink is the
+    // shared focal/distance projection, so the returned value IS the named
+    // constant. The equality is EXACT (toBe, not toBeCloseTo): a
+    // near-match on the pre-14L 1.0 must not pass.
+    expect(computeBillboardScale(5)).toBe(0.5);
+    expect(computeBillboardScale(50)).toBe(0.5);
+    expect(computeBillboardScale(0.1)).toBe(0.5);
+  });
+});
 
-      const nonNullHues = hues.filter((hue): hue is number => hue !== null);
-      expect(nonNullHues.length).toBe(8);
-      expect(new Set(nonNullHues).size).toBe(1);
-    });
+describe('public.sprite crowd billboard placement footprint (P1-sprite-scale-red-contracts, AC-077, RED-B)', () => {
+  it('exports the shared meters-per-pixel constant NEATRACING_BILLBOARD_WORLD_PIXEL_SCALE_M (RED-B)', () => {
+    // AC-077: the meters-per-pixel constant is the SHARED meter scale of
+    // the crowd sprites. It is exported so the right-world pass can import
+    // it instead of keeping its own copy, and so a footprint contract can
+    // READ it instead of hard-coding 0.05.
+    expect(publicSprite).toHaveProperty(
+      'NEATRACING_BILLBOARD_WORLD_PIXEL_SCALE_M',
+      0.05,
+    );
+  });
 
-    it('gives different robots different accent colors', () => {
-      const atlas = loadPublicSpriteAtlas();
-      const table = buildPublicRuntimeIndexTable(atlas);
-      const hues: (number | null)[] = [];
+  it('reports a 4.8 m world footprint (a 2.4 m half-extent) for a 192x192 crowd frame (RED-B)', () => {
+    // The crowd frames are 192 x 192 px, so the PRE-14L footprint was
+    // 192 * 0.05 = 9.6 m wide and tall. The halved footprint is
+    // 192 * 0.5 * 0.05 = 4.8 m, which is a 2.4 m half-extent on each axis.
+    // The square frame keeps its aspect ratio, so the world WIDTH follows
+    // the SAME factor as the world HEIGHT.
+    const atlas = loadPublicSpriteAtlas();
+    const frame = atlas.frames[0]!;
+    const [halfWidth, halfHeight] = billboardHalfSize(frame, 20);
 
-      for (let index = 0; index < 8; index += 1) {
-        const billboard = {
-          position: [0, 0, 0] as const,
-          runtimeRole: 'seated' as const,
-          seed: 1,
-          index,
-          walkDirectionIndex: 0,
-          frameId: 'front-stand',
-          scale: 1,
-          distance: 10,
-          quad: [0, 0, 1, 1] as const,
-        };
+    expect(frame.width).toBe(192);
+    expect(halfWidth).toBeCloseTo(2.4, 6);
+    expect(halfHeight).toBeCloseTo(2.4, 6);
+  });
 
-        const frameIndex = computePublicRuntimeFrameIndex(
-          billboard,
-          [0, 2, -10] as const,
-          [0, 0, 10],
-          0,
-          table,
-        );
-        const frame = atlas.frames[frameIndex];
-        if (!frame) {
-          throw new Error('runtime frame index out of bounds');
-        }
-        hues.push(dominantAccentHue(frame.rgba));
-      }
+  it('derives the crowd footprint from the named lever and the shared meters-per-pixel constant (RED-B)', () => {
+    // The footprint is read from the NAMED world-scale lever and the
+    // SHARED meters-per-pixel constant, so the placement footprint and the
+    // rendered quad can never disagree and a future meter-scale change
+    // moves the reported footprint with it.
+    const atlas = loadPublicSpriteAtlas();
+    const frame = atlas.frames[0]!;
+    const worldScale = readNumericModuleExport(
+      'NEATRACING_PUBLIC_BILLBOARD_WORLD_SCALE',
+    );
+    const metersPerPixel = readNumericModuleExport(
+      'NEATRACING_BILLBOARD_WORLD_PIXEL_SCALE_M',
+    );
+    const [halfWidth, halfHeight] = crowdBillboardWorldHalfSize(frame, 20);
 
-      const nonNullHues = hues.filter((hue): hue is number => hue !== null);
-      expect(nonNullHues.length).toBeGreaterThan(0);
-      expect(new Set(nonNullHues).size).toBeGreaterThanOrEqual(2);
-    });
-  },
-);
-
-describe(
-  'public.sprite public runtime role set (P1-crowd2-red-contracts, AC-074 role set)',
-  () => {
-    it('resolves the seated, walker, standing and mechanic roles through the single role resolver', () => {
-      const resolvedRoles = PUBLIC_RUNTIME_ROLE_SET.map((role) =>
-        resolvePublicRuntimeRole(publicRuntimeRoleCarrier(role)),
-      );
-
-      expect(resolvedRoles).toEqual([...PUBLIC_RUNTIME_ROLE_SET]);
-    });
-
-    it('renders the seated, standing and mechanic roles on the stand pose', () => {
-      const atlas = loadPublicSpriteAtlas();
-      const table = buildPublicRuntimeIndexTable(atlas);
-      const cameraForward: readonly [number, number, number] = [0, 0, 1];
-
-      const seatedPose = poseIndexOfRuntimeFrameIndex(
-        computePublicRuntimeFrameIndex(
-          publicRuntimeRoleBillboard('seated'),
-          FIXTURE_CAMERA.position,
-          FIXTURE_CAR_POSITION,
-          0,
-          table,
-          cameraForward,
-        ),
-      );
-      const standingPose = poseIndexOfRuntimeFrameIndex(
-        computePublicRuntimeFrameIndex(
-          publicRuntimeRoleBillboard('standing'),
-          FIXTURE_CAMERA.position,
-          FIXTURE_CAR_POSITION,
-          0,
-          table,
-          cameraForward,
-        ),
-      );
-      const mechanicPose = poseIndexOfRuntimeFrameIndex(
-        computePublicRuntimeFrameIndex(
-          publicRuntimeRoleBillboard('mechanic'),
-          FIXTURE_CAMERA.position,
-          FIXTURE_CAR_POSITION,
-          0,
-          table,
-          cameraForward,
-        ),
-      );
-
-      // AC-074 (role set): the standing spectators and the inner-ring
-      // mechanics are STANDING agents, so the frame-index helper must render
-      // them on the public stand frames instead of the walk cycle. The
-      // helper resolves the role through resolvePublicRuntimeRole, so the
-      // resolver and the helper must agree on EVERY role of the set.
-      expect(seatedPose).toBe(PUBLIC_POSE_INDEX_STAND);
-      expect(standingPose).toBe(PUBLIC_POSE_INDEX_STAND);
-      expect(mechanicPose).toBe(PUBLIC_POSE_INDEX_STAND);
-    });
-
-    it('renders the walker role on the slow walk-cycle pose', () => {
-      const atlas = loadPublicSpriteAtlas();
-      const table = buildPublicRuntimeIndexTable(atlas);
-      const cameraForward: readonly [number, number, number] = [0, 0, 1];
-
-      const walkerPose = poseIndexOfRuntimeFrameIndex(
-        computePublicRuntimeFrameIndex(
-          publicRuntimeRoleBillboard('walker'),
-          FIXTURE_CAMERA.position,
-          FIXTURE_CAR_POSITION,
-          0,
-          table,
-          cameraForward,
-        ),
-      );
-
-      // AC-074 (role set): the walkers keep their slow walk cycle, so the
-      // walker role is the ONLY role of the set that renders a walk frame.
-      expect(walkerPose).toBe(PUBLIC_POSE_INDEX_WALK1);
-    });
-  },
-);
-
-describe(
-  'public.sprite crowd sprite world scale (P1-sprite-scale-red-contracts, AC-077, RED-A)',
-  () => {
-    it('exports the named NEATRACING_PUBLIC_BILLBOARD_WORLD_SCALE lever as 0.5 (RED-A)', () => {
-      // AC-077: the halving has EXACTLY ONE source of truth - a NAMED
-      // exported constant. The assertion reads the module namespace, so a
-      // missing export fails THIS contract instead of breaking the import of
-      // the whole test file.
-      expect(publicSprite).toHaveProperty(
-        'NEATRACING_PUBLIC_BILLBOARD_WORLD_SCALE',
-        0.5,
-      );
-    });
-
-    it('returns exactly the named world scale for every camera distance (RED-A)', () => {
-      // The scale stays DISTANCE-INDEPENDENT: the perspective shrink is the
-      // shared focal/distance projection, so the returned value IS the named
-      // constant. The equality is EXACT (toBe, not toBeCloseTo): a
-      // near-match on the pre-14L 1.0 must not pass.
-      expect(computeBillboardScale(5)).toBe(0.5);
-      expect(computeBillboardScale(50)).toBe(0.5);
-      expect(computeBillboardScale(0.1)).toBe(0.5);
-    });
-  },
-);
-
-describe(
-  'public.sprite crowd billboard placement footprint (P1-sprite-scale-red-contracts, AC-077, RED-B)',
-  () => {
-    it('exports the shared meters-per-pixel constant NEATRACING_BILLBOARD_WORLD_PIXEL_SCALE_M (RED-B)', () => {
-      // AC-077: the meters-per-pixel constant is the SHARED meter scale of
-      // the crowd sprites. It is exported so the right-world pass can import
-      // it instead of keeping its own copy, and so a footprint contract can
-      // READ it instead of hard-coding 0.05.
-      expect(publicSprite).toHaveProperty(
-        'NEATRACING_BILLBOARD_WORLD_PIXEL_SCALE_M',
-        0.05,
-      );
-    });
-
-    it('reports a 4.8 m world footprint (a 2.4 m half-extent) for a 192x192 crowd frame (RED-B)', () => {
-      // The crowd frames are 192 x 192 px, so the PRE-14L footprint was
-      // 192 * 0.05 = 9.6 m wide and tall. The halved footprint is
-      // 192 * 0.5 * 0.05 = 4.8 m, which is a 2.4 m half-extent on each axis.
-      // The square frame keeps its aspect ratio, so the world WIDTH follows
-      // the SAME factor as the world HEIGHT.
-      const atlas = loadPublicSpriteAtlas();
-      const frame = atlas.frames[0]!;
-      const [halfWidth, halfHeight] = billboardHalfSize(frame, 20);
-
-      expect(frame.width).toBe(192);
-      expect(halfWidth).toBeCloseTo(2.4, 6);
-      expect(halfHeight).toBeCloseTo(2.4, 6);
-    });
-
-    it('derives the crowd footprint from the named lever and the shared meters-per-pixel constant (RED-B)', () => {
-      // The footprint is read from the NAMED world-scale lever and the
-      // SHARED meters-per-pixel constant, so the placement footprint and the
-      // rendered quad can never disagree and a future meter-scale change
-      // moves the reported footprint with it.
-      const atlas = loadPublicSpriteAtlas();
-      const frame = atlas.frames[0]!;
-      const worldScale = readNumericModuleExport(
-        'NEATRACING_PUBLIC_BILLBOARD_WORLD_SCALE',
-      );
-      const metersPerPixel = readNumericModuleExport(
-        'NEATRACING_BILLBOARD_WORLD_PIXEL_SCALE_M',
-      );
-      const [halfWidth, halfHeight] = crowdBillboardWorldHalfSize(frame, 20);
-
-      expect(halfWidth).toBeCloseTo(
-        (frame.width * worldScale * metersPerPixel) / 2,
-        6,
-      );
-      expect(halfHeight).toBeCloseTo(
-        (frame.height * worldScale * metersPerPixel) / 2,
-        6,
-      );
-    });
-  },
-);
+    expect(halfWidth).toBeCloseTo(
+      (frame.width * worldScale * metersPerPixel) / 2,
+      6,
+    );
+    expect(halfHeight).toBeCloseTo(
+      (frame.height * worldScale * metersPerPixel) / 2,
+      6,
+    );
+  });
+});
 
 /**
  * The USER-NAMED public-clearance floor (Step 14V, AC-096).
@@ -1752,8 +1761,7 @@ const measureBillboardClearances = (
       worldZ,
     );
     const nearestChordM =
-      nearest.distanceM -
-      resolveTrackEdgeHalfWidthM(nearestChord, nearestSide);
+      nearest.distanceM - resolveTrackEdgeHalfWidthM(nearestChord, nearestSide);
 
     return {
       role: resolvePublicRuntimeRole(billboard),
@@ -2011,273 +2019,240 @@ const measureBillboardFootprintClearances = (
  * the road resolve the edge through the SAME seam, read through BOTH of
  * the road's own readers of it.
  */
-describe(
-  'public billboard clearance beyond the SEAM edge (Step 14V, slice P1-prop-clearance-red, AC-096)',
-  () => {
-    describe(
-      'RED-3 share (the guaranteed crowd and the determinism are PRESERVED - a LABELLED PRESERVATION GUARD, NEVER counted as a RED)',
-      () => {
-        // [RED-14V-PUBLIC-3-CROWD-PRESERVED]
-        it('AC-096: every bleacher of the ring still carries its full share of seated spectators (RED-14V-PUBLIC-3-CROWD-PRESERVED)', () => {
-          // Arrange
-          const atlas = loadPublicSpriteAtlas();
-          const billboards = buildPublicBillboards(
-            FIXTURE,
-            FIXTURE_CAMERA,
-            atlas,
-          );
-          const seated = billboards.filter(
-            (billboard) => resolvePublicRuntimeRole(billboard) === 'seated',
-          );
+describe('public billboard clearance beyond the SEAM edge (Step 14V, slice P1-prop-clearance-red, AC-096)', () => {
+  describe('RED-3 share (the guaranteed crowd and the determinism are PRESERVED - a LABELLED PRESERVATION GUARD, NEVER counted as a RED)', () => {
+    // [RED-14V-PUBLIC-3-CROWD-PRESERVED]
+    it('AC-096: every bleacher of the ring still carries its full share of seated spectators (RED-14V-PUBLIC-3-CROWD-PRESERVED)', () => {
+      // Arrange
+      const atlas = loadPublicSpriteAtlas();
+      const billboards = buildPublicBillboards(FIXTURE, FIXTURE_CAMERA, atlas);
+      const seated = billboards.filter(
+        (billboard) => resolvePublicRuntimeRole(billboard) === 'seated',
+      );
 
-          // NON-VACUITY GUARD (asserted BEFORE the relational clause): the
-          // lane MUST really build a crowd - an empty billboard list would
-          // satisfy the crowd clause vacuously.
-          expect(billboards.length).toBeGreaterThan(0);
-          expect(seated.length).toBeGreaterThan(0);
+      // NON-VACUITY GUARD (asserted BEFORE the relational clause): the
+      // lane MUST really build a crowd - an empty billboard list would
+      // satisfy the crowd clause vacuously.
+      expect(billboards.length).toBeGreaterThan(0);
+      expect(seated.length).toBeGreaterThan(0);
 
-          // Assert - the guaranteed crowd is preserved: NO bleacher is left
-          // empty by a clearance change.
-          expect(seated.length).toBe(
-            NEATRACING_RIGHT_WORLD_BLEACHER_COUNT *
-              NEATRACING_PUBLIC_BILLBOARD_SEATED_PER_BLEACHER,
-          );
-        });
-
-        // [RED-14V-PUBLIC-3-DETERMINISM-PRESERVED]
-        it('AC-096: the same determinism tuple still yields the same billboard list, byte for byte (RED-14V-PUBLIC-3-DETERMINISM-PRESERVED)', () => {
-          // Arrange
-          const atlas = loadPublicSpriteAtlas();
-
-          // Act
-          const first = buildPublicBillboards(
-            FIXTURE,
-            FIXTURE_CAMERA,
-            atlas,
-          );
-          const second = buildPublicBillboards(
-            FIXTURE,
-            FIXTURE_CAMERA,
-            atlas,
-          );
-
-          // Assert
-          expect(JSON.stringify(second)).toBe(JSON.stringify(first));
-        });
-      },
-    );
-
-    describe('RED-4 share (the billboards read the SAME edge as the road)', () => {
-      // [RED-14V-PUBLIC-4-ONE-SEAM]
-      it('AC-095: the public billboards clear the floor through BOTH of the road\'s own readers of the ONE seam edge (RED-14V-PUBLIC-4-ONE-SEAM)', () => {
-        // Arrange
-        const atlas = loadPublicSpriteAtlas();
-        const billboards = buildPublicBillboards(
-          FIXTURE,
-          FIXTURE_CAMERA,
-          atlas,
-        );
-        const spec = generateTrack(FIXTURE);
-        const profile = resolveTrackEdgeProfile(spec.segments);
-        const readings = measureBillboardClearances(spec, profile, billboards);
-
-        // NON-VACUITY GUARD (asserted BEFORE the relational clause): the
-        // lane MUST really compare TWO DIFFERENT readers of the ONE seam
-        // edge. The union reader is a MINIMUM over EVERY published chord,
-        // so it can never report MORE clearance than the nearest-chord
-        // reader, and the seam publishes more than one chord - so the two
-        // readers consult DIFFERENT chord sets and comparing one reader
-        // with itself would satisfy the clause below vacuously.
-        expect(profile.chords.length).toBeGreaterThan(1);
-
-        for (const row of readings) {
-          expect(row.unionM).toBeLessThanOrEqual(
-            row.nearestChordM + PUBLIC_CLEARANCE_TOLERANCE_M,
-          );
-        }
-
-        // Assert - BOTH readers of the ONE seam edge must clear the
-        // USER-NAMED floor, so the crowd and the road can never disagree
-        // about where the edge is.
-        const roles = [...new Set(readings.map((row) => row.role))];
-        const violationLines = roles
-          .map((role) =>
-            summarizeRoleViolations(
-              `role=${role}`,
-              readings
-                .filter((row) => row.role === role)
-                .map((row) => ({
-                  clearanceM: Math.min(row.unionM, row.nearestChordM),
-                  propLabel: `${row.role}#${row.index}`,
-                })),
-            ),
-          )
-          .filter((line): line is string => line !== null);
-
-        expect(violationLines).toEqual([]);
-      });
+      // Assert - the guaranteed crowd is preserved: NO bleacher is left
+      // empty by a clearance change.
+      expect(seated.length).toBe(
+        NEATRACING_RIGHT_WORLD_BLEACHER_COUNT *
+          NEATRACING_PUBLIC_BILLBOARD_SEATED_PER_BLEACHER,
+      );
     });
 
-    describe('RED-1/RED-2 share (the 10 m floor on the SEAM edge)', () => {
-      // [RED-14V-PUBLIC-1-SEAM-FLOOR]
-      it('AC-096: EVERY public billboard stands at least 10 m beyond the SEAM edge, and the residual is reported per runtime role (RED-14V-PUBLIC-1-SEAM-FLOOR)', () => {
-        // Arrange
-        const atlas = loadPublicSpriteAtlas();
-        const billboards = buildPublicBillboards(
-          FIXTURE,
-          FIXTURE_CAMERA,
-          atlas,
+    // [RED-14V-PUBLIC-3-DETERMINISM-PRESERVED]
+    it('AC-096: the same determinism tuple still yields the same billboard list, byte for byte (RED-14V-PUBLIC-3-DETERMINISM-PRESERVED)', () => {
+      // Arrange
+      const atlas = loadPublicSpriteAtlas();
+
+      // Act
+      const first = buildPublicBillboards(FIXTURE, FIXTURE_CAMERA, atlas);
+      const second = buildPublicBillboards(FIXTURE, FIXTURE_CAMERA, atlas);
+
+      // Assert
+      expect(JSON.stringify(second)).toBe(JSON.stringify(first));
+    });
+  });
+
+  describe('RED-4 share (the billboards read the SAME edge as the road)', () => {
+    // [RED-14V-PUBLIC-4-ONE-SEAM]
+    it("AC-095: the public billboards clear the floor through BOTH of the road's own readers of the ONE seam edge (RED-14V-PUBLIC-4-ONE-SEAM)", () => {
+      // Arrange
+      const atlas = loadPublicSpriteAtlas();
+      const billboards = buildPublicBillboards(FIXTURE, FIXTURE_CAMERA, atlas);
+      const spec = generateTrack(FIXTURE);
+      const profile = resolveTrackEdgeProfile(spec.segments);
+      const readings = measureBillboardClearances(spec, profile, billboards);
+
+      // NON-VACUITY GUARD (asserted BEFORE the relational clause): the
+      // lane MUST really compare TWO DIFFERENT readers of the ONE seam
+      // edge. The union reader is a MINIMUM over EVERY published chord,
+      // so it can never report MORE clearance than the nearest-chord
+      // reader, and the seam publishes more than one chord - so the two
+      // readers consult DIFFERENT chord sets and comparing one reader
+      // with itself would satisfy the clause below vacuously.
+      expect(profile.chords.length).toBeGreaterThan(1);
+
+      for (const row of readings) {
+        expect(row.unionM).toBeLessThanOrEqual(
+          row.nearestChordM + PUBLIC_CLEARANCE_TOLERANCE_M,
         );
-        const spec = generateTrack(FIXTURE);
-        const profile = resolveTrackEdgeProfile(spec.segments);
+      }
 
-        // NON-VACUITY GUARD (asserted BEFORE the relational clause): the
-        // lane MUST really build a crowd (an empty billboard list would
-        // satisfy the floor vacuously) and it MUST really measure a
-        // distance (a zero reading would satisfy the floor vacuously).
-        expect(billboards.length).toBeGreaterThan(0);
-        expect(profile.chords.length).toBeGreaterThan(0);
-
-        // Act
-        const readings = measureBillboardClearances(spec, profile, billboards);
-
-        expect(readings.length).toBe(billboards.length);
-        expect(
-          readings.every(
-            (row) =>
-              Number.isFinite(row.unionM) &&
-              Number.isFinite(row.nearestChordM),
+      // Assert - BOTH readers of the ONE seam edge must clear the
+      // USER-NAMED floor, so the crowd and the road can never disagree
+      // about where the edge is.
+      const roles = [...new Set(readings.map((row) => row.role))];
+      const violationLines = roles
+        .map((role) =>
+          summarizeRoleViolations(
+            `role=${role}`,
+            readings
+              .filter((row) => row.role === role)
+              .map((row) => ({
+                clearanceM: Math.min(row.unionM, row.nearestChordM),
+                propLabel: `${row.role}#${row.index}`,
+              })),
           ),
-        ).toBe(true);
+        )
+        .filter((line): line is string => line !== null);
 
-        // Assert
-        // The floor is the USER-NAMED 10 m and is NEVER widened by a
-        // tolerance: a residual violation is a NAMED, MEASURED violation.
-        const roles = [...new Set(readings.map((row) => row.role))];
-        const violationLines = roles
-          .map((role) =>
-            summarizeRoleViolations(
-              `role=${role}`,
-              readings
-                .filter((row) => row.role === role)
-                .map((row) => ({
-                  clearanceM: row.unionM,
-                  propLabel: `${row.role}#${row.index}`,
-                })),
-            ),
-          )
-          .filter((line): line is string => line !== null);
-
-        expect(violationLines).toEqual([]);
-      });
+      expect(violationLines).toEqual([]);
     });
+  });
 
-    describe(
-      'RED-5 share (the BODY-LEVEL floor - the P-PC-R body-level lane)',
-      () => {
-        // [RED-14V-PUBLIC-5-BODY-LEVEL]
-        it('AC-096: EVERY public billboard FOOTPRINT clears the USER-NAMED 10 m floor, read at the placed footprint\'s nearest surface toward the road (RED-14V-PUBLIC-5-BODY-LEVEL)', () => {
-          // Arrange
-          const atlas = loadPublicSpriteAtlas();
-          const fixtureLines: string[] = [];
-          const roleRows = new Map<
-            string,
-            { clearanceM: number; propLabel: string }[]
-          >();
-          let sampledPoints = 0;
-          let nearestSurfaceGapM = Number.POSITIVE_INFINITY;
-          let fixtureCount = 0;
-          let billboardCount = 0;
+  describe('RED-1/RED-2 share (the 10 m floor on the SEAM edge)', () => {
+    // [RED-14V-PUBLIC-1-SEAM-FLOOR]
+    it('AC-096: EVERY public billboard stands at least 10 m beyond the SEAM edge, and the residual is reported per runtime role (RED-14V-PUBLIC-1-SEAM-FLOOR)', () => {
+      // Arrange
+      const atlas = loadPublicSpriteAtlas();
+      const billboards = buildPublicBillboards(FIXTURE, FIXTURE_CAMERA, atlas);
+      const spec = generateTrack(FIXTURE);
+      const profile = resolveTrackEdgeProfile(spec.segments);
 
-          // Act - the whole published fixture set, NOT one hand-picked
-          // fixture: EVERY published seed in BOTH published size buckets.
-          for (const sizeBucket of NEATRACING_PUBLIC_CLEARANCE_SIZE_BUCKETS) {
-            for (const seed of NEATRACING_PUBLIC_CLEARANCE_FIXTURE_SEEDS) {
-              const input = { seed, layoutVersion: 1, sizeBucket };
-              const spec = generateTrack(input);
-              const profile = resolveTrackEdgeProfile(spec.segments);
-              const billboards = buildPublicBillboards(
-                input,
-                FIXTURE_CAMERA,
-                atlas,
-              );
-              const anchorReadings = measureBillboardClearances(
-                spec,
-                profile,
-                billboards,
-              );
-              const footprintReadings = measureBillboardFootprintClearances(
-                spec,
-                profile,
-                atlas,
-                billboards,
-              );
+      // NON-VACUITY GUARD (asserted BEFORE the relational clause): the
+      // lane MUST really build a crowd (an empty billboard list would
+      // satisfy the floor vacuously) and it MUST really measure a
+      // distance (a zero reading would satisfy the floor vacuously).
+      expect(billboards.length).toBeGreaterThan(0);
+      expect(profile.chords.length).toBeGreaterThan(0);
 
-              fixtureCount += 1;
-              billboardCount += billboards.length;
+      // Act
+      const readings = measureBillboardClearances(spec, profile, billboards);
 
-              for (const [position, footprint] of footprintReadings.entries()) {
-                const anchor = anchorReadings[position]!;
+      expect(readings.length).toBe(billboards.length);
+      expect(
+        readings.every(
+          (row) =>
+            Number.isFinite(row.unionM) && Number.isFinite(row.nearestChordM),
+        ),
+      ).toBe(true);
 
-                nearestSurfaceGapM = Math.min(
-                  nearestSurfaceGapM,
-                  anchor.unionM - footprint.footprintM,
-                );
-                sampledPoints += footprint.sampledPoints;
-              }
+      // Assert
+      // The floor is the USER-NAMED 10 m and is NEVER widened by a
+      // tolerance: a residual violation is a NAMED, MEASURED violation.
+      const roles = [...new Set(readings.map((row) => row.role))];
+      const violationLines = roles
+        .map((role) =>
+          summarizeRoleViolations(
+            `role=${role}`,
+            readings
+              .filter((row) => row.role === role)
+              .map((row) => ({
+                clearanceM: row.unionM,
+                propLabel: `${row.role}#${row.index}`,
+              })),
+          ),
+        )
+        .filter((line): line is string => line !== null);
 
-              const fixtureLine = summarizeRoleViolations(
-                `seed=${seed}/${sizeBucket}`,
-                footprintReadings.map((row) => ({
-                  clearanceM: row.footprintM,
-                  propLabel: `${row.role}#${row.index}`,
-                })),
-              );
+      expect(violationLines).toEqual([]);
+    });
+  });
 
-              if (fixtureLine !== null) {
-                fixtureLines.push(fixtureLine);
-              }
+  describe('RED-5 share (the BODY-LEVEL floor - the P-PC-R body-level lane)', () => {
+    // [RED-14V-PUBLIC-5-BODY-LEVEL]
+    it("AC-096: EVERY public billboard FOOTPRINT clears the USER-NAMED 10 m floor, read at the placed footprint's nearest surface toward the road (RED-14V-PUBLIC-5-BODY-LEVEL)", () => {
+      // Arrange
+      const atlas = loadPublicSpriteAtlas();
+      const fixtureLines: string[] = [];
+      const roleRows = new Map<
+        string,
+        { clearanceM: number; propLabel: string }[]
+      >();
+      let sampledPoints = 0;
+      let nearestSurfaceGapM = Number.POSITIVE_INFINITY;
+      let fixtureCount = 0;
+      let billboardCount = 0;
 
-              for (const row of footprintReadings) {
-                const rows = roleRows.get(row.role) ?? [];
+      // Act - the whole published fixture set, NOT one hand-picked
+      // fixture: EVERY published seed in BOTH published size buckets.
+      for (const sizeBucket of NEATRACING_PUBLIC_CLEARANCE_SIZE_BUCKETS) {
+        for (const seed of NEATRACING_PUBLIC_CLEARANCE_FIXTURE_SEEDS) {
+          const input = { seed, layoutVersion: 1, sizeBucket };
+          const spec = generateTrack(input);
+          const profile = resolveTrackEdgeProfile(spec.segments);
+          const billboards = buildPublicBillboards(
+            input,
+            FIXTURE_CAMERA,
+            atlas,
+          );
+          const anchorReadings = measureBillboardClearances(
+            spec,
+            profile,
+            billboards,
+          );
+          const footprintReadings = measureBillboardFootprintClearances(
+            spec,
+            profile,
+            atlas,
+            billboards,
+          );
 
-                rows.push({
-                  clearanceM: row.footprintM,
-                  propLabel: `${row.role}#${row.index}@seed${seed}/${sizeBucket}`,
-                });
-                roleRows.set(row.role, rows);
-              }
-            }
+          fixtureCount += 1;
+          billboardCount += billboards.length;
+
+          for (const [position, footprint] of footprintReadings.entries()) {
+            const anchor = anchorReadings[position]!;
+
+            nearestSurfaceGapM = Math.min(
+              nearestSurfaceGapM,
+              anchor.unionM - footprint.footprintM,
+            );
+            sampledPoints += footprint.sampledPoints;
           }
 
-          // NON-VACUITY GUARDS (asserted BEFORE the relational clause): the
-          // sweep MUST really build the published crowd over more than one
-          // fixture, the atlas MUST really carry frames, the lane MUST
-          // really SAMPLE the footprints, and it MUST really read a surface
-          // NEARER than the anchor - a lane that measured the anchor would
-          // satisfy the floor with the numbers the anchor-level lanes
-          // already pin.
-          expect(atlas.frames.length).toBeGreaterThan(0);
-          expect(fixtureCount).toBeGreaterThan(1);
-          expect(billboardCount).toBeGreaterThan(0);
-          expect(sampledPoints).toBeGreaterThan(0);
-          expect(nearestSurfaceGapM).toBeGreaterThan(
-            NEATRACING_PUBLIC_FOOTPRINT_SURFACE_MARGIN_M,
+          const fixtureLine = summarizeRoleViolations(
+            `seed=${seed}/${sizeBucket}`,
+            footprintReadings.map((row) => ({
+              clearanceM: row.footprintM,
+              propLabel: `${row.role}#${row.index}`,
+            })),
           );
 
-          // Assert - the FOOTPRINT of every billboard clears the
-          // USER-NAMED floor. The floor is NEVER widened by a tolerance and
-          // NO billboard is ever dropped to satisfy it.
-          const roleLines = [...roleRows.entries()]
-            .map(([role, rows]) =>
-              summarizeRoleViolations(`role=${role}`, rows),
-            )
-            .filter((line): line is string => line !== null);
+          if (fixtureLine !== null) {
+            fixtureLines.push(fixtureLine);
+          }
 
-          expect([...fixtureLines, ...roleLines]).toEqual([]);
-        });
-      },
-    );
-  },
-);
+          for (const row of footprintReadings) {
+            const rows = roleRows.get(row.role) ?? [];
 
+            rows.push({
+              clearanceM: row.footprintM,
+              propLabel: `${row.role}#${row.index}@seed${seed}/${sizeBucket}`,
+            });
+            roleRows.set(row.role, rows);
+          }
+        }
+      }
+
+      // NON-VACUITY GUARDS (asserted BEFORE the relational clause): the
+      // sweep MUST really build the published crowd over more than one
+      // fixture, the atlas MUST really carry frames, the lane MUST
+      // really SAMPLE the footprints, and it MUST really read a surface
+      // NEARER than the anchor - a lane that measured the anchor would
+      // satisfy the floor with the numbers the anchor-level lanes
+      // already pin.
+      expect(atlas.frames.length).toBeGreaterThan(0);
+      expect(fixtureCount).toBeGreaterThan(1);
+      expect(billboardCount).toBeGreaterThan(0);
+      expect(sampledPoints).toBeGreaterThan(0);
+      expect(nearestSurfaceGapM).toBeGreaterThan(
+        NEATRACING_PUBLIC_FOOTPRINT_SURFACE_MARGIN_M,
+      );
+
+      // Assert - the FOOTPRINT of every billboard clears the
+      // USER-NAMED floor. The floor is NEVER widened by a tolerance and
+      // NO billboard is ever dropped to satisfy it.
+      const roleLines = [...roleRows.entries()]
+        .map(([role, rows]) => summarizeRoleViolations(`role=${role}`, rows))
+        .filter((line): line is string => line !== null);
+
+      expect([...fixtureLines, ...roleLines]).toEqual([]);
+    });
+  });
+});

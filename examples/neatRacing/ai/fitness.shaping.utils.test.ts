@@ -98,14 +98,13 @@ describe('higher-is-better monotonicity (E8 red-test invariants)', () => {
   });
 
   it('strictly increases the fitness as the lap progress grows', () => {
-    const fitnessByAscendingProgress = PROGRESS_SWEEP_01.map(
-      (lapProgress01) =>
-        computeNeatRacingShapedFitness(
-          1,
-          PROBE_TIME_SECONDS,
-          lapProgress01,
-          MAX_CARS,
-        ),
+    const fitnessByAscendingProgress = PROGRESS_SWEEP_01.map((lapProgress01) =>
+      computeNeatRacingShapedFitness(
+        1,
+        PROBE_TIME_SECONDS,
+        lapProgress01,
+        MAX_CARS,
+      ),
     );
     expect(isStrictlyIncreasing(fitnessByAscendingProgress)).toBe(true);
   });
@@ -146,10 +145,7 @@ describe('term math (the formula shape is contract)', () => {
         PROBE_LAP_PROGRESS_01,
         MAX_CARS,
       );
-    expect(oneMoreSecondDelta).toBeCloseTo(
-      -NEATRACING_FITNESS_WEIGHT_TIME,
-      12,
-    );
+    expect(oneMoreSecondDelta).toBeCloseTo(-NEATRACING_FITNESS_WEIGHT_TIME, 12);
   });
 
   it('pays exactly the TP-08 lap-progress weight per unit of progress', () => {
@@ -240,12 +236,7 @@ describe('strict-rejection guards (the commit rule never sees a NaN score)', () 
 
   it('rejects a negative race time', () => {
     expect(() =>
-      computeNeatRacingShapedFitness(
-        1,
-        -0.5,
-        PROBE_LAP_PROGRESS_01,
-        MAX_CARS,
-      ),
+      computeNeatRacingShapedFitness(1, -0.5, PROBE_LAP_PROGRESS_01, MAX_CARS),
     ).toThrow(RangeError);
   });
 
@@ -262,23 +253,13 @@ describe('strict-rejection guards (the commit rule never sees a NaN score)', () 
 
   it('rejects a lap progress below zero', () => {
     expect(() =>
-      computeNeatRacingShapedFitness(
-        1,
-        PROBE_TIME_SECONDS,
-        -0.01,
-        MAX_CARS,
-      ),
+      computeNeatRacingShapedFitness(1, PROBE_TIME_SECONDS, -0.01, MAX_CARS),
     ).toThrow(RangeError);
   });
 
   it('rejects a lap progress above one', () => {
     expect(() =>
-      computeNeatRacingShapedFitness(
-        1,
-        PROBE_TIME_SECONDS,
-        1.01,
-        MAX_CARS,
-      ),
+      computeNeatRacingShapedFitness(1, PROBE_TIME_SECONDS, 1.01, MAX_CARS),
     ).toThrow(RangeError);
   });
 
@@ -334,7 +315,9 @@ describe('strict-rejection guards (the commit rule never sees a NaN score)', () 
         PROBE_LAP_PROGRESS_01,
         MAX_CARS,
       ),
-    ).toThrow(/^neatRacing fitness shaping failed: position must be a finite number$/);
+    ).toThrow(
+      /^neatRacing fitness shaping failed: position must be a finite number$/,
+    );
   });
 });
 

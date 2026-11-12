@@ -369,10 +369,7 @@ export async function runWorkflowSelfCheck({ server, planPath }) {
 
   if (!expectedPhase) {
     issues.push(
-      selfCheckError(
-        planPath,
-        'No active WIP phase found in the active plan.',
-      ),
+      selfCheckError(planPath, 'No active WIP phase found in the active plan.'),
     );
   }
 
@@ -1828,6 +1825,12 @@ function extractStepPacketText(planText, stepNumber) {
 /**
  * Parse the YAML metadata block embedded in a step packet.
  *
+ * A malformed packet raises a `PlanYamlParseError` from the plan parser
+ * (learning event
+ * `learn-20261109-f9-plan-parser-silent-skip-overindented-id-items`). The MCP
+ * server must report the malformed packet, never crash on it, so the parse
+ * failure is captured on the returned metadata under `__parseError`.
+ *
  * @param {string} stepPacket - Step packet markdown text.
  * @returns {Record<string, unknown>} Parsed metadata, or an empty object on failure.
  */
@@ -1838,7 +1841,18 @@ function parseStepPacketMetadata(stepPacket) {
     return {};
   }
 
-  return parsePlanYamlBlock(yamlBlock);
+  try {
+    return parsePlanYamlBlock(yamlBlock);
+  } catch (error) {
+    return {
+      __parseError: {
+        message: error?.message ?? String(error),
+        code: error?.code ?? 'PLAN_YAML_PARSE_ERROR',
+        file: error?.file ?? null,
+        line: error?.line ?? null,
+      },
+    };
+  }
 }
 
 /**

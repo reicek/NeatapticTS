@@ -15,6 +15,17 @@ let mockExecStdout;
 let mockExecError;
 let mockParseArgsResult;
 
+// The real module is spread into the mock so every export a transitively
+// imported module needs is present. `plan-yaml-lint.mjs` imports
+// `PlanYamlParseError`, `normalizeYamlScalar` and `parsePlanYamlBlock` from
+// this module; a partial mock factory makes the ESM link fail with
+// "does not provide an export named ...".
+// The import MUST happen BEFORE `node:fs/promises` is mocked: the real
+// `customization-utils.mjs` imports `stat` from `node:fs/promises`, and the
+// mock factory below does not provide it, so linking the real module against
+// the mocked fs fails with "does not provide an export named 'stat'".
+const utils = await import('../customization-utils.mjs');
+
 jest.unstable_mockModule('node:fs/promises', () => ({
   readdir: (...args) => mockReaddir(...args),
   readFile: (...args) => mockReadFile(...args),
@@ -37,6 +48,7 @@ jest.unstable_mockModule('node:child_process', () => ({
 }));
 
 jest.unstable_mockModule('../customization-utils.mjs', () => ({
+  ...utils,
   parseArgs: (argv) =>
     mockParseArgsResult ?? { json: false, help: false, all: false, plan: null },
   repoRoot: path.resolve(),

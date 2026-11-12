@@ -94,8 +94,60 @@ jest.mock('../host/hud', () => ({
  */
 jest.mock('../ai/promotion.rules', () => ({
   ...jest.requireActual('../ai/promotion.rules'),
+  // The `__esModule` marker is re-declared on the mock: the spread above
+  // drops the actual module's marker (it is not enumerable), and a
+  // namespace import of a mock WITHOUT the marker is an interop COPY —
+  // a spy installed on that copy is never observed by the goal machine.
+  __esModule: true,
   runNeatRacingScriptedBaselineProbeEpisode: jest.fn(),
 }));
+
+/**
+ * The adaptation session module is jest-mocked in this file (the AI
+ * lane's LIVE drive recorder is the ONLY doubled seam): the factory
+ * wraps the REAL session, so the host keeps driving a REAL session and
+ * the seam injection still rides the REAL controller object, while the
+ * wrapper RECORDS the simulation ticks the session was driven at.
+ *
+ * The recorder arrays carry the `mock` prefix on purpose: a `jest.mock`
+ * factory may only reach module-scope bindings whose name starts with
+ * `mock` (the hoisting contract), so the recorder stays reachable from
+ * the hoisted factory.
+ */
+jest.mock('../ai/racing-adaptation.session', () => {
+  const actual = jest.requireActual<
+    typeof import('../ai/racing-adaptation.session')
+  >('../ai/racing-adaptation.session');
+  return {
+    ...actual,
+    // The `__esModule` marker is re-declared on the mock: the spread
+    // above drops the actual module's marker (it is not enumerable), and
+    // a namespace import of a mock WITHOUT the marker is an interop COPY.
+    __esModule: true,
+    createNeatRacingAdaptationSession: (
+      options: Parameters<typeof actual.createNeatRacingAdaptationSession>[0],
+    ) => {
+      const realSession = actual.createNeatRacingAdaptationSession(options);
+      mockCapturedAdaptationSessions.push(realSession);
+      return {
+        ...realSession,
+        adaptOnTick: (
+          input: Parameters<typeof realSession.adaptOnTick>[0],
+        ): ReturnType<typeof realSession.adaptOnTick> => {
+          mockCapturedAdaptationDriveTicks.push(input.tick);
+          // The reference car's fed position: the boundary pins read the
+          // drive's position term (one plus the rivals counted ahead) as
+          // the honest stale-rival witness.
+          const referenceCar = input.cars[0] ?? null;
+          mockCapturedAdaptationTickCar0Positions.push(
+            referenceCar === null ? null : referenceCar.position,
+          );
+          return realSession.adaptOnTick(input);
+        },
+      };
+    },
+  };
+});
 
 jest.mock('../workers/simulation-worker/simulation-worker', () => ({
   ...jest.requireActual('../workers/simulation-worker/simulation-worker'),
@@ -114,6 +166,12 @@ import { createHud } from '../host/hud';
 import type { CanvasDimensions } from '../browser-entry/canvas-dimensions.utils';
 import { updateFullWindowRendererSize } from '../browser-entry/canvas-dimensions.utils';
 import { advanceFrameSteps } from '../host/render-loop.utils';
+// The promotion rules module is jest-mocked in this file (the scripted
+// baseline probe is the ONLY doubled seam), so the goal machine's
+// predicate call is observed through a namespace spy: the spy stands in
+// for the REAL predicate (it calls through) and records the node count
+// the host fed it.
+import * as promotionRules from '../ai/promotion.rules';
 import {
   runNeatRacingScriptedBaselineProbeEpisode,
   resolveNeatRacingLevelCarCount,
@@ -123,7 +181,29 @@ import {
   type NeatRacingDrivabilityMeasurement,
   type NeatRacingPromotionRoundSnapshot,
 } from '../ai/promotion.rules';
+// The adaptation session module is jest-mocked in this file (the AI
+// lane's LIVE drive recorder is the ONLY doubled seam): the host keeps
+// driving a REAL session — the mock only RECORDS the simulation ticks
+// the session was driven at.
+import type { NeatRacingAdaptationSession } from '../ai/racing-adaptation.session';
+// The module is jest-mocked above with a REAL-session wrapper, so this
+// import resolves to the wrapped factory: creating a session here still
+// builds a REAL adaptation session (the pins drive REAL relay laws).
+import { createNeatRacingAdaptationSession } from '../ai/racing-adaptation.session';
 import { resolveOscillationPromotionNodeThreshold } from '../ai/oscillation-penalty.utils';
+import {
+  createInitialPhysicsCarState,
+  type PhysicsCarState,
+} from '../physics/physics.step.service';
+import { NEATRACING_FLEET_CONTROL_BRAKE } from '../workers/simulation-worker/nge.fleet.control';
+// The carrier's LIVE network size at rung 1 is derived from the shipped
+// laws (never a magic number): the level-1 observation width plus the
+// controller's output count.
+import {
+  NEATRACING_OBSERVATION_TIER_A_CHANNEL_COUNT,
+  type NeatRacingObservationLevel,
+} from '../ai/observation.assembler';
+import { NEATRACING_NGE_CONTROLLER_OUTPUT_COUNT } from '../ai/nge.controller';
 import {
   createNeatRacingAiModeGoalSession,
   describeNeatRacingAiModeGoalPhase,
@@ -139,9 +219,12 @@ import {
   NEATRACING_DEFAULT_FEATURE_FLAGS,
   NEATRACING_PACK_SCHEMA_VERSION,
 } from '../workers/simulation-worker/frame.pack.service';
+import type { NeatRacingReproducibilityTuple } from '../workers/simulation-worker/reproducibility.utils';
 import type {
+  NeatRacingSimWorkerFramesPayload,
   NeatRacingSimWorkerInitPayload,
   NeatRacingSimWorkerRequest,
+  NeatRacingSimWorkerResponse,
   NeatRacingSimWorkerSession,
   NeatRacingSimWorkerSessionSnapshot,
 } from '../workers/simulation-worker/simulation-worker';
@@ -167,11 +250,10 @@ import { resolveMostForwardNeatRacingAgent } from '../visualizer/network-panel.a
 // `window.neatRacingStart` on the jsdom host.
 import '../browser-entry/browser-entry';
 
-const {
-  createSimWorkerSession: createRealSimWorkerSession,
-} = jest.requireActual<
-  typeof import('../workers/simulation-worker/simulation-worker')
->('../workers/simulation-worker/simulation-worker');
+const { createSimWorkerSession: createRealSimWorkerSession } =
+  jest.requireActual<
+    typeof import('../workers/simulation-worker/simulation-worker')
+  >('../workers/simulation-worker/simulation-worker');
 
 /* ------------------------------------------------------------------------- *
  * Harness constants.
@@ -191,6 +273,16 @@ const FRAME_STEP_MS = 1000 / 60;
 
 /** Frames the rebinding/restart contracts drive (a short honest window). */
 const DRIVEN_FRAME_COUNT = 120;
+
+/**
+ * Frames the AI-lane tick-advance pin drives (the SAME simulation tick,
+ * observed once per drawn frame — the condition that exposes a repeated
+ * drive).
+ */
+const ADAPTATION_REPEAT_FRAME_COUNT = 5;
+
+/** Chords the boundary pin's doctor places its rival clone ahead of car 0. */
+const RIVAL_AHEAD_CHORD_COUNT = 12;
 
 /* ------------------------------------------------------------------------- *
  * Captured HUD read model.
@@ -259,6 +351,44 @@ function lastCapturedBoot(): CapturedSimWorkerBoot {
   return boot;
 }
 /**
+ * The optional doctor of the `frames` reply payload.
+ *
+ * WHY: the harness never advances the simulation (the frame-step double
+ * releases zero ticks), so a forward-lap crossing can never happen on
+ * its own. The doctor replaces the WORKER's frames payload with a FRESH
+ * object (the worker's own state is never mutated), which lets a test
+ * publish a lap count the real lap authority never reached. It is null
+ * whenever no test installed one.
+ */
+let framesReplyDoctor:
+  | ((
+      payload: NeatRacingSimWorkerFramesPayload,
+    ) => NeatRacingSimWorkerFramesPayload)
+  | null = null;
+
+/**
+ * Applies the installed `frames` reply doctor to one reply list.
+ *
+ * @param responses - The replies the REAL session answered with.
+ * @returns The very same replies when no doctor is installed, the
+ *   doctored `frames` replies otherwise (every other reply passes
+ *   through untouched).
+ */
+function applyFramesReplyDoctor(
+  responses: NeatRacingSimWorkerResponse[],
+): NeatRacingSimWorkerResponse[] {
+  const doctor = framesReplyDoctor;
+  if (doctor === null) {
+    return responses;
+  }
+  return responses.map((response): NeatRacingSimWorkerResponse =>
+    response.type === 'frames'
+      ? { type: 'frames', payload: doctor(response.payload) }
+      : response,
+  );
+}
+
+/**
  * Wraps a REAL pure session so every request is captured before the
  * REAL handler answers it (the worker module itself is unmocked beyond
  * `createSimWorkerSession`).
@@ -271,7 +401,7 @@ function createCapturingSimWorkerSession(
   const session: NeatRacingSimWorkerSession = {
     handleRequest: (request: NeatRacingSimWorkerRequest) => {
       capturedRequests.push(request);
-      return realSession.handleRequest(request);
+      return applyFramesReplyDoctor(realSession.handleRequest(request));
     },
     get snapshot(): NeatRacingSimWorkerSessionSnapshot {
       return realSession.snapshot;
@@ -307,6 +437,40 @@ function isStoppedBoot(boot: CapturedSimWorkerBoot): boolean {
 }
 
 /* ------------------------------------------------------------------------- *
+ * Capturing the AI lane's LIVE adaptation drives.
+ * ------------------------------------------------------------------------- */
+
+/**
+ * Every adaptation session the host created (in boot order).
+ *
+ * WHY: the session module is jest-mocked so the AI lane's drives are
+ * observable; the recorder keeps the REAL session objects, so the host
+ * still drives a REAL session (never a fabricated double).
+ */
+const mockCapturedAdaptationSessions: NeatRacingAdaptationSession[] = [];
+
+/**
+ * Every simulation tick the AI lane drove the adaptation session at (in
+ * drive order).
+ *
+ * WHY: the tick ADVANCE gate's invariant is "at most one drive per
+ * simulation tick", so the recorded ticks ARE the contract.
+ */
+const mockCapturedAdaptationDriveTicks: number[] = [];
+
+/**
+ * The car-0 POSITION term of EVERY recorded adaptation drive (in drive
+ * order; null when the tick input carried no reference car).
+ *
+ * WHY: the rival progress meters are host-private state that only the
+ * panel populates and only the drive consumes — the drive's own position
+ * term (one plus the rivals counted ahead) is the lane-honest surface
+ * that reveals them, so the round-boundary pins record what the drive
+ * FED instead of reaching into the host's private state.
+ */
+const mockCapturedAdaptationTickCar0Positions: Array<number | null> = [];
+
+/* ------------------------------------------------------------------------- *
  * Mode switches through the REAL selector (DOM change events).
  * ------------------------------------------------------------------------- */
 
@@ -337,13 +501,40 @@ let scheduledRafCallbacks: FrameRequestCallback[] = [];
  * Drives `count` frames by invoking the boot loop's captured RAF
  * callbacks with advancing timestamps (no timers, no real rAF).
  */
-function driveFrames(count: number, startTimestampMs = FIRST_FRAME_TIMESTAMP_MS): void {
+function driveFrames(
+  count: number,
+  startTimestampMs = FIRST_FRAME_TIMESTAMP_MS,
+): void {
   for (let frame = 0; frame < count; frame += 1) {
     const callback = scheduledRafCallbacks.at(-1);
     if (callback === undefined) {
       throw new Error('the loop never scheduled a frame callback');
     }
     callback(startTimestampMs + frame * FRAME_STEP_MS);
+  }
+}
+
+/**
+ * The macrotask turns one promise flush drains (the AI lane's adaptation
+ * tick is async: the session publishes its live node counts when its
+ * tick resolves).
+ */
+const PROMISE_FLUSH_TURN_COUNT = 3;
+
+/**
+ * Flushes the pending promise chains.
+ *
+ * WHY: the AI lane's adaptation tick resolves asynchronously, so the
+ * session publishes its live node counts a few microtask turns after
+ * the frame that started the tick. A macrotask turn drains every pending
+ * microtask chain, so a short flush lets the session publish before the
+ * next frame reads it.
+ */
+async function flushPendingPromises(): Promise<void> {
+  for (let turn = 0; turn < PROMISE_FLUSH_TURN_COUNT; turn += 1) {
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 0);
+    });
   }
 }
 
@@ -431,6 +622,16 @@ const PASSING_DRIVABILITY: NeatRacingDrivabilityMeasurement = {
 const LVL1_NODE_THRESHOLD = resolveOscillationPromotionNodeThreshold(
   NEATRACING_AI_MODE_START_LEVEL,
 );
+
+/**
+ * The carrier's LIVE network size at rung 1: the level-1 observation
+ * width (82 input nodes) plus the controller's output count (2 output
+ * nodes). The goal machine must be fed AT LEAST the carrier's whole
+ * network — never a fabricated zero.
+ */
+const CARRIER_BASE_NODE_COUNT =
+  NEATRACING_OBSERVATION_TIER_A_CHANNEL_COUNT +
+  NEATRACING_NGE_CONTROLLER_OUTPUT_COUNT;
 
 /**
  * Builds one honest forward crossing fixture at the level-1 band.
@@ -526,7 +727,9 @@ const mockedUpdateFullWindowRendererSize = jest.mocked(
   updateFullWindowRendererSize,
 );
 const mockedCreateHud = jest.mocked(createHud);
-const mockedProbeEpisode = jest.mocked(runNeatRacingScriptedBaselineProbeEpisode);
+const mockedProbeEpisode = jest.mocked(
+  runNeatRacingScriptedBaselineProbeEpisode,
+);
 const mockedCreateSimWorkerSession = jest.mocked(createSimWorkerSession);
 
 /** A deterministic probe double result (the honest lap-pace stand-in). */
@@ -565,6 +768,10 @@ beforeEach(() => {
 
   hudUpdates.length = 0;
   capturedSimWorkerBoots.length = 0;
+  mockCapturedAdaptationSessions.length = 0;
+  mockCapturedAdaptationDriveTicks.length = 0;
+  mockCapturedAdaptationTickCar0Positions.length = 0;
+  framesReplyDoctor = null;
   scheduledRafCallbacks = [];
   window.requestAnimationFrame = (callback: FrameRequestCallback): number => {
     scheduledRafCallbacks.push(callback);
@@ -689,8 +896,9 @@ describe('the frames rebinding through the sim-worker protocol', () => {
     driveFrames(DRIVEN_FRAME_COUNT);
     releaseKeys(['ArrowUp']);
 
-    const seam = (window as unknown as { neatRacingDriftState?: { speedMps: number } })
-      .neatRacingDriftState;
+    const seam = (
+      window as unknown as { neatRacingDriftState?: { speedMps: number } }
+    ).neatRacingDriftState;
     expect(seam?.speedMps).toBe(lastHudUpdate().speedUnitsPerS);
   });
 
@@ -912,8 +1120,9 @@ describe('the most-forward network panel (mode-gated, rivals only)', () => {
 
     switchRaceMode('ai');
 
-    expect(document.getElementById(NETWORK_PANEL_CANVAS_ID))
-      .toBeInstanceOf(HTMLCanvasElement);
+    expect(document.getElementById(NETWORK_PANEL_CANVAS_ID)).toBeInstanceOf(
+      HTMLCanvasElement,
+    );
     expect(
       (document.getElementById(NETWORK_PANEL_CANVAS_ID) as HTMLCanvasElement)
         .width,
@@ -989,12 +1198,7 @@ describe('the most-forward network panel (mode-gated, rivals only)', () => {
     // (31 - 30 + 40 = 41).
     const index = buildNeatRacingTrackChordIndex(buildSyntheticSegments());
     const beforeLine = resolveNeatRacingCarAlongProgressM(index, 0, 9, null);
-    const across = resolveNeatRacingCarAlongProgressM(
-      index,
-      1,
-      0,
-      beforeLine,
-    );
+    const across = resolveNeatRacingCarAlongProgressM(index, 1, 0, beforeLine);
 
     expect(across.totalM).toBe(41);
   });
@@ -1049,5 +1253,370 @@ describe('the stop handle teardown (AC-033)', () => {
     const stop = bootLiveLoop();
 
     expect(() => stop()).not.toThrow();
+  });
+});
+
+/* ------------------------------------------------------------------------- *
+ * The panel seam's jest-mocked 2d context (the adapter suite's idiom).
+ * ------------------------------------------------------------------------- */
+
+/**
+ * Builds the jest-mocked 2d context the boundary pin mounts the network
+ * panel with.
+ *
+ * WHY: the rival progress meters are host-private state only the panel
+ * populates (frame step 7) and only the drive consumes (frame step 5), so
+ * the stale-rival witness needs the panel's honest populate path to RUN —
+ * the jsdom prototype stub returns null (the harness's default honest
+ * UNDRAWABLE path) and the panel would stay dead. This stub is the SAME
+ * established idiom the visualizer adapter suite pins its draw path with
+ * (a complete jest-mocked CanvasRenderingContext2D over a jsdom canvas),
+ * so the panel resolves and draws against the REAL adapter code while
+ * nothing touches a live GPU surface.
+ *
+ * @returns The mocked 2d context (with its jsdom canvas attached).
+ */
+function buildNetworkPanelStubContext(): CanvasRenderingContext2D {
+  const canvas = document.createElement('canvas');
+  canvas.width = 900;
+  canvas.height = 240;
+  return {
+    canvas,
+    clearRect: jest.fn(),
+    beginPath: jest.fn(),
+    moveTo: jest.fn(),
+    lineTo: jest.fn(),
+    bezierCurveTo: jest.fn(),
+    quadraticCurveTo: jest.fn(),
+    ellipse: jest.fn(),
+    stroke: jest.fn(),
+    rect: jest.fn(),
+    fill: jest.fn(),
+    fillRect: jest.fn(),
+    arc: jest.fn(),
+    fillText: jest.fn(),
+    strokeText: jest.fn(),
+    measureText: jest.fn().mockReturnValue({ width: 0 }),
+    drawImage: jest.fn(),
+    save: jest.fn(),
+    restore: jest.fn(),
+    translate: jest.fn(),
+    scale: jest.fn(),
+    rotate: jest.fn(),
+    closePath: jest.fn(),
+    clip: jest.fn(),
+    setLineDash: jest.fn(),
+    getLineDash: jest.fn().mockReturnValue([]),
+    setTransform: jest.fn(),
+    strokeRect: jest.fn(),
+    strokeStyle: '',
+    lineWidth: 1,
+    fillStyle: '',
+    font: '',
+    textAlign: 'center',
+    textBaseline: 'middle',
+  } as unknown as CanvasRenderingContext2D;
+}
+
+/* ------------------------------------------------------------------------- *
+ * (h) The live AI-lane adaptation session (the LIVE carrier node count).
+ * ------------------------------------------------------------------------- */
+
+describe('the live AI-lane adaptation session', () => {
+  it('boots the manual round with a seam and the AI round with it', () => {
+    bootLiveLoop();
+
+    // The MANUAL round carries the seam TOO: the amended spec pins
+    // "a manual round ALWAYS carries the seam" (the AC-029 manual-lane
+    // replacement per LD-12), so the human races against the SAME
+    // evolving agents in BOTH race modes.
+    expect(
+      typeof firstInitPayload(lastCapturedBoot()).controller?.computeControl,
+    ).toBe('function');
+
+    // LD-12: the worker race mode stays 'manual', so car 0 remains the
+    // human car.
+    expect(firstInitPayload(lastCapturedBoot()).raceMode).toBe('manual');
+
+    // The switch into 'ai' REBOOTS the round, so the seam rides the
+    // FRESH round's init payload (the LAST captured boot).
+    switchRaceMode('ai');
+
+    expect(
+      typeof firstInitPayload(lastCapturedBoot()).controller?.computeControl,
+    ).toBe('function');
+  });
+
+  it('feeds the goal machine the carrier LIVE node count', async () => {
+    const promotionSpy = jest.spyOn(
+      promotionRules,
+      'evaluateNeatRacingPromotion',
+    );
+    try {
+      bootLiveLoop();
+      switchRaceMode('ai');
+
+      // Frame one: the AI lane's adaptation tick runs (the harness
+      // releases no simulation ticks, so the cadence gate passes on the
+      // tick counter zero) and the session publishes its live node
+      // counts when the tick resolves.
+      driveFrames(1);
+      await flushPendingPromises();
+
+      // The doctored lap counter publishes the forward-lap crossing the
+      // real lap authority never reached (the doctor returns a FRESH
+      // payload, so the worker's own state is never mutated).
+      framesReplyDoctor = (payload) => ({
+        ...payload,
+        rules: { ...payload.rules, lapsCompleted: 1 },
+      });
+      driveFrames(1);
+
+      expect(promotionSpy).toHaveBeenCalled();
+      const observedNodeCount =
+        promotionSpy.mock.calls.at(-1)?.[0]?.nodeCount ?? Number.NaN;
+      expect(Number.isFinite(observedNodeCount)).toBe(true);
+      // The feed is LIVE: the carrier's whole network (82 inputs + 2
+      // outputs at rung 1), never a fabricated zero.
+      expect(observedNodeCount).toBeGreaterThanOrEqual(CARRIER_BASE_NODE_COUNT);
+    } finally {
+      // The spy is restored here, so the next test's
+      // `jest.resetAllMocks()` never inherits a broken predicate spy.
+      promotionSpy.mockRestore();
+    }
+  });
+
+  it('drives the adaptation session at most once per simulation tick', async () => {
+    bootLiveLoop();
+    switchRaceMode('ai');
+
+    // The harness releases NO simulation tick per drawn frame (the
+    // frame-step double returns zero), so every driven frame observes
+    // the SAME simulation tick (zero). The promise flush BETWEEN the
+    // frames releases the in-flight flag, so the tick ADVANCE gate is
+    // the ONLY thing that keeps the repeated drive out.
+    for (let frame = 0; frame < ADAPTATION_REPEAT_FRAME_COUNT; frame += 1) {
+      driveFrames(1);
+      await flushPendingPromises();
+    }
+
+    // ONE created session per MODE BOOT: the initial MANUAL boot plus
+    // the AI switch = TWO created sessions (the manual round now boots
+    // its own adaptation session).
+    expect(mockCapturedAdaptationSessions).toHaveLength(2);
+    // The drive is NOT mode-gated (the seam rides BOTH modes — AC-029),
+    // but this frame plan never drives a frame before the switch, so the
+    // manual round's session stays un-driven and only the AI session
+    // records a tick.
+    expect(mockCapturedAdaptationDriveTicks).toEqual([0]);
+  });
+
+  it('resets the rival meters at the round boundary and drives the MANUAL session (R1 + R2, AC-031)', async () => {
+    // The drawable panel is REQUIRED for the stale-rival witness: the
+    // rival meters are host-private state the panel populates (frame step
+    // 7) and the drive consumes (frame step 5 — which runs BEFORE the
+    // panel in the same frame). The jest-mocked 2d stub is the adapter
+    // seam's OWN established test idiom; until this test overrides it,
+    // the harness keeps the honest undrawable prototype stub.
+    jest
+      .spyOn(HTMLCanvasElement.prototype, 'getContext')
+      .mockImplementation(() => buildNetworkPanelStubContext());
+    // Every driven frame releases ONE cadence slot (4 simulation steps),
+    // so each frame is a deterministic adaptation-tick candidate.
+    mockedAdvanceFrameSteps.mockReturnValue(4);
+    bootLiveLoop();
+    switchRaceMode('ai');
+
+    // The 2-car doctor: the FRESH frames reply carries the real car 0
+    // plus ONE rival cloned from it and displaced ahead along the demo
+    // track — relative to car 0 on EVERY frame, so the rival's meter
+    // trails car 0's along by the fixed gap (the worker's own fleet never
+    // grows and its state is never mutated).
+    const chordIndex = buildNeatRacingTrackChordIndex(
+      firstInitPayload(capturedBootAt(0)).trackSpec.segments,
+    );
+    const rivalGapM =
+      (RIVAL_AHEAD_CHORD_COUNT * chordIndex.loopLengthM) /
+      chordIndex.chords.length;
+    framesReplyDoctor = (payload) => {
+      const car = payload.cars[0] ?? null;
+      if (car === null) {
+        return payload;
+      }
+      const carAlongM = resolveNeatRacingCarAlongProgressM(
+        chordIndex,
+        car.x,
+        car.y,
+        null,
+      ).totalM;
+      const rivalAlongM = (carAlongM + rivalGapM) % chordIndex.loopLengthM;
+      const rivalChord = chordIndex.chords.findLast(
+        (chord) => chord.startOffsetM <= rivalAlongM,
+      );
+      if (rivalChord === undefined) {
+        return payload;
+      }
+      const rival = {
+        ...car,
+        x: (rivalChord.startX + rivalChord.endX) / 2,
+        y: (rivalChord.startY + rivalChord.endY) / 2,
+      };
+      return { ...payload, cars: [car, rival] };
+    };
+
+    // AI frame one: the drive reads NULL meters (the round just booted)
+    // and the panel populates the rival meter afterwards.
+    driveFrames(1);
+    await flushPendingPromises();
+    // AI frame two: the drive consumes the POPULATED rival meter — the
+    // stale-meter witness arms (the position term becomes 2).
+    driveFrames(1);
+    await flushPendingPromises();
+
+    // THE ROUND BOUNDARY: the manual switch stops the outgoing round and
+    // reboots the worker round — the R1 rival-meter reset rides the round
+    // restart, so the fresh round reads NO stale rival ahead.
+    switchRaceMode('manual');
+
+    // The boundary-side frame: the MANUAL round's session drives (R2 —
+    // the seam rides both race modes) and the drive's position term
+    // returns to its fresh-round value.
+    driveFrames(1);
+    await flushPendingPromises();
+
+    // THREE drives (two AI + the boundary-side MANUAL one at a FRESH tick
+    // lineage) pin R2, and the 1 -> 2 -> 1 position chain pins R1: a
+    // missing boundary reset would keep the rival's pre-boundary meter
+    // alive and the boundary-side drive would read 2 instead of 1.
+    expect(mockCapturedAdaptationDriveTicks).toEqual([4, 8, 4]);
+    expect(mockCapturedAdaptationTickCar0Positions).toEqual([1, 2, 1]);
+  });
+});
+
+/* ------------------------------------------------------------------------- *
+ * (i) The AI lane's carrier-backed human drive (the AI drive of car 0).
+ * ------------------------------------------------------------------------- */
+
+describe('the AI lane\u2019s carrier-backed human drive (the AI drive of car 0)', () => {
+  function buildLiveBootSessionTuple(): NeatRacingReproducibilityTuple {
+    const payload = firstInitPayload(capturedBootAt(0));
+    return {
+      seed: payload.seed,
+      agentCount: payload.agentCount,
+      packSchemaVersion: payload.packSchemaVersion,
+      opponentSnapshot: payload.opponentSnapshot,
+      trackId: payload.trackId,
+      featureFlags: payload.featureFlags,
+    };
+  }
+
+  it('boots the goal lifecycle at the carried boot level', () => {
+    const session = resolveNeatRacingAiModeGoalSessionForMode('ai', 2);
+    if (session === null) {
+      throw new Error('an ai switch must boot a goal session');
+    }
+
+    expect(session).toEqual({
+      level: 2,
+      sessionLaps: 0,
+    });
+  });
+
+  it('rejects a carried boot level below the observation ladder', () => {
+    // The runtime guard lives in the goal-session factory (the TS level
+    // type keeps the literal out statically, so the pin casts): the
+    // RESOLVER must surface the RANGE ERROR, not swallow it.
+    const carried = 0 as NeatRacingObservationLevel;
+    expect(() =>
+      resolveNeatRacingAiModeGoalSessionForMode('ai', carried),
+    ).toThrow(RangeError);
+  });
+
+  it('drives car 0 through the LIVE carrier-backed seam consult', () => {
+    bootLiveLoop();
+    switchRaceMode('ai');
+
+    const session = mockCapturedAdaptationSessions.at(-1);
+    if (session === undefined) {
+      throw new Error('an ai switch must boot an adaptation session');
+    }
+    const control = session.controller.computeControl(
+      [createInitialPhysicsCarState(0, { x: 2, y: 0, heading: 0 })],
+      0,
+    );
+    if (control === null) {
+      throw new Error('the human slot must consult the carrier-backed seam');
+    }
+
+    expect(control.throttle).toBeGreaterThanOrEqual(0);
+    expect(control.throttle).toBeLessThanOrEqual(1);
+    // The mapping law: the brake axis is fixed at zero and no turn-rate
+    // channel is ever emitted.
+    expect(control.brake).toBe(NEATRACING_FLEET_CONTROL_BRAKE);
+  });
+
+  it('keeps the human slot null with the carrier-drive option absent', () => {
+    bootLiveLoop();
+
+    const session = createNeatRacingAdaptationSession({
+      tuple: buildLiveBootSessionTuple(),
+      trackSpec: firstInitPayload(capturedBootAt(0)).trackSpec,
+      carCount: 2,
+    });
+    const car: PhysicsCarState = createInitialPhysicsCarState(0, {
+      x: 2,
+      y: 0,
+      heading: 0,
+    });
+
+    expect(session.controller.computeControl([car], 0)).toBeNull();
+  });
+
+  it('backs the human slot with the opted carrier slot when present', () => {
+    bootLiveLoop();
+
+    const payload = firstInitPayload(capturedBootAt(0));
+    const session = createNeatRacingAdaptationSession({
+      tuple: buildLiveBootSessionTuple(),
+      trackSpec: payload.trackSpec,
+      carCount: 2,
+      humanCarrierDriveSlot: 1,
+    });
+    const car: PhysicsCarState = createInitialPhysicsCarState(0, {
+      x: 2,
+      y: 0,
+      heading: 0,
+    });
+    const control = session.controller.computeControl([car], 0);
+
+    expect(control).not.toBeNull();
+  });
+
+  it('rejects a carrier-drive slot at the human slot', () => {
+    bootLiveLoop();
+
+    const payload = firstInitPayload(capturedBootAt(0));
+    expect(() =>
+      createNeatRacingAdaptationSession({
+        tuple: buildLiveBootSessionTuple(),
+        trackSpec: payload.trackSpec,
+        carCount: 2,
+        humanCarrierDriveSlot: 0,
+      }),
+    ).toThrow(RangeError);
+  });
+
+  it('rejects a carrier-drive slot at the fleet edge', () => {
+    bootLiveLoop();
+
+    const payload = firstInitPayload(capturedBootAt(0));
+    expect(() =>
+      createNeatRacingAdaptationSession({
+        tuple: buildLiveBootSessionTuple(),
+        trackSpec: payload.trackSpec,
+        carCount: 2,
+        humanCarrierDriveSlot: 2,
+      }),
+    ).toThrow(RangeError);
   });
 });

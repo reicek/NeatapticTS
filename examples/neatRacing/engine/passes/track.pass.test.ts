@@ -120,7 +120,10 @@ function createTrackMockGlHarness(): TrackMockGlHarness {
     readonly name: string;
     readonly channels: readonly [number, number, number];
   }> = [];
-  const uniform1fFeeds: Array<{ readonly name: string; readonly value: number }> = [];
+  const uniform1fFeeds: Array<{
+    readonly name: string;
+    readonly value: number;
+  }> = [];
   const gl = {
     VERTEX_SHADER: 0x8b31,
     FRAGMENT_SHADER: 0x8b20,
@@ -189,7 +192,10 @@ function createTrackMockGlHarness(): TrackMockGlHarness {
     uniform1f: (location: { name: string }, value: number): void => {
       uniform1fFeeds.push({ name: location.name, value });
     },
-    uniform1fv: (location: { name: string }, values: readonly number[]): void => {
+    uniform1fv: (
+      location: { name: string },
+      values: readonly number[],
+    ): void => {
       for (const value of values) {
         uniform1fFeeds.push({ name: location.name, value });
       }
@@ -319,7 +325,13 @@ describe('neatRacing track slab pass (AC-017)', () => {
       palette: [{ type: 'road', color: roadColor }],
       quads: [
         // Top face at world y = 0, normalAxis = 1.
-        { position: [0, 0, 0], normalAxis: 1, width: 1, height: 1, paletteIndex: 0 },
+        {
+          position: [0, 0, 0],
+          normalAxis: 1,
+          width: 1,
+          height: 1,
+          paletteIndex: 0,
+        },
       ],
     };
 
@@ -340,9 +352,21 @@ describe('neatRacing track slab pass (AC-017)', () => {
       ],
       quads: [
         // Vertical curb face, not a top face.
-        { position: [0, 0, 0], normalAxis: 0, width: 1, height: 0.5, paletteIndex: 0 },
+        {
+          position: [0, 0, 0],
+          normalAxis: 0,
+          width: 1,
+          height: 0.5,
+          paletteIndex: 0,
+        },
         // Bottom grass face at world y = -0.5.
-        { position: [0, -0.5, 0], normalAxis: 1, width: 1, height: 1, paletteIndex: 1 },
+        {
+          position: [0, -0.5, 0],
+          normalAxis: 1,
+          width: 1,
+          height: 1,
+          paletteIndex: 1,
+        },
       ],
     };
 

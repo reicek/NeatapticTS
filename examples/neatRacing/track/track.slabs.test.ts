@@ -475,11 +475,7 @@ const surfaceAt = (
   generatorX: number,
   generatorY: number,
 ): { readonly surface: string; readonly distancePastEdgeM: number } =>
-  classifyTrackSlabSurfaceAt(
-    generatorX,
-    -generatorY,
-    CORNER_FIXTURE_SEGMENTS,
-  );
+  classifyTrackSlabSurfaceAt(generatorX, -generatorY, CORNER_FIXTURE_SEGMENTS);
 
 /**
  * Pure FIXTURE geometry: the Euclidean distance from a generator-plane point
@@ -516,12 +512,10 @@ describe('P1-outer-edge-red (plan step 14U) - the asymmetric edge model (RED-1 +
     // 14Q shape): the probed corner MUST really be a tight corner and the
     // probed straight MUST really be straight, or the relational clause
     // below is satisfied VACUOUSLY.
-    const cornerTurnDeg =
-      Math.abs(
-        (turnAngleAt(CORNER_FIXTURE_SEGMENTS, PROBE_CORNER_SEGMENT_INDEX) *
-          180) /
-          Math.PI,
-      );
+    const cornerTurnDeg = Math.abs(
+      (turnAngleAt(CORNER_FIXTURE_SEGMENTS, PROBE_CORNER_SEGMENT_INDEX) * 180) /
+        Math.PI,
+    );
     const straightEndpointTurnDegAbs = [
       Math.abs(
         (turnAngleAt(CORNER_FIXTURE_SEGMENTS, PROBE_STRAIGHT_SEGMENT_INDEX) *
@@ -928,9 +922,11 @@ describe('P1-raster-unclip-red (plan step 14U2) - the AABB raster unclip (RED-5 
       (innerGeneratorX - UNCLIP_GRID.origin[0]) / NEATRACING_TRACK_SLAB_PITCH_M,
     );
     const innerCellZ = Math.floor(
-      (-innerGeneratorY - UNCLIP_GRID.origin[2]) / NEATRACING_TRACK_SLAB_PITCH_M,
+      (-innerGeneratorY - UNCLIP_GRID.origin[2]) /
+        NEATRACING_TRACK_SLAB_PITCH_M,
     );
-    const innerCellLabel = UNCLIP_GRID.rows[innerCellZ]?.[innerCellX] ?? 'absent';
+    const innerCellLabel =
+      UNCLIP_GRID.rows[innerCellZ]?.[innerCellX] ?? 'absent';
 
     // Act + Assert: NOT A RED - this clause HOLDS today and must stay
     // green: the road never NARROWS on the inside of a corner, so the inner
@@ -1004,8 +1000,7 @@ describe('P1-raster-unclip-red (plan step 14U2) - the AABB raster unclip (RED-5 
         continue;
       }
       pastPublishedEdgeM.push(
-        distanceToTrackChordM(segment, tile.x, -tile.z) -
-          chord.outerHalfWidthM,
+        distanceToTrackChordM(segment, tile.x, -tile.z) - chord.outerHalfWidthM,
       );
     }
     const closestToPublishedEdgeM = Math.min(...pastPublishedEdgeM);
@@ -1099,8 +1094,7 @@ const BAND_PROBE_LATERAL_M =
  * pushed OUTWARD (the loop is counter-clockwise, so the outer side of the
  * bottom chord is -y) by the band probe's lateral offset.
  */
-const BAND_PROBE_GENERATOR_Y_M =
-  PROBE_STRAIGHT_MID_Y - BAND_PROBE_LATERAL_M;
+const BAND_PROBE_GENERATOR_Y_M = PROBE_STRAIGHT_MID_Y - BAND_PROBE_LATERAL_M;
 
 /**
  * The band probe's world z (m): the rasterizer's frame mirrors the

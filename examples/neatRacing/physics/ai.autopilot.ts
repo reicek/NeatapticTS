@@ -204,6 +204,40 @@ export const NEATRACING_AUTOPILOT_CURVATURE_FEEDFORWARD_GAIN_M =
  */
 export const NEATRACING_AUTOPILOT_BRAKE_GAIN_PER_SPEED_RATIO = 1;
 
+/**
+ * The throttle-cut gain from the relative speed excess over the
+ * curvature-derived target speed (1).
+ *
+ * THE PROPORTIONAL THROTTLE CUT (Step 24, `P4-S2-DRIVE-LAW`): the
+ * throttle sheds the speed excess through the SAME excess-ratio
+ * machinery the AC-084 brake law reads - the cut is the excess over the
+ * target speed as a ratio of that target - so the drive keeps slowing
+ * authority on the ONE axis the fleet-control map cannot strip (the
+ * AC-029 seam forces the brake to zero and drops the turn rate; the
+ * throttle and the steer pass through untouched).
+ *
+ * THE CEILING: the cut saturates at the full coast when the drive is
+ * `1 + 1/gain` times the target speed, so the gain sets the speed
+ * ceiling the throttle axis holds a corner at and the band between the
+ * target and the ceiling still runs on proportional power.
+ *
+ * THE VALUE (MEASURED CONSTRAINT, not tuned): the AC-084 note measured
+ * the R = 60 m fixture entering 31% over the target and running 3.13 m
+ * wide - OUTSIDE the 3 m AC-085 bound - so a ceiling that held a whole
+ * corner that far over the published target would keep the drive on the
+ * grip's losing side for the length of the corner. Eight puts the full
+ * coast at 12.5% over the target - well inside the measured wide-run
+ * account - and keeps a 12.5% band of proportional power between the
+ * target and the ceiling, so the convoy still cruises at full power on
+ * the straights the target speeds are published for.
+ *
+ * THE FLOOR-STRANDING GUARD: the cut is gated by the never-stop floor
+ * (the same gate the AC-084 brake law reads) - at or below the floor the
+ * AI never slows through the new axis either, and the AC-084
+ * never-brake-through-the-floor semantics stay untouched.
+ */
+export const NEATRACING_AUTOPILOT_THROTTLE_CUT_GAIN_PER_SPEED_RATIO = 8;
+
 /** Autopilot throttle axis under steering control (`[0, 1]`). */
 export const NEATRACING_AUTOPILOT_THROTTLE = 1;
 
@@ -1134,8 +1168,9 @@ export function stepAutopilotInput(
   const keepsMoving =
     car.speed <= NEATRACING_AUTOPILOT_MINIMUM_DRIVING_SPEED_UNITS_PER_S;
   // THE CORNER GATE: the road AHEAD turns, so the AI is in (or entering)
-  // a corner - a place the AI may never coast, because a stopped AI in a
-  // corner never restarts on its own.
+  // a corner - a place the AI coasts only through the excess cut the
+  // P4-S2-DRIVE-LAW law gates below (and never at or below the never-stop
+  // floor), because a stopped AI in a corner never restarts on its own.
   const inCorner =
     Math.abs(window.tightestCurvaturePerM) >
     NEATRACING_RACING_LINE_STRAIGHT_CURVATURE_PER_M;
@@ -1143,33 +1178,70 @@ export function stepAutopilotInput(
   const slowsForTheRoad =
     speedExcessUnitsPerS > 0 ||
     absoluteTrackingErrorRad > NEATRACING_AUTOPILOT_FULL_THROTTLE_ERROR_RAD;
+  // THE PROPORTIONAL THROTTLE CUT (Step 24, `P4-S2-DRIVE-LAW`): the
+  // throttle sheds the speed excess through the SAME excess-ratio
+  // machinery the AC-084 brake law reads, gated by the NEVER-STOP floor
+  // so the new axis can never strand a car the way a brake can. The
+  // physics' passive law gives a partial throttle PARTIAL POWER (only
+  // `0` coasts on NATURAL_DECEL), so the cut saturates at the full coast
+  // at `1 + 1/NEATRACING_AUTOPILOT_THROTTLE_CUT_GAIN_PER_SPEED_RATIO`
+  // times the target and runs proportional power in between.
+  const proportionalThrottleCut =
+    keepsMoving || speedExcessUnitsPerS <= 0
+      ? 0
+      : clampRatio(
+          (speedExcessUnitsPerS / window.targetSpeedUnitsPerS) *
+            NEATRACING_AUTOPILOT_THROTTLE_CUT_GAIN_PER_SPEED_RATIO,
+        );
   // THE THROTTLE: the RETAINED coast law - the AI coasts while a heading
   // error it has not shaken off yet is still on the table, and it drives
   // otherwise - with the CORNER gate in front of it.
   //
-  // THE CORNER GATE (Step 14Y, AC-098(c)): a car in (or entering) a
-  // corner is never coasted, so the AI can never buy its way out of a
-  // corner by STOPPING in it.
+  // THE CORNER GATE (Step 14Y, AC-098(c), P4-S2-DRIVE-LAW): the corner
+  // is where the brake-stripped fleet drive used to give its slowing
+  // authority away - the gate pinned the FULL throttle while the drive
+  // sat way over the target - so the gate now rides the proportional cut
+  // instead of pinning the axis: full power at or below the target speed
+  // (the cruise the car needs), proportional power with the excess, full
+  // coast at the cut's ceiling - and FULL power again at the never-stop
+  // floor, so the AI can still never buy its way out of a corner by
+  // STOPPING in it.
   //
-  // THE NEVER-STOP FLOOR GATES THE BRAKE, NOT THE THROTTLE (the fix
-  // packet `fix-packet-P1-turnfeel-ai-iteration-1`, requested change 1):
-  // the floor is the BRAKE gate, and the BRAKE was the strand - on the
-  // served track the brake measured the car decaying 21.21 -> 18.10 ->
-  // 7.42 -> 0.30 -> 0.00 m/s and stopping for good - while the physics'
-  // own off-road floor reads the BRAKE and the tick-start speed and
-  // NEVER the throttle (it floors the coasting grass car at the named
+  // THE STALL RESCUE (Step 24, `P4-S2-DRIVE-LAW`): the heading-correction
+  // coast is floor-gated so a stalled car can never be left coasting at a
+  // standstill - the steer law is the only thing that shakes a big
+  // tracking error off, the steer seam cannot turn a STOPPED car (the yaw
+  // is speed-derived), so an error that outlives the speed would ride the
+  // coast forever: the probe measured the mapped fleet's rivals spinning
+  // wide through collisions and grass excursions and then stalling at
+  // EXACTLY 0.00 m/s with the steer saturated - throttle 0, brake 0, a
+  // dead car the tick loop still steps every tick (the replay on that
+  // state commanded t=0 b=0 s=+/-1). At or below the never-stop floor the
+  // throttle is FULL regardless of the error, so the car re-launches and
+  // steers its error off while moving - and the floor's cruise speed
+  // (the physics' own 20 km/h off-road floor inside the boundary) keeps
+  // the rescued car moving on every surface the physics floors.
+  //
+  // WHY THE FLOOR ONLY GATES THE STALL COAST, NOT THE WHOLE THROTTLE (the
+  // fix packet `fix-packet-P1-turnfeel-ai-iteration-1`, requested change
+  // 1): the floor is the BRAKE gate, and the BRAKE was the strand - on
+  // the served track the brake measured the car decaying 21.21 -> 18.10
+  // -> 7.42 -> 0.30 -> 0.00 m/s and stopping for good - while the
+  // physics' own off-road floor reads the BRAKE and the tick-start speed
+  // and NEVER the throttle (it floors the coasting grass car at the named
   // off-road speed floor - the USER-named 20 km/h sand cap re-derived by
   // fix-packet-P1-sand-red-iteration-3 - through `max(nextSpeed, floor)`),
-  // so a coast can never lose the floor the way a brake can.
-  //
-  // WHY THE FLOOR-GATED THROTTLE CAME OUT (MEASURED, not a formula): the
-  // gated throttle bought nothing on the grass and cost the coast law on
-  // the road - the legacy lane (a car at 10 m/s with a 0.3927 rad
-  // heading error on a straight) read throttle 1 where the legacy law
-  // reads 0, because the car sits below the floor and the gate drove
-  // the throttle through the heading-correction coast.
-  const throttle =
-    inCorner || !slowsForTheRoad ? NEATRACING_AUTOPILOT_THROTTLE : 0;
+  // so a coast can never lose the floor the way a brake can. The
+  // heading-correction coast ABOVE the floor keeps its pinned legacy
+  // output (the 10 m/s / 0.3927 rad straight lane sits above
+  // NEATRACING_AUTOPILOT_MINIMUM_DRIVING_SPEED_UNITS_PER_S and still reads
+  // the coast the lane pins): the gate bites only where the legacy law
+  // had already conceded the car is not coming back.
+  const cruiseThrottle =
+    !keepsMoving && slowsForTheRoad ? 0 : NEATRACING_AUTOPILOT_THROTTLE;
+  const throttle = inCorner
+    ? NEATRACING_AUTOPILOT_THROTTLE - proportionalThrottleCut
+    : cruiseThrottle;
   const speedPercent = resolveSpeedPercent(car.speed);
   return {
     throttle,

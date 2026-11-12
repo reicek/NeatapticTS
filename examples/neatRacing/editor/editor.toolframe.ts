@@ -334,11 +334,17 @@ function applyDocumentToVolume(
   }
 
   // Step 1: map the document palette onto the editor palette.
-  const paletteIndexMap = decoded.palette.map((entry) => palette.addColor(entry));
+  const paletteIndexMap = decoded.palette.map((entry) =>
+    palette.addColor(entry),
+  );
 
   // Step 2: clear the working volume, then write the decoded cells.
   state.volume.fill(0);
-  for (let sliceIndex = 0; sliceIndex < decoded.slices.length; sliceIndex += 1) {
+  for (
+    let sliceIndex = 0;
+    sliceIndex < decoded.slices.length;
+    sliceIndex += 1
+  ) {
     const slice = decoded.slices[sliceIndex];
     for (let row = 0; row < height; row += 1) {
       for (let column = 0; column < width; column += 1) {
@@ -367,7 +373,11 @@ function renderPaletteList(
   const swatches: HTMLLIElement[] = [];
   // Palette index 0 stays the reserved EMPTY sentinel, so the rendered
   // swatches start at index 1 and run to the used color count.
-  for (let paletteIndex = 1; paletteIndex <= snapshot.usedCount; paletteIndex += 1) {
+  for (
+    let paletteIndex = 1;
+    paletteIndex <= snapshot.usedCount;
+    paletteIndex += 1
+  ) {
     const entry = snapshot.entries[paletteIndex];
     const swatch = paletteList.ownerDocument.createElement('li');
     swatch.className = PALETTE_SWATCH_CLASS;
@@ -543,9 +553,7 @@ function mountToolframeControls(
   symmetryToggle.type = 'checkbox';
   symmetryToggle.checked = NEATRACING_EDITOR_DEFAULT_MIRROR_X;
   symmetryLabel.appendChild(symmetryToggle);
-  symmetryLabel.appendChild(
-    documentRef.createTextNode(' Mirror X'),
-  );
+  symmetryLabel.appendChild(documentRef.createTextNode(' Mirror X'));
   symmetrySection.appendChild(symmetryLabel);
 
   return {

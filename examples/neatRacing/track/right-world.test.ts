@@ -181,60 +181,59 @@ describe('right-world robot billboard spacing (P1-sprite-spacing, AC-065)', () =
  * today and must keep passing after the halving. They fail loudly if a
  * future change re-derives the personal space from the sprite size.
  */
-describe(
-  'right-world personal space is a fixed constant, not sprite-derived (RED-E, AC-065 retained)',
-  () => {
-    it('keeps the personal-space threshold at exactly 1.0 m', () => {
-      // The halving must not move the threshold: 1.0 m is the AC-065 value.
-      expect(NEATRACING_ROBOT_PERSONAL_SPACE_M).toBe(1.0);
-    });
+describe('right-world personal space is a fixed constant, not sprite-derived (RED-E, AC-065 retained)', () => {
+  it('keeps the personal-space threshold at exactly 1.0 m', () => {
+    // The halving must not move the threshold: 1.0 m is the AC-065 value.
+    expect(NEATRACING_ROBOT_PERSONAL_SPACE_M).toBe(1.0);
+  });
 
-    it('keeps the named margin on the personal-space threshold', () => {
-      // The margin stays the named 1e-12 m tolerance, and the effective
-      // clearance stays the nominal 1 m MINUS that margin - no sprite-derived
-      // term may sneak into the effective clearance.
-      expect(NEATRACING_ROBOT_PERSONAL_SPACE_EPSILON_M).toBe(1e-12);
-      expect(NEATRACING_ROBOT_PERSONAL_SPACE_CLEARANCE_M).toBe(1.0 - 1e-12);
-    });
+  it('keeps the named margin on the personal-space threshold', () => {
+    // The margin stays the named 1e-12 m tolerance, and the effective
+    // clearance stays the nominal 1 m MINUS that margin - no sprite-derived
+    // term may sneak into the effective clearance.
+    expect(NEATRACING_ROBOT_PERSONAL_SPACE_EPSILON_M).toBe(1e-12);
+    expect(NEATRACING_ROBOT_PERSONAL_SPACE_CLEARANCE_M).toBe(1.0 - 1e-12);
+  });
 
-    it('keeps the >= 1 m XZ separation of the assembled crowd with the halved sprite', () => {
-      // The halving changes the rendered quad, not the placement, and the
-      // personal-space filter thins the crowd independently of the sprite
-      // size - so the assembled crowd keeps the 1 m separation contract.
-      const robots = buildAllRobots(FIXTURE);
+  it('keeps the >= 1 m XZ separation of the assembled crowd with the halved sprite', () => {
+    // The halving changes the rendered quad, not the placement, and the
+    // personal-space filter thins the crowd independently of the sprite
+    // size - so the assembled crowd keeps the 1 m separation contract.
+    const robots = buildAllRobots(FIXTURE);
 
-      expect(robots.length).toBeGreaterThan(1);
+    expect(robots.length).toBeGreaterThan(1);
 
-      const minDistance = minRobotXZDistance(robots);
+    const minDistance = minRobotXZDistance(robots);
 
-      expect(minDistance).toBeGreaterThanOrEqual(AC_065_EFFECTIVE_CLEARANCE_M);
-    });
+    expect(minDistance).toBeGreaterThanOrEqual(AC_065_EFFECTIVE_CLEARANCE_M);
+  });
 
-    it('does not re-derive the personal space from the halved sprite footprint', () => {
-      const atlas = loadPublicSpriteAtlas();
-      const frame = atlas.frames[0]!;
-      const halvedSpriteWidthM =
-        frame.width * HALVED_CROWD_WORLD_SCALE * CROWD_METERS_PER_PIXEL_M;
+  it('does not re-derive the personal space from the halved sprite footprint', () => {
+    const atlas = loadPublicSpriteAtlas();
+    const frame = atlas.frames[0]!;
+    const halvedSpriteWidthM =
+      frame.width * HALVED_CROWD_WORLD_SCALE * CROWD_METERS_PER_PIXEL_M;
 
-      // The probe pair sits CLOSER than the halved sprite is wide, so a
-      // sprite-derived personal space would drop the second billboard. The
-      // fixed 1 m rule keeps it.
-      const kept = filterRobotsByPersonalSpace([
-        { position: [0, 0, 0] as const },
-        { position: [PERSONAL_SPACE_PROBE_SEPARATION_M, 0, 0] as const },
-      ]);
+    // The probe pair sits CLOSER than the halved sprite is wide, so a
+    // sprite-derived personal space would drop the second billboard. The
+    // fixed 1 m rule keeps it.
+    const kept = filterRobotsByPersonalSpace([
+      { position: [0, 0, 0] as const },
+      { position: [PERSONAL_SPACE_PROBE_SEPARATION_M, 0, 0] as const },
+    ]);
 
-      expect(kept.length).toBe(2);
-      expect(halvedSpriteWidthM).toBeGreaterThan(PERSONAL_SPACE_PROBE_SEPARATION_M);
-    });
+    expect(kept.length).toBe(2);
+    expect(halvedSpriteWidthM).toBeGreaterThan(
+      PERSONAL_SPACE_PROBE_SEPARATION_M,
+    );
+  });
 
-    it('still drops a crowd pair that sits closer than the fixed 1 m personal space', () => {
-      const kept = filterRobotsByPersonalSpace([
-        { position: [0, 0, 0] as const },
-        { position: [0.5, 0, 0] as const },
-      ]);
+  it('still drops a crowd pair that sits closer than the fixed 1 m personal space', () => {
+    const kept = filterRobotsByPersonalSpace([
+      { position: [0, 0, 0] as const },
+      { position: [0.5, 0, 0] as const },
+    ]);
 
-      expect(kept.length).toBe(1);
-    });
-  },
-);
+    expect(kept.length).toBe(1);
+  });
+});

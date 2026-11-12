@@ -857,8 +857,11 @@ describe('car pass WebGL2 orchestration', () => {
     const halfTrack = NEATRACING_WHEEL_TRACK_M / 2;
     const halfWheelbase = NEATRACING_WHEEL_WHEELBASE_M / 2;
     const nearCarPatches = wheelPatchFeeds.filter(
-      (feed) => feed.matrix[12] >= 5 - halfTrack - 0.1 && feed.matrix[12] <= 5 + halfTrack + 0.1 &&
-        feed.matrix[14] >= -3 - halfWheelbase - 0.1 && feed.matrix[14] <= -3 + halfWheelbase + 0.1,
+      (feed) =>
+        feed.matrix[12] >= 5 - halfTrack - 0.1 &&
+        feed.matrix[12] <= 5 + halfTrack + 0.1 &&
+        feed.matrix[14] >= -3 - halfWheelbase - 0.1 &&
+        feed.matrix[14] <= -3 + halfWheelbase + 0.1,
     );
     expect(nearCarPatches.length).toBe(4);
 
@@ -1007,7 +1010,9 @@ describe('car pass WebGL2 orchestration', () => {
     const shadowDrawBoundIds = harness.drawArraysCalls
       .slice(0, 10)
       .map((draw) => boundArrayBufferIdAtDraw(harness, draw));
-    expect(shadowDrawBoundIds).toEqual(Array(10).fill(CAR_MOCK_SHADOW_BUFFER_ID));
+    expect(shadowDrawBoundIds).toEqual(
+      Array(10).fill(CAR_MOCK_SHADOW_BUFFER_ID),
+    );
     const litDrawBoundIds = harness.drawArraysCalls
       .slice(10)
       .map((draw) => boundArrayBufferIdAtDraw(harness, draw));
@@ -1029,7 +1034,9 @@ describe('fixed-space tire lighting (OBS-20)', () => {
     expect(CAR_LIT_FRAGMENT_SHADER_SOURCE).toContain('uModel[3][1]');
     expect(CAR_LIT_FRAGMENT_SHADER_SOURCE).toContain('uTireGradientThreshold');
     expect(CAR_LIT_FRAGMENT_SHADER_SOURCE).toContain('uSunDirection');
-    expect(CAR_LIT_FRAGMENT_SHADER_SOURCE).toContain('Fixed-space tire lighting');
+    expect(CAR_LIT_FRAGMENT_SHADER_SOURCE).toContain(
+      'Fixed-space tire lighting',
+    );
 
     for (const name of [
       'uApplyTireGradient',

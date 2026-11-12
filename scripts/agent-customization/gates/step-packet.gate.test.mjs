@@ -12,6 +12,13 @@ const GATE_PATH = path.resolve(
   'scripts/agent-customization/gates/step-packet.gate.mjs',
 );
 
+// The real module is spread into the mock so every export a transitively
+// imported module needs is present. `plan-yaml-lint.mjs` imports
+// `PlanYamlParseError`, `normalizeYamlScalar` and `parsePlanYamlBlock` from
+// this module; a partial mock factory makes the ESM link fail with
+// "does not provide an export named ...".
+const utils = await import('../customization-utils.mjs');
+
 // --- Mock state (captured by mock factory closures) ---
 let mockReaddirEntries;
 let mockReaddirError;
@@ -33,6 +40,7 @@ jest.unstable_mockModule('node:fs/promises', () => ({
 }));
 
 jest.unstable_mockModule('../customization-utils.mjs', () => ({
+  ...utils,
   parseArgs: (argv) => ({ json: argv.includes('--json') }),
   parsePlanYamlBlock: () => {
     if (mockParseError) throw mockParseError;
@@ -152,6 +160,17 @@ function planText(blocks, evidence = '') {
 const EVIDENCE_GREEN = '## Latest validation evidence\ngreen-light: true';
 const EVIDENCE_STATUS = '## Latest validation evidence\nstatus: green-light';
 const EVIDENCE_NONE = '## Latest validation evidence\nstatus: failed';
+// Regression shapes: the marker sits on a LATER line of the section (the live
+// plan records evidence as bullet / table rows), NOT on the section's first
+// line. These must still be detected.
+const EVIDENCE_GREEN_LATE =
+  '## Latest validation evidence\n\n- **2026-11-09 VERIFICATION:** the packet is READY.\n- **THE VERDICT:** `green-light: true` — all four surfaces closed.\n';
+const EVIDENCE_STATUS_LATE =
+  '## Latest validation evidence\n\n| Date | Gate | Result |\n| --- | --- | --- |\n| 2026-11-09 | plan-readiness | status: green-light |\n';
+// A marker outside the section must NOT count — the capture stops at the next
+// `## ` heading.
+const EVIDENCE_GREEN_OUTSIDE_SECTION =
+  '## Latest validation evidence\n\n- no marker in this section\n\n## PlanUpdate\n\ngreen-light: true\n';
 
 describe('step-packet gate', () => {
   let originalExitCode;
@@ -958,6 +977,55 @@ describe('step-packet gate', () => {
         (w) => w.goal === 'red-testing',
       ),
     );
+  });
+
+  // ---- checkPlanGreenLight: non-first-line markers (false-negative regression) ----
+  // The `m` flag on the section matcher made the lazy capture degenerate to
+  // the section's FIRST line, so a marker on a later line was invisible.
+
+  it('does not emit readiness warning when green-light is on a later section line', async () => {
+    const text = planText([yamlBlock('status: WIP')], EVIDENCE_GREEN_LATE);
+    const result = await runJson({
+      plans: { 'plans/test.plans.md': text },
+      queue: [validStep({ goal: 'implementing' })],
+    });
+    assert.equal(result.evidence.planReadinessWarnings.length, 0);
+  });
+
+  it('does not emit readiness warning when status: green-light is on a later section line', async () => {
+    const text = planText([yamlBlock('status: WIP')], EVIDENCE_STATUS_LATE);
+    const result = await runJson({
+      plans: { 'plans/test.plans.md': text },
+      queue: [validStep({ goal: 'implementing' })],
+    });
+    assert.equal(result.evidence.planReadinessWarnings.length, 0);
+  });
+
+  it('still emits a readiness warning when the marker sits outside the evidence section', async () => {
+    const text = planText(
+      [yamlBlock('status: WIP')],
+      EVIDENCE_GREEN_OUTSIDE_SECTION,
+    );
+    const result = await runJson({
+      plans: { 'plans/test.plans.md': text },
+      queue: [validStep({ goal: 'implementing' })],
+    });
+    assert.ok(
+      result.evidence.planReadinessWarnings.some(
+        (w) => w.goal === 'implementing',
+      ),
+    );
+  });
+
+  it('keeps the readiness warning non-blocking (warning, not a violation)', async () => {
+    const text = planText([yamlBlock('status: WIP')], EVIDENCE_NONE);
+    const result = await runJson({
+      plans: { 'plans/test.plans.md': text },
+      queue: [validStep({ goal: 'implementing' })],
+    });
+    assert.ok(result.evidence.planReadinessWarnings.length > 0);
+    assert.equal(result.evidence.violations.length, 0);
+    assert.equal(result.pass, true);
   });
 
   // ---- Neither step nor phase → missingField=phase ----

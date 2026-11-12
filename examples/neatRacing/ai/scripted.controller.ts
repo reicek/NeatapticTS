@@ -276,7 +276,8 @@ export function computeNeatRacingScriptedControl(
     };
   }
 
-  const throttleProfile = resolveNeatRacingScriptedThrottleProfile(splineSamples);
+  const throttleProfile =
+    resolveNeatRacingScriptedThrottleProfile(splineSamples);
   const stripMap = resolveSegmentStripMap(splineSamples);
   const closestSplineSampleIndex = findClosestSplineSampleIndex(
     car,
@@ -301,7 +302,9 @@ export function computeNeatRacingScriptedControl(
     car.x - currentTargetSplineSample.x,
     car.y - currentTargetSplineSample.y,
   );
-  if (distanceToTargetSplineSample < NEATRACING_SCRIPTED_WAYPOINT_ADVANCE_RADIUS_M) {
+  if (
+    distanceToTargetSplineSample < NEATRACING_SCRIPTED_WAYPOINT_ADVANCE_RADIUS_M
+  ) {
     controllerState.targetSegmentIndex =
       (normalizedTargetSegmentIndex + 1) % segmentCount;
   } else {
@@ -325,7 +328,10 @@ export function computeNeatRacingScriptedControl(
   // Step 3: Proportional steer, clamped to the controller output range.
   const steer = Math.max(
     -1,
-    Math.min(1, normalizedHeadingError * NEATRACING_SCRIPTED_STEER_PROPORTIONAL_GAIN),
+    Math.min(
+      1,
+      normalizedHeadingError * NEATRACING_SCRIPTED_STEER_PROPORTIONAL_GAIN,
+    ),
   );
 
   // Step 4: Per-course throttle for the road segment under the car (AC-028).
@@ -458,7 +464,9 @@ function resolveTargetSplineSample(
 ): SplineSample {
   const targetStrip = stripMap.get(targetSegmentIndex);
   if (closestSplineSample.segmentIndex === targetSegmentIndex && targetStrip) {
-    const closestPosition = targetStrip.indexOf(closestSplineSample.globalIndex);
+    const closestPosition = targetStrip.indexOf(
+      closestSplineSample.globalIndex,
+    );
     if (closestPosition >= 0) {
       const targetPosition = Math.min(
         targetStrip.length - 1,
@@ -502,12 +510,14 @@ function resolveSplineSampleFrame(
   }
 
   const wrappedSampleIndex = wrapSampleIndex(splineSamples.length, sampleIndex);
-  const previousSample = splineSamples[
-    wrapSampleIndex(splineSamples.length, wrappedSampleIndex - 1)
-  ]!;
-  const nextSample = splineSamples[
-    wrapSampleIndex(splineSamples.length, wrappedSampleIndex + 1)
-  ]!;
+  const previousSample =
+    splineSamples[
+      wrapSampleIndex(splineSamples.length, wrappedSampleIndex - 1)
+    ]!;
+  const nextSample =
+    splineSamples[
+      wrapSampleIndex(splineSamples.length, wrappedSampleIndex + 1)
+    ]!;
   const tangentDeltaX = nextSample.x - previousSample.x;
   const tangentDeltaY = nextSample.y - previousSample.y;
   const tangentLength = Math.hypot(tangentDeltaX, tangentDeltaY) || 1;

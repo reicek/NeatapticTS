@@ -918,6 +918,246 @@ after every tick; the bind is idempotent by the batch 54 host policy.
 Parameters:
 - `gl` - WebGL2 context.
 
+## host/track.selector.ts
+
+NeatRacing host track selector — plan slice P4-S3-select-restart (plan
+`neatracing-voxel-racer.plans.md`, phase 4, step 25), implementing the
+AC-101 track-selection control over the retained mode-selector
+notify/restart law (spec sections 4.4 and 13.5; LD-08 / LD-12): switching
+the selection restarts the race through the host's restart carrier in
+EITHER direction, and the selection is retained.
+
+The module carries TWO surfaces and pins their EXPORT ORDER:
+
+1. `createNeatRacingTrackSelection` (FIRST) — the DOM-free selection
+   core. The frozen RED-P4-8 contract red home
+   (`../track/track.catalog.test.ts`) runs in the NODE environment and
+   discovers the selection surface with a capability probe that iterates
+   the module's exported functions in declaration order, calling each
+   one with the catalog and with `undefined`, and adopts the FIRST
+   produced record that carries a switch + subscribe surface. This core
+   is therefore the FIRST export and it must never touch the DOM: the
+   contract witnesses the switch + notify/restart law with no browser
+   environment at all.
+2. `createNeatRacingTrackSelector` (SECOND) — the `<select>` overlay
+   composition over the mode-selector pattern (resolve the reserved
+   container or throw; one `<select>` built once at mount; Neatenstein
+   overlay styling; user `change` picks and programmatic switches share
+   the SAME core law). In a DOM-free environment the factory throws
+   (`document` is undefined) and the capability probe skips it — the
+   FIRST-export ordering above keeps the probe deterministic in ANY
+   environment regardless.
+
+AC-101 wiring law (the browser-entry boot composition carries it): the
+demo boots on the catalog default (`NEATRACING_DEMO_TRACK_CATALOG_DEFAULT_ID`
+— the retirement home of the single pinned `NEATRACING_DEMO_TRACK_ID` boot
+constant) and a switch notifies the restart hook EXACTLY once per actual
+switch in BOTH directions with the SELECTED track id; the wiring then
+re-resolves the round's geometry THROUGH the catalog resolver
+(`resolveTrackVariantSpec` — the sole spec-resolution path), so every
+selected variant inherits the catalog's SIGNED left-normal lane-point
+convention: the generator emits a positive magnitude on the optional
+per-sample `innerOffsetWorld` and each consumer applies its own team
+sign, and the catalog's `reverse` / `mirrorX` transforms NEGATE the
+stored sample value (a sign flip, never a magnitude mirroring) so each
+team keeps its physical lane on the same road (cf. the lane-point math in
+`examples/racing_curriculum/renderer/racing.renderer.ts`).
+
+Same-value switches are documented no-ops (mirroring the mode selector:
+the host shell must not reboot a race because a user re-picked the
+already-active track — a same-track restart must come from the round
+lifecycle, never from a re-pick).
+
+Membership law: the selection is a control OVER the catalog, so an id the
+catalog does not carry is a named membership error that mirrors the
+catalog resolver's error shape (unknown id + the known ids). The guard
+reads the catalog KEYS — never a generated spec — so validating a pick
+never pays a track generation, and `resolveTrackVariantSpec` stays the
+SOLE spec-resolution path of the demo.
+
+Determinism: the selection law is pure closure state mutation; the
+overlay is mount-only — identical inputs produce identical state
+transitions with no Math.random, no clock reads, no timers.
+
+### assertCatalogMemberTrackId
+
+```ts
+assertCatalogMemberTrackId(
+  catalog: Readonly<Record<string, NeatRacingDemoTrackCatalogEntry>>,
+  trackId: string,
+): void
+```
+
+What: validates a track id against the configured catalog's KEYS — the
+same membership law `resolveTrackVariantSpec` enforces — and throws the
+catalog's named membership error when the id is unknown.
+
+Why: the selection is a control over the catalog, so a typo can never
+select a track the demo does not ship. The guard reads the catalog keys
+(never a generated spec), so validating a pick never pays a track
+generation and the catalog resolver stays the sole spec-resolution path.
+The error message is built from the SAME `Object.keys` shape the
+resolver builds its message from, so both surfaces speak one membership
+vocabulary.
+
+Parameters:
+- `catalog` - The catalog the selection works over.
+- `trackId` - The candidate variant id.
+
+### createNeatRacingTrackSelection
+
+```ts
+createNeatRacingTrackSelection(
+  options: NeatRacingTrackSelectionOptions,
+): NeatRacingTrackSelection
+```
+
+What: creates the DOM-free track-selection core (the FIRST export, per
+the frozen capability probe's declaration-order law): a closure-held
+current track id, a same-value early-exit guard, a membership guard over
+the configured catalog, and an `onSwitch` subscription list that notifies
+EXACTLY once per actual switch with the selected track id — never on a
+same-value switch, in BOTH switch directions.
+
+Why DOM-free: the frozen RED-P4-8 contract witnesses the notify/restart
+law in the NODE environment (no browser); the capability probe calls
+this factory with the demo catalog and with `undefined`, and both shapes
+must boot the identical law (the probe argument carries none of the
+option fields, so both fall to the same defaults).
+
+When: called by the browser-entry boot composition through the overlay
+factory, and directly by the frozen contract. Never touches the DOM, so
+a node-environment probe always succeeds.
+
+Parameters:
+- `options` - Optional catalog / initial-id overrides (all default to
+the demo catalog's own law).
+
+Returns: The DOM-free selection controller.
+
+Example:
+
+```ts
+// The frozen contract probes BOTH call shapes:
+createNeatRacingTrackSelection(NEATRACING_DEMO_TRACK_CATALOG);
+createNeatRacingTrackSelection(undefined);
+createNeatRacingTrackSelection();
+const selection = createNeatRacingTrackSelection();
+selection.trackId; // 'neatracing-demo-loop' (the catalog default)
+selection.setSelectedTrack('neatracing-demo-loop-reverse'); // notifies once
+selection.setSelectedTrack('neatracing-demo-loop-reverse'); // no-op
+```
+
+### createNeatRacingTrackSelector
+
+```ts
+createNeatRacingTrackSelector(
+  outputId: string,
+): NeatRacingTrackSelector
+```
+
+What: creates the track-selector overlay inside the reserved host output
+container over the mode-selector structure: one `<select>` listing every
+catalog member (pinned demo loop first), a closure-held selection via the
+DOM-free core, one `change` listener plus one `setSelectedTrack` entry
+point that both notify subscribers exactly once per actual switch and
+never notify on same-value switches.
+
+Why (AC-101): the host connects `onSwitch` to the track-switch restart
+carrier — the restart runs in BOTH directions (LD-12) on the SELECTED
+track and the selection is retained. Same-value picks and same-value
+programmatic switches ride the core's same-value guard (one law, one
+place), and programmatic switches are mirrored into the DOM control so
+user picks and programmatic switches share one state.
+
+When: called once during host boot after the race-mode selector mounts
+into the same reserved container id (`neatracing-hud-output`). Throws
+instead of returning null so boot-order bugs surface immediately; the
+boot composition (browser-entry) degrades to an inert fallback when the
+container cannot be resolved, so the demo keeps racing on the catalog
+default.
+
+Parameters:
+- `outputId` - Reserved host DOM id; `neatracing-hud-output` in
+the host shell and the slice fixture suite.
+
+Returns: The track-selector controller (select element + selection API).
+
+Example:
+
+```ts
+const trackSelector = createNeatRacingTrackSelector('neatracing-hud-output');
+trackSelector.trackId; // 'neatracing-demo-loop' (the catalog default)
+trackSelector.setSelectedTrack('neatracing-demo-loop-reverse'); // notifies
+trackSelector.setSelectedTrack('neatracing-demo-loop-reverse'); // no-op
+trackSelector.onSwitch((trackId) => restartRaceOn(trackId));
+```
+
+### createTrackSelect
+
+```ts
+createTrackSelect(): HTMLSelectElement
+```
+
+What: builds the `<select>` with every catalog member rendered in
+CATALOG order (the pinned demo loop first) — the catalog's `displayName`
+is the visible label and the variant id is the value — styled from the
+named Neatenstein overlay constants, offset BELOW the race-mode selector
+so both controls stay visible.
+
+Why: option order and initial value are part of the selection
+acceptance contract, the DOM is built exactly once at mount (allocation
+policy: no per-switch DOM construction), and the option list is a VIEW
+over the catalog — never a second source of the track list.
+
+Returns: The styled, unattached `<select>` element.
+
+### NeatRacingTrackSelection
+
+The DOM-free track-selection controller (the surface the frozen RED-P4-8
+contract discovers): it switches the selection to a named catalog member
+and notifies subscribers with the selected track id, exactly once per
+actual switch, in either direction.
+
+### NeatRacingTrackSelectionOptions
+
+Optional arguments of the DOM-free selection core factory (all default).
+
+### NeatRacingTrackSelector
+
+The constructed track-selector overlay handed to the host shell (the
+`<select>` composition over {@link NeatRacingTrackSelection}).
+
+### NeatRacingTrackSwitchListener
+
+```ts
+NeatRacingTrackSwitchListener(
+  trackId: string,
+): void
+```
+
+Track-switch subscriber shape: carries the SELECTED track id.
+
+### resolveSelectorContainer
+
+```ts
+resolveSelectorContainer(
+  outputId: string,
+  surfaceName: string,
+): HTMLElement
+```
+
+What: resolves the reserved host output container by id, matching the
+mode-selector resolver (`host/mode-selector.ts`) — resolve-or-throw so
+boot-order bugs surface immediately.
+
+Parameters:
+- `outputId` - Reserved host DOM id (`neatracing-hud-output` in the
+host shell and fixtures).
+- `surfaceName` - Human-readable surface name for the error body.
+
+Returns: The DOM container to append the track selector into.
+
 ## host/render-loop.utils.ts
 
 Host render-loop utilities for NeatRacing (slice P1-S1-D, plan

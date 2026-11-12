@@ -241,8 +241,8 @@ Research of model options and cost optimization for GitHub Copilot custom agents
 
 **Recommended model assignment matrix:**
 
-| Agent Type                    | Recommended Model                    | Justification                                |
-| ----------------------------- | ------------------------------------ | -------------------------------------------- |
+| Agent Type                    | Recommended Model                        | Justification                                |
+| ----------------------------- | ---------------------------------------- | -------------------------------------------- |
 | Heavy: Implementation/Editing | `minimax-m3.1-flash:cloud` (local, free) | Deep reasoning, edge-case handling. Free.    |
 | Heavy: Planning/Architecture  | `minimax-m3.1-flash:cloud` (local, free) | Broad reasoning needed. Free.                |
 | Heavy: Red Testing            | `minimax-m3.1-flash:cloud` (local, free) | Test contracts need careful judgment. Free.  |

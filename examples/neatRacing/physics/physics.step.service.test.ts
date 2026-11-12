@@ -187,7 +187,11 @@ const STRAIGHT_INPUT: PhysicsStepInput = { throttle: 1, brake: 0, steer: 0 };
 const COUNTER_INPUT: PhysicsStepInput = { throttle: 1, brake: 0, steer: -1 };
 
 /** Low-speed full-steer input: the MIN_SPEED gate lane (D1). */
-const LOW_SPEED_STEER_INPUT: PhysicsStepInput = { throttle: 0, brake: 0, steer: 1 };
+const LOW_SPEED_STEER_INPUT: PhysicsStepInput = {
+  throttle: 0,
+  brake: 0,
+  steer: 1,
+};
 
 /**
  * Full-throttle, full-steer input: the DRIFT-ENGAGED lane (RC-1).
@@ -276,12 +280,33 @@ const SCRUB_COEFF_BAND_UPPER = 0.626;
  */
 const OFF_ROAD_SLIP_ENVELOPE: readonly SurfaceSchedule[] = [
   [['grass', 300]],
-  [['road', 42], ['grass', 258]],
-  [['road', 120], ['grass', 180]],
-  [['grass', 150], ['road', 150]],
-  [['road', 60], ['grass', 90], ['road', 150]],
-  [['grass', 100], ['curb', 100], ['grass', 100]],
-  [['grass', 80], ['road', 40], ['grass', 180]],
+  [
+    ['road', 42],
+    ['grass', 258],
+  ],
+  [
+    ['road', 120],
+    ['grass', 180],
+  ],
+  [
+    ['grass', 150],
+    ['road', 150],
+  ],
+  [
+    ['road', 60],
+    ['grass', 90],
+    ['road', 150],
+  ],
+  [
+    ['grass', 100],
+    ['curb', 100],
+    ['grass', 100],
+  ],
+  [
+    ['grass', 80],
+    ['road', 40],
+    ['grass', 180],
+  ],
 ];
 
 /**
@@ -297,7 +322,10 @@ const OFF_ROAD_SLIP_ENVELOPE: readonly SurfaceSchedule[] = [
 const ROAD_CURB_SLIP_CONTROL: readonly SurfaceSchedule[] = [
   [['road', 300]],
   [['curb', 300]],
-  [['road', 42], ['curb', 258]],
+  [
+    ['road', 42],
+    ['curb', 258],
+  ],
 ];
 
 /**
@@ -449,7 +477,10 @@ const runCountersteer = (
   let maxSlipAfterCounterOnset = Number.NEGATIVE_INFINITY;
   for (let step = 0; step < steps; step++) {
     state = stepPhysics(state, COUNTER_INPUT, surfaceResolver);
-    maxSlipAfterCounterOnset = Math.max(maxSlipAfterCounterOnset, state.slipAngle);
+    maxSlipAfterCounterOnset = Math.max(
+      maxSlipAfterCounterOnset,
+      state.slipAngle,
+    );
   }
   return { state, maxSlipAfterCounterOnset };
 };
@@ -570,7 +601,8 @@ describe('physics step service slip and drift envelopes (LD-15)', () => {
     // never a magic number. The pose is NOT clamped to the slip-only
     // bound.
     expect(Math.abs(driftChannelOf(state).pose.pose)).toBeLessThanOrEqual(
-      NEATRACING_DRIFT_MAX_SLIP_ANGLE_RAD * NEATRACING_DRIFT_VISUAL_YAW_GAIN_RAD +
+      NEATRACING_DRIFT_MAX_SLIP_ANGLE_RAD *
+        NEATRACING_DRIFT_VISUAL_YAW_GAIN_RAD +
         driftModel.NEATRACING_DRIFT_POSE_STEER_YAW_RAD,
     );
   });
@@ -668,7 +700,8 @@ describe('physics step service drift channel (AC-087, nested DriftChannelState)'
     // number. The re-pinned MAX_SLIP_ANGLE_RAD (0.45) times the visual
     // gain (0.45) is 0.2025 rad.
     expect(
-      NEATRACING_DRIFT_MAX_SLIP_ANGLE_RAD * NEATRACING_DRIFT_VISUAL_YAW_GAIN_RAD,
+      NEATRACING_DRIFT_MAX_SLIP_ANGLE_RAD *
+        NEATRACING_DRIFT_VISUAL_YAW_GAIN_RAD,
     ).toBeCloseTo(0.2025, 10);
   });
 
@@ -678,7 +711,8 @@ describe('physics step service drift channel (AC-087, nested DriftChannelState)'
     // articulation term (0.2025 + 0.0800 = 0.2825 rad): the pose is NOT
     // clamped to the slip-only bound.
     expect(
-      NEATRACING_DRIFT_MAX_SLIP_ANGLE_RAD * NEATRACING_DRIFT_VISUAL_YAW_GAIN_RAD +
+      NEATRACING_DRIFT_MAX_SLIP_ANGLE_RAD *
+        NEATRACING_DRIFT_VISUAL_YAW_GAIN_RAD +
         driftModel.NEATRACING_DRIFT_POSE_STEER_YAW_RAD,
     ).toBeCloseTo(0.2825, 10);
   });
@@ -904,9 +938,7 @@ describe('physics step service proportional traction loss (AC-079)', () => {
 
     // The NON-VACUITY GUARD comes FIRST: the softened gate must produce
     // a REAL commitment, not a different flavour of zero.
-    expect(
-      Math.abs(driftChannelOf(state).committed.slip),
-    ).toBeGreaterThan(0);
+    expect(Math.abs(driftChannelOf(state).committed.slip)).toBeGreaterThan(0);
     // The VISIBLE slide stays exactly zero below the gate.
     expect(state.lateralVelocity).toBe(0);
     expect(state.slipAngle).toBe(0);
@@ -1146,7 +1178,9 @@ describe('physics step service regime-aware published-slip bounds over the swept
     );
 
     // Act + Assert
-    expect(envelopePeak).toBeGreaterThan(NEATRACING_DRIFT_PUBLISHED_SLIP_MAX_RAD);
+    expect(envelopePeak).toBeGreaterThan(
+      NEATRACING_DRIFT_PUBLISHED_SLIP_MAX_RAD,
+    );
   });
 });
 
@@ -1601,8 +1635,7 @@ describe('the published traction scalar (Step 14Q, slice P1-drift-law-red)', () 
       // `state.speed` after the scrub) produce the same number, so no
       // consumer can re-derive a different value.
       expect(tractionSeverity).toBeCloseTo(
-        computeTractionSeverityOf?.(state.slipAngle, state.speed) ??
-          Number.NaN,
+        computeTractionSeverityOf?.(state.slipAngle, state.speed) ?? Number.NaN,
         12,
       );
     });
@@ -2097,7 +2130,11 @@ describe('the LIVE tick APPLIES the momentum (Step 14S, slice P1-momentum-red)',
         STRAIGHT_INPUT,
         NEATRACING_PHYSICS_MAX_SPEED_UNITS_PER_S,
       );
-      const lowSpeedGateLane = runMomentumServiceLane(120, LOW_SPEED_STEER_INPUT, 10);
+      const lowSpeedGateLane = runMomentumServiceLane(
+        120,
+        LOW_SPEED_STEER_INPUT,
+        10,
+      );
 
       // Act + Assert
       // PRESERVATION GUARDS, NOT REDS: the straight-line EXACT zeros and
@@ -2363,7 +2400,10 @@ describe('the TURN-RATE laws (Step 14T, slice P1-turnrate-red)', () => {
     // [RED-14T-1-TOP-SPEED-STRICTLY-LOWER]
     it('AC-092: the top-speed USER turn rate is STRICTLY LOWER than the NOMINAL turn rate (RED-1)', () => {
       // Arrange
-      const lane = runTurnRateLane(TURN_RATE_TOP_SPEED_MPS, TURN_RATE_USER_INPUT);
+      const lane = runTurnRateLane(
+        TURN_RATE_TOP_SPEED_MPS,
+        TURN_RATE_USER_INPUT,
+      );
 
       // Act + Assert
       // The NON-VACUITY GUARD comes FIRST: the lane must REALLY turn (a
@@ -2380,13 +2420,18 @@ describe('the TURN-RATE laws (Step 14T, slice P1-turnrate-red)', () => {
       // band floor leaves a margin of 0.5 rad/s - twelve orders of
       // magnitude above any float64 noise - so the clause stays RED
       // until the law really reduces the rate.
-      expect(lane.commandedRateRadPerS).toBeLessThan(TURN_RATE_NOMINAL_RAD_PER_S);
+      expect(lane.commandedRateRadPerS).toBeLessThan(
+        TURN_RATE_NOMINAL_RAD_PER_S,
+      );
     });
 
     // [RED-14T-1-MILD-FLOOR]
     it('AC-092: the top-speed USER turn rate stays MILD - never below the RED-measured fraction of the nominal rate (RED-1)', () => {
       // Arrange
-      const lane = runTurnRateLane(TURN_RATE_TOP_SPEED_MPS, TURN_RATE_USER_INPUT);
+      const lane = runTurnRateLane(
+        TURN_RATE_TOP_SPEED_MPS,
+        TURN_RATE_USER_INPUT,
+      );
 
       // Act + Assert
       // The NON-VACUITY GUARD comes FIRST: the lane must REALLY turn.
@@ -3101,7 +3146,7 @@ describe('the LIVE road containment (Step 14I, slice P1-track-road-containment)'
     });
 
     // [RED-14I-PUBLISHED-SCALARS]
-    it('PUBLISHED SCALARS: the published scalars are THE MODEL LAW on the tick\'s own final state, byte-identical with and without the geometry (the containment is retired)', () => {
+    it("PUBLISHED SCALARS: the published scalars are THE MODEL LAW on the tick's own final state, byte-identical with and without the geometry (the containment is retired)", () => {
       // Arrange: a SLIDING car that leaves the band, so the tick
       // publishes a NON-ZERO slip and a NON-ZERO traction severity.
       const car = buildSlidingContainmentFixtureCar(
@@ -3319,11 +3364,7 @@ describe('the BOUNDARY RE-CONTRACT (Step 14W, slice P1-sand-red)', () => {
 
     // Act: the UNBOUNDED tick (the pose the car REALLY reached) and the
     // LIVE tick with the ribbon geometry (the shipped containment seam).
-    const unbounded = stepPhysics(
-      start,
-      BAND_CROSSING_INPUT,
-      surfaceResolver,
-    );
+    const unbounded = stepPhysics(start, BAND_CROSSING_INPUT, surfaceResolver);
     const published = stepPhysics(
       start,
       BAND_CROSSING_INPUT,
@@ -3887,7 +3928,8 @@ const buildSandI2Lane = (tickBudget: number): SandI2Lane => {
       surfaceResolver,
     );
     const boundMovedPose =
-      nextPublished.x !== nextUnbounded.x || nextPublished.y !== nextUnbounded.y;
+      nextPublished.x !== nextUnbounded.x ||
+      nextPublished.y !== nextUnbounded.y;
     if (boundMovedPose && touchIndex < 0) {
       touchIndex = index;
     }
@@ -4106,7 +4148,11 @@ const buildSandI2Lane = (tickBudget: number): SandI2Lane => {
   let firstSettleTickIndex = -1;
   let settleOffsetInTicks = -1;
   if (firstGrassIndex >= 0) {
-    for (let tickIndex = firstGrassIndex; tickIndex < ticks.length; tickIndex += 1) {
+    for (
+      let tickIndex = firstGrassIndex;
+      tickIndex < ticks.length;
+      tickIndex += 1
+    ) {
       const tick = ticks[tickIndex];
       if (
         tick === undefined ||
@@ -4132,7 +4178,11 @@ const buildSandI2Lane = (tickBudget: number): SandI2Lane => {
   let postSettleMinSpeedMps = Number.NaN;
   if (firstGrassIndex >= 0) {
     if (settleOffsetInTicks < 0) {
-      for (let tickIndex = firstGrassIndex; tickIndex < ticks.length; tickIndex += 1) {
+      for (
+        let tickIndex = firstGrassIndex;
+        tickIndex < ticks.length;
+        tickIndex += 1
+      ) {
         const tick = ticks[tickIndex];
         if (tick === undefined || tick.surface !== 'grass') {
           break;
@@ -4142,7 +4192,11 @@ const buildSandI2Lane = (tickBudget: number): SandI2Lane => {
           : Math.max(postSettleMaxSpeedMps, tick.speedMps);
       }
     } else {
-      for (let tickIndex = settleOffsetInTicks; tickIndex < ticks.length; tickIndex += 1) {
+      for (
+        let tickIndex = settleOffsetInTicks;
+        tickIndex < ticks.length;
+        tickIndex += 1
+      ) {
         const tick = ticks[tickIndex];
         if (tick === undefined || tick.surface !== 'grass') {
           break;
@@ -4319,7 +4373,7 @@ describe('the SAND-BAND OUTER-EDGE REBOUND (Step 14W iteration 2, slice P1-sand-
  */
 describe('the SAND-BAND OUTER-EDGE WALL + THE USER-NAMED OFF-TRACK SPEED CAP (Step 14W iteration 3, slice P1-sand-red)', () => {
   // [RED-I3-WALL]
-  it('RED-I3-wall (DISCRIMINATING): NO INVISIBLE WALL at the band outer edge - the car LEAVES today\'s bound location behind and is NEVER held there while the throttle is applied (MEASURED 2026-11-05: 288/288 post-anchor ticks pinned at exactly 3.0 m past the drivable edge, max published excess 0.0 vs the free-rolling twin at 79.52 m)', () => {
+  it("RED-I3-wall (DISCRIMINATING): NO INVISIBLE WALL at the band outer edge - the car LEAVES today's bound location behind and is NEVER held there while the throttle is applied (MEASURED 2026-11-05: 288/288 post-anchor ticks pinned at exactly 3.0 m past the drivable edge, max published excess 0.0 vs the free-rolling twin at 79.52 m)", () => {
     // Arrange: the sharp-exit lane over the FULL roll budget (the
     // MEASURED hold spans ticks 12..299 of this window).
     const lane = buildSandI2Lane(SAND_I2_ROLL_BUDGET_TICKS);
@@ -4568,9 +4622,7 @@ interface TurnfeelCorner {
  * @param samples - The frozen spline samples of the layout.
  * @returns The tightest racing-line point of the layout.
  */
-const tightestCornerOf = (
-  samples: readonly SplineSample[],
-): TurnfeelCorner => {
+const tightestCornerOf = (samples: readonly SplineSample[]): TurnfeelCorner => {
   const line = buildTrackRacingLine(samples);
   let index = 0;
   let curvaturePerM = 0;
@@ -4668,10 +4720,7 @@ describe('the TURNING FEEL wave (Step 14Y, slice P1-turnfeel-red; AC-098)', () =
     it('AC-098: the USER channel commanded rate can HOLD the tightest corner of the tightest MEASURED layout (the commanded rate meets the kinematic requirement) (RED-14Y-1-USER-HOLDS-TIGHTEST-CORNER)', () => {
       // Arrange
       const corner = tightestCornerOf(TURNFEEL_TIGHT_SAMPLES);
-      const lane = runTurnRateLane(
-        corner.targetSpeedMps,
-        TURN_RATE_USER_INPUT,
-      );
+      const lane = runTurnRateLane(corner.targetSpeedMps, TURN_RATE_USER_INPUT);
 
       // Act + Assert
       // The NON-VACUITY GUARD comes FIRST, and it has TWO parts: the
@@ -4698,7 +4747,7 @@ describe('the TURNING FEEL wave (Step 14Y, slice P1-turnfeel-red; AC-098)', () =
     });
 
     // [RED-14Y-1-SERVED-LAYOUT-READING]
-    it('AC-098: the SERVED layout reading of the same contract (the served track\'s tightest corner is ALREADY holdable) (RED-14Y-1-SERVED-LAYOUT-READING) - PRESERVATION GUARD (GREEN on arrival, NOT a red)', () => {
+    it("AC-098: the SERVED layout reading of the same contract (the served track's tightest corner is ALREADY holdable) (RED-14Y-1-SERVED-LAYOUT-READING) - PRESERVATION GUARD (GREEN on arrival, NOT a red)", () => {
       // Arrange
       const spec = generateTrack({
         seed: 42,
@@ -4706,10 +4755,7 @@ describe('the TURNING FEEL wave (Step 14Y, slice P1-turnfeel-red; AC-098)', () =
         sizeBucket: 'large',
       });
       const corner = tightestCornerOf(spec.splineSamples);
-      const lane = runTurnRateLane(
-        corner.targetSpeedMps,
-        TURN_RATE_USER_INPUT,
-      );
+      const lane = runTurnRateLane(corner.targetSpeedMps, TURN_RATE_USER_INPUT);
 
       // Act + Assert
       // PRESERVATION GUARD, NOT A RED: the MEASURED current-model state

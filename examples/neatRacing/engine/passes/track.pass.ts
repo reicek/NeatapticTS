@@ -130,8 +130,7 @@ const NEATRACING_TRACK_LIT_POSITION_OFFSET_BYTES = 0;
 const NEATRACING_TRACK_LIT_COLOR_OFFSET_BYTES = 3 * BYTES_PER_FLOAT;
 
 /** Byte offset of the normal axis attribute within one lit vertex. */
-const NEATRACING_TRACK_LIT_NORMAL_AXIS_OFFSET_BYTES =
-  6 * BYTES_PER_FLOAT;
+const NEATRACING_TRACK_LIT_NORMAL_AXIS_OFFSET_BYTES = 6 * BYTES_PER_FLOAT;
 
 /** Per-draw inputs for the track pass. */
 export interface TrackPassDrawState {
@@ -185,9 +184,11 @@ function normalizeColorBytes(
 }
 
 /** Near-black matte color applied to all slab top faces (0-255 RGB). */
-const NEATRACING_TRACK_SLAB_TOP_FACE_MATTE_COLOR: readonly [number, number, number] = [
-  12, 12, 12,
-];
+const NEATRACING_TRACK_SLAB_TOP_FACE_MATTE_COLOR: readonly [
+  number,
+  number,
+  number,
+] = [12, 12, 12];
 
 /**
  * Builds an interleaved Float32Array of position+color vertices from the
@@ -317,7 +318,11 @@ function buildRoadEdgeVboData(mesh: RoadEdgeHexMesh): Float32Array {
   );
   const normalAxis = 1;
 
-  for (let triangleIndex = 0; triangleIndex < mesh.triangles.length; triangleIndex++) {
+  for (
+    let triangleIndex = 0;
+    triangleIndex < mesh.triangles.length;
+    triangleIndex++
+  ) {
     const triangle = mesh.triangles[triangleIndex];
 
     for (let vertexIndex = 0; vertexIndex < 3; vertexIndex++) {
@@ -408,9 +413,7 @@ export function createTrackPass(gl: WebGL2RenderingContext): TrackPass {
   const roadEdgeMesh = buildRoadEdgeHexVoxels(DEFAULT_TRACK_BUILD_INPUT);
   const roadEdgeVboData = buildRoadEdgeVboData(roadEdgeMesh);
 
-  const vboData = new Float32Array(
-    slabVboData.length + roadEdgeVboData.length,
-  );
+  const vboData = new Float32Array(slabVboData.length + roadEdgeVboData.length);
   vboData.set(slabVboData, 0);
   vboData.set(roadEdgeVboData, slabVboData.length);
 

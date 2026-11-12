@@ -221,9 +221,7 @@ describe('assembleNeatRacingObservationVector (Tier A, level 1)', () => {
 
     expect(channels.length).toBe(NEATRACING_OBSERVATION_TIER_A_CHANNEL_COUNT);
     expect(channels.every((value) => Number.isFinite(value))).toBe(true);
-    expect(
-      channels.every((value) => value >= -1 && value <= 1),
-    ).toBe(true);
+    expect(channels.every((value) => value >= -1 && value <= 1)).toBe(true);
   });
 
   it('pins the base-state scalar channels 0..6 (pose + body-frame speeds)', () => {
@@ -289,7 +287,7 @@ describe('assembleNeatRacingObservationVector (Tier A, level 1)', () => {
         (sampleIndex - FIXTURE_CAR_X) /
           NEATRACING_OBSERVATION_TRACK_POSITION_WORLD_SCALE,
         0,
-        ((sampleIndex + 1) % FIXTURE_SAMPLES.length - FIXTURE_CAR_X) /
+        (((sampleIndex + 1) % FIXTURE_SAMPLES.length) - FIXTURE_CAR_X) /
           NEATRACING_OBSERVATION_TRACK_POSITION_WORLD_SCALE,
         0,
         0, // sin(tangent) = sin(0)
@@ -340,16 +338,7 @@ describe('assembleNeatRacingObservationVector (Tier A, level 1)', () => {
     );
 
     expect(Array.from(observationVector.slice(60, 70))).toEqual([
-      1,
-      -1,
-      0.25,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
+      1, -1, 0.25, 0, 0, 0, 0, 0, 0, 0,
     ]);
   });
 
@@ -379,7 +368,10 @@ describe('assembleNeatRacingObservationVector (Tier A, level 1)', () => {
       ),
     );
 
-    expect(frontLeft).toBeCloseTo(expectedSlideIntensity, FLOAT32_PIN_PRECISION);
+    expect(frontLeft).toBeCloseTo(
+      expectedSlideIntensity,
+      FLOAT32_PIN_PRECISION,
+    );
     expect(frontRight).toBeCloseTo(
       -expectedSlideIntensity,
       FLOAT32_PIN_PRECISION,
@@ -502,10 +494,14 @@ describe('assembleNeatRacingObservationVector (Tier B, level 2)', () => {
       { level: 2 },
     );
 
-    expect(tierBVector.length).toBe(NEATRACING_OBSERVATION_TIER_B_CHANNEL_COUNT);
-    expect(Array.from(tierBVector.slice(0, NEATRACING_OBSERVATION_TIER_A_CHANNEL_COUNT))).toEqual(
-      Array.from(tierAVector),
+    expect(tierBVector.length).toBe(
+      NEATRACING_OBSERVATION_TIER_B_CHANNEL_COUNT,
     );
+    expect(
+      Array.from(
+        tierBVector.slice(0, NEATRACING_OBSERVATION_TIER_A_CHANNEL_COUNT),
+      ),
+    ).toEqual(Array.from(tierAVector));
   });
 
   it('appends the raw seven-channel self-radio tail at 82..88 without renormalization', () => {
@@ -562,10 +558,14 @@ describe('assembleNeatRacingObservationVector (Tier C, level 3)', () => {
       { level: 3 },
     );
 
-    expect(tierCVector.length).toBe(NEATRACING_OBSERVATION_TIER_C_CHANNEL_COUNT);
-    expect(Array.from(tierCVector.slice(0, NEATRACING_OBSERVATION_TIER_B_CHANNEL_COUNT))).toEqual(
-      Array.from(tierBVector),
+    expect(tierCVector.length).toBe(
+      NEATRACING_OBSERVATION_TIER_C_CHANNEL_COUNT,
     );
+    expect(
+      Array.from(
+        tierCVector.slice(0, NEATRACING_OBSERVATION_TIER_B_CHANNEL_COUNT),
+      ),
+    ).toEqual(Array.from(tierBVector));
   });
 
   it('covers the 4-rival [0,1,1,1,1] ladder with all eight rival-gap channels populated', () => {
@@ -646,10 +646,7 @@ describe('assembleNeatRacingObservationVector (Tier C, level 3)', () => {
       -2 / NEATRACING_OBSERVATION_TRACK_POSITION_WORLD_SCALE,
       FLOAT32_PIN_PRECISION,
     );
-    expect(teammateTwo[2]).toBeCloseTo(
-      Math.sin(0.5),
-      FLOAT32_PIN_PRECISION,
-    );
+    expect(teammateTwo[2]).toBeCloseTo(Math.sin(0.5), FLOAT32_PIN_PRECISION);
     expect(teammateTwo[3]).toBeCloseTo(
       11 / NEATRACING_OBSERVATION_SPEED_WORLD_SCALE,
       FLOAT32_PIN_PRECISION,
@@ -662,10 +659,7 @@ describe('assembleNeatRacingObservationVector (Tier C, level 3)', () => {
       -2 / NEATRACING_OBSERVATION_TRACK_POSITION_WORLD_SCALE,
       FLOAT32_PIN_PRECISION,
     );
-    expect(teammateTwo[6]).toBeCloseTo(
-      Math.sin(0.5),
-      FLOAT32_PIN_PRECISION,
-    );
+    expect(teammateTwo[6]).toBeCloseTo(Math.sin(0.5), FLOAT32_PIN_PRECISION);
     expect(paddedSlot).toEqual([0, 0, 0, 0, 0, 0, 0]);
   });
 

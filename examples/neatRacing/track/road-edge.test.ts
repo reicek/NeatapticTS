@@ -97,7 +97,8 @@ const FIXTURE_TRACK_BUILD_INPUT = {
 const FIXTURE_TRACK_SPEC = generateTrack(FIXTURE_TRACK_BUILD_INPUT);
 
 /** Serializes a hex mesh for byte-identity comparison. */
-const serializeHexMesh = (mesh: RoadEdgeHexMesh): string => JSON.stringify(mesh);
+const serializeHexMesh = (mesh: RoadEdgeHexMesh): string =>
+  JSON.stringify(mesh);
 
 /** Rec709 luminance of a 0-255 RGB color. */
 const lumaOf = (color: readonly [number, number, number]): number => {
@@ -138,11 +139,17 @@ describe('buildRoadEdgeHexVoxels (P1-road-edge-hex flat paint)', () => {
     // share the same small positive paint height; there is no separate stroke
     // y offset to create coplanar depth interleaving or a dark seam.
     for (const y of ys) {
-      expect(Math.abs(y - NEATRACING_ROAD_EDGE_PAINT_Y_OFFSET_M)).toBeLessThanOrEqual(1e-9);
+      expect(
+        Math.abs(y - NEATRACING_ROAD_EDGE_PAINT_Y_OFFSET_M),
+      ).toBeLessThanOrEqual(1e-9);
     }
     expect(ys).toContain(NEATRACING_ROAD_EDGE_PAINT_Y_OFFSET_M);
-    const yMin = ys.reduce(function (acc, v) { return Math.min(acc, v); }, Infinity);
-    const yMax = ys.reduce(function (acc, v) { return Math.max(acc, v); }, -Infinity);
+    const yMin = ys.reduce(function (acc, v) {
+      return Math.min(acc, v);
+    }, Infinity);
+    const yMax = ys.reduce(function (acc, v) {
+      return Math.max(acc, v);
+    }, -Infinity);
     const yRange = yMax - yMin;
     expect(yRange).toBeLessThanOrEqual(1e-9);
   });
@@ -189,9 +196,9 @@ describe('buildRoadEdgeHexVoxels (P1-road-edge-hex flat paint)', () => {
     expect(colors.has(JSON.stringify(NEATRACING_ROAD_EDGE_EDGE_COLOR))).toBe(
       true,
     );
-    expect(colors.has(JSON.stringify(NEATRACING_ROAD_EDGE_RED_FILL_COLOR))).toBe(
-      true,
-    );
+    expect(
+      colors.has(JSON.stringify(NEATRACING_ROAD_EDGE_RED_FILL_COLOR)),
+    ).toBe(true);
     expect(
       colors.has(JSON.stringify(NEATRACING_ROAD_EDGE_YELLOW_FILL_COLOR)),
     ).toBe(true);
@@ -232,7 +239,9 @@ describe('buildRoadEdgeHexVoxels (P1-road-edge-hex flat paint)', () => {
     const first = lattice.tiles[0]!;
     const neighbor = directions
       .map(([dq, dr]) =>
-        lattice.tiles.find((tile) => tile.q === first.q + dq && tile.r === first.r + dr),
+        lattice.tiles.find(
+          (tile) => tile.q === first.q + dq && tile.r === first.r + dr,
+        ),
       )
       .find(Boolean);
     expect(neighbor).toBeDefined();
@@ -298,7 +307,10 @@ describe('buildRoadEdgeHexVoxels (P1-road-edge-hex flat paint)', () => {
       incidentCount.set(ownerKey, (incidentCount.get(ownerKey) ?? 0) + 1);
       if (edge.neighborQ !== null && edge.neighborR !== null) {
         const neighborKey = `${edge.neighborQ},${edge.neighborR}`;
-        incidentCount.set(neighborKey, (incidentCount.get(neighborKey) ?? 0) + 1);
+        incidentCount.set(
+          neighborKey,
+          (incidentCount.get(neighborKey) ?? 0) + 1,
+        );
       }
     }
 
@@ -339,10 +351,10 @@ describe('buildRoadEdgeHexVoxels (P1-road-edge-hex flat paint)', () => {
           expectedColorway === 'red'
             ? NEATRACING_ROAD_EDGE_RED_EDGE_COLOR
             : expectedColorway === 'yellow'
-            ? NEATRACING_ROAD_EDGE_YELLOW_EDGE_COLOR
-            : expectedColorway === 'green'
-            ? NEATRACING_ROAD_EDGE_GREEN_EDGE_COLOR
-            : NEATRACING_ROAD_EDGE_EDGE_COLOR;
+              ? NEATRACING_ROAD_EDGE_YELLOW_EDGE_COLOR
+              : expectedColorway === 'green'
+                ? NEATRACING_ROAD_EDGE_GREEN_EDGE_COLOR
+                : NEATRACING_ROAD_EDGE_EDGE_COLOR;
         expect(edge.color).toEqual(expectedEdgeColor);
       }
     }
@@ -451,12 +463,8 @@ const expectedBandColorway = (
 };
 
 /** 2-D cross product (z component) of vectors a and b. */
-const crossZ = (
-  ax: number,
-  az: number,
-  bx: number,
-  bz: number,
-): number => ax * bz - az * bx;
+const crossZ = (ax: number, az: number, bx: number, bz: number): number =>
+  ax * bz - az * bx;
 
 /** Normalizes a 2-D vector, returning a zero vector if the input is zero. */
 const normalize2 = (
@@ -724,7 +732,8 @@ describe('P1-outer-edge-red band contract (RED-3): the band starts at the ASYMME
       return Math.hypot(pointX - segment.startX, pointY - segment.startY);
     }
     const projection =
-      ((pointX - segment.startX) * chordX + (pointY - segment.startY) * chordY) /
+      ((pointX - segment.startX) * chordX +
+        (pointY - segment.startY) * chordY) /
       chordLengthSquared;
     const clamped = Math.min(1, Math.max(0, projection));
     return Math.hypot(
@@ -877,7 +886,8 @@ describe('P1-outer-edge-red band contract (RED-3): the band starts at the ASYMME
     expect(cornerBoundOuterTiles.length).toBeGreaterThan(0);
 
     const baseDeltas = cornerBoundOuterTiles.map(
-      (tile) => productionPastEdgeM(tile.x, tile.z) - retiredBaseM(tile.x, tile.z),
+      (tile) =>
+        productionPastEdgeM(tile.x, tile.z) - retiredBaseM(tile.x, tile.z),
     );
     const minimumBaseDeltaM = Math.min(...baseDeltas);
     const minimumRetiredBaseM = Math.min(
@@ -956,18 +966,26 @@ describe('P1-outer-edge-red band contract (RED-3): the band starts at the ASYMME
   it('RED-3 (PRESERVATION - the ladder STAYS A PAINT LADDER): the border ladder never paints the drivable surface and never becomes a physical bound', () => {
     const borderTileSurfaces = allTiles
       .filter((tile) => tile.colorway !== 'road')
-      .map((tile) => classifyTrackSlabSurfaceAt(tile.x, tile.z, segments).surface);
+      .map(
+        (tile) => classifyTrackSlabSurfaceAt(tile.x, tile.z, segments).surface,
+      );
     const drivableBorderTiles = allTiles.filter((tile) => {
       if (tile.colorway === 'road') {
         return false;
       }
-      const surface = classifyTrackSlabSurfaceAt(tile.x, tile.z, segments).surface;
+      const surface = classifyTrackSlabSurfaceAt(
+        tile.x,
+        tile.z,
+        segments,
+      ).surface;
       return surface === 'road' || surface === 'curb';
     });
 
-    expect(borderTileSurfaces.every((surface) => surface === 'grass' || surface === 'air')).toBe(
-      true,
-    );
+    expect(
+      borderTileSurfaces.every(
+        (surface) => surface === 'grass' || surface === 'air',
+      ),
+    ).toBe(true);
     expect(drivableBorderTiles.length).toBe(0);
 
     // The ladder is measured from the EDGE and never from the centreline: the

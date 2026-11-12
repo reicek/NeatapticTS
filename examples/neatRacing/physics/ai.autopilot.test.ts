@@ -18,9 +18,7 @@ import {
   type AutopilotCarSnapshot,
 } from './ai.autopilot';
 import { createTrackSpecForAutopilotFixture } from './ai.autopilot.fixtures';
-import {
-  createTrackSurfaceResolver,
-} from './collision.utils';
+import { createTrackSurfaceResolver } from './collision.utils';
 import {
   createInitialPhysicsCarState,
   NEATRACING_PHYSICS_FIXED_TIMESTEP_SECONDS,
@@ -303,9 +301,7 @@ describe('the AI turn-rate-percent channel (Step 14T, slice P1-turnrate-red)', (
       // The MEASURED current-model state: the seam returns ONLY
       // `{ throttle, brake, steer }`, so the percent is `undefined` today
       // and the clause is RED.
-      expect(
-        Number.isFinite(aiTurnRatePercentOf(lane.input)),
-      ).toBe(true);
+      expect(Number.isFinite(aiTurnRatePercentOf(lane.input))).toBe(true);
     });
 
     // [RED-14T-4-AI-READS-SPEED]
@@ -373,10 +369,7 @@ describe('the AI turn-rate-percent channel (Step 14T, slice P1-turnrate-red)', (
       // `AI_OFF_CENTER_STEER_PIN_RAD` - NEVER RELAXED (the assertion
       // form and the precision are UNCHANGED). The percent channel is a
       // SECOND channel, never a REPLACEMENT of the steer axis.
-      expect(lane.input.steer).toBeCloseTo(
-        AI_OFF_CENTER_STEER_PIN_RAD,
-        12,
-      );
+      expect(lane.input.steer).toBeCloseTo(AI_OFF_CENTER_STEER_PIN_RAD, 12);
     });
   });
 });
@@ -858,11 +851,7 @@ describe('the AI centerline-keeping wave (Step 14M, slice P1-ai-centerline)', ()
         maxAbsOffsetM = Math.max(
           maxAbsOffsetM,
           Math.abs(
-            measureLateralOffsetM(
-              CENTERLINE_LAP_SAMPLES,
-              state.x,
-              state.y,
-            ),
+            measureLateralOffsetM(CENTERLINE_LAP_SAMPLES, state.x, state.y),
           ),
         );
       }
@@ -885,9 +874,7 @@ describe('the AI centerline-keeping wave (Step 14M, slice P1-ai-centerline)', ()
       // the tightest layout the repo measures, not only on the lap
       // layout. The lane was authored by the implementing slice
       // `P1-ai-centerline` (the RED slice authored AI-1..AI-7).
-      const segments = buildCenterlineSegments(
-        CENTERLINE_TIGHT_CORNER_SAMPLES,
-      );
+      const segments = buildCenterlineSegments(CENTERLINE_TIGHT_CORNER_SAMPLES);
       let state = createInitialPhysicsCarState(42, {
         x: 5,
         y: -CENTERLINE_TIGHT_CORNER_RADIUS_M,
@@ -1395,7 +1382,8 @@ const measureAiTurnRateLane = (
   return {
     input,
     commandedRateRadPerS:
-      (next.heading - start.heading) / NEATRACING_PHYSICS_FIXED_TIMESTEP_SECONDS,
+      (next.heading - start.heading) /
+      NEATRACING_PHYSICS_FIXED_TIMESTEP_SECONDS,
   };
 };
 
@@ -1478,9 +1466,7 @@ describe('the TURNING FEEL + AI DRIVEABILITY wave (Step 14Y, slice P1-turnfeel-r
     // [RED-14Y-2A-AI-HOLDS-TARGETED-LINE]
     it('AC-098: the AI commanded rate can HOLD the line it TARGETS (the AI turn rate meets the kinematic requirement of the tightest corner) (RED-14Y-2A-AI-HOLDS-TARGETED-LINE)', () => {
       // Arrange
-      const corner = tightestRacingLinePointOf(
-        CENTERLINE_TIGHT_CORNER_SAMPLES,
-      );
+      const corner = tightestRacingLinePointOf(CENTERLINE_TIGHT_CORNER_SAMPLES);
       const pose = turnfeelRacingLinePoseOf(
         CENTERLINE_TIGHT_CORNER_SAMPLES,
         corner.index,
@@ -1517,9 +1503,7 @@ describe('the TURNING FEEL + AI DRIVEABILITY wave (Step 14Y, slice P1-turnfeel-r
     // [RED-14Y-2B-TARGET-SPEED-REACHABLE]
     it('AC-098: the AI TARGET speed is REACHABLE (the corner is holdable AT the speed the AI asks for) (RED-14Y-2B-TARGET-SPEED-REACHABLE)', () => {
       // Arrange
-      const corner = tightestRacingLinePointOf(
-        CENTERLINE_TIGHT_CORNER_SAMPLES,
-      );
+      const corner = tightestRacingLinePointOf(CENTERLINE_TIGHT_CORNER_SAMPLES);
       const pose = turnfeelRacingLinePoseOf(
         CENTERLINE_TIGHT_CORNER_SAMPLES,
         corner.index,
@@ -1593,9 +1577,7 @@ describe('the TURNING FEEL + AI DRIVEABILITY wave (Step 14Y, slice P1-turnfeel-r
           state.x,
           state.y,
         );
-        const curvaturePerM = Math.abs(
-          racingLine[nearest].curvaturePerM,
-        );
+        const curvaturePerM = Math.abs(racingLine[nearest].curvaturePerM);
         if (curvaturePerM > NEATRACING_RACING_LINE_STRAIGHT_CURVATURE_PER_M) {
           cornerTickCount += 1;
           if (firstCornerTick < 0) {
@@ -1612,9 +1594,7 @@ describe('the TURNING FEEL + AI DRIVEABILITY wave (Step 14Y, slice P1-turnfeel-r
         // The Step 14I containment is RETIRED (AC-090 VERDICT 8): the
         // geometry rides the retired NO-OP seam, so the drive is
         // boundary-free and the measurement can still FAIL (AC-085).
-        if (
-          curvaturePerM > NEATRACING_RACING_LINE_STRAIGHT_CURVATURE_PER_M
-        ) {
+        if (curvaturePerM > NEATRACING_RACING_LINE_STRAIGHT_CURVATURE_PER_M) {
           minSpeedInCorner = Math.min(minSpeedInCorner, state.speed);
         }
       }
@@ -1714,9 +1694,7 @@ describe('the TURNING FEEL + AI DRIVEABILITY wave (Step 14Y, slice P1-turnfeel-r
     // [RED-14Y-5D-AI-PERCENT-NOT-SOFTENED]
     it('AC-093: the AI percent channel is NEVER softened by the user factor (the resolved rate is exactly (percent / 100) x the steering rate, ABOVE the crawl band) (RED-14Y-5D-AI-PERCENT-NOT-SOFTENED) - PRESERVATION GUARD (NOT a red)', () => {
       // Arrange
-      const corner = tightestRacingLinePointOf(
-        CENTERLINE_TIGHT_CORNER_SAMPLES,
-      );
+      const corner = tightestRacingLinePointOf(CENTERLINE_TIGHT_CORNER_SAMPLES);
       const pose = turnfeelRacingLinePoseOf(
         CENTERLINE_TIGHT_CORNER_SAMPLES,
         corner.index,

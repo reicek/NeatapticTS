@@ -218,8 +218,7 @@ function signedCurvaturePerM(
   const currentToNextX = next.x - current.x;
   const currentToNextY = next.y - current.y;
   const cross =
-    previousToCurrentX * previousToNextY -
-    previousToCurrentY * previousToNextX;
+    previousToCurrentX * previousToNextY - previousToCurrentY * previousToNextX;
   const previousToCurrentLength = Math.sqrt(
     previousToCurrentX * previousToCurrentX +
       previousToCurrentY * previousToCurrentY,

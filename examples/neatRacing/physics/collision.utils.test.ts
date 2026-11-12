@@ -388,7 +388,12 @@ describe('track boundary retirement (spec §4.3, D6, AC-090 VERDICT 8 - the AC-0
     // geometry is byte-identical to the free roll, so the car keeps
     // rolling outward instead of stopping on the band edge (able to
     // fail if a containment bound ever creeps back into the tick).
-    const published = stepPhysics(car, input, undefined, FIXTURE_TRACK_SEGMENTS);
+    const published = stepPhysics(
+      car,
+      input,
+      undefined,
+      FIXTURE_TRACK_SEGMENTS,
+    );
 
     expect(published).toEqual(stepPhysics(car, input));
     // The published pose IS the reached pose: beyond the former band
@@ -396,9 +401,9 @@ describe('track boundary retirement (spec §4.3, D6, AC-090 VERDICT 8 - the AC-0
     // outward world-velocity component NOT reflected.
     const [velocityX, velocityY] = worldVelocityOf(published);
     expect(Math.abs(published.y)).toBeGreaterThan(bandOuterEdgeM);
-    expect(classifyTrackSurface(published, FIXTURE_TRACK_SEGMENTS).surface).toBe(
-      'grass',
-    );
+    expect(
+      classifyTrackSurface(published, FIXTURE_TRACK_SEGMENTS).surface,
+    ).toBe('grass');
     expect(velocityY).toBeGreaterThan(0);
     expect(velocityX).toBeCloseTo(0, 6);
   });
@@ -411,7 +416,12 @@ describe('track boundary retirement (spec §4.3, D6, AC-090 VERDICT 8 - the AC-0
     const car = seededCarAt(FIXTURE_RIBBON_X_M, 2.5, { speed: 10 });
     const input: PhysicsStepInput = { throttle: 0, brake: 0, steer: 0 };
 
-    const published = stepPhysics(car, input, undefined, FIXTURE_TRACK_SEGMENTS);
+    const published = stepPhysics(
+      car,
+      input,
+      undefined,
+      FIXTURE_TRACK_SEGMENTS,
+    );
 
     expect(published).toEqual(stepPhysics(car, input));
     expect(classifyTrackSurface(car, FIXTURE_TRACK_SEGMENTS).surface).toBe(
@@ -427,14 +437,17 @@ describe('track boundary retirement (spec §4.3, D6, AC-090 VERDICT 8 - the AC-0
     const car = seededCarAt(FIXTURE_RIBBON_X_M, 5, { speed: 10 });
     const input: PhysicsStepInput = { throttle: 0, brake: 0, steer: 0 };
 
-    const published = stepPhysics(car, input, undefined, FIXTURE_TRACK_SEGMENTS);
+    const published = stepPhysics(
+      car,
+      input,
+      undefined,
+      FIXTURE_TRACK_SEGMENTS,
+    );
 
     expect(published).toEqual(stepPhysics(car, input));
     // ...and the reached pose really stays off the road core, yet on
     // the DRIVABLE off-road band.
-    expect(Math.abs(published.y)).toBeGreaterThan(
-      FIXTURE_HALF_TRACK_WIDTH_M,
-    );
+    expect(Math.abs(published.y)).toBeGreaterThan(FIXTURE_HALF_TRACK_WIDTH_M);
     expect(
       classifyTrackSurface(published, FIXTURE_TRACK_SEGMENTS).isDrivable,
     ).toBe(true);

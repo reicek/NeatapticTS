@@ -148,10 +148,9 @@ function createStubPicker(hit: EditorVoxelHit | null): {
     (position: EditorPointerPosition) => EditorVoxelHit | null
   >;
 } {
-  const pick =
-    jest.fn<(position: EditorPointerPosition) => EditorVoxelHit | null>(
-      () => hit,
-    );
+  const pick = jest.fn<
+    (position: EditorPointerPosition) => EditorVoxelHit | null
+  >(() => hit);
   return { picker: { pick }, pick };
 }
 
@@ -162,9 +161,7 @@ function createStubPicker(hit: EditorVoxelHit | null): {
  * @param hits - Voxels the double answers with, in call order.
  * @returns The picker double and its mock.
  */
-function createQueuedPicker(
-  hits: readonly (EditorVoxelHit | null)[],
-): {
+function createQueuedPicker(hits: readonly (EditorVoxelHit | null)[]): {
   readonly picker: EditorVoxelPicker;
   readonly pick: jest.Mock<
     (position: EditorPointerPosition) => EditorVoxelHit | null
@@ -317,9 +314,7 @@ function collectPaintedCells(
   for (let z = 0; z < VOLUME_EDGE; z += 1) {
     for (let y = 0; y < VOLUME_EDGE; y += 1) {
       for (let x = 0; x < VOLUME_EDGE; x += 1) {
-        if (
-          volume[x + VOLUME_ROW_STRIDE * y + VOLUME_SLICE_STRIDE * z] !== 0
-        ) {
+        if (volume[x + VOLUME_ROW_STRIDE * y + VOLUME_SLICE_STRIDE * z] !== 0) {
           cells.push({ x, y, z });
         }
       }
@@ -428,7 +423,10 @@ describe('Neat Racing editor pointer-pick edit loop (slice P1-editor-editloop)',
 
     it('routes every painted edit through the rebuild pipeline edit(sliceZ)', () => {
       // Arrange - the second pick lands on another slice.
-      const { picker } = createQueuedPicker([PICKED_VOXEL, SECOND_PICKED_VOXEL]);
+      const { picker } = createQueuedPicker([
+        PICKED_VOXEL,
+        SECOND_PICKED_VOXEL,
+      ]);
       const harness = createEditLoopHarness(picker);
       // Act - a pointerdown and one pointermove.
       harness.loop.attach();
@@ -579,10 +577,7 @@ describe('Neat Racing editor pointer-pick edit loop (slice P1-editor-editloop)',
         name: 'car-f1',
       });
       const decoded = decodeVoxelModel(document);
-      const row = decoded.slices[5].slice(
-        4 * VOLUME_EDGE,
-        5 * VOLUME_EDGE,
-      );
+      const row = decoded.slices[5].slice(4 * VOLUME_EDGE, 5 * VOLUME_EDGE);
       const occupiedColumns = Array.from(row).flatMap((value, column) =>
         value === 0 ? [] : [column],
       );
@@ -641,7 +636,8 @@ describe('Neat Racing editor pointer-pick edit loop (slice P1-editor-editloop)',
 
     it('publishes an edited document after a canvas pointerdown and pointerup', async () => {
       // Arrange - a booted editor session with its mounted canvas.
-      const session: NeatRacingEditorSession = getEditorStart()(PREVIEW_HOST_ID);
+      const session: NeatRacingEditorSession =
+        getEditorStart()(PREVIEW_HOST_ID);
       const canvas = getPreviewCanvas();
       // Act - a pointer stroke in the middle of the canvas, then let the
       // queued full rebuild settle before reading the published document.
@@ -664,12 +660,13 @@ describe('Neat Racing editor pointer-pick edit loop (slice P1-editor-editloop)',
         VOLUME_EDGE,
       ]);
       const paintedCells = collectPaintedCells(session.toolframe.state.volume);
-      const paintedColumns = paintedCells.map((cell) =>
-        decodeVoxelRow(
-          document.slices[cell.z][cell.y],
-          VOLUME_EDGE,
-          document.palette.length,
-        )[cell.x],
+      const paintedColumns = paintedCells.map(
+        (cell) =>
+          decodeVoxelRow(
+            document.slices[cell.z][cell.y],
+            VOLUME_EDGE,
+            document.palette.length,
+          )[cell.x],
       );
       expect(paintedColumns.length).toBeGreaterThan(0);
       expect(paintedColumns).not.toContain(0);
@@ -677,7 +674,8 @@ describe('Neat Racing editor pointer-pick edit loop (slice P1-editor-editloop)',
 
     it('detaches the edit loop on stop so a later pointer event paints nothing', () => {
       // Arrange - a booted editor session that is stopped.
-      const session: NeatRacingEditorSession = getEditorStart()(PREVIEW_HOST_ID);
+      const session: NeatRacingEditorSession =
+        getEditorStart()(PREVIEW_HOST_ID);
       const canvas = getPreviewCanvas();
       session.stop();
       // Act - a pointer stroke after the stop.
@@ -714,8 +712,20 @@ describe('Neat Racing editor pointer-pick edit loop (slice P1-editor-editloop)',
       dispatchPointer(canvas, 'pointerdown', 12, 34);
       undo.undo();
       // Assert - the mirror-X pair is gone again.
-      expect(state.volume[CANONICAL_VOXEL.x + VOLUME_ROW_STRIDE * CANONICAL_VOXEL.y + VOLUME_SLICE_STRIDE * CANONICAL_VOXEL.z]).toBe(0);
-      expect(state.volume[PICKED_VOXEL.x + VOLUME_ROW_STRIDE * PICKED_VOXEL.y + VOLUME_SLICE_STRIDE * PICKED_VOXEL.z]).toBe(0);
+      expect(
+        state.volume[
+          CANONICAL_VOXEL.x +
+            VOLUME_ROW_STRIDE * CANONICAL_VOXEL.y +
+            VOLUME_SLICE_STRIDE * CANONICAL_VOXEL.z
+        ],
+      ).toBe(0);
+      expect(
+        state.volume[
+          PICKED_VOXEL.x +
+            VOLUME_ROW_STRIDE * PICKED_VOXEL.y +
+            VOLUME_SLICE_STRIDE * PICKED_VOXEL.z
+        ],
+      ).toBe(0);
     });
   });
 });

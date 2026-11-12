@@ -36,7 +36,11 @@
  *   all-in-one `drawNeatRacingNetworkPanel` is the standalone self-sizing
  *   path and must NOT be composed with the resize service on the same
  *   canvas, because its sync pass would silently override the resize
- *   service's backing store (review F2).
+ *   service's backing store (review F2). Since P4-S2C (1a) the docked-right
+ *   shelf slot RESOLVER is the ONE sizing authority behind both surfaces:
+ *   the resize owner sizes the backing store through the resolved slot and
+ *   the host mount applies the SAME resolved slot to the panel box (the
+ *   zero-measure jsdom fallback stays the pinned windowless lane).
  *
  * @module
  */
@@ -73,9 +77,7 @@ import {
   NETWORK_LOD_HOVER_MAX_LOCAL_NODES,
 } from '../../shared/network-visualization/network-visualization.constants';
 import { NEATRACING_NGE_CONTROLLER_OUTPUT_COUNT } from '../ai/nge.controller';
-import {
-  NEATRACING_OBSERVATION_TIER_A_CHANNEL_COUNT,
-} from '../ai/observation.assembler';
+import { NEATRACING_OBSERVATION_TIER_A_CHANNEL_COUNT } from '../ai/observation.assembler';
 import { NEATRACING_HUD_COLOR_CYAN } from '../host/hud';
 
 /* ------------------------------------------------------------------------- *
@@ -120,6 +122,24 @@ const PANEL_OUTPUT_LABEL_FONT = '700 10px Consolas, Menlo, Monaco, monospace';
 
 /** Output-label horizontal offset from the output node anchor, in px. */
 const PANEL_OUTPUT_LABEL_OFFSET_PX = 18;
+
+/**
+ * Network-panel shelf width expressed as a fraction of the viewport width.
+ *
+ * The docked-right slot law (P4-S2C 1a) keeps the shelf a clearly bounded
+ * side dock: about a third of the viewport, and never wider than half (the
+ * resolver clamps onto that cap, so a full-viewport box is unreachable).
+ */
+const PANEL_SHELF_WIDTH_VIEWPORT_FRACTION = 0.3;
+
+/**
+ * Shelf top clearance in px under the top HUD band.
+ *
+ * Keeps the docked-right shelf clear of the top-right race mode selector
+ * (`top: 0; right: 0`, Neatenstein precedent) and the top-left boot HUD at
+ * the recorded example viewport (the S2C-SIBLINGS sibling geometry).
+ */
+const PANEL_SHELF_TOP_CLEARANCE_PX = 48;
 
 /* ------------------------------------------------------------------------- *
  * Public types
@@ -329,6 +349,153 @@ function buildNeatRacingNetworkPanelSettings(): NetworkVisualizationSettings {
       hoverMaxLocalNodes: NETWORK_LOD_HOVER_MAX_LOCAL_NODES,
     },
   };
+}
+
+/**
+ * One live-carrier panel feed for the live evolved-network resolution
+ * (AC-102, Step 26 P4-S4-live-feed).
+ *
+ * Educational note — WHY THIS SHAPE: the most-forward panel watches the
+ * LIVE evolved lane, so the host hands the resolver the watched carrier —
+ * the carrier's own live evolved network (real node / connection /
+ * activation data) wrapped with the elected candidate view it rode in on.
+ * The carrier's OWN network is the authoritative live mind; the candidate
+ * view is the fallback so the elected NeatRacingNetworkPanelCandidate can
+ * ride into the resolver alone.
+ */
+export interface NeatRacingNetworkPanelLiveCarrier {
+  /** Stable in-fleet agent index assigned by the host. */
+  readonly agentId: number;
+  /** Host-owned along-track race progress of the watched carrier. */
+  readonly progress: number;
+  /**
+   * The carrier's OWN live evolved network (AC-102). Absent while the live
+   * feed has not landed for this carrier — the resolver then raises the
+   * named live-carrier error; it NEVER falls back to the retired
+   * idle-path stub frame.
+   */
+  readonly network?: Network | undefined;
+  /**
+   * The elected fleet candidate this carrier wraps (the carrier's fallback
+   * network view).
+   */
+  readonly candidate?: NeatRacingNetworkPanelCandidate | undefined;
+}
+
+/**
+ * Named live-carrier resolution error prefix (the AC-102 stub-retirement
+ * law): a network-less carrier is never silently answered with the retired
+ * idle-path stub frame — the failure NAMES the live-carrier contract.
+ */
+const PANEL_LIVE_CARRIER_ERROR_PREFIX =
+  'NeatRacingNetworkPanelLiveCarrierError';
+
+/**
+ * Reads the live network slot off a live-carrier-shaped argument (any
+ * object carrying a `network`, or a `candidate` view carrying one).
+ *
+ * The carrier's OWN network wins; the candidate view is the fallback (the
+ * elected NeatRacingNetworkPanelCandidate may ride into the resolver alone).
+ * A non-object argument or a carrier that carries no network at either
+ * slot resolves to undefined and the caller raises the named error.
+ *
+ * @param carrier - The carrier-shaped argument to read.
+ * @returns The carried live network object, or undefined.
+ */
+function readNeatRacingNetworkPanelCarrierNetwork(
+  carrier: unknown,
+): object | undefined {
+  // Step 1: A non-object argument carries no network slot at all.
+  if (typeof carrier !== 'object' || carrier === null) {
+    return undefined;
+  }
+  const carrierRecord = carrier as Record<string, unknown>;
+  // Step 2: The carrier's OWN network is the authoritative live mind.
+  const ownNetwork = carrierRecord['network'];
+  if (typeof ownNetwork === 'object' && ownNetwork !== null) {
+    return ownNetwork;
+  }
+  // Step 3: The candidate view is the fallback network slot.
+  const candidate = carrierRecord['candidate'];
+  if (typeof candidate !== 'object' || candidate === null) {
+    return undefined;
+  }
+  const candidateNetwork = (candidate as Record<string, unknown>)['network'];
+  return typeof candidateNetwork === 'object' && candidateNetwork !== null
+    ? candidateNetwork
+    : undefined;
+}
+
+/**
+ * Resolves the shared visualizer frame for a LIVE evolved carrier (AC-102,
+ * Step 26 P4-S4-live-feed — the RED-P4-9 live-feed seam).
+ *
+ * Educational note — WHAT/WHY: the docked-right panel's idle-path stub
+ * frame (the 82-channel/2-output placeholder) retires with the live feed —
+ * with a live carrier present the most-forward panel renders the carrier's
+ * OWN evolved network (real node / connection / activation data). This
+ * resolver is the adapter's live-carrier seam: it re-shapes the CARRIER
+ * argument into the existing live-network frame path and delegates the
+ * whole frame to the shared visualizer (L5 — thin adapter), so the frame
+ * topology, LOD behavior and activation reads stay the shared laws.
+ *
+ * Educational note — ACTIVATIONS ARE CAPTURED AT RESOLVE TIME: the shared
+ * builder normalizes the carrier network's runtime nodes into fresh
+ * view-layer records (`activation: runtimeNode.activation ?? 0`), so the
+ * resolved frame carries the activation values AS OF THIS RESOLVE — a
+ * consumer that CACHES the frame (the documented
+ * drawNeatRacingNetworkPanelFromFrame hover-repaint path — and the
+ * fullscreen surface slice, the next frame consumer) MUST re-resolve to
+ * observe a later activation change. The resolution path itself adds NO
+ * per-call allocation beyond the delegated shared frame build (AC-102's
+ * zero-per-frame-allocation law). An extra `activations` argument on the
+ * carrier is deliberately ignored: the network's nodes are the source of
+ * truth for the activations captured at resolve time.
+ *
+ * @param context - Canvas 2D drawing context of the network panel.
+ * @param carrier - The watched live carrier (its own network, or an
+ *   elected {@link NeatRacingNetworkPanelCandidate} riding in alone).
+ * @returns The shared visualizer frame for the carrier's live network, with
+ *   the network's activation values captured as of this resolve time
+ *   (re-resolve to observe later activation changes).
+ * @throws When the carrier carries no network at either slot (its own slot
+ *   or its candidate view) — the named live-carrier error; the retired
+ *   idle-path stub frame is NEVER a legal live-carrier answer (AC-102).
+ *
+ * @example
+ * ```ts
+ * const carrier: NeatRacingNetworkPanelLiveCarrier = {
+ *   agentId: 2,
+ *   progress: 120,
+ *   network: liveEvolvedNetwork,
+ * };
+ * const frame = resolveNeatRacingNetworkPanelLiveCarrierFrame(
+ *   panelContext,
+ *   carrier,
+ * );
+ * drawNeatRacingNetworkPanelFromFrame(panelContext, frame);
+ * ```
+ */
+export function resolveNeatRacingNetworkPanelLiveCarrierFrame(
+  context: CanvasRenderingContext2D,
+  carrier: NeatRacingNetworkPanelLiveCarrier | NeatRacingNetworkPanelCandidate,
+): NetworkVisualizationResolvedFrame {
+  // Step 1: Read the carried live network (own slot first, candidate view
+  //         as the fallback). A network-less carrier NEVER degrades into
+  //         the idle stub — it fails LOUDLY with the named error.
+  const liveNetwork = readNeatRacingNetworkPanelCarrierNetwork(carrier);
+  if (liveNetwork === undefined) {
+    throw new Error(
+      `${PANEL_LIVE_CARRIER_ERROR_PREFIX}: the live-carrier frame resolution requires a carrier carrying a live evolved network — a network-less carrier is NEVER answered with the retired idle-path stub frame (AC-102)`,
+    );
+  }
+  // Step 2: Delegate the whole frame to the shared visualizer path (L5).
+  //         The carrier carries the live Network instance per the panel
+  //         candidate contract (`NeatRacingNetworkPanelCandidate.network`).
+  return resolveNeatRacingNetworkPanelVisualizationFrame(
+    context,
+    liveNetwork as Network,
+  );
 }
 
 /**
@@ -609,29 +776,127 @@ export function drawNeatRacingNetworkPanel(
 }
 
 /* ------------------------------------------------------------------------- *
+ * Docked-right shelf slot resolver (pure, DOM-free — P4-S2C 1a)
+ * ------------------------------------------------------------------------- */
+
+/**
+ * One resolved docked-right shelf slot for the network panel.
+ *
+ * @property leftPx - Slot left edge in viewport px (viewport-anchored).
+ * @property topPx - Slot top edge in viewport px (below the top HUD band).
+ * @property widthPx - Slot width in px (strictly bounded, at most half the
+ *   viewport width — never a full-viewport box).
+ * @property heightPx - Slot height in px (strictly bounded inside the
+ *   viewport height).
+ */
+export interface NeatRacingNetworkPanelShelfSlot {
+  readonly leftPx: number;
+  readonly topPx: number;
+  readonly widthPx: number;
+  readonly heightPx: number;
+}
+
+/**
+ * Resolves the deterministic docked-right network-panel shelf slot
+ * (P4-S2C 1a — RED-P4-20).
+ *
+ * The pure, DOM-free ONE sizing authority of the 1a panel law: the viewport
+ * is mapped onto the slot the right-docked panel rides, so a full-viewport
+ * panel box is unreachable by construction. The resolver owns four laws:
+ *
+ * - right-anchored x (`leftPx + widthPx === viewportWidthPx`),
+ * - strictly inside the viewport on both axes,
+ * - strictly bounded extent (at least 1px and never a full-viewport side),
+ * - the width never exceeds half the viewport width.
+ *
+ * Determinism claim (reproducibility rank: deterministic on the same
+ * runtime): the slot is a pure function of its two arguments — no window
+ * reads, no host measure, no DOM — so the same arguments always resolve the
+ * same slot regardless of the surrounding window state. The host mount and
+ * the resize service compose that one result instead of inventing separate
+ * geometry (ONE sizing authority, L6).
+ *
+ * @param viewportWidthPx - Viewport width in CSS px (the panel docks into
+ *   the full-viewport hud-output layer, so viewport px map 1:1 onto it).
+ * @param viewportHeightPx - Viewport height in CSS px.
+ * @returns The docked-right bounded slot to size and position the panel
+ *   with.
+ *
+ * @example
+ * ```ts
+ * const slot = resolveNeatRacingNetworkPanelDockedRightShelfSlot(1689, 1325);
+ * // -> { leftPx: 1183, topPx: 48, widthPx: 506, heightPx: 379 }
+ * panelCanvas.style.left = `${slot.leftPx}px`;
+ * panelCanvas.style.width = `${slot.widthPx}px`;
+ * ```
+ */
+export function resolveNeatRacingNetworkPanelDockedRightShelfSlot(
+  viewportWidthPx: number,
+  viewportHeightPx: number,
+): NeatRacingNetworkPanelShelfSlot {
+  // Step 1: The bounded shelf width — a fraction of the viewport, clamped
+  // onto the half-viewport cap so a full-viewport box is unreachable.
+  const widthPx = Math.min(
+    Math.ceil(viewportWidthPx / 2),
+    Math.max(
+      1,
+      Math.floor(viewportWidthPx * PANEL_SHELF_WIDTH_VIEWPORT_FRACTION),
+    ),
+  );
+
+  // Step 2: The aspect-locked height, strictly bounded inside the viewport.
+  const heightPx = Math.min(
+    Math.max(1, viewportHeightPx - 1),
+    Math.max(1, Math.floor(widthPx * PANEL_CANVAS_ASPECT_RATIO)),
+  );
+
+  // Step 3: Right-anchor the slot onto the viewport's right edge.
+  const leftPx = viewportWidthPx - widthPx;
+
+  // Step 4: Dock below the top HUD band, clamped so the slot stays inside.
+  const topPx = Math.max(
+    0,
+    Math.min(PANEL_SHELF_TOP_CLEARANCE_PX, viewportHeightPx - heightPx),
+  );
+
+  return { leftPx, topPx, widthPx, heightPx };
+}
+
+/* ------------------------------------------------------------------------- *
  * Resize service (installRacingNetworkResize pattern)
  * ------------------------------------------------------------------------- */
 
 /**
  * Installs NeatRacing network canvas resize listeners.
  *
- * Mirrors the `installRacingNetworkResize` pattern exactly: on every window
- * `resize` event the service measures the host element and updates the canvas
- * backing store, then invokes `onResize` so the caller can schedule a network
- * redraw. On install the size is applied once immediately. This service is
- * the backing-store OWNER of the racing-parity panel wiring (L6, review F2):
- * pair it with `resolveNeatRacingNetworkPanelVisualizationFrame` +
+ * Mirrors the `installRacingNetworkResize` pattern exactly on the wiring
+ * side: on every window `resize` event the service sizes the canvas backing
+ * store once per event, then invokes `onResize` so the caller can schedule a
+ * network redraw (only when the store actually changed — a no-op resize
+ * never repaints the idle draw path). On install the size is applied once
+ * immediately. This service is the backing-store OWNER of the racing-parity
+ * panel wiring (L6, review F2): pair it with
+ * `resolveNeatRacingNetworkPanelVisualizationFrame` +
  * `drawNeatRacingNetworkPanelFromFrame`, never with the self-sizing
  * `drawNeatRacingNetworkPanel`.
  *
+ * Since P4-S2C (1a — RED-P4-21) a MEASURABLE host (positive `clientWidth`
+ * AND `clientHeight`) rides the docked-right slot: the service resolves the
+ * same pure `resolveNeatRacingNetworkPanelDockedRightShelfSlot` slot from
+ * the WINDOW dimensions (ONE sizing authority with the panel box the host
+ * mount applies), never from the raw host bounds that defined the recorded
+ * full-viewport defect.
+ *
  * If the host element has no CSS layout yet (for example in jsdom tests), the
  * service falls back to `window.innerWidth * 0.25` by
- * `window.innerHeight * 0.35` so the canvas still has a positive backing size.
+ * `window.innerHeight * 0.35` so the canvas still has a positive backing size
+ * (the pinned zero-measure lane, unchanged).
  * The returned `redraw` handle is intentionally a no-op; the host schedules
  * redraws through `onResize`.
  *
  * @param networkCanvas - Network visualization canvas to resize.
- * @param networkCanvasHost - Host element whose bounds drive the canvas size.
+ * @param networkCanvasHost - Host element providing the measurability gate
+ *   (its zero client extents route the pinned fallback lane).
  * @param onResize - Callback invoked after the canvas backing size changes.
  * @returns Uninstall, resize, and redraw handles.
  *
@@ -664,13 +929,22 @@ export function installNeatRacingNetworkResize(
   onResize: () => void,
 ): { uninstall: () => void; resize: () => void; redraw: () => void } {
   const applySize = (): void => {
-    // Step 1: Measure the host shelf, falling back to the viewport fraction.
-    const hostWidth = networkCanvasHost.clientWidth;
-    const hostHeight = networkCanvasHost.clientHeight;
+    // Step 1: Resolve the ONE sizing authority (the 1a slot law). A
+    // measurable host (the real browser mount) rides the docked-right slot
+    // through the pure resolver — never its raw bounds; the zero-measure
+    // fallback lane keeps the pinned viewport fractions.
+    const hostMeasurable =
+      networkCanvasHost.clientWidth > 0 && networkCanvasHost.clientHeight > 0;
+    const shelfSlot = hostMeasurable
+      ? resolveNeatRacingNetworkPanelDockedRightShelfSlot(
+          window.innerWidth,
+          window.innerHeight,
+        )
+      : null;
     const fallbackWidth = Math.max(1, Math.floor(window.innerWidth * 0.25));
     const fallbackHeight = Math.max(1, Math.floor(window.innerHeight * 0.35));
-    const widthPx = hostWidth > 0 ? hostWidth : fallbackWidth;
-    const heightPx = hostHeight > 0 ? hostHeight : fallbackHeight;
+    const widthPx = shelfSlot !== null ? shelfSlot.widthPx : fallbackWidth;
+    const heightPx = shelfSlot !== null ? shelfSlot.heightPx : fallbackHeight;
 
     // Step 2: Only report a resize when the backing store actually changed.
     if (networkCanvas.width !== widthPx || networkCanvas.height !== heightPx) {

@@ -864,14 +864,34 @@ function renderWorldIntoSceneTarget(
   if (passes.trackGrid !== undefined) {
     bindSceneFrameBufferAndViewport(gl, scene);
     passes.trackGrid.draw(bags.track);
-    logPerPassPixelCountIfEnabled(gl, scene, 'track-grid', perPassReadbackBuffer);
-    logPerPassDiagnosticsIfEnabled(gl, scene, 'track-grid', perPassDiagnosticBuffer);
+    logPerPassPixelCountIfEnabled(
+      gl,
+      scene,
+      'track-grid',
+      perPassReadbackBuffer,
+    );
+    logPerPassDiagnosticsIfEnabled(
+      gl,
+      scene,
+      'track-grid',
+      perPassDiagnosticBuffer,
+    );
   }
   if (passes.rightWorld !== undefined && frame.rightWorld !== undefined) {
     bindSceneFrameBufferAndViewport(gl, scene);
     passes.rightWorld.draw(bags.rightWorld);
-    logPerPassPixelCountIfEnabled(gl, scene, 'right-world', perPassReadbackBuffer);
-    logPerPassDiagnosticsIfEnabled(gl, scene, 'right-world', perPassDiagnosticBuffer);
+    logPerPassPixelCountIfEnabled(
+      gl,
+      scene,
+      'right-world',
+      perPassReadbackBuffer,
+    );
+    logPerPassDiagnosticsIfEnabled(
+      gl,
+      scene,
+      'right-world',
+      perPassDiagnosticBuffer,
+    );
   }
   bindSceneFrameBufferAndViewport(gl, scene);
   passes.car.draw(bags.car);

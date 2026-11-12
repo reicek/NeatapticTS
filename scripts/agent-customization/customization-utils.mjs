@@ -422,6 +422,159 @@ export function summarizeIssues(name, issues) {
 }
 
 /**
+ * Structured error raised when a plan YAML block cannot be parsed without
+ * silently dropping content.
+ *
+ * The class exists because of learning-log event
+ * `learn-20261109-f9-plan-parser-silent-skip-overindented-id-items`: a `- id:`
+ * list item indented deeper than the object that owns it used to be skipped
+ * without a trace, so a corrupted step packet still parsed "cleanly" and every
+ * shape-only gate passed. A malformed packet must fail at the gate instead of
+ * degrading silently, and the failure must name the source file, the line
+ * number and the observed indentation so it can be repaired.
+ */
+export class PlanYamlParseError extends Error {
+  /**
+   * @param {string} message - Human-readable failure description.
+   * @param {object} [details] - Structured failure details.
+   * @param {string} [details.code] - Stable machine-readable finding code.
+   * @param {string|null} [details.file] - Source file path, when known.
+   * @param {number|null} [details.line] - 1-based line number of the offending line IN THE SOURCE FILE.
+   * @param {number|null} [details.blockLine] - 1-based line number of the offending line INSIDE THE YAML BLOCK.
+   * @param {number|null} [details.indent] - Observed indentation of the offending line.
+   * @param {number|null} [details.baseIndent] - Enclosing base indentation.
+   * @param {string|null} [details.snippet] - Trimmed text of the offending line.
+   */
+  constructor(message, details = {}) {
+    super(message);
+    this.name = 'PlanYamlParseError';
+    this.code = details.code ?? 'PLAN_YAML_PARSE_ERROR';
+    this.file = details.file ?? null;
+    this.line = details.line ?? null;
+    this.blockLine = details.blockLine ?? null;
+    this.indent = details.indent ?? null;
+    this.baseIndent = details.baseIndent ?? null;
+    this.snippet = details.snippet ?? null;
+  }
+}
+
+/**
+ * Builds a {@link PlanYamlParseError} for a malformed plan YAML line.
+ *
+ * @param {object} context - Parse context carrying the source file path.
+ * @param {object} details - Failure details (`code`, `message`, `line`,
+ *   `indent`, `baseIndent`, `snippet`).
+ * @returns {PlanYamlParseError} Error describing the malformed line.
+ */
+function planYamlError(context, details) {
+  const blockLine = details.line ?? null;
+  // `details.line` is relative to the YAML block; shift it into the source file
+  // so the message names a location a human can actually open.
+  const sourceLine =
+    typeof blockLine === 'number'
+      ? (context.startLine ?? 1) + Math.max(0, blockLine - 1)
+      : null;
+  const location = context.file
+    ? `${context.file}:${sourceLine ?? '?'}`
+    : `line ${sourceLine ?? '?'}`;
+  const indentText =
+    typeof details.indent === 'number'
+      ? ` (indent ${details.indent}, enclosing base indent ${details.baseIndent})`
+      : '';
+  const snippet = details.snippet ? ` "${details.snippet}"` : '';
+  return new PlanYamlParseError(
+    `Plan YAML parse error at ${location}${indentText}: ${details.message}${snippet}`,
+    {
+      ...details,
+      file: context.file ?? null,
+      line: sourceLine,
+      blockLine,
+    },
+  );
+}
+
+/**
+ * Strict YAML field pattern: the identifier-like keys used by plan packets.
+ */
+const YAML_FIELD_PATTERN = /^(?<key>[A-Za-z0-9_]+):(?<rest>.*)$/u;
+
+/**
+ * Wide YAML field pattern: an identifier key that may carry hyphens.
+ *
+ * Plan packets use hyphenated keys such as `RED-1:` or `P1-S1-A:`. The
+ * strict pattern rejects them, and a rejected key used to be stepped over
+ * silently, which dropped the value that belonged to it.
+ */
+const YAML_WIDE_FIELD_PATTERN =
+  /^(?<key>[A-Za-z0-9_][A-Za-z0-9_-]*):(?<rest>.*)$/u;
+
+/**
+ * Loose YAML field pattern: a key that carries extra text (for example a key
+ * with a parenthetical suffix) and declares an empty value.
+ *
+ * The pattern deliberately refuses a quoted scalar, so a plain list item such
+ * as `- 'a: b'` is never mistaken for a key, and it refuses a value, so a
+ * scalar such as `npm run foo: bar` keeps its scalar meaning.
+ *
+ * The key must contain whitespace. A key without whitespace that the strict
+ * pattern rejects (for example `some-key:`) keeps its legacy handling, where
+ * the item is read as "the object starts on the next line".
+ */
+const YAML_LOOSE_FIELD_PATTERN = /^(?<key>[^:'"\s][^:]*\s[^:]*):(?<rest>)$/u;
+
+/**
+ * Matches a YAML field line and returns its key and value.
+ *
+ * The strict pattern is tried first; the wide pattern adds hyphenated keys;
+ * the loose pattern is the fallback for a key whose text is not an identifier.
+ * A key that every pattern rejects must NOT be dropped: dropping the key
+ * silently drops the list or object that belongs to it, which is the failure
+ * mode recorded in `learn-20261109-f9-plan-parser-silent-skip-overindented-id-items`.
+ *
+ * @param {string} line - Trimmed line text.
+ * @param {object} [options] - Match options.
+ * @param {boolean} [options.allowHyphen] - When true, a hyphenated key is
+ *   accepted (used for object fields, where a hyphenated key is a key).
+ * @returns {RegExpExecArray|null} Match result, or `null` when the line is not a field.
+ */
+function matchYamlField(line, options = {}) {
+  const strict = YAML_FIELD_PATTERN.exec(line);
+  if (strict) return strict;
+  if (options.allowHyphen) {
+    const wide = YAML_WIDE_FIELD_PATTERN.exec(line);
+    if (wide) return wide;
+  }
+  return YAML_LOOSE_FIELD_PATTERN.exec(line);
+}
+
+/**
+ * Determines whether a list item carries STRUCTURED content.
+ *
+ * A list item is structured when its payload would be parsed as an object or
+ * a nested list, that is when the payload is a YAML field (`id: ...`,
+ * `command: ...`) or a key whose value starts on the next line. A structured
+ * item that the parser cannot place is CONTENT: dropping it loses a
+ * criterion, a command or a field, which is the F9 defect class.
+ *
+ * A PLAIN SCALAR item (`- 'a free-form note'`) carries no structure. The
+ * repo's plan evidence blocks carry such items at a deeper indent than their
+ * siblings on purpose, and dropping a scalar does not drop a criterion, so
+ * the parser tolerates it exactly as it did before the F9 fix. The
+ * indentation lint is the detector for the structured case.
+ *
+ * @param {string} remainder - List item payload with the `- ` marker removed.
+ * @returns {boolean} `true` when the payload is structured.
+ */
+function isStructuredListItem(remainder) {
+  const payload = String(remainder ?? '').trim();
+  if (payload === '') return true;
+  if (matchYamlField(payload, { allowHyphen: true })) return true;
+  // A key whose value starts on the next line (`- acceptance_criteria:`).
+  if (/^.*:\s*$/u.test(payload)) return true;
+  return false;
+}
+
+/**
  * Parses a plan YAML metadata block into a JavaScript object.
  *
  * Supports the subset used by plan step/phase packets: scalar key–value pairs,
@@ -432,11 +585,31 @@ export function summarizeIssues(name, issues) {
  * Multi-line object lists use the standard YAML `- key: value` indentation
  * pattern.
  *
+ * The parser FAILS LOUDLY: a list item whose indentation exceeds the base
+ * indentation of the list or object that owns it raises a
+ * {@link PlanYamlParseError} instead of being skipped, because a silently
+ * skipped item corrupts the packet without any visible symptom.
+ *
  * @param yamlText - Raw YAML string (without the surrounding fence).
+ * @param {object} [options] - Parse options.
+ * @param {string|null} [options.file] - Source file path used in error messages.
+ * @param {number} [options.startLine] - 1-based line number in the source file of the
+ *   first content line of this block; used to report file-absolute line numbers.
  * @returns Object with parsed values; lists are arrays, nested object lists are
  *   arrays of objects, and nested objects are plain objects.
+ * @throws {PlanYamlParseError} When the block contains an over-indented list item.
  */
-export function parsePlanYamlBlock(yamlText) {
+export function parsePlanYamlBlock(yamlText, options = {}) {
+  const context = {
+    file: options.file ?? null,
+    // 1-based line number in the SOURCE FILE of the first content line of this
+    // YAML block. Defaults to 1 so block-relative and file-absolute numbering
+    // coincide for standalone snippets.
+    startLine:
+      Number.isInteger(options.startLine) && options.startLine > 0
+        ? options.startLine
+        : 1,
+  };
   const lines = yamlText.split(/\r?\n/u);
   const result = {};
   let index = 0;
@@ -449,7 +622,7 @@ export function parsePlanYamlBlock(yamlText) {
       continue;
     }
 
-    const topMatch = /^(?<key>[A-Za-z0-9_]+):(?<rest>.*)$/u.exec(line);
+    const topMatch = matchYamlField(line);
     if (!topMatch?.groups) {
       index++;
       continue;
@@ -458,16 +631,30 @@ export function parsePlanYamlBlock(yamlText) {
     const key = topMatch.groups.key;
     const rest = topMatch.groups.rest.trim();
 
-    if (rest === '' || rest === '>' || rest === '|') {
+    if (isBlockScalarIndicator(rest)) {
+      // Block scalar: the value continues on the following, more-indented lines.
+      // The established contract keeps a bare block-scalar indicator as an
+      // empty list, but the continuation lines MUST be consumed so a bullet
+      // inside the scalar is never mistaken for a (mis-indented) YAML list.
+      result[key] = [];
+      index = skipBlockScalarLines(lines, index + 1, 0);
+      continue;
+    }
+
+    if (rest === '') {
       const next = peekNextNonEmptyLine(lines, index);
       if (next && /^\s*-\s/.test(next.line)) {
-        const parsed = parseListBlock(lines, index + 1, next.indent);
+        const parsed = parseListBlock(lines, index + 1, next.indent, context);
         result[key] = parsed.list;
         index = parsed.nextIndex;
         continue;
       }
-      if (next && next.indent > 0 && /^\s*[A-Za-z0-9_]+:/u.test(next.line)) {
-        const parsed = parseObjectFields(lines, index, 0, true, true);
+      if (
+        next &&
+        next.indent > 0 &&
+        /^\s*[A-Za-z0-9_][^:]*:/u.test(next.line)
+      ) {
+        const parsed = parseObjectFields(lines, index, 0, true, true, context);
         result[key] = parsed.object;
         index = parsed.nextIndex;
         continue;
@@ -532,17 +719,65 @@ function peekNextNonEmptyLine(lines, startIndex) {
 }
 
 /**
+ * Determines whether a scalar value is a YAML block scalar indicator.
+ *
+ * Block scalars (`|`, `>`, `|-`, `>-`, `|+`, `>+`) carry their value on the
+ * following, more-indented lines. Plan packets use them for prose, so the
+ * parser must consume those continuation lines instead of trying to read
+ * them as fields or list items.
+ *
+ * @param {string} value - Raw scalar text (already trimmed).
+ * @returns {boolean} `true` when the value opens a block scalar.
+ */
+function isBlockScalarIndicator(value) {
+  return /^[|>][+-]?$/u.test(value);
+}
+
+/**
+ * Skips the continuation lines of a block scalar.
+ *
+ * @param {string[]} lines - Full line array.
+ * @param {number} startIndex - Index of the first continuation line.
+ * @param {number} baseIndent - Indentation of the key that owns the scalar.
+ * @returns {number} Index of the first line that is not part of the scalar.
+ */
+function skipBlockScalarLines(lines, startIndex, baseIndent) {
+  let index = startIndex;
+  while (index < lines.length) {
+    const rawLine = lines[index];
+    const line = rawLine.trim();
+    if (line === '') {
+      index++;
+      continue;
+    }
+    const indent = rawLine.match(/^\s*/u)?.[0].length ?? 0;
+    if (indent <= baseIndent) {
+      break;
+    }
+    index++;
+  }
+  return index;
+}
+
+/**
  * Parses a YAML list block starting at a line that begins with `- `.
  *
  * Handles both scalar lists and object lists. Nested object fields may
  * themselves contain scalar lists.
  *
+ * A list item whose indentation exceeds the base indentation of the list is a
+ * malformed packet: it raises a {@link PlanYamlParseError} instead of being
+ * folded into the surrounding object (mirrored guard for
+ * `learn-20261109-f9-plan-parser-silent-skip-overindented-id-items`).
+ *
  * @param lines - Full line array.
  * @param startIndex - Index of the first list item line.
  * @param baseIndent - Indentation (spaces) of the `- ` marker.
+ * @param {object} [context] - Parse context carrying the source file path.
  * @returns Object with `list` and the `nextIndex` after the list.
+ * @throws {PlanYamlParseError} When a list item is indented deeper than `baseIndent`.
  */
-function parseListBlock(lines, startIndex, baseIndent) {
+function parseListBlock(lines, startIndex, baseIndent, context = {}) {
   const list = [];
   let index = startIndex;
 
@@ -560,9 +795,48 @@ function parseListBlock(lines, startIndex, baseIndent) {
     }
 
     const remainder = line.slice(line.indexOf('-') + 1).trim();
-    if (/^(?<key>[A-Za-z0-9_]+):(?<rest>.*)$/u.test(remainder)) {
+
+    if (currentIndent > baseIndent) {
+      // An over-indented item that carries STRUCTURED content would be
+      // dropped by the parser, so it fails loudly instead of degrading
+      // silently (learning event
+      // `learn-20261109-f9-plan-parser-silent-skip-overindented-id-items`).
+      // An over-indented PLAIN SCALAR is tolerated: the repo's evidence
+      // blocks carry scalar items at a deeper indent than their siblings,
+      // and losing a scalar does not lose a criterion.
+      if (isStructuredListItem(remainder)) {
+        throw planYamlError(context, {
+          code: 'PLAN_YAML_OVER_INDENTED_LIST_ITEM',
+          message: 'List item is indented deeper than the list it belongs to',
+          line: index + 1,
+          indent: currentIndent,
+          baseIndent,
+          snippet: line,
+        });
+      }
+      index++;
+      continue;
+    }
+
+    if (isBlockScalarIndicator(remainder)) {
+      // A list item whose value is a block scalar: the scalar content follows
+      // on the more-indented lines. Those lines belong to the scalar and must
+      // be consumed here, never read as (mis-indented) list items.
+      list.push([]);
+      index = skipBlockScalarLines(lines, index + 1, baseIndent);
+      continue;
+    }
+
+    if (matchYamlField(remainder)) {
       // Object list item; first key is inline, remaining fields follow.
-      const objectResult = parseObjectFields(lines, index, baseIndent);
+      const objectResult = parseObjectFields(
+        lines,
+        index,
+        baseIndent,
+        false,
+        false,
+        context,
+      );
       list.push(objectResult.object);
       index = objectResult.nextIndex;
       continue;
@@ -570,7 +844,14 @@ function parseListBlock(lines, startIndex, baseIndent) {
 
     if (/^.*:\s*$/.test(remainder)) {
       // Object list item starting on next line.
-      const objectResult = parseObjectFields(lines, index, baseIndent, true);
+      const objectResult = parseObjectFields(
+        lines,
+        index,
+        baseIndent,
+        true,
+        false,
+        context,
+      );
       list.push(objectResult.object);
       index = objectResult.nextIndex;
       continue;
@@ -594,7 +875,9 @@ function parseListBlock(lines, startIndex, baseIndent) {
  * @param emptyDefaultToObject - When true, a bare key with no children parses
  *   as an empty object `{}`; otherwise it parses as an empty array `[]`. This
  *   distinguishes nested object contexts from list contexts.
+ * @param {object} [context] - Parse context carrying the source file path.
  * @returns Object with `object` and `nextIndex` after the object.
+ * @throws {PlanYamlParseError} When a list item is indented deeper than `baseIndent`.
  */
 function parseObjectFields(
   lines,
@@ -602,6 +885,7 @@ function parseObjectFields(
   baseIndent,
   firstFieldOnNextLine = false,
   emptyDefaultToObject = false,
+  context = {},
 ) {
   const object = {};
   let index = firstFieldOnNextLine ? startIndex + 1 : startIndex;
@@ -613,20 +897,30 @@ function parseObjectFields(
       .trim()
       .slice(rawLine.trim().indexOf('-') + 1)
       .trim();
-    const firstMatch = /^(?<key>[A-Za-z0-9_]+):(?<rest>.*)$/u.exec(remainder);
+    const firstMatch = matchYamlField(remainder);
     if (firstMatch?.groups) {
-      const key = firstMatch.groups.key;
+      const key = firstMatch.groups.key.trim();
       const rest = firstMatch.groups.rest.trim();
       if (rest === '') {
         const next = peekNextNonEmptyLine(lines, startIndex);
         if (next && /^\s*-\s/.test(next.line) && next.indent > baseIndent) {
-          const parsed = parseListBlock(lines, next.index, next.indent);
+          const parsed = parseListBlock(
+            lines,
+            next.index,
+            next.indent,
+            context,
+          );
           object[key] = parsed.list;
           index = parsed.nextIndex;
         } else {
           object[key] = [];
           index = startIndex + 1;
         }
+      } else if (isBlockScalarIndicator(rest)) {
+        // Block scalar: consume the indented continuation lines so their
+        // content is never mistaken for a stray or mis-indented list item.
+        object[key] = [];
+        index = skipBlockScalarLines(lines, startIndex + 1, baseIndent);
       } else {
         object[key] = normalizeYamlScalar(rest);
         index = startIndex + 1;
@@ -648,8 +942,27 @@ function parseObjectFields(
       break;
     }
 
-    const fieldMatch = /^(?<key>[A-Za-z0-9_]+):(?<rest>.*)$/u.exec(line);
+    const fieldMatch = matchYamlField(line, { allowHyphen: true });
     if (!fieldMatch?.groups) {
+      // A list item that reaches this field loop is indented deeper than the
+      // object that owns it. Skipping it silently (the pre-F9 behaviour) made
+      // the packet corrupt without any visible symptom, so a STRUCTURED item
+      // fails loudly. A plain scalar is tolerated (see
+      // `isStructuredListItem`).
+      if (/^-\s/.test(line)) {
+        const payload = line.slice(line.indexOf('-') + 1).trim();
+        if (isStructuredListItem(payload)) {
+          throw planYamlError(context, {
+            code: 'PLAN_YAML_OVER_INDENTED_LIST_ITEM',
+            message:
+              'List item is indented deeper than the object that owns it',
+            line: index + 1,
+            indent: currentIndent,
+            baseIndent,
+            snippet: line,
+          });
+        }
+      }
       index++;
       continue;
     }
@@ -658,8 +971,12 @@ function parseObjectFields(
     const rest = fieldMatch.groups.rest.trim();
     if (rest === '') {
       const next = peekNextNonEmptyLine(lines, index);
-      if (next && /^\s*-\s/.test(next.line) && next.indent > currentIndent) {
-        const parsed = parseListBlock(lines, next.index, next.indent);
+      // A YAML sequence may be indented at the SAME level as the mapping key
+      // that owns it (`options:` followed by `- item` at equal indentation),
+      // so the list is recognized at `>=` and not only at `>`. The stricter
+      // comparison used to drop such lists silently.
+      if (next && /^\s*-\s/.test(next.line) && next.indent >= currentIndent) {
+        const parsed = parseListBlock(lines, next.index, next.indent, context);
         object[key] = parsed.list;
         index = parsed.nextIndex;
         continue;
@@ -667,7 +984,7 @@ function parseObjectFields(
       if (
         next &&
         next.indent > currentIndent &&
-        /^\s*[A-Za-z0-9_]+:/u.test(next.line)
+        /^\s*[A-Za-z0-9_][^:]*:/u.test(next.line)
       ) {
         const parsed = parseObjectFields(
           lines,
@@ -675,6 +992,7 @@ function parseObjectFields(
           currentIndent,
           true,
           true,
+          context,
         );
         object[key] = parsed.object;
         index = parsed.nextIndex;
@@ -682,6 +1000,14 @@ function parseObjectFields(
       }
       object[key] = emptyDefaultToObject ? {} : [];
       index++;
+      continue;
+    }
+
+    if (isBlockScalarIndicator(rest)) {
+      // Block scalar: consume the indented continuation lines so their
+      // content is never mistaken for a stray or mis-indented list item.
+      object[key] = normalizeYamlScalar(rest);
+      index = skipBlockScalarLines(lines, index + 1, currentIndent);
       continue;
     }
 
@@ -699,7 +1025,7 @@ function parseObjectFields(
  * @param value - Raw scalar string.
  * @returns Normalized scalar value.
  */
-function normalizeYamlScalar(value) {
+export function normalizeYamlScalar(value) {
   const trimmed = value.trim();
   if (trimmed === '[]') return [];
   if (trimmed === 'true') return true;

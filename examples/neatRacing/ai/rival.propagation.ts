@@ -436,11 +436,9 @@ export function restoreNeatRacingRivalSwapReplacementMinds(
   // (the finite-weights guard re-runs on the decoded plane).
   const crossingWeights = decodeHexAsFloat32Array(payload.crossing.weights);
   assertCrossingWeights(crossingWeights, PAYLOAD_ERROR_PREFIX);
-  return buildReplacementMinds(
-    crossingWeights,
-    payload.mutationSeed,
-    [...payload.propagatedCarIndices],
-  );
+  return buildReplacementMinds(crossingWeights, payload.mutationSeed, [
+    ...payload.propagatedCarIndices,
+  ]);
 }
 
 /**
@@ -580,7 +578,10 @@ function encodeFloat32ArrayAsHex(weights: Float32Array): string {
 function decodeHexAsFloat32Array(hex: string): Float32Array {
   const bytes = new Uint8Array(hex.length / 2);
   for (let byteIndex = 0; byteIndex < bytes.length; byteIndex += 1) {
-    bytes[byteIndex] = parseInt(hex.slice(byteIndex * 2, byteIndex * 2 + 2), 16);
+    bytes[byteIndex] = parseInt(
+      hex.slice(byteIndex * 2, byteIndex * 2 + 2),
+      16,
+    );
   }
   return new Float32Array(bytes.buffer);
 }

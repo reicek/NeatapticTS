@@ -20,6 +20,11 @@ import { exec } from 'node:child_process';
 import { promisify } from 'node:util';
 import { pathToFileURL } from 'node:url';
 import { parseArgs, repoRoot } from '../customization-utils.mjs';
+import {
+  collectPlanYamlBlocks,
+  isActivePlanPacket,
+  lintPlanYamlBlock,
+} from '../plan-yaml-lint.mjs';
 
 const execAsync = promisify(exec);
 
@@ -155,13 +160,57 @@ export async function runPlanCommandLintGate(planPath = DEFAULT_PLAN) {
   }
 
   // Step 3: Validate flags.
-  const issues = [];
+  const commandIssues = [];
   for (const command of allCommands) {
     const issue = await validateCommand(command, context);
     if (issue) {
-      issues.push(issue);
+      commandIssues.push(issue);
     }
   }
+
+  // Step 4: Structural YAML lint of every OPEN plan packet.
+  //
+  // The command lint catches flag drift; this catches a packet whose YAML is
+  // malformed. An over-indented `- id:` item used to be skipped by the parser,
+  // which silently dropped a criterion and corrupted the dispatched packet.
+  // Only open packets are linted: a closed packet is an archival record and
+  // must not fail the gate.
+  const yamlIssues = [];
+  for (const { filePath, text } of planFiles) {
+    for (const block of collectPlanYamlBlocks(text)) {
+      if (!isActivePlanPacket(block.yaml)) continue;
+      // A malformed packet must FAIL THE GATE, never crash it: an
+      // unexpected throw is reported as an issue with the same contract as
+      // a lint finding.
+      let findings = [];
+      try {
+        findings = lintPlanYamlBlock(block.yaml, null, {
+          file: filePath,
+          startLine: block.contentStartLine,
+        });
+      } catch (error) {
+        yamlIssues.push({
+          plan: filePath,
+          source: 'plan-yaml',
+          code: 'PLAN_YAML_LINT_ERROR',
+          line: block.contentStartLine,
+          message: `Plan YAML lint failed: ${error?.message ?? String(error)}`,
+        });
+        continue;
+      }
+      for (const finding of findings) {
+        yamlIssues.push({
+          plan: filePath,
+          source: 'plan-yaml',
+          code: finding.code,
+          line: finding.line,
+          message: finding.message,
+        });
+      }
+    }
+  }
+
+  const issues = [...commandIssues, ...yamlIssues];
 
   const pass = issues.length === 0;
 
@@ -176,13 +225,30 @@ export async function runPlanCommandLintGate(planPath = DEFAULT_PLAN) {
         command: command.raw,
       })),
       issues,
+      yamlIssues,
       warnings: context.warnings,
     },
-    fixHint: pass
-      ? null
-      : `Found ${issues.length} invalid flag(s) in plan validation commands. First: ${issues[0].plan} — ${issues[0].command} (invalid: ${issues[0].invalidFlags.join(', ')})`,
+    fixHint: pass ? null : buildFixHint(issues),
     owner: OWNER,
   };
+}
+
+/**
+ * Builds the gate fix hint from the collected issues.
+ *
+ * Command-flag issues and YAML-lint issues carry different evidence, so the
+ * hint names the offending file and line for a YAML finding.
+ *
+ * @param {Array<object>} issues - Collected gate issues.
+ * @returns {string} Fix hint text.
+ */
+function buildFixHint(issues) {
+  const first = issues[0];
+  if (!first) return null;
+  if (first.source === 'plan-yaml') {
+    return `Found ${issues.length} plan YAML issue(s). First: ${first.plan}:${first.line} — ${first.code}: ${first.message}`;
+  }
+  return `Found ${issues.length} invalid flag(s) in plan validation commands. First: ${first.plan} — ${first.command} (invalid: ${first.invalidFlags.join(', ')})`;
 }
 
 // ---------------------------------------------------------------------------

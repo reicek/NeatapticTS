@@ -80,7 +80,10 @@ export const NEATRACING_DECORATION_P1_DECISION: DecorationRenderDecision = {
  * @returns Positive scale that is larger near the camera and smaller far away.
  */
 export function computeDecorationScale(distance: number): number {
-  const clampedDistance = Math.max(distance, NEATRACING_DECORATION_NEAR_REFERENCE_M / 100);
+  const clampedDistance = Math.max(
+    distance,
+    NEATRACING_DECORATION_NEAR_REFERENCE_M / 100,
+  );
   const rawScale = NEATRACING_DECORATION_NEAR_REFERENCE_M / clampedDistance;
 
   return Math.max(NEATRACING_DECORATION_MIN_SCALE, rawScale);
@@ -217,7 +220,9 @@ export function createDecorationSelectionScratch(
  * @param scratch - Preallocated scratch buffer.
  * @returns Number of visible decorations written to the scratch buffer.
  */
-export function selectVisibleDecorationsForCamera<T extends PositionedDecoration>(
+export function selectVisibleDecorationsForCamera<
+  T extends PositionedDecoration,
+>(
   decorations: readonly T[],
   cameraPosition: readonly [number, number, number],
   cullDistanceM: number,

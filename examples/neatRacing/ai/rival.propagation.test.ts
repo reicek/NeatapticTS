@@ -40,18 +40,49 @@
  *   payload rebuilds the operator's own replacement minds, byte-identical,
  *   without the original options, the tuple seed or any runtime state.
  *
+ * Slice P4-S2-rival-propagation additions (the LIVE lane): the operator
+ * semantics above are re-pinned against PUBLISHED payloads through the REAL
+ * sim-worker session (imported headless after the fake worker scope binds —
+ * the established worker-test pattern): the worker materializes each
+ * rival's spawn mind deterministically from the tuple seed, publishes
+ * `rivalSwaps` on the frames replies exactly at lap/line boundary
+ * crossings, omits the field entirely on untouched frames, and its
+ * serialized ledger compounds through the published payloads (each later
+ * crossing propagates from the mind a previous event replaced). The lvl-2
+ * single-rival rung stays a tested no-op in the live lane and the main
+ * agent (car 0) is never a crossing anchor.
+ *
  * @module
  */
 
 import {
   serializeNeatRacingReproducibilityTuple,
   createNeatRacingXorShift32Stream,
+  deriveNeatRacingCarNetworkChildSeed,
   deriveNeatRacingRivalSwapChildSeed,
   NEATRACING_RIVAL_SWAP_SEED_STRIDE,
   type NeatRacingReproducibilityTuple,
 } from '../workers/simulation-worker/reproducibility.utils';
-import { NEATRACING_TEAM_LAYOUTS } from './observation.assembler';
 import {
+  NEATRACING_TEAM_LAYOUTS,
+  resolveNeatRacingObservationChannelCount,
+} from './observation.assembler';
+import { NEATRACING_NGE_CONTROLLER_OUTPUT_COUNT } from './nge.controller';
+import { stepAutopilotInput } from '../physics/ai.autopilot';
+import type { PhysicsCarState } from '../physics/physics.step.service';
+import { generateTrack } from '../../racing_curriculum/track/track.generator';
+import {
+  NEATRACING_FIXED_TIMESTEP_MS,
+  NEATRACING_MAX_CATCHUP_STEPS_PER_FRAME,
+} from '../host/render-loop.utils';
+import Network from '../../../src/architecture/network';
+import type { NeatRacingFleetControlSeam } from '../workers/simulation-worker/nge.fleet.control';
+import type {
+  NeatRacingSimWorkerFramesPayload,
+  NeatRacingSimWorkerSession,
+} from '../workers/simulation-worker/simulation-worker';
+import {
+  NEATRACING_RIVAL_SWAP_PAYLOAD_KIND,
   NEATRACING_RIVAL_SWAP_WEIGHT_DELTA_MIN,
   NEATRACING_RIVAL_SWAP_WEIGHT_DELTA_MAX,
   propagateNeatRacingRivalWinnerWeights,
@@ -111,9 +142,8 @@ const FIRST_SWAP_MUTATION_SEED = deriveNeatRacingRivalSwapChildSeed(
  * @returns The level's rival car indices, ascending.
  */
 function rivalCarIndicesForLevel(level: number): number[] {
-  const layout = NEATRACING_TEAM_LAYOUTS[
-    level as keyof typeof NEATRACING_TEAM_LAYOUTS
-  ];
+  const layout =
+    NEATRACING_TEAM_LAYOUTS[level as keyof typeof NEATRACING_TEAM_LAYOUTS];
   return layout
     .map((teamId, carIndex) => ({ carIndex, teamId }))
     .filter((slot) => slot.teamId !== 0)
@@ -246,7 +276,7 @@ describe('the lvl-3 propagation (four rivals — the winner re-seeds the others)
     ).toBe(false);
   });
 
-  it('keeps every replacement on the winner\'s flat weight plane', () => {
+  it("keeps every replacement on the winner's flat weight plane", () => {
     const result = propagateNeatRacingRivalWinnerWeights(buildSwapOptions());
     expect(
       result.replacements.every(
@@ -262,11 +292,9 @@ describe('the lvl-3 propagation (four rivals — the winner re-seeds the others)
     );
   });
 
-  it('never mutates the winner\'s serialized weights', () => {
+  it("never mutates the winner's serialized weights", () => {
     const winnerWeights = new Float32Array([1, -0.5, 0.25, 2]);
-    propagateNeatRacingRivalWinnerWeights(
-      buildSwapOptions({ winnerWeights }),
-    );
+    propagateNeatRacingRivalWinnerWeights(buildSwapOptions({ winnerWeights }));
     expect(winnerWeights).toEqual(new Float32Array([1, -0.5, 0.25, 2]));
   });
 });
@@ -274,7 +302,7 @@ describe('the lvl-3 propagation (four rivals — the winner re-seeds the others)
 // ── The main-agent exclusion ─────────────────────────────────────────────────
 
 describe('the main-agent exclusion (the Blocked stop condition is a guard)', () => {
-  it('rejects a rival set that includes the main agent\'s car 0 slot', () => {
+  it("rejects a rival set that includes the main agent's car 0 slot", () => {
     expect(() =>
       propagateNeatRacingRivalWinnerWeights(
         buildSwapOptions({ rivalCarIndices: [0, 1, 2, 3, 4] }),
@@ -371,17 +399,15 @@ describe('the crossing anchor and the recycled weight guards', () => {
 
 describe('the crossing-network snapshot (the runtime replay anchor)', () => {
   it('anchors the crossing rival and the event index', () => {
-    const { snapshot } = propagateNeatRacingRivalWinnerWeights(
-      buildSwapOptions(),
-    );
+    const { snapshot } =
+      propagateNeatRacingRivalWinnerWeights(buildSwapOptions());
     expect(snapshot.crossing.carIndex).toBe(2);
     expect(snapshot.eventIndex).toBe(EVENT_FIRST);
   });
 
   it('carries the derived mutation seed', () => {
-    const { snapshot } = propagateNeatRacingRivalWinnerWeights(
-      buildSwapOptions(),
-    );
+    const { snapshot } =
+      propagateNeatRacingRivalWinnerWeights(buildSwapOptions());
     expect(snapshot.mutationSeed).toBe(FIRST_SWAP_MUTATION_SEED);
   });
 
@@ -399,17 +425,15 @@ describe('the crossing-network snapshot (the runtime replay anchor)', () => {
 
 describe('the swap payload (the opponentSnapshot record — JSON-safe by construction)', () => {
   it('encodes the crossing weights as byte-exact lowercase hex', () => {
-    const { snapshot } = propagateNeatRacingRivalWinnerWeights(
-      buildSwapOptions(),
-    );
+    const { snapshot } =
+      propagateNeatRacingRivalWinnerWeights(buildSwapOptions());
     const payload = toNeatRacingRivalSwapPayload(snapshot);
     expect(payload.crossing.weights).toBe(WINNER_WEIGHTS_HEX);
   });
 
   it('carries the discriminator and the event fields', () => {
-    const { snapshot } = propagateNeatRacingRivalWinnerWeights(
-      buildSwapOptions(),
-    );
+    const { snapshot } =
+      propagateNeatRacingRivalWinnerWeights(buildSwapOptions());
     const payload = toNeatRacingRivalSwapPayload(snapshot);
     expect(payload.kind).toBe('rival-swap');
     expect(payload.eventIndex).toBe(EVENT_FIRST);
@@ -417,9 +441,8 @@ describe('the swap payload (the opponentSnapshot record — JSON-safe by constru
   });
 
   it('survives the ONE base tuple serial path', () => {
-    const { snapshot } = propagateNeatRacingRivalWinnerWeights(
-      buildSwapOptions(),
-    );
+    const { snapshot } =
+      propagateNeatRacingRivalWinnerWeights(buildSwapOptions());
     const payload = toNeatRacingRivalSwapPayload(snapshot);
     const tuple = buildBaseTupleFixture(payload);
     const parsed = JSON.parse(
@@ -429,9 +452,8 @@ describe('the swap payload (the opponentSnapshot record — JSON-safe by constru
   });
 
   it('rejects a payload whose weights field carries a typed array', () => {
-    const { snapshot } = propagateNeatRacingRivalWinnerWeights(
-      buildSwapOptions(),
-    );
+    const { snapshot } =
+      propagateNeatRacingRivalWinnerWeights(buildSwapOptions());
     const payload = toNeatRacingRivalSwapPayload(snapshot);
     const tampered = {
       ...payload,
@@ -450,9 +472,8 @@ describe('the swap payload (the opponentSnapshot record — JSON-safe by constru
 
 describe('the replay path — swap events rebuild from the tuple alone', () => {
   it('rebuilds the replacements from the payload alone', () => {
-    const { snapshot, replacements } = propagateNeatRacingRivalWinnerWeights(
-      buildSwapOptions(),
-    );
+    const { snapshot, replacements } =
+      propagateNeatRacingRivalWinnerWeights(buildSwapOptions());
     const payload = toNeatRacingRivalSwapPayload(snapshot);
     expect(restoreNeatRacingRivalSwapReplacementMinds(payload)).toEqual(
       replacements,
@@ -460,9 +481,8 @@ describe('the replay path — swap events rebuild from the tuple alone', () => {
   });
 
   it('is replay-exact across repeated restores', () => {
-    const { snapshot } = propagateNeatRacingRivalWinnerWeights(
-      buildSwapOptions(),
-    );
+    const { snapshot } =
+      propagateNeatRacingRivalWinnerWeights(buildSwapOptions());
     const payload = toNeatRacingRivalSwapPayload(snapshot);
     const firstRestore = restoreNeatRacingRivalSwapReplacementMinds(payload);
     const secondRestore = restoreNeatRacingRivalSwapReplacementMinds(payload);
@@ -480,7 +500,8 @@ describe('the replay path — swap events rebuild from the tuple alone', () => {
   });
 
   it('different events nudge different minds', () => {
-    const firstEvent = propagateNeatRacingRivalWinnerWeights(buildSwapOptions());
+    const firstEvent =
+      propagateNeatRacingRivalWinnerWeights(buildSwapOptions());
     const secondEvent = propagateNeatRacingRivalWinnerWeights(
       buildSwapOptions({ eventIndex: EVENT_SECOND }),
     );
@@ -488,9 +509,8 @@ describe('the replay path — swap events rebuild from the tuple alone', () => {
   });
 
   it('round-trips through the canonical serial (serialize -> parse -> restore)', () => {
-    const { snapshot, replacements } = propagateNeatRacingRivalWinnerWeights(
-      buildSwapOptions(),
-    );
+    const { snapshot, replacements } =
+      propagateNeatRacingRivalWinnerWeights(buildSwapOptions());
     const payload = toNeatRacingRivalSwapPayload(snapshot);
     const parsed = JSON.parse(
       serializeNeatRacingRivalSwapPayload(payload),
@@ -505,9 +525,8 @@ describe('the replay path — swap events rebuild from the tuple alone', () => {
 
 describe('the canonical payload serial (byte-exact replay anchor)', () => {
   it('is byte-stable across repeated serializations', () => {
-    const { snapshot } = propagateNeatRacingRivalWinnerWeights(
-      buildSwapOptions(),
-    );
+    const { snapshot } =
+      propagateNeatRacingRivalWinnerWeights(buildSwapOptions());
     const payload = toNeatRacingRivalSwapPayload(snapshot);
     expect(serializeNeatRacingRivalSwapPayload(payload)).toBe(
       serializeNeatRacingRivalSwapPayload(payload),
@@ -515,9 +534,8 @@ describe('the canonical payload serial (byte-exact replay anchor)', () => {
   });
 
   it('is key-order invariant', () => {
-    const { snapshot } = propagateNeatRacingRivalWinnerWeights(
-      buildSwapOptions(),
-    );
+    const { snapshot } =
+      propagateNeatRacingRivalWinnerWeights(buildSwapOptions());
     const payload = toNeatRacingRivalSwapPayload(snapshot);
     const handShuffled = {
       propagatedCarIndices: payload.propagatedCarIndices,
@@ -535,9 +553,8 @@ describe('the canonical payload serial (byte-exact replay anchor)', () => {
   });
 
   it('embeds the canonical sorted shape with the hex weights', () => {
-    const { snapshot } = propagateNeatRacingRivalWinnerWeights(
-      buildSwapOptions(),
-    );
+    const { snapshot } =
+      propagateNeatRacingRivalWinnerWeights(buildSwapOptions());
     const payload = toNeatRacingRivalSwapPayload(snapshot);
     const serial = serializeNeatRacingRivalSwapPayload(payload);
     expect(serial).toContain('"kind":"rival-swap"');
@@ -546,9 +563,8 @@ describe('the canonical payload serial (byte-exact replay anchor)', () => {
   });
 
   it('rejects a NaN mutation seed', () => {
-    const { snapshot } = propagateNeatRacingRivalWinnerWeights(
-      buildSwapOptions(),
-    );
+    const { snapshot } =
+      propagateNeatRacingRivalWinnerWeights(buildSwapOptions());
     const payload = toNeatRacingRivalSwapPayload(snapshot);
     const tampered = { ...payload, mutationSeed: Number.NaN };
     expect(() => serializeNeatRacingRivalSwapPayload(tampered)).toThrow(
@@ -557,9 +573,8 @@ describe('the canonical payload serial (byte-exact replay anchor)', () => {
   });
 
   it('rejects an uppercase-hex weights field', () => {
-    const { snapshot } = propagateNeatRacingRivalWinnerWeights(
-      buildSwapOptions(),
-    );
+    const { snapshot } =
+      propagateNeatRacingRivalWinnerWeights(buildSwapOptions());
     const payload = toNeatRacingRivalSwapPayload(snapshot);
     const tampered = {
       ...payload,
@@ -574,9 +589,8 @@ describe('the canonical payload serial (byte-exact replay anchor)', () => {
   });
 
   it('rejects non-ascending propagated indices', () => {
-    const { snapshot } = propagateNeatRacingRivalWinnerWeights(
-      buildSwapOptions(),
-    );
+    const { snapshot } =
+      propagateNeatRacingRivalWinnerWeights(buildSwapOptions());
     const payload = toNeatRacingRivalSwapPayload(snapshot);
     const tampered = { ...payload, propagatedCarIndices: [3, 1, 4] };
     expect(() => serializeNeatRacingRivalSwapPayload(tampered)).toThrow(
@@ -589,9 +603,8 @@ describe('the canonical payload serial (byte-exact replay anchor)', () => {
 
 describe('the runtime snapshot guard (toNeatRacingRivalSwapPayload rejections)', () => {
   it('rejects a fractional or negative event index', () => {
-    const { snapshot } = propagateNeatRacingRivalWinnerWeights(
-      buildSwapOptions(),
-    );
+    const { snapshot } =
+      propagateNeatRacingRivalWinnerWeights(buildSwapOptions());
     expect(() =>
       toNeatRacingRivalSwapPayload({
         ...snapshot,
@@ -607,9 +620,8 @@ describe('the runtime snapshot guard (toNeatRacingRivalSwapPayload rejections)',
   });
 
   it('rejects a mutation seed outside the unsigned 32-bit seed range', () => {
-    const { snapshot } = propagateNeatRacingRivalWinnerWeights(
-      buildSwapOptions(),
-    );
+    const { snapshot } =
+      propagateNeatRacingRivalWinnerWeights(buildSwapOptions());
     expect(() =>
       toNeatRacingRivalSwapPayload({
         ...snapshot,
@@ -619,9 +631,8 @@ describe('the runtime snapshot guard (toNeatRacingRivalSwapPayload rejections)',
   });
 
   it('rejects a main-agent-slot crossing index', () => {
-    const { snapshot } = propagateNeatRacingRivalWinnerWeights(
-      buildSwapOptions(),
-    );
+    const { snapshot } =
+      propagateNeatRacingRivalWinnerWeights(buildSwapOptions());
     expect(() =>
       toNeatRacingRivalSwapPayload({
         ...snapshot,
@@ -631,9 +642,8 @@ describe('the runtime snapshot guard (toNeatRacingRivalSwapPayload rejections)',
   });
 
   it('rejects empty or non-finite crossing weights', () => {
-    const { snapshot } = propagateNeatRacingRivalWinnerWeights(
-      buildSwapOptions(),
-    );
+    const { snapshot } =
+      propagateNeatRacingRivalWinnerWeights(buildSwapOptions());
     expect(() =>
       toNeatRacingRivalSwapPayload({
         ...snapshot,
@@ -652,9 +662,8 @@ describe('the runtime snapshot guard (toNeatRacingRivalSwapPayload rejections)',
   });
 
   it('rejects non-ascending propagated indices', () => {
-    const { snapshot } = propagateNeatRacingRivalWinnerWeights(
-      buildSwapOptions(),
-    );
+    const { snapshot } =
+      propagateNeatRacingRivalWinnerWeights(buildSwapOptions());
     expect(() =>
       toNeatRacingRivalSwapPayload({
         ...snapshot,
@@ -664,9 +673,8 @@ describe('the runtime snapshot guard (toNeatRacingRivalSwapPayload rejections)',
   });
 
   it('rejects propagated indices carrying the crossing rival', () => {
-    const { snapshot } = propagateNeatRacingRivalWinnerWeights(
-      buildSwapOptions(),
-    );
+    const { snapshot } =
+      propagateNeatRacingRivalWinnerWeights(buildSwapOptions());
     expect(() =>
       toNeatRacingRivalSwapPayload({
         ...snapshot,
@@ -676,9 +684,8 @@ describe('the runtime snapshot guard (toNeatRacingRivalSwapPayload rejections)',
   });
 
   it('rejects a snapshot record missing its crossing snapshot', () => {
-    const { snapshot } = propagateNeatRacingRivalWinnerWeights(
-      buildSwapOptions(),
-    );
+    const { snapshot } =
+      propagateNeatRacingRivalWinnerWeights(buildSwapOptions());
     expect(() =>
       toNeatRacingRivalSwapPayload({
         ...snapshot,
@@ -688,9 +695,8 @@ describe('the runtime snapshot guard (toNeatRacingRivalSwapPayload rejections)',
   });
 
   it('rejects a payload record missing its crossing snapshot', () => {
-    const { snapshot } = propagateNeatRacingRivalWinnerWeights(
-      buildSwapOptions(),
-    );
+    const { snapshot } =
+      propagateNeatRacingRivalWinnerWeights(buildSwapOptions());
     const payload = toNeatRacingRivalSwapPayload(snapshot);
     expect(() =>
       serializeNeatRacingRivalSwapPayload({
@@ -705,9 +711,8 @@ describe('the runtime snapshot guard (toNeatRacingRivalSwapPayload rejections)',
 
 describe('the bounded-nudge invariants (the E4 small-delta law)', () => {
   it('nudges every weight within the bounded delta range', () => {
-    const { replacements } = propagateNeatRacingRivalWinnerWeights(
-      buildSwapOptions(),
-    );
+    const { replacements } =
+      propagateNeatRacingRivalWinnerWeights(buildSwapOptions());
     const allWithinBounds = replacements.every((mind) =>
       mind.weights.every(
         (weight, index) =>
@@ -726,19 +731,456 @@ describe('the bounded-nudge invariants (the E4 small-delta law)', () => {
   });
 
   it('rejects a NaN-decoding hex payload on both public payload entries', () => {
-    const { snapshot } = propagateNeatRacingRivalWinnerWeights(
-      buildSwapOptions(),
-    );
+    const { snapshot } =
+      propagateNeatRacingRivalWinnerWeights(buildSwapOptions());
     const payload = toNeatRacingRivalSwapPayload(snapshot);
     const nanHexPayload = {
       ...payload,
       crossing: { ...payload.crossing, weights: '0000c07f' },
     } as unknown as NeatRacingRivalSwapPayload;
-    expect(() =>
-      serializeNeatRacingRivalSwapPayload(nanHexPayload),
-    ).toThrow(RangeError);
+    expect(() => serializeNeatRacingRivalSwapPayload(nanHexPayload)).toThrow(
+      RangeError,
+    );
     expect(() =>
       restoreNeatRacingRivalSwapReplacementMinds(nanHexPayload),
     ).toThrow(RangeError);
+  });
+});
+
+// ── The LIVE lane (slice P4-S2-rival-propagation, AC-032) ────────────────────
+//
+// The describes above pin the OPERATOR's semantics in isolation; this section
+// pins the LIVE worker-plane integration the served `ai` mode drives: a REAL
+// sim-worker session (imported headless after the fake worker scope binds —
+// the established worker-test pattern; the node test environment has no
+// `self` and the worker module boots its inbox adapter at import time) runs
+// the served track geometry with the REAL autopilot driving every rival, and
+// the frames replies must publish the rival-swap events exactly the way the
+// serialized-plane operator defines them:
+//
+// - the worker materializes each rival's SPAWN mind from the tuple seed (the
+//   same deterministic reconstruction the adaptation plane uses: a network
+//   of the level's observation channel count and the controller output
+//   count, seeded from the per-car child seed), serialized positionally;
+// - a rival crossing the lap/line boundary resolves ONE swap event whose
+//   numbering, event seed, draw order and replacement minds follow the
+//   operator exactly;
+// - the published payload IS the section 9.7 replay anchor (JSON-safe hex
+//   weights, plain numbers) and the worker's serialized ledger COMPOUNDS
+//   through it: each later crossing propagates from the mind a previous
+//   event replaced;
+// - the lvl-2 single-rival rung stays a tested no-op in the live lane and
+//   the main agent (car 0) is never a crossing anchor;
+// - frames with NO rival crossing omit the `rivalSwaps` field entirely (the
+//   byte-shape mandate: untouched frames keep their exact prior shape).
+//
+// Educational note — the drive pacing: this lane runs the REAL render-loop
+// pacing (the RED home's rival drive MOCKS `advanceFrameSteps` to release a
+// flat 8 ticks per frame, this lane does not). The real `advanceFrameSteps`
+// caps catch-up at `NEATRACING_MAX_CATCHUP_STEPS_PER_FRAME` ticks per drawn
+// frame, so the drive steps exactly one ceiling-full of fixed ticks per
+// paced frame: a frame step of four 60 Hz timesteps releases exactly four
+// ticks, deterministically, with no accumulator drift.
+
+/** Live-lane drive pace: the real render-loop catch-up ceiling per frame. */
+const LIVE_LANE_TICKS_PER_FRAME = NEATRACING_MAX_CATCHUP_STEPS_PER_FRAME;
+
+/**
+ * Live-lane frame step in ms: one ceiling-full of fixed 60 Hz timesteps per
+ * paced frame (deterministically releases exactly four ticks each frame).
+ */
+const LIVE_LANE_FRAME_STEP_MS =
+  NEATRACING_FIXED_TIMESTEP_MS * LIVE_LANE_TICKS_PER_FRAME;
+
+/**
+ * Live-lane drive budget in frames: comfortably more than one autopilot lap
+ * of the served track (the served 'medium' seed-42 geometry closes a lap in
+ * roughly 19 s — about 1,150 fixed ticks — so 900 paced frames of four
+ * ticks each ≈ three full laps, leaving a wide margin while keeping the
+ * drive bounded).
+ */
+const LIVE_LANE_FRAME_BUDGET = 900;
+
+/** The served-track fixture seed (the autopilot suite's driven geometry). */
+const LIVE_LANE_TRACK_SEED = 42;
+
+/** The served layout version of the live-lane fixture. */
+const LIVE_LANE_LAYOUT_VERSION = 1;
+
+/**
+ * The served size bucket of the live-lane fixture (the served demo boot's
+ * own `NEATRACING_DEMO_TRACK_GENERATION` law: seed 42, layout version 1,
+ * size bucket 'large' — `examples/neatRacing/browser-entry/browser-entry.ts`).
+ */
+const LIVE_LANE_SIZE_BUCKET = 'large';
+
+/** The live-lane fleet size at the lvl-3 rung (car 0 plus four rivals). */
+const LIVE_LANE_AGENT_COUNT_LVL_THIRD = 5;
+
+/** The live-lane fleet size at the lvl-2 rung (car 0 plus one rival). */
+const LIVE_LANE_AGENT_COUNT_LVL_SECOND = 2;
+
+/** The fake worker scope the sim-worker module binds its inbox adapter onto. */
+const liveLaneSimWorkerScope: {
+  onmessage: unknown;
+  postMessage: (message: unknown) => void;
+} = {
+  onmessage: undefined,
+  postMessage: (): void => {},
+};
+
+/** The REAL `self` property descriptor, captured before the fake binds. */
+const liveLaneOriginalSelfDescriptor = Object.getOwnPropertyDescriptor(
+  globalThis,
+  'self',
+);
+
+// The node test environment has no `self` and the sim-worker module boots its
+// inbox adapter (`self.onmessage`) at import time, so the fake scope binds at
+// module scope — BEFORE the dynamic import below can ever run.
+Object.defineProperty(globalThis, 'self', {
+  configurable: true,
+  value: liveLaneSimWorkerScope,
+});
+
+afterAll(() => {
+  if (liveLaneOriginalSelfDescriptor === undefined) {
+    Object.defineProperty(globalThis, 'self', {
+      configurable: true,
+      value: undefined,
+    });
+  } else {
+    Object.defineProperty(globalThis, 'self', liveLaneOriginalSelfDescriptor);
+  }
+});
+
+/**
+ * The sim-worker module, dynamically imported AFTER the fake scope binds
+ * (the import boots the inbox adapter, so it must never be a static import).
+ */
+let liveLaneSimWorkerModule: typeof import('../workers/simulation-worker/simulation-worker');
+
+beforeAll(async () => {
+  liveLaneSimWorkerModule =
+    await import('../workers/simulation-worker/simulation-worker');
+});
+
+// The served-track fixture: the exact generated geometry the autopilot suite
+// drives (a fully closed, self-validating loop), shared by every live-lane
+// boot below.
+const liveLaneTrackSpec = generateTrack({
+  seed: LIVE_LANE_TRACK_SEED,
+  layoutVersion: LIVE_LANE_LAYOUT_VERSION,
+  sizeBucket: LIVE_LANE_SIZE_BUCKET,
+});
+
+/**
+ * The live-lane controller double: the REAL autopilot drives every car it is
+ * handed (the same `stepAutopilotInput` seam the RED home's rival drive uses
+ * — and the worker's fleet-control seam clamps and derives the turn rate).
+ *
+ * Car 0 stays on the human lane (the worker samples D5 input for it only in
+ * `manual` mode and boots `ai` by default), so car 0 is parked at its spawn
+ * pose and can never become a crossing anchor: the live lane inherits the
+ * main-agent independence for free.
+ */
+function buildLiveLaneControllerDouble(): NeatRacingFleetControlSeam {
+  return {
+    computeControl(fleet: readonly PhysicsCarState[], carIndex: number) {
+      return stepAutopilotInput(
+        fleet[carIndex],
+        liveLaneTrackSpec.splineSamples,
+      );
+    },
+  };
+}
+
+/**
+ * Boots one live-lane session from the served fixture (the init reply is
+ * asserted to be the single `ready` acknowledgement).
+ *
+ * @param level - The served opponent-snapshot level (the rival rung).
+ * @param agentCount - The fleet size the session boots with.
+ * @returns The booted sim-worker session.
+ */
+function bootLiveLaneSession(
+  level: 1 | 2 | 3,
+  agentCount: number,
+): NeatRacingSimWorkerSession {
+  const session = liveLaneSimWorkerModule.createSimWorkerSession();
+  const responses = session.handleRequest({
+    type: 'init',
+    payload: {
+      seed: LIVE_LANE_TRACK_SEED,
+      agentCount,
+      packSchemaVersion: '1.0.0',
+      opponentSnapshot: { level, carCount: agentCount },
+      trackId: 'fixture-live-lane-served-track',
+      featureFlags: undefined,
+      trackSpec: liveLaneTrackSpec,
+      raceMode: 'ai',
+      controller: buildLiveLaneControllerDouble(),
+    },
+  });
+  if (responses.length !== 1 || responses[0].type !== 'ready') {
+    throw new Error('live lane: the served boot did not acknowledge ready');
+  }
+  return session;
+}
+
+/**
+ * Drives one live-lane session frame by frame, harvesting every frames
+ * reply. The FIRST paced frame (t = 0) is the render-loop anchor (delta 0,
+ * zero ticks — exactly like the real loop's first drawn frame), then every
+ * paced frame releases exactly one ceiling-full of fixed ticks.
+ *
+ * @param session - The booted sim-worker session.
+ * @param stop - Called with the swap-event total so far after each frame;
+ *   when it returns true the drive stops (the budget never runs past).
+ * @returns Every frames payload observed during the drive, in order.
+ */
+function driveLiveLaneFrames(
+  session: NeatRacingSimWorkerSession,
+  stop: (swapsSoFar: number) => boolean,
+): NeatRacingSimWorkerFramesPayload[] {
+  const payloads: NeatRacingSimWorkerFramesPayload[] = [];
+  let swapsSoFar = 0;
+  for (
+    let frameIndex = 0;
+    frameIndex < LIVE_LANE_FRAME_BUDGET;
+    frameIndex += 1
+  ) {
+    const responses = session.handleRequest({
+      type: 'frame',
+      payload: { timestampMs: frameIndex * LIVE_LANE_FRAME_STEP_MS },
+    });
+    if (responses.length !== 1 || responses[0].type !== 'frames') {
+      throw new Error(
+        `live lane: unexpected reply at frame ${frameIndex} (${responses.length} replies)`,
+      );
+    }
+    const payload = (
+      responses[0] as { payload: NeatRacingSimWorkerFramesPayload }
+    ).payload;
+    payloads.push(payload);
+    swapsSoFar += payload.rivalSwaps?.length ?? 0;
+    if (stop(swapsSoFar)) {
+      break;
+    }
+  }
+  return payloads;
+}
+
+/** Collects every published rival-swap event across a live drive. */
+function collectLiveLaneSwaps(
+  payloads: readonly NeatRacingSimWorkerFramesPayload[],
+): NeatRacingRivalSwapPayload[] {
+  return payloads.flatMap((payload) => payload.rivalSwaps ?? []);
+}
+
+/** Serializes one network positionally: connection i's weight at slot i. */
+function serializeLiveLaneNetworkWeights(network: Network): Float32Array {
+  const weights = new Float32Array(network.connections.length);
+  for (let index = 0; index < network.connections.length; index += 1) {
+    weights[index] = network.connections[index].weight;
+  }
+  return weights;
+}
+
+/**
+ * Materializes one rival's spawn mind exactly the way the worker's serialized
+ * ledger does: a fresh network of the level's observation channel count and
+ * the controller output count, seeded from the per-car child seed of the
+ * tuple seed, serialized positionally (the CarGenome.serialize() plane).
+ */
+function materializeLiveLaneSpawnMind(
+  carIndex: number,
+  level: 1 | 2 | 3,
+  seed: number,
+): Float32Array {
+  const network = new Network(
+    resolveNeatRacingObservationChannelCount(level),
+    NEATRACING_NGE_CONTROLLER_OUTPUT_COUNT,
+    { seed: deriveNeatRacingCarNetworkChildSeed(seed, carIndex) },
+  );
+  return serializeLiveLaneNetworkWeights(network);
+}
+
+/** Re-encodes serialized weights as the payload's byte-exact lowercase hex. */
+function hexOfSerializedWeights(weights: Float32Array): string {
+  return Array.from(
+    new Uint8Array(weights.buffer, weights.byteOffset, weights.byteLength),
+    (byte) => byte.toString(16).padStart(2, '0'),
+  ).join('');
+}
+
+/** Decodes the payload's byte-exact lowercase hex weights (native byte order). */
+function decodeLiveLaneHexWeights(hex: string): Float32Array {
+  const byteLength = hex.length / 2;
+  if (byteLength % 4 !== 0) {
+    throw new Error('live lane: hex weights do not decode to float32 words');
+  }
+  const bytes = new Uint8Array(byteLength);
+  for (let byteIndex = 0; byteIndex < byteLength; byteIndex += 1) {
+    bytes[byteIndex] = parseInt(
+      hex.slice(byteIndex * 2, byteIndex * 2 + 2),
+      16,
+    );
+  }
+  return new Float32Array(bytes.buffer);
+}
+
+/**
+ * Asserts that the published swap events follow the operator EXACTLY: the
+ * event numbering is contiguous from zero, every event seed is the section
+ * 9.7.2 rival-swap row, every crossing anchor is a rival's serialized LEDGER
+ * mind (its spawn mind until a previous event replaces it), every propagated
+ * list matches the operator's own replacements, every payload survives the
+ * canonical serial, and the worker's ledger compounds through the payloads.
+ */
+function assertLiveLaneSwapsFollowTheOperator(
+  swaps: readonly NeatRacingRivalSwapPayload[],
+  rivals: readonly number[],
+  level: 1 | 2 | 3,
+  seed: number,
+): void {
+  // The mirrored ledger: each rival's serialized mind, evolving exactly by
+  // the operator's semantics (spawn materialization, then replacements).
+  const ledger = new Map<number, Float32Array>();
+  for (const rivalCarIndex of rivals) {
+    ledger.set(
+      rivalCarIndex,
+      materializeLiveLaneSpawnMind(rivalCarIndex, level, seed),
+    );
+  }
+
+  for (let swapIndex = 0; swapIndex < swaps.length; swapIndex += 1) {
+    const payload = swaps[swapIndex];
+    // The event numbering is contiguous from zero (the per-round counter).
+    expect(payload.eventIndex).toBe(swapIndex);
+    // The event seed is the rival-swap row of the tuple (seed stride 2).
+    expect(payload.mutationSeed).toBe(
+      deriveNeatRacingRivalSwapChildSeed(seed, payload.eventIndex),
+    );
+    // The payload kind and the JSON-safe publication law (RED-P4-6).
+    expect(payload.kind).toBe(NEATRACING_RIVAL_SWAP_PAYLOAD_KIND);
+    expect(serializeNeatRacingRivalSwapPayload(payload).length).toBeGreaterThan(
+      0,
+    );
+    // The main agent is never a crossing anchor in the live lane.
+    expect(payload.crossing.carIndex).toBeGreaterThan(0);
+
+    // The crossing weights ARE the rival's serialized ledger mind at the
+    // moment it crossed (the compounding law).
+    const expectedLedgerMind = ledger.get(payload.crossing.carIndex);
+    if (expectedLedgerMind === undefined) {
+      throw new Error(
+        `live lane: crossing rival ${payload.crossing.carIndex} has no ledger mind`,
+      );
+    }
+    const crossingWeights = decodeLiveLaneHexWeights(payload.crossing.weights);
+    expect(hexOfSerializedWeights(crossingWeights)).toBe(
+      hexOfSerializedWeights(expectedLedgerMind),
+    );
+
+    // The event resolves EXACTLY once through the operator over the
+    // crossing's serialized weights: the same draw order and seeds, so the
+    // published propagated list and mutation seed match the re-resolution.
+    const { snapshot, replacements } = propagateNeatRacingRivalWinnerWeights({
+      rivalCarIndices: [...rivals],
+      crossingCarIndex: payload.crossing.carIndex,
+      winnerWeights: crossingWeights,
+      tupleSeed: seed,
+      eventIndex: payload.eventIndex,
+      atLapLineBoundary: true,
+    });
+    expect(payload.mutationSeed).toBe(snapshot.mutationSeed);
+    expect([...payload.propagatedCarIndices]).toEqual([
+      ...snapshot.propagatedCarIndices,
+    ]);
+
+    // The ledger compounding: this event's replacement minds are what the
+    // targets' NEXT crossings carry.
+    for (const replacement of replacements) {
+      ledger.set(replacement.carIndex, replacement.weights);
+    }
+  }
+}
+
+describe('the LIVE lane — the worker-plane rival swap at the lap/line boundary (P4-S2, AC-032)', () => {
+  it('publishes operator-exact rival-swap payloads when the real autopilot drives the lvl-3 four-rival round past the lap line', () => {
+    const rivals = rivalCarIndicesForLevel(LEVEL_THIRD);
+    const session = bootLiveLaneSession(
+      LEVEL_THIRD,
+      LIVE_LANE_AGENT_COUNT_LVL_THIRD,
+    );
+
+    // Act: drive the served round until the FOUR rivals have each crossed
+    // once (a full event round) or the frame budget is exhausted.
+    const payloads = driveLiveLaneFrames(
+      session,
+      (swapsSoFar) => swapsSoFar >= rivals.length,
+    );
+    const swaps = collectLiveLaneSwaps(payloads);
+
+    // The drive is not VACUOUS: the real autopilot really closes the lap and
+    // all four rivals really cross within the budget.
+    expect(swaps.length).toBeGreaterThanOrEqual(rivals.length);
+
+    // Untouched frames keep their exact prior shape: before the first
+    // crossing the frames payload carries NO `rivalSwaps` field at all
+    // (frame 1 is long before the lap line).
+    expect(payloads[1]).not.toHaveProperty('rivalSwaps');
+
+    // Every published event follows the operator exactly (numbering, seeds,
+    // spawn-mind materialization, ledger compounding, JSON safety) and the
+    // main agent is never a crossing anchor.
+    assertLiveLaneSwapsFollowTheOperator(
+      swaps,
+      rivals,
+      LEVEL_THIRD,
+      LIVE_LANE_TRACK_SEED,
+    );
+  });
+
+  it('stays a tested no-op at the lvl-2 rung in the live lane: the lone rival crosses and nobody is replaced', () => {
+    const rivals = rivalCarIndicesForLevel(LEVEL_SECOND);
+    const session = bootLiveLaneSession(
+      LEVEL_SECOND,
+      LIVE_LANE_AGENT_COUNT_LVL_SECOND,
+    );
+
+    // Act: drive until the lone rival crosses (or the budget is exhausted).
+    const payloads = driveLiveLaneFrames(
+      session,
+      (swapsSoFar) => swapsSoFar >= 1,
+    );
+    const swaps = collectLiveLaneSwaps(payloads);
+
+    // The drive is not vacuous: the lone rival really crossed.
+    expect(swaps.length).toBeGreaterThanOrEqual(1);
+
+    // The lvl-2 no-op in the live lane: empty propagated lists, and the lone
+    // rival's ledger mind is never replaced — its crossing hex IS its spawn
+    // mind at every event it anchors.
+    const spawnMind = materializeLiveLaneSpawnMind(
+      rivals[0],
+      LEVEL_SECOND,
+      LIVE_LANE_TRACK_SEED,
+    );
+    for (const payload of swaps) {
+      expect(payload.propagatedCarIndices).toEqual([]);
+      expect(payload.crossing.carIndex).toBe(rivals[0]);
+      expect(payload.crossing.weights).toBe(hexOfSerializedWeights(spawnMind));
+    }
+
+    // The full operator mirror still holds for the no-op events (numbering,
+    // seeds, the zero-replacement resolution, JSON safety).
+    assertLiveLaneSwapsFollowTheOperator(
+      swaps,
+      rivals,
+      LEVEL_SECOND,
+      LIVE_LANE_TRACK_SEED,
+    );
   });
 });

@@ -23,6 +23,7 @@ import {
   parsePlanYamlBlock,
   repoRoot,
 } from '../customization-utils.mjs';
+import { lintPlanYamlBlock } from '../plan-yaml-lint.mjs';
 
 const VALID_GOAL_VALUES = new Set([
   'planning',
@@ -101,9 +102,16 @@ async function runStepPacketGate() {
       if (statusValue !== 'WIP') continue;
 
       const blockId = `${planFile}:yaml@${match.index}`;
+      // 1-based line of the first YAML content line, so a failure names a
+      // location a human can open in the plan file.
+      const contentStartLine =
+        text.slice(0, match.index).split(/\r?\n/u).length + 1;
       let metadata;
       try {
-        metadata = parsePlanYamlBlock(rawBlock);
+        metadata = parsePlanYamlBlock(rawBlock, {
+          file: planFile,
+          startLine: contentStartLine,
+        });
       } catch (error) {
         violations.push({
           blockId,
@@ -113,6 +121,22 @@ async function runStepPacketGate() {
       }
 
       blocksChecked.push(blockId);
+
+      // The parse can succeed while the packet is still wrong: an over-indented
+      // `- id:` item used to be skipped, which silently dropped a criterion.
+      // The lint compares the raw text against the parsed result so a packet
+      // that lost content cannot pass the gate.
+      for (const finding of lintPlanYamlBlock(rawBlock, metadata, {
+        file: planFile,
+        startLine: contentStartLine,
+      })) {
+        violations.push({
+          blockId,
+          lintCode: finding.code,
+          line: finding.line,
+          message: finding.message,
+        });
+      }
 
       if (isLegacyBlock(metadata)) {
         violations.push({
@@ -168,6 +192,9 @@ async function runStepPacketGate() {
               violation.invalidField,
               violation.deprecatedField,
               violation.parseError,
+              violation.lintCode
+                ? `${violation.lintCode} at ${violation.blockId}:${violation.line}`
+                : null,
               violation.message,
             ]
               .filter(Boolean)
@@ -178,9 +205,27 @@ async function runStepPacketGate() {
   };
 }
 
+/**
+ * Detects a green-light marker in a plan's `## Latest validation evidence`
+ * section.
+ *
+ * The section matcher MUST NOT carry the `m` (multiline) flag. Under `m`, the
+ * lookahead's `$` matches at EVERY line end, so the lazy capture
+ * `([\s\S]*?)` degenerates to the section's FIRST line only and a green-light
+ * marker recorded further down the section is never seen. That is a FALSE
+ * NEGATIVE: the marker IS in the section, yet the gate reports the plan as
+ * un-verified.
+ *
+ * The non-multiline capture below mirrors `plan-readiness.gate.mjs` and spans
+ * the WHOLE section, stopping at the next `## ` heading or the end of the
+ * document.
+ *
+ * @param {string} text - Raw plan Markdown text.
+ * @returns {boolean} True when the section records a green light.
+ */
 function checkPlanGreenLight(text) {
   const sectionMatch = text.match(
-    /^## Latest validation evidence\s*\r?\n([\s\S]*?)(?=\r?\n## |$)/m,
+    /(?:^|\n)## Latest validation evidence\s*\r?\n([\s\S]*?)(?=\r?\n## |$)/,
   );
   if (!sectionMatch) return false;
 

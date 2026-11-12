@@ -338,10 +338,7 @@ function multiplyMat4(
     const b3 = b[column * 4 + 3];
     for (let row = 0; row < 4; row += 1) {
       out[column * 4 + row] =
-        a[row] * b0 +
-        a[4 + row] * b1 +
-        a[8 + row] * b2 +
-        a[12 + row] * b3;
+        a[row] * b0 + a[4 + row] * b1 + a[8 + row] * b2 + a[12 + row] * b3;
     }
   }
 }
@@ -668,9 +665,7 @@ function frontWheelSteerYawRad(harness: MockGlHarness): number {
   const bodyYawRad = yawFromModelColumn(matrices[0]);
   const frontMount = resolveVoxelWheelMountTransform('front-left');
   const frontWheelYawRad = yawFromModelColumn(matrices[1]);
-  return wrapAngle(
-    frontWheelYawRad - bodyYawRad - frontMount.rotationYawRad,
-  );
+  return wrapAngle(frontWheelYawRad - bodyYawRad - frontMount.rotationYawRad);
 }
 
 describe('NeatRacing car pass visual drift yaw (AC-047C + AC-078)', () => {
@@ -928,9 +923,9 @@ describe('published traction severity (AC-088, RED 14R)', () => {
     const straightSteerRad = frontWheelSteerYawRad(straight);
     const driftingSteerRad = frontWheelSteerYawRad(drifting);
     // Assert — the front-wheel yaw RESPONDS to the published physics state.
-    expect(
-      Math.abs(driftingSteerRad - straightSteerRad),
-    ).toBeGreaterThan(STEER_RESPONSE_TOLERANCE_RAD);
+    expect(Math.abs(driftingSteerRad - straightSteerRad)).toBeGreaterThan(
+      STEER_RESPONSE_TOLERANCE_RAD,
+    );
   });
 
   // [RED-14R-CAR-STEER-NOT-ECHO]
@@ -943,8 +938,8 @@ describe('published traction severity (AC-088, RED 14R)', () => {
     // Assert — G-V5: the tire yaw-follow is an INPUT ECHO today (the raw
     // axis times 35 degrees), so a dramatic-looking turn is rendered even
     // when the physics state never latched a slide.
-    expect(
-      Math.abs(renderedSteerRad - RAW_STEER_ECHO_RAD),
-    ).toBeGreaterThan(STEER_RESPONSE_TOLERANCE_RAD);
+    expect(Math.abs(renderedSteerRad - RAW_STEER_ECHO_RAD)).toBeGreaterThan(
+      STEER_RESPONSE_TOLERANCE_RAD,
+    );
   });
 });

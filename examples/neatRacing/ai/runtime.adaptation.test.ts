@@ -222,9 +222,7 @@ describe('NeatRacing runtime adaptation engine (P2-S3-A)', () => {
     it('binds one engine per car index without spare factories', () => {
       const engines = createNeatRacingPerCarAdaptationEngines(TUPLE, 2);
 
-      expect(
-        engines.has(0) && engines.has(1) && !engines.has(2),
-      ).toBe(true);
+      expect(engines.has(0) && engines.has(1) && !engines.has(2)).toBe(true);
     });
 
     it('replays identical car-0 decisions between the manual and factory engines', async () => {

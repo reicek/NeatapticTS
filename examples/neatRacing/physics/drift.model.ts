@@ -821,7 +821,8 @@ export function computeMomentumSlideDemandRad(
   }
   const gripShare = Math.min(1, Math.max(0, availableGripShare));
   const demandedAccelMps2 = speedMps * rateMagnitude;
-  const holdableAccelMps2 = gripShare * NEATRACING_DRIFT_MOMENTUM_HOLD_ACCEL_MPS2;
+  const holdableAccelMps2 =
+    gripShare * NEATRACING_DRIFT_MOMENTUM_HOLD_ACCEL_MPS2;
   const excessShare = Math.min(
     1,
     Math.max(0, 1 - holdableAccelMps2 / demandedAccelMps2),
@@ -895,7 +896,10 @@ export function computeDriftReArmReleaseRateRadPerS(dt: number): number {
  */
 function resolveDemandedTurnRateRadPerS(input: DriftStepInput): number {
   const explicitRateRadPerS = input.demandedTurnRateRadPerS;
-  if (typeof explicitRateRadPerS === 'number' && Number.isFinite(explicitRateRadPerS)) {
+  if (
+    typeof explicitRateRadPerS === 'number' &&
+    Number.isFinite(explicitRateRadPerS)
+  ) {
     return explicitRateRadPerS;
   }
   // The RAW, FACTOR-FREE steer-axis rate (no speed factor): the production
@@ -1052,8 +1056,7 @@ export function computeGripBudgetFactor(
   const severity = computeTractionSeverity(slipAngle, speedMps);
   return (
     1 /
-    (1 +
-      NEATRACING_DRIFT_GRIP_FALLOFF_RATE_PER_RAD * demand * (1 + severity))
+    (1 + NEATRACING_DRIFT_GRIP_FALLOFF_RATE_PER_RAD * demand * (1 + severity))
   );
 }
 
@@ -1135,8 +1138,7 @@ export function computeLongitudinalSpeedScrub(
  */
 export function computeDriftSlideProxyRad(slipAngleRad: number): number {
   return (
-    Math.abs(slipAngleRad) *
-    Math.abs(NEATRACING_DRIFT_VISUAL_YAW_GAIN_RAD - 1)
+    Math.abs(slipAngleRad) * Math.abs(NEATRACING_DRIFT_VISUAL_YAW_GAIN_RAD - 1)
   );
 }
 
@@ -1167,7 +1169,8 @@ export function computeNextLateralVelocity(
   // against sign(slip); the NEUTRAL wheel is a release too (Step 14Q,
   // AC-089) - the same law the commitment uses, so the two stages can never
   // disagree about what the driver is doing.
-  const countersteering = turnSign !== 0 && Math.sign(input.steer) === -turnSign;
+  const countersteering =
+    turnSign !== 0 && Math.sign(input.steer) === -turnSign;
   const neutralWheel =
     Math.abs(input.steer) < NEATRACING_DRIFT_STEER_NEUTRAL_THRESHOLD;
   const drifting = turnSign !== 0 && !countersteering && !neutralWheel;
@@ -1193,10 +1196,7 @@ export function computeNextLateralVelocity(
   // held at exactly 0. The boundary is INCLUSIVE (`<=`), the same edge stage 1
   // releases on, so the two stages can never disagree about a slide that sits
   // exactly on the snap band.
-  if (
-    !drifting &&
-    Math.abs(slip) <= NEATRACING_DRIFT_SNAP_BACK_ZERO_SLIP_RAD
-  ) {
+  if (!drifting && Math.abs(slip) <= NEATRACING_DRIFT_SNAP_BACK_ZERO_SLIP_RAD) {
     nextLateralVelocity = 0;
   }
 

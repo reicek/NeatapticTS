@@ -197,7 +197,13 @@ function readPickedColorEntry(hexValue: string): VoxelPaletteEntry {
   const blue = Number.parseInt(normalized.slice(4, 6), 16);
   const safe = (value: number): number =>
     Number.isFinite(value) ? Math.min(255, Math.max(0, value)) : 0;
-  return [safe(red), safe(green), safe(blue), PICKED_COLOR_ALPHA, PICKED_COLOR_GLOW];
+  return [
+    safe(red),
+    safe(green),
+    safe(blue),
+    PICKED_COLOR_ALPHA,
+    PICKED_COLOR_GLOW,
+  ];
 }
 
 /**
@@ -407,9 +413,8 @@ export function createEditorControls(
       if (selectedPaletteIndex > snapshot.usedCount) {
         selectedPaletteIndex = NEATRACING_EDITOR_PALETTE_EMPTY_INDEX;
       }
-      const entry = snapshot.entries[
-        selectedPaletteIndex
-      ] as VoxelPaletteEntry | undefined;
+      const entry = snapshot.entries[selectedPaletteIndex] as
+        VoxelPaletteEntry | undefined;
       if (entry !== undefined) {
         applyPaintEntry(entry);
       }
@@ -574,7 +579,10 @@ export function createEditorControls(
       addButton.removeEventListener('click', handleAddColor);
       controls.undoButton.removeEventListener('click', handleUndoClick);
       controls.redoButton.removeEventListener('click', handleRedoClick);
-      controls.modelSelect.removeEventListener('change', handleModelChangeEvent);
+      controls.modelSelect.removeEventListener(
+        'change',
+        handleModelChangeEvent,
+      );
       controls.cadFrontButton.removeEventListener('click', handleCadFrontClick);
       controls.cadSideButton.removeEventListener('click', handleCadSideClick);
       controls.cadTopButton.removeEventListener('click', handleCadTopClick);

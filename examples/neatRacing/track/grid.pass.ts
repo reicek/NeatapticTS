@@ -285,9 +285,9 @@ export function createTrackGridPass(gl: WebGL2RenderingContext): TrackGridPass {
 }
 
 /** Column-major identity matrix for the warmup offscreen draw. */
-const NEATRACING_TRACK_GRID_WARMUP_IDENTITY_VIEW_PROJECTION = new Float32Array(
-  [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
-);
+const NEATRACING_TRACK_GRID_WARMUP_IDENTITY_VIEW_PROJECTION = new Float32Array([
+  1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1,
+]);
 
 /** Zero-pose draw state used for the track-grid shader warmup offscreen draw. */
 const NEATRACING_TRACK_GRID_WARMUP_DRAW_STATE: TrackGridPassDrawState = {

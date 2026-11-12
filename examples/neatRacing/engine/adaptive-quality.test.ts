@@ -46,7 +46,10 @@ function createControllerAt(
 }
 
 /** Runs N decision ticks with NaN frameMs (the fold ignores NaN). */
-function runDecisionTicks(state: AdaptiveQualityState, tickCount: number): void {
+function runDecisionTicks(
+  state: AdaptiveQualityState,
+  tickCount: number,
+): void {
   for (let tickIndex = 0; tickIndex < tickCount; tickIndex++) {
     tickAdaptiveQuality(state, Number.NaN);
   }
@@ -79,7 +82,9 @@ describe('NEATRACING_ADAPTIVE_QUALITY_STAGES ladder (AC-035)', () => {
   });
 
   it('names the ladder stages in drop order', () => {
-    const labels = NEATRACING_ADAPTIVE_QUALITY_STAGES.map((stage) => stage.label);
+    const labels = NEATRACING_ADAPTIVE_QUALITY_STAGES.map(
+      (stage) => stage.label,
+    );
     expect(labels).toEqual(['full', 'bloom-off', 'lod-cheap', 'props-sparse']);
   });
 

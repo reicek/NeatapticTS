@@ -222,7 +222,9 @@ export function createOscillationPredicateState(): OscillationPredicateState {
  * resolveOscillationPromotionNodeThreshold(2); // 600
  * ```
  */
-export function resolveOscillationPromotionNodeThreshold(level: number): number {
+export function resolveOscillationPromotionNodeThreshold(
+  level: number,
+): number {
   return (
     PROMOTION_NODE_THRESHOLDS_BY_LEVEL[level] ??
     NEATRACING_PROMOTION_NODE_THRESHOLD_LVL_3

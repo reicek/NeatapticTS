@@ -197,9 +197,7 @@ import { NEATRACING_ADAPTIVE_QUALITY_STAGES } from '../engine/adaptive-quality';
 // (P3-S1-wiring): the composition attempt succeeds on the fake GL fixture
 // through these doubles.
 import { createFrameComposer } from '../host/frame-composer';
-import type {
-  NeatRacingFrameComposerFrame,
-} from '../host/frame-composer';
+import type { NeatRacingFrameComposerFrame } from '../host/frame-composer';
 // The pass-factory seam doubles (P3-S1-wiring): the factories themselves
 // are stubbed with inert pass doubles so the composition attempt never
 // touches the fake GL context beyond the capability gate.
@@ -565,10 +563,7 @@ function readDriftSeam(): DriftSeamView | undefined {
  *   number, so a law comparison fails LEGIBLY instead of passing on an
  *   `undefined` field.
  */
-function readSeamNumber(
-  seam: DriftSeamView | undefined,
-  key: string,
-): number {
+function readSeamNumber(seam: DriftSeamView | undefined, key: string): number {
   const value = seam?.[key];
   return typeof value === 'number' ? value : Number.NaN;
 }
@@ -893,11 +888,7 @@ describe('Neat Racing browser entry boot wiring (Step 13, P1-boot-glue)', () => 
       window.dispatchEvent(
         new KeyboardEvent('keydown', { code: 'ArrowRight', cancelable: true }),
       );
-      for (
-        let frame = 0;
-        frame < SLIDING_SEAM_FRAME_COUNT;
-        frame += 1
-      ) {
+      for (let frame = 0; frame < SLIDING_SEAM_FRAME_COUNT; frame += 1) {
         scheduledRafCallbacks[frame]?.(
           DRIVEN_FRAME_TIMESTAMP_MS + frame * SLIDING_SEAM_FRAME_STEP_MS,
         );
@@ -950,11 +941,7 @@ describe('Neat Racing browser entry boot wiring (Step 13, P1-boot-glue)', () => 
         readonly poseRad: number;
         readonly poseRateRadPerS: number;
       }> = [];
-      for (
-        let frame = 0;
-        frame < SLIDING_SEAM_FRAME_COUNT;
-        frame += 1
-      ) {
+      for (let frame = 0; frame < SLIDING_SEAM_FRAME_COUNT; frame += 1) {
         scheduledRafCallbacks[frame]?.(
           DRIVEN_FRAME_TIMESTAMP_MS + frame * SLIDING_SEAM_FRAME_STEP_MS,
         );

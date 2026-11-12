@@ -62,7 +62,10 @@ export const RIGHT_WORLD_PROP_HALF_SIZES = {
   mechanic: [0.5, 0.25, 0.5],
   crew: [0.4, 0.25, 0.4],
   'team-banner': [1.2, 1.5, 0.1],
-} as const satisfies Record<RightWorldProp['kind'], readonly [number, number, number]>;
+} as const satisfies Record<
+  RightWorldProp['kind'],
+  readonly [number, number, number]
+>;
 
 /**
  * Resolves the canonical axis-aligned half-size of a scenery prop in meters.

@@ -253,17 +253,9 @@ function buildCameraRay(
 ): EditorCameraRay {
   // Step 1: Read the camera basis and the eye point from the view matrix.
   const view = camera.buildViewMatrix();
-  const right: readonly [number, number, number] = [
-    view[0],
-    view[4],
-    view[8],
-  ];
+  const right: readonly [number, number, number] = [view[0], view[4], view[8]];
   const up: readonly [number, number, number] = [view[1], view[5], view[9]];
-  const back: readonly [number, number, number] = [
-    view[2],
-    view[6],
-    view[10],
-  ];
+  const back: readonly [number, number, number] = [view[2], view[6], view[10]];
   const eye: [number, number, number] = [
     -(view[12] * right[0] + view[13] * up[0] + view[14] * back[0]),
     -(view[12] * right[1] + view[13] * up[1] + view[14] * back[1]),
@@ -423,7 +415,9 @@ function isOccupied(
 ): boolean {
   return (
     volume[
-      x + NEATRACING_EDITOR_VOLUME_ROW_STRIDE * y + NEATRACING_EDITOR_VOLUME_SLICE_STRIDE * z
+      x +
+        NEATRACING_EDITOR_VOLUME_ROW_STRIDE * y +
+        NEATRACING_EDITOR_VOLUME_SLICE_STRIDE * z
     ] !== 0
   );
 }
@@ -537,12 +531,7 @@ export function createEditorVoxelPicker(
 
       // Step 4: March the cells; fall back to the entered cell.
       const entryCell = resolveEntryCell(gridRay, span.tEnter);
-      const occupied = marchForOccupiedVoxel(
-        gridRay,
-        span,
-        entryCell,
-        volume,
-      );
+      const occupied = marchForOccupiedVoxel(gridRay, span, entryCell, volume);
       return occupied ?? entryCell;
     },
   };

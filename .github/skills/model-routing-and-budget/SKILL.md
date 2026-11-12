@@ -84,8 +84,8 @@ Validation: advisory — confirm qualified name before committing.
 
 ## Phase Defaults
 
-| Phase             | Tier                 | Reason                                                                    |
-| ----------------- | -------------------- | ------------------------------------------------------------------------- |
+| Phase             | Tier                     | Reason                                                                    |
+| ----------------- | ------------------------ | ------------------------------------------------------------------------- |
 | 00 Helping        | minimax-m3.1-flash:cloud | Maintenance and gap resolution need nuanced synthesis plus safe fallback. |
 | 01 Planning       | minimax-m3.1-flash:cloud | Architecture decisions and cross-plan tradeoffs need broad reasoning.     |
 | 02 Research       | minimax-m3.1-flash:cloud | Retrieval and summarization should be cheap and bounded.                  |

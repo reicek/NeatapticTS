@@ -20,9 +20,7 @@ describe('wheel steer helper', () => {
   });
 
   it('maps full left input to negative max lock', () => {
-    expect(computeWheelSteerAngleRad(-1)).toBe(
-      -NEATRACING_MAX_WHEEL_STEER_RAD,
-    );
+    expect(computeWheelSteerAngleRad(-1)).toBe(-NEATRACING_MAX_WHEEL_STEER_RAD);
   });
 
   it('maps centered input to zero steer', () => {
@@ -35,9 +33,7 @@ describe('wheel steer helper', () => {
 
   it('clamps over-range inputs without flipping sign', () => {
     expect(computeWheelSteerAngleRad(2)).toBe(NEATRACING_MAX_WHEEL_STEER_RAD);
-    expect(computeWheelSteerAngleRad(-3)).toBe(
-      -NEATRACING_MAX_WHEEL_STEER_RAD,
-    );
+    expect(computeWheelSteerAngleRad(-3)).toBe(-NEATRACING_MAX_WHEEL_STEER_RAD);
   });
 
   it('preserves spin-direction invariance (sign mirrors input)', () => {

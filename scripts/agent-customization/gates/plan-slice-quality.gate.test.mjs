@@ -12,6 +12,13 @@ let mockReadFileFn;
 let mockParsePlanYamlBlockFn;
 let mockRepoRoot;
 
+// The real module is spread into the mock so every export a transitively
+// imported module needs is present. `plan-yaml-lint.mjs` imports
+// `PlanYamlParseError`, `normalizeYamlScalar` and `parsePlanYamlBlock` from
+// this module; a partial mock factory makes the ESM link fail with
+// "does not provide an export named ...".
+const utils = await import('../customization-utils.mjs');
+
 jest.unstable_mockModule('node:fs/promises', () => ({
   readdir: async () => {
     if (mockReaddirThrows) throw mockReaddirThrows;
@@ -21,6 +28,7 @@ jest.unstable_mockModule('node:fs/promises', () => ({
 }));
 
 jest.unstable_mockModule('../customization-utils.mjs', () => ({
+  ...utils,
   parseArgs: () => mockOptions,
   parsePlanYamlBlock: (...args) => mockParsePlanYamlBlockFn(...args),
   repoRoot: mockRepoRoot,
@@ -203,7 +211,10 @@ describe('plan-slice-quality gate', () => {
     assert.equal(parsed.evidence.violations.length, 0);
   });
 
-  it('skips when parsePlanYamlBlock throws', async () => {
+  it('reports a violation when parsePlanYamlBlock throws', async () => {
+    // A WIP packet that cannot be parsed must NOT be skipped silently: the
+    // F9 defect class is exactly a packet that parses "cleanly" while it lost
+    // content, so an unparsable packet is reported as a violation.
     mockReaddirResult = ['test.plans.md'];
     mockReadFileFn = async () => planWith(WIP_BLOCK);
     mockParsePlanYamlBlockFn = () => {
@@ -212,8 +223,12 @@ describe('plan-slice-quality gate', () => {
     mockOptions = { json: true, help: false };
     const logs = await importGate(['--json']);
     const parsed = JSON.parse(logs[0]);
-    assert.equal(parsed.pass, true);
-    assert.equal(parsed.evidence.violations.length, 0);
+    assert.equal(parsed.pass, false);
+    assert.equal(parsed.evidence.violations.length, 1);
+    assert.ok(
+      parsed.evidence.violations[0].message.includes('could not be parsed'),
+    );
+    assert.equal(process.exitCode, 1);
   });
 
   it('skips when step is undefined', async () => {

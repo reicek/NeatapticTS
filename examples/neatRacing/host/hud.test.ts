@@ -215,10 +215,7 @@ describe('NeatRacing HUD traction readout (P1-drift-presentation-red, RED-2)', (
       const fixture = createHudFixture();
       // Act
       fixture.hud.update(
-        hudStateFixture(
-          MOVING_SPEED_UNITS_PER_S,
-          DRIFTING_TRAACTION_SEVERITY,
-        ),
+        hudStateFixture(MOVING_SPEED_UNITS_PER_S, DRIFTING_TRAACTION_SEVERITY),
       );
       // Assert - the overlay shows the PUBLISHED severity (42 percent).
       expect(['42%', '0.42']).toContain(
@@ -236,10 +233,7 @@ describe('NeatRacing HUD traction readout (P1-drift-presentation-red, RED-2)', (
       );
       const atRest = tractionReadout(overlayText(fixture.container));
       fixture.hud.update(
-        hudStateFixture(
-          MOVING_SPEED_UNITS_PER_S,
-          DRIFTING_TRAACTION_SEVERITY,
-        ),
+        hudStateFixture(MOVING_SPEED_UNITS_PER_S, DRIFTING_TRAACTION_SEVERITY),
       );
       const atSpeed = tractionReadout(overlayText(fixture.container));
       // Assert - the readout IS the published severity and does NOT move
@@ -271,10 +265,7 @@ describe('NeatRacing HUD traction readout (P1-drift-presentation-red, RED-2)', (
       // Arrange
       const fixture = createHudFixture();
       fixture.hud.update(
-        hudStateFixture(
-          MOVING_SPEED_UNITS_PER_S,
-          DRIFTING_TRAACTION_SEVERITY,
-        ),
+        hudStateFixture(MOVING_SPEED_UNITS_PER_S, DRIFTING_TRAACTION_SEVERITY),
       );
       // Act - a deeper slide publishes a bigger severity.
       fixture.hud.update(

@@ -144,11 +144,9 @@ const OUTER_RING_KINDS: readonly ('pillar' | 'gantry' | 'sign')[] = [
  * CONSTRUCTION in a fixed round robin, so every kind is present at every
  * seed and the scene never depends on a random draw to carry a people prop.
  */
-const INNER_RING_PEOPLE_KINDS: readonly ('mechanic' | 'crew' | 'team-banner')[] = [
-  'mechanic',
-  'crew',
-  'team-banner',
-];
+const INNER_RING_PEOPLE_KINDS: readonly (
+  'mechanic' | 'crew' | 'team-banner'
+)[] = ['mechanic', 'crew', 'team-banner'];
 
 /**
  * The USER-NAMED clearance floor of every right-world prop, in meters.
@@ -784,12 +782,8 @@ export function measureSeamClearanceM(
   worldX: number,
   worldZ: number,
 ): number {
-  return classifyTrackSlabSurfaceAt(
-    worldX,
-    worldZ,
-    seam.segments,
-    seam.profile,
-  ).distancePastEdgeM;
+  return classifyTrackSlabSurfaceAt(worldX, worldZ, seam.segments, seam.profile)
+    .distancePastEdgeM;
 }
 
 /**
@@ -1104,7 +1098,8 @@ export function emitRightWorldPeopleRing(
     // so every kind is present at every seed. The archetype draw is still
     // consumed and only the RESOLVED archetype is overridden afterwards, so
     // the three-draws-per-slot contract holds for the inner ring too.
-    const kind = INNER_RING_PEOPLE_KINDS[index % INNER_RING_PEOPLE_KINDS.length]!;
+    const kind =
+      INNER_RING_PEOPLE_KINDS[index % INNER_RING_PEOPLE_KINDS.length]!;
     const color = NEON_COLORS[Math.floor(colorRoll * NEON_COLORS.length)]!;
 
     props.push({
@@ -1191,7 +1186,11 @@ export function selectBleacherSlotIndices(
     Math.floor(slotCount / NEATRACING_RIGHT_WORLD_BLEACHER_COUNT),
   );
   const indices: number[] = [];
-  for (let index = 0; index < NEATRACING_RIGHT_WORLD_BLEACHER_COUNT; index += 1) {
+  for (
+    let index = 0;
+    index < NEATRACING_RIGHT_WORLD_BLEACHER_COUNT;
+    index += 1
+  ) {
     indices.push(index * stride);
   }
   return indices;
@@ -1572,10 +1571,7 @@ export function getBleacherSeatTopY(
       if (voxel.role !== 'seat') {
         continue;
       }
-      const distance = Math.hypot(
-        x - voxel.position[0],
-        z - voxel.position[2],
-      );
+      const distance = Math.hypot(x - voxel.position[0], z - voxel.position[2]);
       if (distance < bestDistance) {
         bestDistance = distance;
         top = voxel.position[1] + BLEACHER_VOXEL_HALF_HEIGHT_M;
@@ -1730,7 +1726,9 @@ export function getBleacherAxisAlignedHalfSize(
  * }
  * ```
  */
-export function getBleacherHostingFootprintArea(bleacher: RightWorldProp): number {
+export function getBleacherHostingFootprintArea(
+  bleacher: RightWorldProp,
+): number {
   const voxels = bleacher.bleacherGeometry?.voxels;
   if (!voxels || voxels.length === 0) {
     return 0;
@@ -2100,8 +2098,11 @@ export function getBleacherSeatAnchors(
 function recoverRightWorldSeam(
   samples: readonly SplineSample[],
 ): RightWorldSeamContext {
-  const segmentStarts: { readonly x: number; readonly y: number; readonly width: number }[] =
-    [];
+  const segmentStarts: {
+    readonly x: number;
+    readonly y: number;
+    readonly width: number;
+  }[] = [];
 
   for (const sample of samples) {
     if (sample.sampleIndexWithinSegment === 0) {

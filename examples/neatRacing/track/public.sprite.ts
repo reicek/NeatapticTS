@@ -96,7 +96,10 @@ import {
   selectBleacherSlotIndices,
   selectPeopleRingSampleIndices,
 } from './right-world.builder';
-import type { RightWorldProp, RightWorldSeamContext } from './right-world.builder';
+import type {
+  RightWorldProp,
+  RightWorldSeamContext,
+} from './right-world.builder';
 import { resolvePropHalfSize } from './right-world.prop-sizes';
 import type { TrackSlabBuildInput } from './track.slabs';
 
@@ -692,7 +695,12 @@ const PUBLIC_DIRECTION_STEP_RAD = Math.PI / 4;
 const PUBLIC_FULL_TURN_RAD = 2 * Math.PI;
 
 /** Diverse neon accent palette used for spectator public sprites. */
-const PUBLIC_NEON_ACCENT_PALETTE: readonly (readonly [number, number, number, number])[] = [
+const PUBLIC_NEON_ACCENT_PALETTE: readonly (readonly [
+  number,
+  number,
+  number,
+  number,
+])[] = [
   [0, 255, 255, 255],
   [255, 0, 255, 255],
   [0, 255, 128, 255],
@@ -721,7 +729,11 @@ const PUBLIC_TEAM_ACCENT_HUE_BAND_DEGREES = 30;
  * @param blue - Blue channel in the 0..255 range.
  * @returns The hue angle in the 0..360 degree range, or NaN for a grey pixel.
  */
-function computeRgbHueDegrees(red: number, green: number, blue: number): number {
+function computeRgbHueDegrees(
+  red: number,
+  green: number,
+  blue: number,
+): number {
   const max = Math.max(red, green, blue);
   const min = Math.min(red, green, blue);
 
@@ -756,7 +768,8 @@ function computeRgbHueDegrees(red: number, green: number, blue: number): number 
  */
 function computeHueBucket(hueDegrees: number): number {
   return (
-    Math.round(hueDegrees / PUBLIC_HUE_BUCKET_DEGREES) * PUBLIC_HUE_BUCKET_DEGREES
+    Math.round(hueDegrees / PUBLIC_HUE_BUCKET_DEGREES) *
+    PUBLIC_HUE_BUCKET_DEGREES
   );
 }
 
@@ -786,7 +799,9 @@ function computeHueBucketDistance(left: number, right: number): number {
  */
 function resolvePublicTeamAccentColorIds(): readonly number[] {
   const teamBuckets = NEATRACING_TEAM_COLORS.map((team) =>
-    computeHueBucket(computeRgbHueDegrees(team.rgb[0], team.rgb[1], team.rgb[2])),
+    computeHueBucket(
+      computeRgbHueDegrees(team.rgb[0], team.rgb[1], team.rgb[2]),
+    ),
   );
   const colorIds: number[] = [];
 
@@ -1036,12 +1051,13 @@ function resolveCameraRelativeDirectionIndex(
   robotPosition: readonly [number, number, number],
   targetPosition: readonly [number, number, number],
 ): number {
-  const cameraYaw = cameraForward !== undefined
-    ? Math.atan2(cameraForward[0], cameraForward[2])
-    : Math.atan2(
-      targetPosition[0] - cameraWorld[0],
-      targetPosition[2] - cameraWorld[2],
-    );
+  const cameraYaw =
+    cameraForward !== undefined
+      ? Math.atan2(cameraForward[0], cameraForward[2])
+      : Math.atan2(
+          targetPosition[0] - cameraWorld[0],
+          targetPosition[2] - cameraWorld[2],
+        );
   const facingYaw = Math.atan2(
     targetPosition[0] - robotPosition[0],
     targetPosition[2] - robotPosition[2],
@@ -1170,13 +1186,13 @@ function isLookAroundPause(
   timeSeconds: number,
 ): boolean {
   const period = 16.0;
-  const inWindow = (timeSeconds % period) < PUBLIC_WALK_CYCLE_PERIOD_SECONDS;
+  const inWindow = timeSeconds % period < PUBLIC_WALK_CYCLE_PERIOD_SECONDS;
   if (!inWindow) {
     return false;
   }
   const phase = Math.floor(timeSeconds / period);
 
-  return (((seed ^ index ^ (phase * 0x9e3779b9)) >>> 0) % 5) === 0;
+  return ((seed ^ index ^ (phase * 0x9e3779b9)) >>> 0) % 5 === 0;
 }
 
 /**
@@ -1276,7 +1292,10 @@ export function computePublicRuntimeFrameIndex(
   let directionIndex: number;
   let poseIndex: number;
 
-  if (role !== PUBLIC_WALKER_RUNTIME_ROLE || isLookAroundPause(seed, index, timeSeconds)) {
+  if (
+    role !== PUBLIC_WALKER_RUNTIME_ROLE ||
+    isLookAroundPause(seed, index, timeSeconds)
+  ) {
     directionIndex = resolveCameraRelativeDirectionIndex(
       cameraForward,
       cameraWorld,
@@ -1286,9 +1305,10 @@ export function computePublicRuntimeFrameIndex(
     poseIndex = PUBLIC_POSE_INDEX_STAND;
   } else {
     directionIndex = billboard.walkDirectionIndex ?? 0;
-    poseIndex = selectPublicWalkPoseIndex(timeSeconds) === 0
-      ? PUBLIC_POSE_INDEX_WALK1
-      : PUBLIC_POSE_INDEX_WALK2;
+    poseIndex =
+      selectPublicWalkPoseIndex(timeSeconds) === 0
+        ? PUBLIC_POSE_INDEX_WALK1
+        : PUBLIC_POSE_INDEX_WALK2;
   }
 
   const tableIndex = directionIndex * PUBLIC_POSE_COUNT + poseIndex;
@@ -1342,7 +1362,8 @@ export function selectPublicWalkFrame(
 ): string {
   void atlas;
   const random = createDeterministicRandom(seed ^ (index * 0x9e3779b9));
-  const directionIndex = Math.floor(random() * DIRECTION_ORDER.length) % DIRECTION_ORDER.length;
+  const directionIndex =
+    Math.floor(random() * DIRECTION_ORDER.length) % DIRECTION_ORDER.length;
   const pose = selectPublicWalkPoseIndex(timeSeconds) === 0 ? 'walk1' : 'walk2';
 
   return `${DIRECTION_ORDER[directionIndex]!}-${pose}`;
@@ -1386,11 +1407,7 @@ function buildBleacherSeatPositions(
     }
 
     for (const [x, topY, z] of bleacherAnchors) {
-      seats.push([
-        x,
-        topY + NEATRACING_BILLBOARD_SURFACE_EPSILON_M,
-        z,
-      ]);
+      seats.push([x, topY + NEATRACING_BILLBOARD_SURFACE_EPSILON_M, z]);
     }
   }
 
@@ -1877,10 +1894,9 @@ function buildPublicSpriteAtlasFrames(): readonly PublicSpriteFrame[] {
 
   for (const accent of PUBLIC_NEON_ACCENT_PALETTE) {
     for (const direction of DIRECTION_ORDER) {
-      const poseMap =
-        (ROBOT_SPRITE_FRAMES as Record<string, Record<string, EncodedFrame>>)[
-          direction
-        ];
+      const poseMap = (
+        ROBOT_SPRITE_FRAMES as Record<string, Record<string, EncodedFrame>>
+      )[direction];
       if (!poseMap) {
         continue;
       }
@@ -1891,7 +1907,10 @@ function buildPublicSpriteAtlasFrames(): readonly PublicSpriteFrame[] {
         }
         const id = `${direction}-${pose}`;
         frames.push(
-          recolorFrameRgba(decodePublicFrame(frame as EncodedFrame, id), accent),
+          recolorFrameRgba(
+            decodePublicFrame(frame as EncodedFrame, id),
+            accent,
+          ),
         );
       }
     }
@@ -1982,7 +2001,10 @@ function recolorFrameRgba(
  *   the same base seed still draw independent sequences.
  * @returns Unsigned 32-bit seed for the local PRNG.
  */
-function resolvePublicSpriteSeed(input: TrackSlabBuildInput, index: number): number {
+function resolvePublicSpriteSeed(
+  input: TrackSlabBuildInput,
+  index: number,
+): number {
   let combinedSeed = input.seed ^ (input.layoutVersion * 0x9e3779b9);
 
   for (const character of input.sizeBucket) {
@@ -2016,10 +2038,15 @@ function createDeterministicRandom(initialSeed: number): () => number {
  * @param camera - Camera whose forward/right basis is known.
  * @returns Normalized world-up vector perpendicular to forward and right.
  */
-function computeCameraUp(camera: PublicCamera): readonly [number, number, number] {
-  const upX = camera.forward[1] * camera.right[2] - camera.forward[2] * camera.right[1];
-  const upY = camera.forward[2] * camera.right[0] - camera.forward[0] * camera.right[2];
-  const upZ = camera.forward[0] * camera.right[1] - camera.forward[1] * camera.right[0];
+function computeCameraUp(
+  camera: PublicCamera,
+): readonly [number, number, number] {
+  const upX =
+    camera.forward[1] * camera.right[2] - camera.forward[2] * camera.right[1];
+  const upY =
+    camera.forward[2] * camera.right[0] - camera.forward[0] * camera.right[2];
+  const upZ =
+    camera.forward[0] * camera.right[1] - camera.forward[1] * camera.right[0];
   const length = Math.hypot(upX, upY, upZ) || 1;
 
   return [upX / length, upY / length, upZ / length];
@@ -2044,10 +2071,14 @@ function buildBillboard(
   const relY = position[1] - camera.position[1];
   const relZ = position[2] - camera.position[2];
 
-  const distance = Math.max(BILLBOARD_MIN_DISTANCE_M, Math.hypot(relX, relY, relZ));
+  const distance = Math.max(
+    BILLBOARD_MIN_DISTANCE_M,
+    Math.hypot(relX, relY, relZ),
+  );
   const scale = computeBillboardScale(distance);
-  const focal = 1 / Math.tan((camera.fovDegrees * Math.PI / 180) / 2);
-  const rightDot = relX * camera.right[0] + relY * camera.right[1] + relZ * camera.right[2];
+  const focal = 1 / Math.tan((camera.fovDegrees * Math.PI) / 180 / 2);
+  const rightDot =
+    relX * camera.right[0] + relY * camera.right[1] + relZ * camera.right[2];
   const upDot = relX * cameraUp[0] + relY * cameraUp[1] + relZ * cameraUp[2];
   const screenX = (focal * rightDot) / distance;
   const screenY = (focal * upDot) / distance;
@@ -2059,7 +2090,12 @@ function buildBillboard(
     frameId: frame.id,
     scale,
     distance,
-    quad: [screenX - halfWidth, screenY - halfHeight, screenX + halfWidth, screenY + halfHeight],
+    quad: [
+      screenX - halfWidth,
+      screenY - halfHeight,
+      screenX + halfWidth,
+      screenY + halfHeight,
+    ],
   };
 }
 
@@ -2159,4 +2195,3 @@ function placeBillboardOnSurface(
 
   return buildBillboard([x, positionY, z], frame, camera, cameraUp);
 }
-

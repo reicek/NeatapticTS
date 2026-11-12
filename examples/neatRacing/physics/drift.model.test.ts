@@ -452,7 +452,11 @@ const runDriftScenario = (point = POSE_POINT): DriftScenarioRun => {
   let maxProxyRad = 0;
   let tick = 0;
 
-  const drive = (steer: number, ticks: number, phase: 'build' | 'counter'): void => {
+  const drive = (
+    steer: number,
+    ticks: number,
+    phase: 'build' | 'counter',
+  ): void => {
     for (let step = 0; step < ticks; step += 1) {
       const input = makeStepInput({
         steer,
@@ -529,7 +533,8 @@ const runDriftScenario = (point = POSE_POINT): DriftScenarioRun => {
     counterSamples.reduce(
       (max, sample) => Math.max(max, Math.abs(sample.pose.pose - poseFinal)),
       0,
-    ) * (180 / Math.PI);
+    ) *
+    (180 / Math.PI);
 
   // The settle tick: the first counter tick after which the pose stays
   // within 0.5 deg of the final pose for EVERY remaining tick.
@@ -907,9 +912,7 @@ describe('drift model published-slip ceilings (14N W3b owner contracts)', () => 
     expect(declaredOffRoadCeiling).toBeGreaterThanOrEqual(
       MEASURED_OFF_ROAD_RAW_PEAK_RAD + OFF_ROAD_DECLARATION_MARGIN_RAD,
     );
-    expect(
-      declaredOffRoadCeiling - OFF_ROAD_DECLARATION_GRID_RAD,
-    ).toBeLessThan(
+    expect(declaredOffRoadCeiling - OFF_ROAD_DECLARATION_GRID_RAD).toBeLessThan(
       MEASURED_OFF_ROAD_RAW_PEAK_RAD + OFF_ROAD_DECLARATION_MARGIN_RAD,
     );
   });
@@ -918,7 +921,9 @@ describe('drift model published-slip ceilings (14N W3b owner contracts)', () => 
 describe('drift model retired surface (14N GONE pins)', () => {
   // [RED-GONE-CONSTANTS]
   it('AC-079: the retired drift-rate constants are gone', () => {
-    expect('NEATRACING_DRIFT_LATERAL_GRIP_RATE_PER_S' in driftModel).toBe(false);
+    expect('NEATRACING_DRIFT_LATERAL_GRIP_RATE_PER_S' in driftModel).toBe(
+      false,
+    );
     expect(
       'NEATRACING_DRIFT_COUNTERSTEER_RECOVERY_RATE_PER_S' in driftModel,
     ).toBe(false);
@@ -985,12 +990,12 @@ describe('drift model grip budget and speed scrub (14N G-2 / G-3 / G-5 / G-6)', 
   it('AC-079: a sliding tire still gives up more grip than the old 30% cap allowed (G-3)', () => {
     // The argument is re-based to the RE-PINNED max slip (0.45 rad): 0.8 rad
     // is no longer a legal slip. The 5 percent margin of the old pin is kept.
-    expect(computeGripBudgetFactor(NEATRACING_DRIFT_MAX_SLIP_ANGLE_RAD, 1)).toBeLessThan(
-      0.7,
-    );
-    expect(computeGripBudgetFactor(NEATRACING_DRIFT_MAX_SLIP_ANGLE_RAD, 1)).toBeGreaterThan(
-      0,
-    );
+    expect(
+      computeGripBudgetFactor(NEATRACING_DRIFT_MAX_SLIP_ANGLE_RAD, 1),
+    ).toBeLessThan(0.7);
+    expect(
+      computeGripBudgetFactor(NEATRACING_DRIFT_MAX_SLIP_ANGLE_RAD, 1),
+    ).toBeGreaterThan(0);
   });
 
   // [RED-G5-SPEED-SCRUB]
@@ -1217,9 +1222,9 @@ describe('drift pose spring feel contract (AC-087, merge 7a)', () => {
     // step the target by more than ARTICULATION_RAD * SLEW * dt, at ANY
     // speed.
     expect(run.maxArticulationStepDeg).toBeLessThanOrEqual(
-      (NEATRACING_DRIFT_POSE_STEER_YAW_RAD *
+      NEATRACING_DRIFT_POSE_STEER_YAW_RAD *
         NEATRACING_DRIFT_POSE_ARTICULATION_SLEW_PER_S *
-        SCN_DRIFT_01_DT_S) *
+        SCN_DRIFT_01_DT_S *
         (180 / Math.PI),
     );
   });
@@ -1538,18 +1543,12 @@ describe('the PROPORTIONAL traction law (Step 14Q, slice P1-drift-law-red)', () 
     // The percent is forced through the `speedPercent` override, so the
     // lane really is a same-percent lane and the percent can never leak
     // in from the speed.
-    const fastLane = runCommittedTicks(
-      SCN_DRIFT_01_BUILD_TICKS,
-      1,
-      80,
-      { speedPercent: 0.5 },
-    );
-    const slowLane = runCommittedTicks(
-      SCN_DRIFT_01_BUILD_TICKS,
-      1,
-      20,
-      { speedPercent: 0.5 },
-    );
+    const fastLane = runCommittedTicks(SCN_DRIFT_01_BUILD_TICKS, 1, 80, {
+      speedPercent: 0.5,
+    });
+    const slowLane = runCommittedTicks(SCN_DRIFT_01_BUILD_TICKS, 1, 20, {
+      speedPercent: 0.5,
+    });
 
     // The NON-VACUITY GUARD comes FIRST: both lanes must really slide.
     expect(Math.abs(fastLane.committed.slip)).toBeGreaterThan(0);
@@ -1734,7 +1733,9 @@ describe('the PROPORTIONAL traction law (Step 14Q, slice P1-drift-law-red)', () 
     const windowDeficit = equilibriumDeficitKmh(
       RED_EQUILIBRIUM_TICKS - RED_EQUILIBRIUM_WINDOW_TICKS,
     );
-    const transientDeficit = equilibriumDeficitKmh(RED_EQUILIBRIUM_WINDOW_TICKS);
+    const transientDeficit = equilibriumDeficitKmh(
+      RED_EQUILIBRIUM_WINDOW_TICKS,
+    );
 
     // The NON-VACUITY GUARD comes FIRST: the lane must really converge,
     // so a slow transient can never pass or fail this contract by
@@ -1749,9 +1750,9 @@ describe('the PROPORTIONAL traction law (Step 14Q, slice P1-drift-law-red)', () 
     ).toBeGreaterThan(RED_EQUILIBRIUM_DEFICIT_BAND_KMH);
     // The MAIN assertion: the settled deficit is inside the band around
     // the pinned equilibrium.
-    expect(
-      Math.abs(deficit - RED_EQUILIBRIUM_DEFICIT_KMH),
-    ).toBeLessThanOrEqual(RED_EQUILIBRIUM_DEFICIT_BAND_KMH);
+    expect(Math.abs(deficit - RED_EQUILIBRIUM_DEFICIT_KMH)).toBeLessThanOrEqual(
+      RED_EQUILIBRIUM_DEFICIT_BAND_KMH,
+    );
   });
 });
 

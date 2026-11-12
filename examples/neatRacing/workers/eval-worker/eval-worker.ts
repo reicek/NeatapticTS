@@ -186,23 +186,21 @@ export function createEvalWorkerSession(options: {
     const { seed, requestTick, variants } = payload;
     // Step 3: Bind every slot to its §9.7.2 row-4 child seed up front so
     // the dispatch order never influences the seed derivation order (D2).
-    const tasks = variants.map(
-      (variant): NeatRacingEvalWorkerTask<number> => {
-        const variantSeed = deriveNeatRacingVariantStreamChildSeed(
-          seed,
-          variant.variantIndex,
-          variant.patchSize ?? 0,
-        );
-        return () => {
-          // E11(d): slots opened after a round-boundary stop refuse to
-          // run; the whole window's reply is discarded below.
-          if (isStopped()) {
-            throw new EvalWorkerCancelled();
-          }
-          return evaluateVariant({ variant, variantSeed, tupleSeed: seed });
-        };
-      },
-    );
+    const tasks = variants.map((variant): NeatRacingEvalWorkerTask<number> => {
+      const variantSeed = deriveNeatRacingVariantStreamChildSeed(
+        seed,
+        variant.variantIndex,
+        variant.patchSize ?? 0,
+      );
+      return () => {
+        // E11(d): slots opened after a round-boundary stop refuse to
+        // run; the whole window's reply is discarded below.
+        if (isStopped()) {
+          throw new EvalWorkerCancelled();
+        }
+        return evaluateVariant({ variant, variantSeed, tupleSeed: seed });
+      };
+    });
 
     // Step 4: Dispatch under the bounded parallel variant count (TP-18).
     let scores: number[];

@@ -65,10 +65,7 @@ import type {
   BloomPass,
   BloomPassDrawFrame,
 } from '../engine/passes/bloom.pass';
-import type {
-  TrackGridPass,
-  TrackGridPassDrawState,
-} from '../track/grid.pass';
+import type { TrackGridPass, TrackGridPassDrawState } from '../track/grid.pass';
 
 /** `gl.FRAMEBUFFER` target enum (0x8D40) used by the FBO choreography pins. */
 const MOCK_GL_FRAMEBUFFER = 0x8d40;

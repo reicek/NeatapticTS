@@ -19,6 +19,7 @@ import {
   parsePlanYamlBlock,
   repoRoot,
 } from '../customization-utils.mjs';
+import { lintPlanYamlBlock } from '../plan-yaml-lint.mjs';
 
 const SLICE_HOURS_LIMIT = 4;
 const MAX_SLICES_PER_STEP = 5;
@@ -77,11 +78,38 @@ async function runPlanSliceQualityGate() {
         );
       if (statusMatch?.groups?.status !== 'WIP') continue;
 
+      const contentStartLine =
+        text.slice(0, match.index).split(/\r?\n/u).length + 1;
+
       let metadata;
       try {
-        metadata = parsePlanYamlBlock(rawBlock);
-      } catch {
+        metadata = parsePlanYamlBlock(rawBlock, {
+          file: planFile,
+          startLine: contentStartLine,
+        });
+      } catch (error) {
+        // A malformed WIP packet must not be skipped silently: the slice
+        // budget below cannot be checked against a packet that did not parse.
+        violations.push({
+          plan: planFile,
+          line: contentStartLine,
+          message: `WIP packet could not be parsed: ${String(error)}`,
+        });
         continue;
+      }
+
+      // The parse can succeed while the packet lost content. The lint compares
+      // the raw text against the parsed result so a dropped criterion fails.
+      for (const finding of lintPlanYamlBlock(rawBlock, metadata, {
+        file: planFile,
+        startLine: contentStartLine,
+      })) {
+        violations.push({
+          plan: planFile,
+          line: finding.line,
+          code: finding.code,
+          message: finding.message,
+        });
       }
 
       if (metadata.step === undefined) continue;

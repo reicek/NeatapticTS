@@ -77,6 +77,29 @@ import type {} from '../../../src/architecture/network/gpu/gpu.types';
  * budget). The grow-stabilize orchestrator invokes the runner with the
  * juvenile stage, so the guard is a hard E10 boundary, not a runtime path.
  *
+ * ## The AC-030 oscillation law (one declaration site)
+ *
+ * The oscillation retune of spec section 9.5 has ONE owner:
+ * `./oscillation-penalty.utils`.  This module IMPORTS the shared predicate and
+ * RE-EXPORTS the penalty weight, the commit gate and the commit boost under
+ * their historical names, so the public surface of this module is unchanged
+ * while the declarations themselves live in exactly one place.
+ *
+ * The engine evaluates the shared predicate EXACTLY ONCE per adaptation tick,
+ * against the PRE-mutation network, and applies the resulting engagement to
+ * the baseline score, to the pre-mutation baseline, to the stabilization
+ * candidate, to the growth candidate and to the cycle's `scoreFn` result.
+ * The penalty is therefore SYMMETRIC: the baseline and the variant are damped
+ * by the SAME fraction, so the variant-vs-baseline ordering (and the commit
+ * decision) survives the penalty.  The engagement's `commitBoost` raises the
+ * growth-commit threshold instead of the legacy metric-driven boost.
+ *
+ * The legacy 200-node oscillation penalty that used to live in
+ * {@link scoreRacingVariant} and {@link evaluateRacingTrendScore} is REMOVED:
+ * keeping it alive would double-penalize the live path (legacy law plus the
+ * shared level-gated ramped law) and would mix score spaces between the
+ * engine's `evaluateScore` path and the cycle's `scoreFn` path — a dual path.
+ *
  * ## Score-space invariant
  *
  * The grow-stabilize cycle commits a weight variant only when
@@ -144,20 +167,44 @@ import {
   deriveNeatRacingAdaptationChildSeed,
   type NeatRacingReproducibilityTuple,
 } from '../workers/simulation-worker/reproducibility.utils';
+import {
+  RACING_OSCILLATION_COMMIT_THRESHOLD,
+  RACING_OSCILLATION_IMPROVEMENT_THRESHOLD_BOOST,
+  RACING_OSCILLATION_PENALTY_WEIGHT,
+  applyOscillationPenalty,
+  applyOscillationPenaltySymmetrically,
+  createOscillationPredicateState,
+  evaluateOscillationEngagement,
+  type OscillationEngagement,
+  type OscillationPredicateState,
+} from './oscillation-penalty.utils';
+
+/**
+ * THE AC-030 CONSTANT OWNERSHIP (one declaration site).
+ *
+ * `./oscillation-penalty.utils` is the CANONICAL owner of the oscillation
+ * penalty weight, the commit gate and the commit boost (spec section 9.5).
+ * This module no longer declares its own copies: it imports the three
+ * constants from the shared module and RE-EXPORTS them under the same names
+ * and values, so this module's public surface is preserved while the
+ * declaration itself lives in exactly ONE place (no dual path).  The shared
+ * module deliberately does NOT import back from here — an import in that
+ * direction would create a cycle now that the runtime consumes the
+ * predicate.
+ */
+export {
+  RACING_OSCILLATION_COMMIT_THRESHOLD,
+  RACING_OSCILLATION_IMPROVEMENT_THRESHOLD_BOOST,
+  RACING_OSCILLATION_PENALTY_WEIGHT,
+};
 
 /** Cadence modes supported by the runtime adaptation engine (recycled). */
 export type NeatRacingRuntimeAdaptationCadenceMode =
-  | 'every_tick'
-  | 'every_n_ticks'
-  | 'lap_boundary'
-  | 'sector_boundary';
+  'every_tick' | 'every_n_ticks' | 'lap_boundary' | 'sector_boundary';
 
 /** Candidate mutation operations supported by the runtime adaptation engine. */
 export type NeatRacingRuntimeAdaptationOperation =
-  | 'param_nudge'
-  | 'add_edge'
-  | 'add_node'
-  | 'prune_edge';
+  'param_nudge' | 'add_edge' | 'add_node' | 'prune_edge';
 
 /** Per-tick network size snapshot used by adaptation telemetry. */
 export interface NeatRacingAdaptationNetworkSizeSnapshot {
@@ -254,6 +301,17 @@ export interface NeatRacingAdaptationTelemetry {
   readonly tickCostMs: number;
   /** Whether {@link tickCostMs} stayed within `NEATRACING_ADAPTATION_TICK_BUDGET_MS`. */
   readonly withinTickBudget: boolean;
+  /**
+   * THE AC-030 OSCILLATION VERDICT OF THIS ADAPTATION TICK (spec section 9.5).
+   *
+   * The shared predicate is evaluated EXACTLY ONCE per adaptation tick — by
+   * the engine, from the PRE-mutation network — and the resulting engagement
+   * is applied to the baseline AND the variant score symmetrically.  The
+   * verdict is published here so the host session can report the live
+   * engagement of the tick without re-evaluating the predicate (a second
+   * evaluation would advance the hysteresis ramp twice).
+   */
+  readonly oscillationEngagement: OscillationEngagement;
 }
 
 /** Engine options used by the NeatRacing runtime adaptation engine. */
@@ -295,6 +353,16 @@ export interface NeatRacingAdaptationEngineOptions {
     network: Network,
     scoreHistory: readonly (number | NeatRacingQualitySignal)[],
   ) => number;
+  /**
+   * THE SESSION LEVEL GATING THE AC-030 OSCILLATION LAW (spec section 9.5 /
+   * TP-07).  The level selects the promotion node threshold through the
+   * shared predicate's table (level 1 -> 300 nodes, level 2 -> 600 nodes,
+   * level 3 -> 600 nodes); an unknown level falls back to the highest band.
+   *
+   * Defaults to level 1 (the solo rung).  The level NEVER changes the
+   * oscillation METRIC — it only selects the node-count gate.
+   */
+  readonly level?: number;
   /**
    * Per-tick adaptation budget in milliseconds used for the AC-043 telemetry
    * stamp. Defaults to `NEATRACING_ADAPTATION_TICK_BUDGET_MS`. Telemetry only;
@@ -409,6 +477,22 @@ const DEFAULT_IMPROVEMENT_THRESHOLD = 0.02;
 const DEFAULT_MINIMUM_EVIDENCE_WINDOW = 4;
 
 /**
+ * The default session level of the runtime adaptation engine.  The level
+ * selects the TP-07 promotion node threshold that gates the shared AC-030
+ * oscillation law (level 1 -> 300 nodes, level 2 -> 600 nodes, level 3 ->
+ * 600 nodes), so an engine that is not told its level behaves as a level-1
+ * engine.
+ */
+const DEFAULT_OSCILLATION_LEVEL = 1;
+
+/**
+ * The forward-pass output index of the STEERING channel of the racing
+ * controller (index 0 carries the throttle).  The AC-030 steering detector
+ * reads this channel, so the index is named instead of inlined.
+ */
+const RACING_STEERING_OUTPUT_INDEX = 1;
+
+/**
  * Exclusive upper bound for the deterministic lifecycle morph seed derived
  * from one `[0, 1)` draw of the engine's seeded stream. `2 ** 31` keeps the
  * product inside the double-precision exact-integer range and yields a
@@ -503,20 +587,29 @@ function reduceOutputToScalar(outputVector: readonly number[]): number {
  * network's own forward-pass outputs so that it lives in the same space as
  * the pre-mutation baseline.
  *
+ * The scorer is PURE: it carries NO oscillation penalty of its own.  The
+ * AC-030 law lives in the shared predicate
+ * (`./oscillation-penalty.utils`), whose engagement the runtime engine
+ * evaluates ONCE per adaptation tick and applies symmetrically to the
+ * baseline and the variant score.  A second penalty inside the scorer would
+ * double-penalize the live path and mix two score spaces.
+ *
  * @param outputs - Stack of network output vectors, one per input sample.
  * @param _target - Scalar target value for each sample (unused).
- * @param neuronCount - Live neuron count used to tier-gate the oscillation
- *   penalty. Penalty is skipped below {@link RACING_OSCILLATION_MIN_NEURONS}.
  * @returns Positive racing-trend quality score (higher is better).
  */
 export function scoreRacingVariant(
   outputs: readonly number[][],
   _target: readonly number[],
-  neuronCount: number = Number.POSITIVE_INFINITY,
 ): number {
   if (outputs.length === 0) {
     return 0;
   }
+
+  // The `VariantScorer` contract passes a per-sample target that the racing
+  // score space never reads; reference it explicitly (house idiom) so the
+  // unused parameter stays deliberate.
+  void _target;
 
   // Step 1: collapse the multi-dimensional controller output to a scalar
   // driving-quality proxy, exactly like {@link buildCandidateScoreWindow}.
@@ -537,42 +630,31 @@ export function scoreRacingVariant(
     ? behavioralComplexity * RACING_COMPLEXITY_WEIGHT
     : 0;
 
-  // Step 3: penalize rapid steering oscillation so the adaptation loop
-  // rewards sustained progress instead of noisy back-and-forth control.
-  // The penalty is proportional to the base score so it damps oscillation
-  // without inverting a positive score into a negative one.  The penalty is
-  // only applied once a network has reached the child tier (200+ neurons);
-  // newborn and baby networks naturally oscillate while learning to steer and
-  // must not be trapped by the penalty.
+  // Step 3: fold the trend/mean baseline with the complexity bonus.  The
+  // AC-030 oscillation penalty is NOT applied here — the runtime engine
+  // applies the shared predicate's engagement (evaluated ONCE per
+  // adaptation tick) symmetrically to the baseline and the variant score.
   const baseScore = scoreMean + scoreTrend * 0.5;
-  const steeringAngles = outputs.map((outputVector) => outputVector[1] ?? 0);
-  const steeringOscillation = detectSteeringOscillation(steeringAngles);
-  const scoreOscillation = detectScoreWindowOscillation(scalarWindow);
-  const oscillationMetric = Math.max(steeringOscillation, scoreOscillation);
-  const applyOscillationPenalty = neuronCount >= RACING_OSCILLATION_MIN_NEURONS;
-  const oscillationPenalty = applyOscillationPenalty
-    ? baseScore * oscillationMetric * RACING_OSCILLATION_PENALTY_WEIGHT
-    : 0;
 
-  return baseScore + complexityBonus - oscillationPenalty;
+  return baseScore + complexityBonus;
 }
 
 /**
  * Racing-specific variant scorer for the NGE grow-stabilize cycle.
  *
  * This is a {@link VariantScorer}-compatible wrapper around
- * {@link scoreRacingVariant}.  Because the variant-scorer contract only passes
- * `outputs` and `target`, the wrapper uses a default neuron count of
- * `Number.POSITIVE_INFINITY` so direct callers continue to apply the
- * oscillation penalty.  The runtime engine calls {@link scoreRacingVariant}
- * directly with the live candidate size to tier-gate young networks.
+ * {@link scoreRacingVariant}.  The variant-scorer contract only passes
+ * `outputs` and `target`, so the wrapper adds nothing: the AC-030
+ * oscillation penalty is applied by the runtime engine (the shared
+ * predicate's engagement, evaluated ONCE per adaptation tick), never inside
+ * the scorer.
  *
  * @param outputs - Stack of network output vectors, one per input sample.
  * @param target - Scalar target value for each sample (unused).
  * @returns Positive driving-quality score (higher is better).
  */
 export const RACING_VARIANT_SCORER: VariantScorer = (outputs, target) =>
-  scoreRacingVariant(outputs, target, Number.POSITIVE_INFINITY);
+  scoreRacingVariant(outputs, target);
 
 /**
  * Creates a reusable per-tick adaptation engine for the NeatRacing racing
@@ -633,6 +715,7 @@ export function createRuntimeAdaptationEngine(
   const cadence = resolveCadenceOptions(options.cadence);
   const limits = resolveLimitOptions(options.limits);
   const evaluateScore = options.evaluateScore ?? evaluateRacingTrendScore;
+  const oscillationLevel = options.level ?? DEFAULT_OSCILLATION_LEVEL;
   const minimumEvidenceWindow = Math.max(
     1,
     Math.floor(
@@ -660,6 +743,17 @@ export function createRuntimeAdaptationEngine(
   let postGrowthThresholdActive = false;
   let preGrowthBaseline: number | undefined;
   let previousScore: number | undefined;
+  // THE AC-030 PREDICATE STATE (spec section 9.5): the engine owns the
+  // hysteresis memory of the shared oscillation predicate and threads it
+  // from one adaptation tick to the next.  It is reset with the rest of the
+  // engine state on `reset()`.
+  let oscillationState: OscillationPredicateState =
+    createOscillationPredicateState();
+  // The engagement verdict of the MOST RECENT adaptation tick.  It is stamped
+  // onto the telemetry by the `adaptOnTick` wrapper, which is the only place
+  // that sees the tick's own verdict after the tick body has resolved.
+  let currentOscillationEngagement: OscillationEngagement =
+    createIdleOscillationEngagement(oscillationLevel);
 
   /**
    * The recycled `adaptOnTick` body, lifted verbatim as the engine's inner
@@ -673,12 +767,31 @@ export function createRuntimeAdaptationEngine(
   ): Promise<
     Omit<
       NeatRacingAdaptationTelemetry,
-      'tickCostMs' | 'withinTickBudget'
+      'tickCostMs' | 'withinTickBudget' | 'oscillationEngagement'
     >
   > => {
     const networkSizeBefore = resolveNetworkSizeSnapshot(tickInput.network);
     const evidenceWindow = resolveEvidenceWindow(tickInput.scoreHistory);
-    const baselineScore = evaluateScore(tickInput.network, evidenceWindow);
+
+    // Step 0 (AC-030, spec section 9.5): evaluate the SHARED oscillation
+    // predicate EXACTLY ONCE per adaptation tick, against the PRE-mutation
+    // network.  The engagement it produces is applied SYMMETRICALLY to the
+    // baseline and to every variant score of this tick, and its commit boost
+    // raises the growth-commit threshold.
+    const oscillationEngagement = evaluateTickOscillationEngagement(
+      tickInput.network,
+      evidenceWindow,
+      oscillationState,
+      oscillationLevel,
+    );
+    oscillationState = oscillationEngagement.state;
+    currentOscillationEngagement = oscillationEngagement;
+
+    const rawBaselineScore = evaluateScore(tickInput.network, evidenceWindow);
+    const baselineScore = applyOscillationPenalty(
+      rawBaselineScore,
+      oscillationEngagement,
+    );
     const inputSize = tickInput.network.input;
     const trainingInputs =
       inputSize > 0
@@ -701,30 +814,38 @@ export function createRuntimeAdaptationEngine(
         },
       )
     ) {
-      return createTelemetry({
-        tick: tickInput.tick,
-        operations: [],
-        scoreBefore: baselineScore,
-        scoreAfter: baselineScore,
-        committed: false,
-        reason: 'cadence_not_reached',
-        networkSizeBefore,
-        networkSizeAfter: networkSizeBefore,
-      }, currentPhase, stabilizationTicksSinceGrowth);
+      return createTelemetry(
+        {
+          tick: tickInput.tick,
+          operations: [],
+          scoreBefore: baselineScore,
+          scoreAfter: baselineScore,
+          committed: false,
+          reason: 'cadence_not_reached',
+          networkSizeBefore,
+          networkSizeAfter: networkSizeBefore,
+        },
+        currentPhase,
+        stabilizationTicksSinceGrowth,
+      );
     }
 
     // Step 2: Guard against insufficient evidence and active cooldown windows.
     if (evidenceWindow.length < minimumEvidenceWindow) {
-      return createTelemetry({
-        tick: tickInput.tick,
-        operations: [],
-        scoreBefore: baselineScore,
-        scoreAfter: baselineScore,
-        committed: false,
-        reason: 'insufficient_evidence',
-        networkSizeBefore,
-        networkSizeAfter: networkSizeBefore,
-      }, currentPhase, stabilizationTicksSinceGrowth);
+      return createTelemetry(
+        {
+          tick: tickInput.tick,
+          operations: [],
+          scoreBefore: baselineScore,
+          scoreAfter: baselineScore,
+          committed: false,
+          reason: 'insufficient_evidence',
+          networkSizeBefore,
+          networkSizeAfter: networkSizeBefore,
+        },
+        currentPhase,
+        stabilizationTicksSinceGrowth,
+      );
     }
 
     // Step 2.5: Record the baseline quality score for plateau detection.
@@ -744,29 +865,37 @@ export function createRuntimeAdaptationEngine(
     hysteresis = advanceGrowthHysteresis(hysteresis, isPositiveFocusWindow);
 
     if (hysteresis.cooldownWindowsRemaining > 0) {
-      return createTelemetry({
-        tick: tickInput.tick,
-        operations: [],
-        scoreBefore: baselineScore,
-        scoreAfter: baselineScore,
-        committed: false,
-        reason: 'mutation_cooldown_active',
-        networkSizeBefore,
-        networkSizeAfter: networkSizeBefore,
-      }, currentPhase, stabilizationTicksSinceGrowth);
+      return createTelemetry(
+        {
+          tick: tickInput.tick,
+          operations: [],
+          scoreBefore: baselineScore,
+          scoreAfter: baselineScore,
+          committed: false,
+          reason: 'mutation_cooldown_active',
+          networkSizeBefore,
+          networkSizeAfter: networkSizeBefore,
+        },
+        currentPhase,
+        stabilizationTicksSinceGrowth,
+      );
     }
 
     if (tickInput.tick < nextRollbackTick) {
-      return createTelemetry({
-        tick: tickInput.tick,
-        operations: [],
-        scoreBefore: baselineScore,
-        scoreAfter: baselineScore,
-        committed: false,
-        reason: 'rollback_cooldown_active',
-        networkSizeBefore,
-        networkSizeAfter: networkSizeBefore,
-      }, currentPhase, stabilizationTicksSinceGrowth);
+      return createTelemetry(
+        {
+          tick: tickInput.tick,
+          operations: [],
+          scoreBefore: baselineScore,
+          scoreAfter: baselineScore,
+          committed: false,
+          reason: 'rollback_cooldown_active',
+          networkSizeBefore,
+          networkSizeAfter: networkSizeBefore,
+        },
+        currentPhase,
+        stabilizationTicksSinceGrowth,
+      );
     }
 
     // Step 3.5: Size-based growth throttle — back off lifecycle runs when
@@ -776,16 +905,20 @@ export function createRuntimeAdaptationEngine(
       tickInput.tick,
     );
     if (growthThrottle.shouldThrottle) {
-      return createTelemetry({
-        tick: tickInput.tick,
-        operations: [],
-        scoreBefore: baselineScore,
-        scoreAfter: baselineScore,
-        committed: false,
-        reason: 'growth_throttled',
-        networkSizeBefore,
-        networkSizeAfter: networkSizeBefore,
-      }, currentPhase, stabilizationTicksSinceGrowth);
+      return createTelemetry(
+        {
+          tick: tickInput.tick,
+          operations: [],
+          scoreBefore: baselineScore,
+          scoreAfter: baselineScore,
+          committed: false,
+          reason: 'growth_throttled',
+          networkSizeBefore,
+          networkSizeAfter: networkSizeBefore,
+        },
+        currentPhase,
+        stabilizationTicksSinceGrowth,
+      );
     }
 
     // Step 3.6: Run the NGE grow-stabilize cycle (plateau detection +
@@ -799,9 +932,13 @@ export function createRuntimeAdaptationEngine(
       tickInput.network,
       evidenceWindow,
     );
-    const preMutationBaselineScore = evaluateScore(
+    const rawPreMutationBaselineScore = evaluateScore(
       tickInput.network,
       preMutationScoreWindow,
+    );
+    const preMutationBaselineScore = applyOscillationPenalty(
+      rawPreMutationBaselineScore,
+      oscillationEngagement,
     );
 
     // Snapshot the network and the global connection innovation counter
@@ -837,10 +974,9 @@ export function createRuntimeAdaptationEngine(
       inputs: trainingInputs,
       target: trainingTarget,
       scoreFn: (outputs, target) =>
-        scoreRacingVariant(
-          outputs,
-          target,
-          tickInput.network.nodes.length,
+        applyOscillationPenalty(
+          scoreRacingVariant(outputs, target),
+          oscillationEngagement,
         ),
       lifecycleStage: 'baby',
       config: {
@@ -907,8 +1043,7 @@ export function createRuntimeAdaptationEngine(
     // Carry the grow-stabilize cycle state forward so that weight-exhaustion
     // counting, the post-growth anti-runaway boost, and the pre-growth
     // baseline persist across adaptation ticks.
-    consecutiveWeightExhaustion =
-      cycleResult.consecutiveWeightExhaustion ?? 0;
+    consecutiveWeightExhaustion = cycleResult.consecutiveWeightExhaustion ?? 0;
     consecutiveStabilizationFailures =
       cycleResult.consecutiveStabilizationFailures ??
       consecutiveStabilizationFailures;
@@ -924,16 +1059,20 @@ export function createRuntimeAdaptationEngine(
 
       if (!cycleResult.committed) {
         consecutiveStabilizationFailures += 1;
-        return createTelemetry({
-          tick: tickInput.tick,
-          operations: [],
-          scoreBefore: baselineScore,
-          scoreAfter: baselineScore,
-          committed: false,
-          reason: 'no_weight_mutations',
-          networkSizeBefore,
-          networkSizeAfter: networkSizeBefore,
-        }, 'stabilization', stabilizationTicksSinceGrowth);
+        return createTelemetry(
+          {
+            tick: tickInput.tick,
+            operations: [],
+            scoreBefore: baselineScore,
+            scoreAfter: baselineScore,
+            committed: false,
+            reason: 'no_weight_mutations',
+            networkSizeBefore,
+            networkSizeAfter: networkSizeBefore,
+          },
+          'stabilization',
+          stabilizationTicksSinceGrowth,
+        );
       }
 
       // Evaluate stabilization candidate score.
@@ -941,24 +1080,38 @@ export function createRuntimeAdaptationEngine(
         tickInput.network,
         evidenceWindow,
       );
-      const stabilizationScore = evaluateScore(
+      const rawStabilizationScore = evaluateScore(
         tickInput.network,
         stabilizationScoreWindow,
       );
-      const stabilizationImprovement = stabilizationScore - baselineScore;
+      // AC-030: the SAME engagement damps the baseline and the stabilization
+      // candidate SYMMETRICALLY, so the variant-vs-baseline ordering (and
+      // therefore the commit decision) survives the penalty.
+      const stabilizationScores = applyOscillationPenaltySymmetrically(
+        rawBaselineScore,
+        rawStabilizationScore,
+        oscillationEngagement,
+      );
+      const stabilizationScore = stabilizationScores.variantScore;
+      const stabilizationImprovement =
+        stabilizationScores.variantScore - stabilizationScores.baselineScore;
 
       if (stabilizationImprovement >= 0) {
         consecutiveStabilizationFailures = 0;
-        return createTelemetry({
-          tick: tickInput.tick,
-          operations: ['param_nudge'],
-          scoreBefore: baselineScore,
-          scoreAfter: stabilizationScore,
-          committed: true,
-          reason: 'weight_mutation_committed',
-          networkSizeBefore,
-          networkSizeAfter: networkSizeBefore,
-        }, 'stabilization', stabilizationTicksSinceGrowth);
+        return createTelemetry(
+          {
+            tick: tickInput.tick,
+            operations: ['param_nudge'],
+            scoreBefore: baselineScore,
+            scoreAfter: stabilizationScore,
+            committed: true,
+            reason: 'weight_mutation_committed',
+            networkSizeBefore,
+            networkSizeAfter: networkSizeBefore,
+          },
+          'stabilization',
+          stabilizationTicksSinceGrowth,
+        );
       }
 
       // Rollback weight mutations that did not improve the score.
@@ -969,16 +1122,20 @@ export function createRuntimeAdaptationEngine(
         capturedInnovation,
       );
 
-      return createTelemetry({
-        tick: tickInput.tick,
-        operations: ['param_nudge'],
-        scoreBefore: baselineScore,
-        scoreAfter: stabilizationScore,
-        committed: false,
-        reason: 'weight_mutation_rolled_back',
-        networkSizeBefore,
-        networkSizeAfter: networkSizeBefore,
-      }, 'stabilization', stabilizationTicksSinceGrowth);
+      return createTelemetry(
+        {
+          tick: tickInput.tick,
+          operations: ['param_nudge'],
+          scoreBefore: baselineScore,
+          scoreAfter: stabilizationScore,
+          committed: false,
+          reason: 'weight_mutation_rolled_back',
+          networkSizeBefore,
+          networkSizeAfter: networkSizeBefore,
+        },
+        'stabilization',
+        stabilizationTicksSinceGrowth,
+      );
     }
 
     // Growth phase: structural mutation via NGE lifecycle.
@@ -994,16 +1151,20 @@ export function createRuntimeAdaptationEngine(
       // the pre-lifecycle captured value, corrupting subsequent mutation
       // innovation assignments.
       Connection.resetInnovationCounter(capturedInnovation);
-      return createTelemetry({
-        tick: tickInput.tick,
-        operations: [],
-        scoreBefore: baselineScore,
-        scoreAfter: baselineScore,
-        committed: false,
-        reason: 'no_candidate_operations',
-        networkSizeBefore,
-        networkSizeAfter: networkSizeBefore,
-      }, currentPhase, stabilizationTicksSinceGrowth);
+      return createTelemetry(
+        {
+          tick: tickInput.tick,
+          operations: [],
+          scoreBefore: baselineScore,
+          scoreAfter: baselineScore,
+          committed: false,
+          reason: 'no_candidate_operations',
+          networkSizeBefore,
+          networkSizeAfter: networkSizeBefore,
+        },
+        currentPhase,
+        stabilizationTicksSinceGrowth,
+      );
     }
 
     // Evaluate candidate score after lifecycle mutation.
@@ -1017,36 +1178,31 @@ export function createRuntimeAdaptationEngine(
       tickInput.network,
       evidenceWindow,
     );
-    const candidateScore = evaluateScore(
+    const rawCandidateScore = evaluateScore(
       tickInput.network,
       candidateScoreWindow,
     );
-    const improvement = candidateScore - preMutationBaselineScore;
+    // AC-030: the growth pair is penalized SYMMETRICALLY as well — the
+    // pre-mutation baseline and the post-mutation candidate are damped by the
+    // SAME fraction of the tick's single engagement.
+    const growthScores = applyOscillationPenaltySymmetrically(
+      rawPreMutationBaselineScore,
+      rawCandidateScore,
+      oscillationEngagement,
+    );
+    const candidateScore = growthScores.variantScore;
+    const improvement = candidateScore - growthScores.baselineScore;
     // For the very first growth, commit unconditionally (if safety checks
     // pass) — the structural mutation adds capacity that the stabilization
     // phase will tune; requiring an immediate score improvement would
     // rollback the first growth and leave the network stuck forever.
     const isFirstGrowth = !hasGrownBefore;
-    // Boost the improvement threshold when either the evidence window is
-    // oscillating or the candidate network's steering outputs are zig-zagging,
-    // making it harder to commit structural growth during unstable reward
-    // windows.
-    const candidateOutputs = collectForwardPassOutputs(
-      tickInput.network,
-      evidenceWindow,
-    );
-    const steeringAngles = candidateOutputs.map(
-      (outputVector) => outputVector[1] ?? 0,
-    );
-    const steeringOscillation = detectSteeringOscillation(steeringAngles);
-    const scoreOscillation = detectScoreWindowOscillation(evidenceWindow);
-    const oscillationMetric = Math.max(steeringOscillation, scoreOscillation);
+    // Boost the improvement threshold while the SHARED AC-030 predicate is
+    // engaged, making it harder to commit structural growth during unstable
+    // reward windows.  The boost comes from the tick's single engagement and
+    // therefore ramps with the hysteresis instead of stepping.
     const effectiveImprovementThreshold =
-      improvementThreshold +
-      resolveOscillationThresholdBoost(
-        oscillationMetric,
-        tickInput.network.nodes.length,
-      );
+      improvementThreshold + oscillationEngagement.commitBoost;
     // Trust the grow-stabilize cycle's commit decision. The cycle already
     // applied the structural mutation in-place; re-evaluating with a fixed
     // improvement threshold here would roll back valid growth. We still
@@ -1064,16 +1220,20 @@ export function createRuntimeAdaptationEngine(
       qualityScoreHistory = [];
       stabilizationTicksSinceGrowth = 0;
       currentPhase = 'stabilization';
-      return createTelemetry({
-        tick: tickInput.tick,
-        operations,
-        scoreBefore: preMutationBaselineScore,
-        scoreAfter: candidateScore,
-        committed: true,
-        reason: 'committed',
-        networkSizeBefore,
-        networkSizeAfter: rawCandidateSize,
-      }, 'growth', 0);
+      return createTelemetry(
+        {
+          tick: tickInput.tick,
+          operations,
+          scoreBefore: preMutationBaselineScore,
+          scoreAfter: candidateScore,
+          committed: true,
+          reason: 'committed',
+          networkSizeBefore,
+          networkSizeAfter: rawCandidateSize,
+        },
+        'growth',
+        0,
+      );
     }
 
     // Rollback the network and the global innovation counter, then
@@ -1086,18 +1246,22 @@ export function createRuntimeAdaptationEngine(
     nextRollbackTick = tickInput.tick + limits.rollbackCooldownTicks;
     const restoredSize = resolveNetworkSizeSnapshot(tickInput.network);
 
-    return createTelemetry({
-      tick: tickInput.tick,
-      operations,
-      scoreBefore: preMutationBaselineScore,
-      scoreAfter: candidateScore,
-      committed: false,
-      reason: safetyChecksPass
-        ? 'improvement_below_threshold'
-        : 'safety_checks_failed',
-      networkSizeBefore,
-      networkSizeAfter: restoredSize,
-    }, currentPhase, stabilizationTicksSinceGrowth);
+    return createTelemetry(
+      {
+        tick: tickInput.tick,
+        operations,
+        scoreBefore: preMutationBaselineScore,
+        scoreAfter: candidateScore,
+        committed: false,
+        reason: safetyChecksPass
+          ? 'improvement_below_threshold'
+          : 'safety_checks_failed',
+        networkSizeBefore,
+        networkSizeAfter: restoredSize,
+      },
+      currentPhase,
+      stabilizationTicksSinceGrowth,
+    );
   };
 
   return {
@@ -1116,6 +1280,7 @@ export function createRuntimeAdaptationEngine(
       );
       return {
         ...telemetry,
+        oscillationEngagement: currentOscillationEngagement,
         tickCostMs: budgetState.elapsedMs,
         withinTickBudget: budgetState.withinBudget,
       };
@@ -1139,6 +1304,11 @@ export function createRuntimeAdaptationEngine(
       postGrowthThresholdActive = false;
       preGrowthBaseline = undefined;
       previousScore = undefined;
+      // AC-030: the predicate hysteresis memory is engine state — a reset
+      // starts the shared predicate from a fully disengaged state.
+      oscillationState = createOscillationPredicateState();
+      currentOscillationEngagement =
+        createIdleOscillationEngagement(oscillationLevel);
     },
   };
 }
@@ -1219,8 +1389,7 @@ export function evaluateRollingScoreWindow(
     return 0;
   }
 
-  const scoreTrend =
-    (scoreHistory.at(-1) ?? 0) - (scoreHistory[0] ?? 0);
+  const scoreTrend = (scoreHistory.at(-1) ?? 0) - (scoreHistory[0] ?? 0);
   const scoreMean =
     scoreHistory.reduce(
       (accumulatedScore, scoreValue) => accumulatedScore + scoreValue,
@@ -1243,40 +1412,6 @@ export function evaluateRollingScoreWindow(
 export const RACING_COMPLEXITY_WEIGHT = 0.000_1;
 
 /**
- * Weight applied to steering- and score-window oscillation penalties in the
- * racing trend evaluator.  A positive weight penalizes wild steering swings and
- * reward oscillation, steering evolution toward smooth, consistent driving
- * behavior.
- */
-export const RACING_OSCILLATION_PENALTY_WEIGHT = 0.25;
-
-/**
- * Oscillation gate for the growth-commit threshold boost.  The small additive
- * {@link RACING_OSCILLATION_IMPROVEMENT_THRESHOLD_BOOST} is only applied when
- * the maximum of steering and score-window oscillation exceeds this value;
- * below the gate the threshold is left unchanged.  This is a gate, not a
- * multiplier.
- */
-export const RACING_OSCILLATION_COMMIT_THRESHOLD = 0.5;
-
-/**
- * Small additive boost added to the growth commit threshold when the
- * oscillation metric is above {@link RACING_OSCILLATION_COMMIT_THRESHOLD}.  It
- * is not multiplied by the metric; it is a fixed nudge that makes structural
- * commits slightly harder during unstable reward windows without creating a
- * death spiral for young networks.
- */
-export const RACING_OSCILLATION_IMPROVEMENT_THRESHOLD_BOOST = 0.03;
-
-/**
- * Minimum live neuron count at which oscillation penalties and the growth-commit
- * threshold boost are applied.  Newborn and baby networks (< 200 neurons)
- * naturally oscillate while learning to steer, so the adaptation loop must not
- * penalize them until they reach the child tier.
- */
-export const RACING_OSCILLATION_MIN_NEURONS = 200;
-
-/**
  * Minimum mean absolute steering magnitude required for steering oscillation
  * to contribute to the oscillation metric.  Gentle corrections below this
  * deadband are treated as smooth steering, so legitimate S-curves through
@@ -1291,33 +1426,6 @@ export const RACING_OSCILLATION_MIN_MEAN_STEERING = 0.15;
  * non-trivial mutations.
  */
 const MAX_FORWARD_PASS_SAMPLES = 5;
-
-/**
- * Resolves the oscillation-driven additive boost for the growth-commit
- * improvement threshold.  The boost is only returned when the network has
- * reached the child tier (200+ neurons) and the oscillation metric is above the
- * commit gate; otherwise it returns zero so young or smooth networks are not
- * saddled with an extra growth bar.
- *
- * @param oscillationMetric - Maximum of steering and score-window oscillation.
- * @param neuronCount - Live neuron count of the candidate network.
- * @returns Additive threshold boost (0 or
- *   {@link RACING_OSCILLATION_IMPROVEMENT_THRESHOLD_BOOST}).
- */
-export function resolveOscillationThresholdBoost(
-  oscillationMetric: number,
-  neuronCount: number,
-): number {
-  if (neuronCount < RACING_OSCILLATION_MIN_NEURONS) {
-    return 0;
-  }
-
-  if (oscillationMetric <= RACING_OSCILLATION_COMMIT_THRESHOLD) {
-    return 0;
-  }
-
-  return RACING_OSCILLATION_IMPROVEMENT_THRESHOLD_BOOST;
-}
 
 /**
  * Detects steering oscillation from a window of steering angles.  A series is
@@ -1368,9 +1476,7 @@ export function detectSteeringOscillation(angles: readonly number[]): number {
  * @param entry - Numeric score or composite driving-quality signal.
  * @returns Scalar quality value for trend/mean scoring.
  */
-function toDrivingQuality(
-  entry: number | NeatRacingQualitySignal,
-): number {
+function toDrivingQuality(entry: number | NeatRacingQualitySignal): number {
   if (typeof entry === 'number') {
     return entry;
   }
@@ -1427,6 +1533,59 @@ export function detectScoreWindowOscillation(
   }
 
   return Math.min(1, (peaks + troughs) / (length * 0.5));
+}
+
+/**
+ * Evaluates the SHARED AC-030 oscillation predicate for ONE adaptation tick.
+ *
+ * The metric is the maximum of the steering oscillation and the score-window
+ * oscillation, computed from the PRE-mutation network's forward-pass outputs
+ * over the evidence window.  The steering deadband already lives inside
+ * {@link detectSteeringOscillation}, so a gentle correction yields a metric of
+ * exactly 0 and never engages the law.
+ *
+ * @param network - The PRE-mutation network of the tick.
+ * @param evidenceWindow - The tick's evidence window.
+ * @param state - The previous tick's predicate state (the hysteresis memory).
+ * @param level - The session level whose TP-07 node threshold gates the law.
+ * @returns The engagement verdict of the tick, carrying the next state.
+ */
+function evaluateTickOscillationEngagement(
+  network: Network,
+  evidenceWindow: readonly (number | NeatRacingQualitySignal)[],
+  state: OscillationPredicateState,
+  level: number,
+): OscillationEngagement {
+  const forwardPassOutputs = collectForwardPassOutputs(network, evidenceWindow);
+  const steeringAngles = forwardPassOutputs.map(
+    (outputVector) => outputVector[RACING_STEERING_OUTPUT_INDEX] ?? 0,
+  );
+  const oscillationMetric = Math.max(
+    detectSteeringOscillation(steeringAngles),
+    detectScoreWindowOscillation(evidenceWindow),
+  );
+
+  return evaluateOscillationEngagement(
+    { nodeCount: network.nodes.length, oscillationMetric, level },
+    state,
+  );
+}
+
+/**
+ * Builds the idle engagement verdict of a fresh engine.
+ *
+ * The shared predicate is evaluated against an empty network, so the hard
+ * node-count gate keeps the law fully disengaged until the engine's first
+ * real tick evaluates it.
+ *
+ * @param level - The session level whose TP-07 node threshold gates the law.
+ * @returns The fully disengaged engagement verdict.
+ */
+function createIdleOscillationEngagement(level: number): OscillationEngagement {
+  return evaluateOscillationEngagement(
+    { nodeCount: 0, oscillationMetric: 0, level },
+    createOscillationPredicateState(),
+  );
 }
 
 /**
@@ -1613,8 +1772,7 @@ export function evaluateRacingTrendScore(
   }
 
   const qualities = scoreHistory.map(toDrivingQuality);
-  const scoreTrend =
-    (qualities.at(-1) ?? 0) - (qualities[0] ?? 0);
+  const scoreTrend = (qualities.at(-1) ?? 0) - (qualities[0] ?? 0);
   const scoreMean =
     qualities.reduce(
       (accumulatedQuality, qualityValue) => accumulatedQuality + qualityValue,
@@ -1635,21 +1793,15 @@ export function evaluateRacingTrendScore(
     ? behavioralComplexity * RACING_COMPLEXITY_WEIGHT
     : 0;
 
-  // Penalize score-window oscillation so the trend evaluator prefers stable,
-  // monotonic improvement over noisy reward swings.  The penalty is proportional
-  // to the base score so it damps oscillation without inverting the score.  Like
-  // the variant scorer, the penalty is gated to child-tier networks so young
-  // networks are not punished for the natural learning oscillations that come
-  // with learning to steer.
+  // The AC-030 oscillation penalty is NOT applied here: the shared predicate
+  // in `./oscillation-penalty.utils` owns it, and the adaptation engine
+  // applies the tick's single engagement to the baseline and to every variant
+  // score.  Applying a second, legacy penalty inside the evaluator would
+  // double-penalize the live path and mix score spaces between the engine's
+  // `evaluateScore` path and the cycle's `scoreFn` path (a dual path).
   const baseScore = scoreMean + scoreTrend * 0.5;
-  const scoreOscillation = detectScoreWindowOscillation(scoreHistory);
-  const applyOscillationPenalty =
-    network.nodes.length >= RACING_OSCILLATION_MIN_NEURONS;
-  const oscillationPenalty = applyOscillationPenalty
-    ? baseScore * scoreOscillation * RACING_OSCILLATION_PENALTY_WEIGHT
-    : 0;
 
-  return baseScore + complexityBonus - oscillationPenalty;
+  return baseScore + complexityBonus;
 }
 
 /** Validates and normalizes the cadence options (recycled defaults). */
@@ -1784,9 +1936,7 @@ function buildModuleMetricsSnapshot(
 ): NgeModuleMetricsSnapshot {
   const qualities = evidenceWindow.map(toDrivingQuality);
   const scoreTrend =
-    qualities.length >= 2
-      ? (qualities.at(-1) ?? 0) - (qualities[0] ?? 0)
-      : 0;
+    qualities.length >= 2 ? (qualities.at(-1) ?? 0) - (qualities[0] ?? 0) : 0;
   const scoreMean =
     qualities.length > 0
       ? qualities.reduce(
@@ -1872,12 +2022,13 @@ function createTelemetry(
     | 'stabilizationTicksSinceGrowth'
     | 'tickCostMs'
     | 'withinTickBudget'
+    | 'oscillationEngagement'
   >,
   adaptationPhase: 'growth' | 'stabilization' = 'growth',
   stabilizationTicksSinceGrowth: number = 0,
 ): Omit<
   NeatRacingAdaptationTelemetry,
-  'tickCostMs' | 'withinTickBudget'
+  'tickCostMs' | 'withinTickBudget' | 'oscillationEngagement'
 > {
   return {
     ...telemetry,

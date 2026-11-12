@@ -1079,8 +1079,7 @@ export function createGlassPass(
         NEATRACING_GLASS_WHEEL_MOUNT_YAW_MATRIX,
       );
       const isFrontWheel =
-        mount.socketId === 'front-left' ||
-        mount.socketId === 'front-right';
+        mount.socketId === 'front-left' || mount.socketId === 'front-right';
       rotationYMat4(
         NEATRACING_GLASS_WHEEL_STEER_YAW_MATRIX,
         isFrontWheel ? (car.steerAngleRad ?? 0) : 0,

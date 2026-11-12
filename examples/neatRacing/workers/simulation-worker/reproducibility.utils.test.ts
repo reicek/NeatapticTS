@@ -1,5 +1,9 @@
 import { afterAll, beforeAll, describe, expect, it } from '@jest/globals';
-import type { PhysicsCarState } from '../../physics/physics.step.service';
+import type {
+  PhysicsCarState,
+  PhysicsStepInput,
+} from '../../physics/physics.step.service';
+import type { NeatRacingFleetControlSeam } from './nge.fleet.control';
 import type { RaceRulesState, RaceStatus } from '../../physics/race-rules';
 import {
   NEATRACING_PACK_SCHEMA_VERSION,
@@ -196,6 +200,11 @@ function createReproTestFixtureTuple(): NeatRacingReproducibilityTuple {
 /**
  * Builds the fixture init payload (the AC-026 tuple + owned geometry).
  *
+ * Educational note — the injected controller: the legacy scripted lane is
+ * retired (AC-029), so an agent car with NO injected controller has no
+ * driver. The fixture therefore boots WITH the deterministic controller
+ * double, and the fleet size stays 3 (the multi-car coverage survives).
+ *
  * @param overrides - Partial fields to override on the fixture payload.
  * @returns A complete init payload for one deterministic fixture boot.
  */
@@ -206,7 +215,50 @@ function createReproTestFixtureInitPayload(
     ...createReproTestFixtureTuple(),
     trackSpec: createReproTestFixtureTrackSpec(),
     raceMode: 'ai',
+    controller: createReproTestControllerDouble(),
     ...overrides,
+  };
+}
+
+/**
+ * The deterministic control answer the agent cars publish in this suite.
+ *
+ * Educational note — why a FIXED answer: the retired scripted lane is gone
+ * (AC-029), so the AGENT cars take the CONTROLLER's answer. A frozen answer
+ * keeps the AC-026 byte-parity contract deterministic — no RNG, no network,
+ * no clock.
+ */
+const REPRO_TEST_AGENT_CONTROL: Readonly<PhysicsStepInput> = Object.freeze({
+  throttle: 1,
+  brake: 0,
+  steer: 0.25,
+});
+
+/**
+ * Creates the deterministic controller double the agent cars run.
+ *
+ * Educational note — the seam contract: `computeControl(fleet, carIndex)`
+ * publishes the control input of ONE fleet car. The double is STATELESS and
+ * PURE (frozen constants plus the addressed car's own heading, no mutable
+ * state, no call counter) because the AC-026 contract compares TWO
+ * independently booted sessions element-for-element — a stateful double
+ * would make their digest streams diverge.
+ *
+ * @returns A deterministic fleet-control seam double.
+ */
+function createReproTestControllerDouble(): NeatRacingFleetControlSeam {
+  return {
+    computeControl(
+      fleet: readonly PhysicsCarState[],
+      carIndex: number,
+    ): PhysicsStepInput {
+      const addressedCar = fleet[carIndex];
+      return {
+        throttle: REPRO_TEST_AGENT_CONTROL.throttle,
+        brake: REPRO_TEST_AGENT_CONTROL.brake,
+        steer: REPRO_TEST_AGENT_CONTROL.steer + addressedCar.heading,
+      };
+    },
   };
 }
 
@@ -313,8 +365,11 @@ function createReproTestFramePool(
  */
 function packReproTestFrame(
   pool: NeatRacingTestFramePool,
-  overrides: { cars?: PhysicsCarState[]; fromTick?: number; toTick?: number } =
-    {},
+  overrides: {
+    cars?: PhysicsCarState[];
+    fromTick?: number;
+    toTick?: number;
+  } = {},
 ): NeatRacingPackedFrame {
   return pool.packFrame({
     fromTick: overrides.fromTick ?? 0,
@@ -395,9 +450,14 @@ describe('combineNeatRacingChildSeed + §9.7.2 derivation table', () => {
     // Assert: pure-function determinism, and both inputs matter.
     expect(
       combineNeatRacingChildSeed(REPRO_TEST_SEED, NEATRACING_TRACK_SURFACE_TAG),
-    ).toBe(combineNeatRacingChildSeed(REPRO_TEST_SEED, NEATRACING_TRACK_SURFACE_TAG));
+    ).toBe(
+      combineNeatRacingChildSeed(REPRO_TEST_SEED, NEATRACING_TRACK_SURFACE_TAG),
+    );
     expect(
-      combineNeatRacingChildSeed(REPRO_TEST_SEED + 1, NEATRACING_TRACK_SURFACE_TAG),
+      combineNeatRacingChildSeed(
+        REPRO_TEST_SEED + 1,
+        NEATRACING_TRACK_SURFACE_TAG,
+      ),
     ).not.toBe(
       combineNeatRacingChildSeed(REPRO_TEST_SEED, NEATRACING_TRACK_SURFACE_TAG),
     );
@@ -406,7 +466,9 @@ describe('combineNeatRacingChildSeed + §9.7.2 derivation table', () => {
         REPRO_TEST_SEED,
         NEATRACING_VARIANT_STREAM_SURFACE_TAG,
       ),
-    ).not.toBe(combineNeatRacingChildSeed(REPRO_TEST_SEED, NEATRACING_TRACK_SURFACE_TAG));
+    ).not.toBe(
+      combineNeatRacingChildSeed(REPRO_TEST_SEED, NEATRACING_TRACK_SURFACE_TAG),
+    );
   });
 
   it('mirrors the recycled per-variant stride composition', () => {
@@ -422,16 +484,18 @@ describe('combineNeatRacingChildSeed + §9.7.2 derivation table', () => {
 
     // Assert: index 0 ignores the stride; the named stride formula holds
     // on both branches.
-    expect(deriveNeatRacingVariantStreamChildSeed(REPRO_TEST_SEED, 0, 300)).toBe(
-      variantBase,
-    );
+    expect(
+      deriveNeatRacingVariantStreamChildSeed(REPRO_TEST_SEED, 0, 300),
+    ).toBe(variantBase);
     expect(deriveNeatRacingVariantStreamChildSeed(REPRO_TEST_SEED, 2)).toBe(
       (variantBase + 2 * NEATRACING_VARIANT_PATCH_SEED_OFFSET) >>> 0,
     );
     expect(
       deriveNeatRacingVariantStreamChildSeed(REPRO_TEST_SEED, 2, 300),
     ).toBe(
-      (variantBase + 2 * (300 * NEATRACING_VARIANT_PATCH_SEED_STRIDE_FACTOR)) >>> 0,
+      (variantBase +
+        2 * (300 * NEATRACING_VARIANT_PATCH_SEED_STRIDE_FACTOR)) >>>
+        0,
     );
   });
 
@@ -459,9 +523,9 @@ describe('combineNeatRacingChildSeed + §9.7.2 derivation table', () => {
     // Act: mix an empty tag and derive with negative / fractional indices.
 
     // Assert: loud static RangeErrors at the derivation boundary.
-    expect(() =>
-      combineNeatRacingChildSeed(REPRO_TEST_SEED, ''),
-    ).toThrow(RangeError);
+    expect(() => combineNeatRacingChildSeed(REPRO_TEST_SEED, '')).toThrow(
+      RangeError,
+    );
     expect(() =>
       deriveNeatRacingCarNetworkChildSeed(REPRO_TEST_SEED, -1),
     ).toThrow(RangeError);
@@ -508,9 +572,15 @@ describe('createNeatRacingXorShift32Stream', () => {
 
     // Assert: different seeds seed different streams.
     expect(
-      collectXorShiftDraws(createNeatRacingXorShift32Stream(1), REPRO_TEST_DRAW_COUNT),
+      collectXorShiftDraws(
+        createNeatRacingXorShift32Stream(1),
+        REPRO_TEST_DRAW_COUNT,
+      ),
     ).not.toEqual(
-      collectXorShiftDraws(createNeatRacingXorShift32Stream(2), REPRO_TEST_DRAW_COUNT),
+      collectXorShiftDraws(
+        createNeatRacingXorShift32Stream(2),
+        REPRO_TEST_DRAW_COUNT,
+      ),
     );
   });
 
@@ -543,7 +613,9 @@ describe('createNeatRacingXorShift32Stream', () => {
       ),
     ).toEqual(
       collectXorShiftDraws(
-        createNeatRacingXorShift32Stream(NEATRACING_XORSHIFT32_ZERO_SEED_FALLBACK),
+        createNeatRacingXorShift32Stream(
+          NEATRACING_XORSHIFT32_ZERO_SEED_FALLBACK,
+        ),
         REPRO_TEST_DRAW_COUNT,
       ),
     );
@@ -620,14 +692,22 @@ describe('serializeNeatRacingReproducibilityTuple', () => {
     // Assert: absent flags collapse to an explicit null slot in the same
     // field position; present flags are carried verbatim.
     expect(
-      (JSON.parse(serializeNeatRacingReproducibilityTuple(tupleWithoutFlags)) as {
-        featureFlags: unknown;
-      }).featureFlags,
+      (
+        JSON.parse(
+          serializeNeatRacingReproducibilityTuple(tupleWithoutFlags),
+        ) as {
+          featureFlags: unknown;
+        }
+      ).featureFlags,
     ).toBe(null);
     expect(
-      (JSON.parse(
-        serializeNeatRacingReproducibilityTuple(createReproTestFixtureTuple()),
-      ) as { featureFlags: unknown }).featureFlags,
+      (
+        JSON.parse(
+          serializeNeatRacingReproducibilityTuple(
+            createReproTestFixtureTuple(),
+          ),
+        ) as { featureFlags: unknown }
+      ).featureFlags,
     ).toEqual({ aiAutopilot: true });
   });
 
@@ -643,9 +723,9 @@ describe('serializeNeatRacingReproducibilityTuple', () => {
     expect(computeNeatRacingReproducibilityTupleFingerprint({ ...tuple })).toBe(
       computeNeatRacingReproducibilityTupleFingerprint({ ...tuple }),
     );
-    expect(
-      serializeNeatRacingReproducibilityTuple(tupleSeedShifted),
-    ).not.toBe(serializeNeatRacingReproducibilityTuple(tuple));
+    expect(serializeNeatRacingReproducibilityTuple(tupleSeedShifted)).not.toBe(
+      serializeNeatRacingReproducibilityTuple(tuple),
+    );
     expect(
       computeNeatRacingReproducibilityTupleFingerprint(tupleSeedShifted),
     ).not.toBe(computeNeatRacingReproducibilityTupleFingerprint(tuple));
@@ -704,9 +784,13 @@ describe('computeNeatRacingPackedFrameByteDigest', () => {
     // Assert: any channel-byte change flips the packed-frame digest — the
     // AC-026 byte-parity witness has no silent channel tolerance.
     expect(
-      computeNeatRacingPackedFrameByteDigest(packReproTestFrame(pool, { cars: fleetB })),
+      computeNeatRacingPackedFrameByteDigest(
+        packReproTestFrame(pool, { cars: fleetB }),
+      ),
     ).not.toBe(
-      computeNeatRacingPackedFrameByteDigest(packReproTestFrame(pool, { cars: fleetA })),
+      computeNeatRacingPackedFrameByteDigest(
+        packReproTestFrame(pool, { cars: fleetA }),
+      ),
     );
   });
 
@@ -719,9 +803,9 @@ describe('computeNeatRacingPackedFrameByteDigest', () => {
     // Act: digest it.
 
     // Assert: a loud RangeError from the schema sentinel check.
-    expect(() =>
-      computeNeatRacingPackedFrameByteDigest(foreignFrame),
-    ).toThrow(RangeError);
+    expect(() => computeNeatRacingPackedFrameByteDigest(foreignFrame)).toThrow(
+      RangeError,
+    );
   });
 
   it('rejects a frame with missing header scalars', () => {
@@ -734,9 +818,9 @@ describe('computeNeatRacingPackedFrameByteDigest', () => {
     // Act: digest it.
 
     // Assert: a loud RangeError from the header-fold validation.
-    expect(() =>
-      computeNeatRacingPackedFrameByteDigest(hollowFrame),
-    ).toThrow(RangeError);
+    expect(() => computeNeatRacingPackedFrameByteDigest(hollowFrame)).toThrow(
+      RangeError,
+    );
   });
 });
 
@@ -799,7 +883,11 @@ describe('AC-026 byte parity over the adaptation-tick window', () => {
 
     // Act: pace exactly one adaptation-tick window of once-per-tick frames.
     const digests: string[] = [];
-    for (let frameIndex = 0; frameIndex < NEATRACING_REPLAY_ADAPTATION_TICKS; frameIndex++) {
+    for (
+      let frameIndex = 0;
+      frameIndex < NEATRACING_REPLAY_ADAPTATION_TICKS;
+      frameIndex++
+    ) {
       const request: NeatRacingSimWorkerRequest = {
         type: 'frame',
         payload: {
@@ -831,9 +919,7 @@ describe('AC-026 byte parity over the adaptation-tick window', () => {
     // and the two digest streams are element-for-element identical — the
     // AC-026 same-runtime byte-parity claim at this boundary.
     expect(digestsA).toHaveLength(NEATRACING_REPLAY_ADAPTATION_TICKS);
-    expect(
-      digestsA.every((digest) => /^[0-9a-f]{8}$/.test(digest)),
-    ).toBe(true);
+    expect(digestsA.every((digest) => /^[0-9a-f]{8}$/.test(digest))).toBe(true);
     expect(digestsB).toEqual(digestsA);
   });
 

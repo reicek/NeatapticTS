@@ -718,9 +718,12 @@ export function expandVoxelBinModelToCarMesh(
       vertexData[writeOffset] = modelX;
       vertexData[writeOffset + 1] = modelY;
       vertexData[writeOffset + 2] = modelZ;
-      vertexData[writeOffset + 3] = baseColor[0] / NEATRACING_CAR_COLOR_BYTE_MAX;
-      vertexData[writeOffset + 4] = baseColor[1] / NEATRACING_CAR_COLOR_BYTE_MAX;
-      vertexData[writeOffset + 5] = baseColor[2] / NEATRACING_CAR_COLOR_BYTE_MAX;
+      vertexData[writeOffset + 3] =
+        baseColor[0] / NEATRACING_CAR_COLOR_BYTE_MAX;
+      vertexData[writeOffset + 4] =
+        baseColor[1] / NEATRACING_CAR_COLOR_BYTE_MAX;
+      vertexData[writeOffset + 5] =
+        baseColor[2] / NEATRACING_CAR_COLOR_BYTE_MAX;
       vertexData[writeOffset + 6] = quad.normalAxis;
       vertexData[writeOffset + 7] = emissive;
       vertexData[writeOffset + 8] = quad.paletteIndex;
@@ -1555,7 +1558,7 @@ export function createCarPass(
         const localX = mount.position[0];
         const localZ = mount.position[2];
         const wheelWorldX = car.worldX + cos * localX + sin * localZ;
-        const wheelWorldZ = car.worldZ + (-sin) * localX + cos * localZ;
+        const wheelWorldZ = car.worldZ + -sin * localX + cos * localZ;
         translationMat4(
           NEATRACING_SHADOW_TRANSLATION_MATRIX,
           wheelWorldX,
@@ -1761,8 +1764,7 @@ export function createCarPass(
           NEATRACING_WHEEL_MOUNT_YAW_MATRIX,
         );
         const isFrontWheel =
-          mount.socketId === 'front-left' ||
-          mount.socketId === 'front-right';
+          mount.socketId === 'front-left' || mount.socketId === 'front-right';
         // AC-088: the front axle is the steered axle, and the angle it
         // actually holds is the physics-driven EFFECTIVE steer (the raw
         // request scaled by the front grip), never the raw echo itself.

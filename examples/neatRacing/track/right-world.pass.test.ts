@@ -206,9 +206,7 @@ const BILLBOARD_UPLOAD_FLOATS_PER_VERTEX = 5;
  * quad occupies 120 bytes of the GPU buffer.
  */
 const BILLBOARD_UPLOAD_BYTES =
-  BILLBOARD_UPLOAD_VERTICES_PER_QUAD *
-  BILLBOARD_UPLOAD_FLOATS_PER_VERTEX *
-  4;
+  BILLBOARD_UPLOAD_VERTICES_PER_QUAD * BILLBOARD_UPLOAD_FLOATS_PER_VERTEX * 4;
 
 /**
  * Number of frames of the public-only sprite atlas (AC-075).
@@ -443,7 +441,7 @@ function findHostProp(
 /** Computes the horizontal top surface area of a prop in square meters. */
 function propTopArea(prop: RightWorldProp): number {
   const [hx, , hz] = resolvePropHalfSize(prop.kind);
-  return (2 * hx) * (2 * hz);
+  return 2 * hx * (2 * hz);
 }
 
 /**
@@ -451,7 +449,9 @@ function propTopArea(prop: RightWorldProp): number {
  * Billboards standing on the ground are not counted.
  */
 function countHostedBillboardsPerProp(
-  billboards: readonly { readonly position: readonly [number, number, number] }[],
+  billboards: readonly {
+    readonly position: readonly [number, number, number];
+  }[],
   props: readonly RightWorldProp[],
 ): Map<RightWorldProp, number> {
   const counts = new Map<RightWorldProp, number>();
@@ -514,15 +514,16 @@ function findBleacherHostProp(
  * @param scene - Assembled right-world scene.
  * @returns The bleacher-hosted public billboards.
  */
-function getBleacherHostedPublicBillboards(
-  scene: {
-    readonly props: readonly RightWorldProp[];
-    readonly billboards: readonly {
-      readonly position: readonly [number, number, number];
-      readonly runtimeRole?: string;
-    }[];
-  },
-): { readonly position: readonly [number, number, number]; readonly runtimeRole?: string }[] {
+function getBleacherHostedPublicBillboards(scene: {
+  readonly props: readonly RightWorldProp[];
+  readonly billboards: readonly {
+    readonly position: readonly [number, number, number];
+    readonly runtimeRole?: string;
+  }[];
+}): {
+  readonly position: readonly [number, number, number];
+  readonly runtimeRole?: string;
+}[] {
   return scene.billboards.filter(
     (billboard) => findBleacherHostProp(billboard, scene.props) !== undefined,
   );
@@ -681,9 +682,9 @@ function countSelectedBillboards(
  * @returns The direction×pose index table.
  */
 function buildRuntimeIndexTable(scene: RightWorldSceneData): Int16Array {
-  const table = new Int16Array(
-    DIRECTION_ORDER.length * PUBLIC_POSE_COUNT,
-  ).fill(-1);
+  const table = new Int16Array(DIRECTION_ORDER.length * PUBLIC_POSE_COUNT).fill(
+    -1,
+  );
 
   for (
     let frameIndex = 0;
@@ -934,8 +935,14 @@ interface RightWorldMockGlHarness {
     readonly name: string;
     readonly channels: readonly [number, number, number];
   }>;
-  readonly uniform1fFeeds: ReadonlyArray<{ readonly name: string; readonly value: number }>;
-  readonly uniform1iFeeds: ReadonlyArray<{ readonly name: string; readonly value: number }>;
+  readonly uniform1fFeeds: ReadonlyArray<{
+    readonly name: string;
+    readonly value: number;
+  }>;
+  readonly uniform1iFeeds: ReadonlyArray<{
+    readonly name: string;
+    readonly value: number;
+  }>;
   readonly uniformMatrixFeeds: ReadonlyArray<{
     readonly name: string;
     readonly matrix: readonly number[];
@@ -1242,8 +1249,14 @@ function createRightWorldMockGlHarness(
     readonly name: string;
     readonly channels: readonly [number, number, number];
   }> = [];
-  const uniform1fFeeds: Array<{ readonly name: string; readonly value: number }> = [];
-  const uniform1iFeeds: Array<{ readonly name: string; readonly value: number }> = [];
+  const uniform1fFeeds: Array<{
+    readonly name: string;
+    readonly value: number;
+  }> = [];
+  const uniform1iFeeds: Array<{
+    readonly name: string;
+    readonly value: number;
+  }> = [];
   const uniformMatrixFeeds: Array<{
     readonly name: string;
     readonly matrix: readonly number[];
@@ -1254,7 +1267,11 @@ function createRightWorldMockGlHarness(
     readonly format: number;
     readonly type: number;
   }> = [];
-  const drawCalls: Array<{ readonly mode: number; readonly first: number; readonly count: number }> = [];
+  const drawCalls: Array<{
+    readonly mode: number;
+    readonly first: number;
+    readonly count: number;
+  }> = [];
   const bufferDataCalls: Array<{ readonly size: number }> = [];
   const bufferSubDataCalls: Array<{ readonly data: Float32Array }> = [];
 
@@ -1394,7 +1411,10 @@ function createRightWorldMockGlHarness(
       _transpose: boolean,
       matrix: Float32Array,
     ): void => {
-      uniformMatrixFeeds.push({ name: location.name, matrix: Array.from(matrix) });
+      uniformMatrixFeeds.push({
+        name: location.name,
+        matrix: Array.from(matrix),
+      });
     },
     uniform3f: (
       location: { name: string },
@@ -1416,7 +1436,10 @@ function createRightWorldMockGlHarness(
     uniform1f: (location: { name: string }, value: number): void => {
       uniform1fFeeds.push({ name: location.name, value });
     },
-    uniform1fv: (location: { name: string }, values: readonly number[]): void => {
+    uniform1fv: (
+      location: { name: string },
+      values: readonly number[],
+    ): void => {
       for (const value of values) {
         uniform1fFeeds.push({ name: location.name, value });
       }
@@ -1428,7 +1451,8 @@ function createRightWorldMockGlHarness(
       drawCalls.push({ mode, first, count });
     },
     isEnabled: (): boolean => false,
-    getParameter: (pname: number): unknown => parameterDefaults.get(pname) ?? null,
+    getParameter: (pname: number): unknown =>
+      parameterDefaults.get(pname) ?? null,
     getVertexAttrib: (): boolean => false,
     deleteProgram: (): void => undefined,
     deleteShader: (): void => undefined,
@@ -1472,7 +1496,8 @@ describe('right-world.pass scene assembly (P1-sprite-spacing, AC-065)', () => {
     // epsilon only covers the double-precision residue of the rotated seat
     // lattice, so the contract is never relaxed.
     expect(minDistance).toBeGreaterThanOrEqual(
-      NEATRACING_ROBOT_PERSONAL_SPACE_M - NEATRACING_ROBOT_PERSONAL_SPACE_EPSILON_M,
+      NEATRACING_ROBOT_PERSONAL_SPACE_M -
+        NEATRACING_ROBOT_PERSONAL_SPACE_EPSILON_M,
     );
   });
 });
@@ -1530,884 +1555,863 @@ describe('right-world.pass prop shared sun lighting (P1-world-lighting-coherence
   });
 });
 
-describe(
-  'bleacher crowd hosting and gaze (fix-packet-P1-bleacher-crowd-iteration-1, OBS-B + OBS-C)',
-  () => {
-    it('hosts at least one public spectator on a real bleacher stand cell', () => {
-      const scene = buildRightWorldSceneData();
-      const hosted = getBleacherHostedPublicBillboards(scene);
+describe('bleacher crowd hosting and gaze (fix-packet-P1-bleacher-crowd-iteration-1, OBS-B + OBS-C)', () => {
+  it('hosts at least one public spectator on a real bleacher stand cell', () => {
+    const scene = buildRightWorldSceneData();
+    const hosted = getBleacherHostedPublicBillboards(scene);
 
-      expect(hosted.length).toBeGreaterThan(0);
-    });
+    expect(hosted.length).toBeGreaterThan(0);
+  });
 
-    it('keeps the majority of bleacher-hosted spectators in look-at-car mode', () => {
-      const scene = buildRightWorldSceneData();
-      const hosted = getBleacherHostedPublicBillboards(scene);
+  it('keeps the majority of bleacher-hosted spectators in look-at-car mode', () => {
+    const scene = buildRightWorldSceneData();
+    const hosted = getBleacherHostedPublicBillboards(scene);
 
-      expect(hosted.length).toBeGreaterThan(0);
+    expect(hosted.length).toBeGreaterThan(0);
 
-      const lookingAtCar = hosted.filter(
-        (billboard) => billboard.runtimeRole === 'seated',
-      );
-      const ratio = lookingAtCar.length / hosted.length;
+    const lookingAtCar = hosted.filter(
+      (billboard) => billboard.runtimeRole === 'seated',
+    );
+    const ratio = lookingAtCar.length / hosted.length;
 
-      expect(ratio).toBeGreaterThan(0.5);
-    });
-  },
-);
+    expect(ratio).toBeGreaterThan(0.5);
+  });
+});
 
-describe(
-  'right-world.pass public-only atlas and seed-invariant scene (AC-070 retained clauses)',
-  () => {
-    it('packs a public-only sprite atlas of exactly 144 frames', () => {
-      // AC-070: the atlas is PUBLIC-ONLY - the mechanic atlas must no longer
-      // be merged into it. 144 frames = 6 accents x 8 directions x 3 poses.
-      const scene = buildRightWorldSceneData();
-      const frameIds = scene.atlas.frames.map((frame) => String(frame.id));
+describe('right-world.pass public-only atlas and seed-invariant scene (AC-070 retained clauses)', () => {
+  it('packs a public-only sprite atlas of exactly 144 frames', () => {
+    // AC-070: the atlas is PUBLIC-ONLY - the mechanic atlas must no longer
+    // be merged into it. 144 frames = 6 accents x 8 directions x 3 poses.
+    const scene = buildRightWorldSceneData();
+    const frameIds = scene.atlas.frames.map((frame) => String(frame.id));
 
-      expect(scene.atlas.source).toBe('neatenstein-public');
-      expect(scene.atlas.frames.length).toBe(144);
-      expect(frameIds.filter((id) => id.includes('mechanic'))).toEqual([]);
-    });
+    expect(scene.atlas.source).toBe('neatenstein-public');
+    expect(scene.atlas.frames.length).toBe(144);
+    expect(frameIds.filter((id) => id.includes('mechanic'))).toEqual([]);
+  });
 
-    it('rebuilds an identical scene when the same seed is built twice', () => {
-      // F3 (determinism reviewer): the crowd-host rule has to be STABLE for
-      // a fixed seed. Two builds of the same input must yield the same
-      // props, the same hosting bleacher and the same billboard anchors -
-      // the reserved bleacher slot, the host selection and the seat anchors
-      // must not drift between two builds of one seed. The sweep runs over
-      // BOTH size buckets, because the reserved slot, the ring slot counts,
-      // and therefore the host selection all depend on the track geometry
-      // the bucket selects.
-      const driftedSeeds: string[] = [];
+  it('rebuilds an identical scene when the same seed is built twice', () => {
+    // F3 (determinism reviewer): the crowd-host rule has to be STABLE for
+    // a fixed seed. Two builds of the same input must yield the same
+    // props, the same hosting bleacher and the same billboard anchors -
+    // the reserved bleacher slot, the host selection and the seat anchors
+    // must not drift between two builds of one seed. The sweep runs over
+    // BOTH size buckets, because the reserved slot, the ring slot counts,
+    // and therefore the host selection all depend on the track geometry
+    // the bucket selects.
+    const driftedSeeds: string[] = [];
 
-      for (const sizeBucket of ['small', 'large'] as const) {
-        for (const seed of NEATRACING_CROWD_FIXTURE_SEEDS) {
-          const first = buildRightWorldSceneData({
-            seed,
-            layoutVersion: NEATRACING_CROWD_BUILD_INPUT.layoutVersion,
-            sizeBucket,
-          });
-          const second = buildRightWorldSceneData({
-            seed,
-            layoutVersion: NEATRACING_CROWD_BUILD_INPUT.layoutVersion,
-            sizeBucket,
-          });
+    for (const sizeBucket of ['small', 'large'] as const) {
+      for (const seed of NEATRACING_CROWD_FIXTURE_SEEDS) {
+        const first = buildRightWorldSceneData({
+          seed,
+          layoutVersion: NEATRACING_CROWD_BUILD_INPUT.layoutVersion,
+          sizeBucket,
+        });
+        const second = buildRightWorldSceneData({
+          seed,
+          layoutVersion: NEATRACING_CROWD_BUILD_INPUT.layoutVersion,
+          sizeBucket,
+        });
 
-          if (summarizeScene(first) !== summarizeScene(second)) {
-            driftedSeeds.push(`seed=${seed} bucket=${sizeBucket}`);
-          }
+        if (summarizeScene(first) !== summarizeScene(second)) {
+          driftedSeeds.push(`seed=${seed} bucket=${sizeBucket}`);
         }
       }
+    }
 
-      expect(driftedSeeds).toEqual([]);
-    });
-  },
-);
+    expect(driftedSeeds).toEqual([]);
+  });
+});
 
-describe(
-  'right-world.pass re-populated crowd (P1-crowd2-red-contracts, RED-C, AC-073 + AC-074)',
-  () => {
-    it('populates every bleacher of the scene with seated billboards at every fixture seed', () => {
-      // RED-C (AC-073): the retired single-host crowd filter left ONE
-      // bleacher populated and every other bleacher empty. The re-populated
-      // world keeps EVERY bleacher, so each one of them has to host at least
-      // one SEATED billboard at every fixture seed.
-      const violations: string[] = [];
-      const bleacherCounts: number[] = [];
+describe('right-world.pass re-populated crowd (P1-crowd2-red-contracts, RED-C, AC-073 + AC-074)', () => {
+  it('populates every bleacher of the scene with seated billboards at every fixture seed', () => {
+    // RED-C (AC-073): the retired single-host crowd filter left ONE
+    // bleacher populated and every other bleacher empty. The re-populated
+    // world keeps EVERY bleacher, so each one of them has to host at least
+    // one SEATED billboard at every fixture seed.
+    const violations: string[] = [];
+    const bleacherCounts: number[] = [];
 
-      for (const seed of NEATRACING_CROWD_FIXTURE_SEEDS) {
-        const scene = buildFixtureScene(seed);
-        const bleachers = scene.props.filter((prop) => prop.kind === 'bleacher');
-        bleacherCounts.push(bleachers.length);
+    for (const seed of NEATRACING_CROWD_FIXTURE_SEEDS) {
+      const scene = buildFixtureScene(seed);
+      const bleachers = scene.props.filter((prop) => prop.kind === 'bleacher');
+      bleacherCounts.push(bleachers.length);
 
-        if (bleachers.length === 0) {
-          violations.push(`seed=${seed} the scene carries no bleacher at all`);
-          continue;
-        }
-
-        for (const bleacher of bleachers) {
-          const hosted = scene.billboards.filter(
-            (billboard) =>
-              runtimeRoleOf(billboard) === CROWD_ROLE_SEATED &&
-              findBleacherHostProp(billboard, scene.props) === bleacher,
-          );
-
-          if (hosted.length === 0) {
-            violations.push(
-              `seed=${seed} bleacherProp=${scene.props.indexOf(bleacher)} ` +
-                'hosts no seated billboard',
-            );
-          }
-        }
+      if (bleachers.length === 0) {
+        violations.push(`seed=${seed} the scene carries no bleacher at all`);
+        continue;
       }
 
-      // More than one bleacher per scene, so "every bleacher" is a real
-      // constraint and not a vacuous one.
-      expect(Math.min(...bleacherCounts)).toBeGreaterThan(1);
-      expect(violations).toEqual([]);
-    });
-
-    it('seats exactly twelve spectators on every bleacher and four on every level at every fixture seed', () => {
-      // MAJOR-1 (AC-072): the seated count is an EXACT contract, not a lower
-      // bound. Every bleacher of every fixture seed carries exactly twelve
-      // seated spectators - four on each of its three levels - and the
-      // count is measured on the ASSEMBLED scene, so the personal-space
-      // filter is part of the measurement. A filter that thins a bleacher
-      // shows up as a violation instead of a silently lower bound, the
-      // violation names the seed, the bleacher and the level, and the
-      // expected counts are constants that are never lowered to match a
-      // drifting scene.
-      const violations: string[] = [];
-
-      for (const seed of NEATRACING_CROWD_FIXTURE_SEEDS) {
-        const scene = buildFixtureScene(seed);
-        const bleachers = scene.props.filter((prop) => prop.kind === 'bleacher');
-
-        for (const bleacher of bleachers) {
-          const bleacherIndex = scene.props.indexOf(bleacher);
-          const hosted = scene.billboards.filter(
-            (billboard) =>
-              runtimeRoleOf(billboard) === CROWD_ROLE_SEATED &&
-              findBleacherHostProp(billboard, scene.props) === bleacher,
-          );
-
-          if (hosted.length !== REPOPULATED_SEATED_BILLBOARDS_PER_BLEACHER) {
-            violations.push(
-              `seed=${seed} bleacherProp=${bleacherIndex} seats ` +
-                `${hosted.length} spectators, expected ` +
-                `${REPOPULATED_SEATED_BILLBOARDS_PER_BLEACHER}`,
-            );
-            continue;
-          }
-
-          // The seat anchors are LEVEL-MAJOR - four anchors per level, the
-          // lowest platform first - so the level of a seated billboard is
-          // read from the real seat geometry instead of a guessed height
-          // window.
-          const anchors = getBleacherSeatAnchors(bleacher);
-          const levelCounts = new Map<number, number>();
-
-          for (const billboard of hosted) {
-            const [x, , z] = billboard.position;
-            let nearestAnchor = -1;
-            let nearestDistance = Number.POSITIVE_INFINITY;
-
-            for (let index = 0; index < anchors.length; index += 1) {
-              const anchor = anchors[index]!;
-              const distance = Math.hypot(x - anchor[0], z - anchor[2]);
-
-              if (distance < nearestDistance) {
-                nearestDistance = distance;
-                nearestAnchor = index;
-              }
-            }
-
-            const level = Math.floor(
-              nearestAnchor / REPOPULATED_SEATED_BILLBOARDS_PER_LEVEL,
-            );
-            levelCounts.set(level, (levelCounts.get(level) ?? 0) + 1);
-          }
-
-          for (let level = 0; level < NEATRACING_BLEACHER_LEVEL_COUNT; level += 1) {
-            const levelCount = levelCounts.get(level) ?? 0;
-
-            if (levelCount !== REPOPULATED_SEATED_BILLBOARDS_PER_LEVEL) {
-              violations.push(
-                `seed=${seed} bleacherProp=${bleacherIndex} level=${level} seats ` +
-                  `${levelCount} spectators, expected ` +
-                  `${REPOPULATED_SEATED_BILLBOARDS_PER_LEVEL}`,
-              );
-            }
-          }
-        }
-      }
-
-      expect(violations).toEqual([]);
-    });
-
-    it('keeps the off-bleacher crowd inside its allowance and every role inside the runtime role set', () => {
-      // The off-bleacher crowd is a CAP, never a quota: the allowance is the
-      // ceiling of the walkers, standing spectators and mechanics, and the
-      // clearance search SKIPS an agent that has no clear spot. The contract
-      // therefore pins the ceiling and the role set, not an exact
-      // off-bleacher count.
-      const violations: string[] = [];
-
-      for (const seed of NEATRACING_CROWD_FIXTURE_SEEDS) {
-        const scene = buildFixtureScene(seed);
-        const offBleacher = getOffBleacherBillboards(scene);
-
-        if (
-          offBleacher.length > NEATRACING_PUBLIC_OFF_BLEACHER_AGENT_ALLOWANCE
-        ) {
-          violations.push(
-            `seed=${seed} carries ${offBleacher.length} off-bleacher agents, ` +
-              `above the allowance of ` +
-              `${NEATRACING_PUBLIC_OFF_BLEACHER_AGENT_ALLOWANCE}`,
-          );
-        }
-
-        for (const billboard of scene.billboards) {
-          const role = runtimeRoleOf(billboard);
-
-          if (!PUBLIC_RUNTIME_ROLES.includes(role)) {
-            violations.push(`seed=${seed} carries the unknown role ${role}`);
-          }
-        }
-      }
-
-      expect(violations).toEqual([]);
-    });
-
-    it('carries at least one walker and at least one standing off-bleacher billboard at every fixture seed', () => {
-      // RED-C (AC-074): the off-bleacher agents are back - the WALKERS on the
-      // seeded slow walk cycle and the STANDING spectators outside the ring.
-      const violations: string[] = [];
-
-      for (const seed of NEATRACING_CROWD_FIXTURE_SEEDS) {
-        const scene = buildFixtureScene(seed);
-        const walkers = scene.billboards.filter(
-          (billboard) => runtimeRoleOf(billboard) === CROWD_ROLE_WALKER,
-        );
-        const standingOffBleacher = scene.billboards.filter(
+      for (const bleacher of bleachers) {
+        const hosted = scene.billboards.filter(
           (billboard) =>
-            runtimeRoleOf(billboard) === CROWD_ROLE_STANDING &&
-            findBleacherHostProp(billboard, scene.props) === undefined,
+            runtimeRoleOf(billboard) === CROWD_ROLE_SEATED &&
+            findBleacherHostProp(billboard, scene.props) === bleacher,
         );
 
-        if (walkers.length === 0) {
-          violations.push(`seed=${seed} the scene carries no walker billboard`);
-        }
-        if (standingOffBleacher.length === 0) {
+        if (hosted.length === 0) {
           violations.push(
-            `seed=${seed} the scene carries no standing off-bleacher billboard`,
+            `seed=${seed} bleacherProp=${scene.props.indexOf(bleacher)} ` +
+              'hosts no seated billboard',
           );
         }
       }
+    }
 
-      expect(violations).toEqual([]);
-    });
+    // More than one bleacher per scene, so "every bleacher" is a real
+    // constraint and not a vacuous one.
+    expect(Math.min(...bleacherCounts)).toBeGreaterThan(1);
+    expect(violations).toEqual([]);
+  });
 
-    it('carries the mechanic, crew and team-banner prop kinds on the inner ring', () => {
-      // RED-C (AC-074): the mechanic pit props are RE-AUTHORED on the INNER
-      // ring - closer to the road than the bleachers - so the assembled scene
-      // carries the three people kinds and every one of them sits on the
-      // inner ring.
-      const violations: string[] = [];
+  it('seats exactly twelve spectators on every bleacher and four on every level at every fixture seed', () => {
+    // MAJOR-1 (AC-072): the seated count is an EXACT contract, not a lower
+    // bound. Every bleacher of every fixture seed carries exactly twelve
+    // seated spectators - four on each of its three levels - and the
+    // count is measured on the ASSEMBLED scene, so the personal-space
+    // filter is part of the measurement. A filter that thins a bleacher
+    // shows up as a violation instead of a silently lower bound, the
+    // violation names the seed, the bleacher and the level, and the
+    // expected counts are constants that are never lowered to match a
+    // drifting scene.
+    const violations: string[] = [];
 
-      for (const seed of NEATRACING_CROWD_FIXTURE_SEEDS) {
-        const scene = buildFixtureScene(seed);
+    for (const seed of NEATRACING_CROWD_FIXTURE_SEEDS) {
+      const scene = buildFixtureScene(seed);
+      const bleachers = scene.props.filter((prop) => prop.kind === 'bleacher');
 
-        for (const kind of REQUIRED_PEOPLE_PROP_KINDS) {
-          const ofKind = scene.props.filter((prop) => prop.kind === kind);
-
-          if (ofKind.length === 0) {
-            violations.push(`seed=${seed} the scene carries no ${kind} prop`);
-            continue;
-          }
-
-          for (const prop of ofKind) {
-            if (prop.ringSide !== 'inner') {
-              violations.push(
-                `seed=${seed} the ${kind} prop sits on the ` +
-                  `${prop.ringSide} ring`,
-              );
-            }
-          }
-        }
-      }
-
-      expect(violations).toEqual([]);
-    });
-  },
-);
-
-describe(
-  'right-world.pass off-bleacher agents (P1-crowd2-red-contracts, RED-D, AC-074)',
-  () => {
-    it('paints the inner-ring mechanics with a team accent', () => {
-      // RED-D (AC-074): the mechanics keep TEAM-color accents instead of the
-      // colour-diverse spectator rule. The accent of the frame a mechanic
-      // actually renders has to belong to the family of one of the four
-      // NAMED team colours.
-      const violations: string[] = [];
-      let mechanicCount = 0;
-
-      for (const seed of NEATRACING_CROWD_FIXTURE_SEEDS) {
-        const scene = buildFixtureScene(seed);
-        const table = buildRuntimeIndexTable(scene);
-        const mechanics = scene.billboards.filter(
-          (billboard) => runtimeRoleOf(billboard) === CROWD_ROLE_MECHANIC,
+      for (const bleacher of bleachers) {
+        const bleacherIndex = scene.props.indexOf(bleacher);
+        const hosted = scene.billboards.filter(
+          (billboard) =>
+            runtimeRoleOf(billboard) === CROWD_ROLE_SEATED &&
+            findBleacherHostProp(billboard, scene.props) === bleacher,
         );
-        mechanicCount += mechanics.length;
 
-        for (const mechanic of mechanics) {
-          const frameIndex = computePublicRuntimeFrameIndex(
-            mechanic,
-            CROWD_CAMERA_WORLD,
-            CROWD_CAR_POSITION,
-            CROWD_RUNTIME_TIME_SECONDS,
-            table,
-            CROWD_CAMERA_FORWARD,
-          );
-
-          if (frameIndex < 0) {
-            violations.push(`seed=${seed} a mechanic resolves no atlas frame`);
-            continue;
-          }
-
-          const frame = scene.atlas.frames[frameIndex];
-          if (!frame) {
-            violations.push(`seed=${seed} a mechanic resolves a missing frame`);
-            continue;
-          }
-
-          const hue = dominantAccentHue(frame.rgba);
-          if (hue === null) {
-            violations.push(
-              `seed=${seed} a mechanic frame carries no accent hue`,
-            );
-            continue;
-          }
-
-          if (!isTeamAccentHue(hue)) {
-            violations.push(
-              `seed=${seed} a mechanic renders accent hue ${hue}, ` +
-                'which is no team accent',
-            );
-          }
-        }
-      }
-
-      expect(mechanicCount).toBeGreaterThan(0);
-      expect(violations).toEqual([]);
-    });
-
-    it('renders the inner-ring mechanics on the look-at-car stand frame', () => {
-      // RED-D (AC-074): a mechanic always looks at the car, so its frame is
-      // the STAND pose of the camera-relative look-at-car direction. The
-      // reference billboard resolves that direction for the very same spot,
-      // so the contract compares frames and never duplicates the bearing
-      // math.
-      const violations: string[] = [];
-      let mechanicCount = 0;
-
-      for (const seed of NEATRACING_CROWD_FIXTURE_SEEDS) {
-        const scene = buildFixtureScene(seed);
-        const table = buildRuntimeIndexTable(scene);
-        const mechanics = scene.billboards.filter(
-          (billboard) => runtimeRoleOf(billboard) === CROWD_ROLE_MECHANIC,
-        );
-        mechanicCount += mechanics.length;
-
-        for (const mechanic of mechanics) {
-          const frameIndex = computePublicRuntimeFrameIndex(
-            mechanic,
-            CROWD_CAMERA_WORLD,
-            CROWD_CAR_POSITION,
-            CROWD_RUNTIME_TIME_SECONDS,
-            table,
-            CROWD_CAMERA_FORWARD,
-          );
-
-          if (frameIndex < 0) {
-            violations.push(`seed=${seed} a mechanic resolves no atlas frame`);
-            continue;
-          }
-
-          const pose = poseIndexOfRuntimeFrameIndex(frameIndex);
-          if (pose !== PUBLIC_POSE_INDEX_STAND) {
-            violations.push(
-              `seed=${seed} a mechanic renders pose ${pose} ` +
-                `instead of the stand pose ${PUBLIC_POSE_INDEX_STAND}`,
-            );
-            continue;
-          }
-
-          const reference = seatedReferenceBillboard(mechanic.position);
-          const referenceIndex = computePublicRuntimeFrameIndex(
-            reference,
-            CROWD_CAMERA_WORLD,
-            CROWD_CAR_POSITION,
-            CROWD_RUNTIME_TIME_SECONDS,
-            table,
-            CROWD_CAMERA_FORWARD,
-          );
-
-          if (referenceIndex < 0) {
-            violations.push(
-              `seed=${seed} the look-at-car reference resolves no atlas frame`,
-            );
-            continue;
-          }
-
-          const mechanicDirection = directionIndexOfRuntimeFrameIndex(frameIndex);
-          const referenceDirection = directionIndexOfRuntimeFrameIndex(
-            referenceIndex,
-          );
-
-          if (mechanicDirection !== referenceDirection) {
-            violations.push(
-              `seed=${seed} a mechanic faces direction ${mechanicDirection}, ` +
-                `the look-at-car direction is ${referenceDirection}`,
-            );
-          }
-        }
-      }
-
-      expect(mechanicCount).toBeGreaterThan(0);
-      expect(violations).toEqual([]);
-    });
-
-    it('gives every walker billboard a slow walk-cycle frame', () => {
-      // RED-D (AC-074): the walkers walk again, on the seeded SLOW walk
-      // cycle. The build-time frame id is a walk frame, the resolved pose is
-      // a walk pose, and the pose does not flip inside a one-second window,
-      // which is what makes the cycle slow.
-      const violations: string[] = [];
-      let walkerCount = 0;
-
-      for (const seed of NEATRACING_CROWD_FIXTURE_SEEDS) {
-        const scene = buildFixtureScene(seed);
-        const table = buildRuntimeIndexTable(scene);
-        const walkers = scene.billboards.filter(
-          (billboard) => runtimeRoleOf(billboard) === CROWD_ROLE_WALKER,
-        );
-        walkerCount += walkers.length;
-
-        for (const walker of walkers) {
-          if (!/-walk[12]$/.test(walker.frameId)) {
-            violations.push(
-              `seed=${seed} a walker carries the frame id ` +
-                `"${walker.frameId}" instead of a walk frame`,
-            );
-          }
-
-          const frameIndex = computePublicRuntimeFrameIndex(
-            walker,
-            CROWD_CAMERA_WORLD,
-            CROWD_CAR_POSITION,
-            CROWD_RUNTIME_TIME_SECONDS,
-            table,
-            CROWD_CAMERA_FORWARD,
-          );
-
-          if (frameIndex < 0) {
-            violations.push(`seed=${seed} a walker resolves no atlas frame`);
-            continue;
-          }
-
-          const pose = poseIndexOfRuntimeFrameIndex(frameIndex);
-          if (
-            pose !== PUBLIC_POSE_INDEX_WALK1 &&
-            pose !== PUBLIC_POSE_INDEX_WALK2
-          ) {
-            violations.push(
-              `seed=${seed} a walker renders pose ${pose} ` +
-                'instead of a walk pose',
-            );
-            continue;
-          }
-
-          const laterFrameIndex = computePublicRuntimeFrameIndex(
-            walker,
-            CROWD_CAMERA_WORLD,
-            CROWD_CAR_POSITION,
-            CROWD_RUNTIME_TIME_LATER_SECONDS,
-            table,
-            CROWD_CAMERA_FORWARD,
-          );
-          const laterPose = poseIndexOfRuntimeFrameIndex(laterFrameIndex);
-
-          if (laterPose !== pose) {
-            violations.push(
-              `seed=${seed} a walker flips its walk pose inside one second ` +
-                `(${pose} -> ${laterPose})`,
-            );
-          }
-        }
-      }
-
-      expect(walkerCount).toBeGreaterThan(0);
-      expect(violations).toEqual([]);
-    });
-
-    it('keeps the off-bleacher agents at 1 m personal space', () => {
-      // RED-D (AC-074): the off-bleacher agents - the walkers, the standing
-      // spectators, and the inner-ring mechanics - keep the 1 m personal
-      // space of the re-populated world.
-      const violations: string[] = [];
-      let offBleacherCount = 0;
-
-      for (const seed of NEATRACING_CROWD_FIXTURE_SEEDS) {
-        const scene = buildFixtureScene(seed);
-        const offBleacher = getOffBleacherBillboards(scene);
-        offBleacherCount += offBleacher.length;
-
-        if (offBleacher.length < 2) {
+        if (hosted.length !== REPOPULATED_SEATED_BILLBOARDS_PER_BLEACHER) {
           violations.push(
-            `seed=${seed} the scene carries ${offBleacher.length} ` +
-              'off-bleacher agents, so no personal space is measured',
+            `seed=${seed} bleacherProp=${bleacherIndex} seats ` +
+              `${hosted.length} spectators, expected ` +
+              `${REPOPULATED_SEATED_BILLBOARDS_PER_BLEACHER}`,
           );
           continue;
         }
 
-        const minDistance = minRobotXZDistance(
-          offBleacher.map((billboard) => billboard.position),
+        // The seat anchors are LEVEL-MAJOR - four anchors per level, the
+        // lowest platform first - so the level of a seated billboard is
+        // read from the real seat geometry instead of a guessed height
+        // window.
+        const anchors = getBleacherSeatAnchors(bleacher);
+        const levelCounts = new Map<number, number>();
+
+        for (const billboard of hosted) {
+          const [x, , z] = billboard.position;
+          let nearestAnchor = -1;
+          let nearestDistance = Number.POSITIVE_INFINITY;
+
+          for (let index = 0; index < anchors.length; index += 1) {
+            const anchor = anchors[index]!;
+            const distance = Math.hypot(x - anchor[0], z - anchor[2]);
+
+            if (distance < nearestDistance) {
+              nearestDistance = distance;
+              nearestAnchor = index;
+            }
+          }
+
+          const level = Math.floor(
+            nearestAnchor / REPOPULATED_SEATED_BILLBOARDS_PER_LEVEL,
+          );
+          levelCounts.set(level, (levelCounts.get(level) ?? 0) + 1);
+        }
+
+        for (
+          let level = 0;
+          level < NEATRACING_BLEACHER_LEVEL_COUNT;
+          level += 1
+        ) {
+          const levelCount = levelCounts.get(level) ?? 0;
+
+          if (levelCount !== REPOPULATED_SEATED_BILLBOARDS_PER_LEVEL) {
+            violations.push(
+              `seed=${seed} bleacherProp=${bleacherIndex} level=${level} seats ` +
+                `${levelCount} spectators, expected ` +
+                `${REPOPULATED_SEATED_BILLBOARDS_PER_LEVEL}`,
+            );
+          }
+        }
+      }
+    }
+
+    expect(violations).toEqual([]);
+  });
+
+  it('keeps the off-bleacher crowd inside its allowance and every role inside the runtime role set', () => {
+    // The off-bleacher crowd is a CAP, never a quota: the allowance is the
+    // ceiling of the walkers, standing spectators and mechanics, and the
+    // clearance search SKIPS an agent that has no clear spot. The contract
+    // therefore pins the ceiling and the role set, not an exact
+    // off-bleacher count.
+    const violations: string[] = [];
+
+    for (const seed of NEATRACING_CROWD_FIXTURE_SEEDS) {
+      const scene = buildFixtureScene(seed);
+      const offBleacher = getOffBleacherBillboards(scene);
+
+      if (offBleacher.length > NEATRACING_PUBLIC_OFF_BLEACHER_AGENT_ALLOWANCE) {
+        violations.push(
+          `seed=${seed} carries ${offBleacher.length} off-bleacher agents, ` +
+            `above the allowance of ` +
+            `${NEATRACING_PUBLIC_OFF_BLEACHER_AGENT_ALLOWANCE}`,
+        );
+      }
+
+      for (const billboard of scene.billboards) {
+        const role = runtimeRoleOf(billboard);
+
+        if (!PUBLIC_RUNTIME_ROLES.includes(role)) {
+          violations.push(`seed=${seed} carries the unknown role ${role}`);
+        }
+      }
+    }
+
+    expect(violations).toEqual([]);
+  });
+
+  it('carries at least one walker and at least one standing off-bleacher billboard at every fixture seed', () => {
+    // RED-C (AC-074): the off-bleacher agents are back - the WALKERS on the
+    // seeded slow walk cycle and the STANDING spectators outside the ring.
+    const violations: string[] = [];
+
+    for (const seed of NEATRACING_CROWD_FIXTURE_SEEDS) {
+      const scene = buildFixtureScene(seed);
+      const walkers = scene.billboards.filter(
+        (billboard) => runtimeRoleOf(billboard) === CROWD_ROLE_WALKER,
+      );
+      const standingOffBleacher = scene.billboards.filter(
+        (billboard) =>
+          runtimeRoleOf(billboard) === CROWD_ROLE_STANDING &&
+          findBleacherHostProp(billboard, scene.props) === undefined,
+      );
+
+      if (walkers.length === 0) {
+        violations.push(`seed=${seed} the scene carries no walker billboard`);
+      }
+      if (standingOffBleacher.length === 0) {
+        violations.push(
+          `seed=${seed} the scene carries no standing off-bleacher billboard`,
+        );
+      }
+    }
+
+    expect(violations).toEqual([]);
+  });
+
+  it('carries the mechanic, crew and team-banner prop kinds on the inner ring', () => {
+    // RED-C (AC-074): the mechanic pit props are RE-AUTHORED on the INNER
+    // ring - closer to the road than the bleachers - so the assembled scene
+    // carries the three people kinds and every one of them sits on the
+    // inner ring.
+    const violations: string[] = [];
+
+    for (const seed of NEATRACING_CROWD_FIXTURE_SEEDS) {
+      const scene = buildFixtureScene(seed);
+
+      for (const kind of REQUIRED_PEOPLE_PROP_KINDS) {
+        const ofKind = scene.props.filter((prop) => prop.kind === kind);
+
+        if (ofKind.length === 0) {
+          violations.push(`seed=${seed} the scene carries no ${kind} prop`);
+          continue;
+        }
+
+        for (const prop of ofKind) {
+          if (prop.ringSide !== 'inner') {
+            violations.push(
+              `seed=${seed} the ${kind} prop sits on the ` +
+                `${prop.ringSide} ring`,
+            );
+          }
+        }
+      }
+    }
+
+    expect(violations).toEqual([]);
+  });
+});
+
+describe('right-world.pass off-bleacher agents (P1-crowd2-red-contracts, RED-D, AC-074)', () => {
+  it('paints the inner-ring mechanics with a team accent', () => {
+    // RED-D (AC-074): the mechanics keep TEAM-color accents instead of the
+    // colour-diverse spectator rule. The accent of the frame a mechanic
+    // actually renders has to belong to the family of one of the four
+    // NAMED team colours.
+    const violations: string[] = [];
+    let mechanicCount = 0;
+
+    for (const seed of NEATRACING_CROWD_FIXTURE_SEEDS) {
+      const scene = buildFixtureScene(seed);
+      const table = buildRuntimeIndexTable(scene);
+      const mechanics = scene.billboards.filter(
+        (billboard) => runtimeRoleOf(billboard) === CROWD_ROLE_MECHANIC,
+      );
+      mechanicCount += mechanics.length;
+
+      for (const mechanic of mechanics) {
+        const frameIndex = computePublicRuntimeFrameIndex(
+          mechanic,
+          CROWD_CAMERA_WORLD,
+          CROWD_CAR_POSITION,
+          CROWD_RUNTIME_TIME_SECONDS,
+          table,
+          CROWD_CAMERA_FORWARD,
         );
 
-        if (
-          minDistance <
-          NEATRACING_ROBOT_PERSONAL_SPACE_M -
-            NEATRACING_ROBOT_PERSONAL_SPACE_EPSILON_M
-        ) {
+        if (frameIndex < 0) {
+          violations.push(`seed=${seed} a mechanic resolves no atlas frame`);
+          continue;
+        }
+
+        const frame = scene.atlas.frames[frameIndex];
+        if (!frame) {
+          violations.push(`seed=${seed} a mechanic resolves a missing frame`);
+          continue;
+        }
+
+        const hue = dominantAccentHue(frame.rgba);
+        if (hue === null) {
           violations.push(
-            `seed=${seed} two off-bleacher agents stand ` +
-              `${minDistance.toFixed(4)} m apart`,
+            `seed=${seed} a mechanic frame carries no accent hue`,
+          );
+          continue;
+        }
+
+        if (!isTeamAccentHue(hue)) {
+          violations.push(
+            `seed=${seed} a mechanic renders accent hue ${hue}, ` +
+              'which is no team accent',
           );
         }
       }
+    }
 
-      expect(offBleacherCount).toBeGreaterThan(1);
-      expect(violations).toEqual([]);
-    });
-  },
-);
+    expect(mechanicCount).toBeGreaterThan(0);
+    expect(violations).toEqual([]);
+  });
 
-describe(
-  'right-world.pass device-sourced atlas texture bound (AC-071, RED-D)',
-  () => {
-    it('packs the sprite atlas into the device-reported GPU max texture size', () => {
-      // AC-071 (d1): the atlas bound must come from the DEVICE, never from a
-      // hard-coded 16384. The mocked limit below is 2400 px, which is TIGHTER
-      // than 16384 and is only satisfiable by a public-only atlas:
-      //   - before the AC-070 retirement (192 merged frames): 12 columns x
-      //     16 rows of 192 px = 2304 x 3072 px, so the 3072 px height blows
-      //     the 2400 px limit and the pass throws instead of packing;
-      //   - after the AC-070 retirement (144 public frames): 12 x 12 cells of
-      //     192 px = 2304 x 2304 px, which fits into 2400 px.
-      // The limit is read back from the mock's getParameter so the assertion
-      // can never drift into a hard-coded constant.
-      const harness = createRightWorldMockGlHarness({ maxTextureSize: 2400 });
-      const deviceLimit = harness.gl.getParameter(
-        harness.gl.MAX_TEXTURE_SIZE,
-      ) as number;
-      let thrown: unknown = null;
+  it('renders the inner-ring mechanics on the look-at-car stand frame', () => {
+    // RED-D (AC-074): a mechanic always looks at the car, so its frame is
+    // the STAND pose of the camera-relative look-at-car direction. The
+    // reference billboard resolves that direction for the very same spot,
+    // so the contract compares frames and never duplicates the bearing
+    // math.
+    const violations: string[] = [];
+    let mechanicCount = 0;
 
-      try {
-        createRightWorldPass(harness.gl);
-      } catch (error) {
-        thrown = error;
+    for (const seed of NEATRACING_CROWD_FIXTURE_SEEDS) {
+      const scene = buildFixtureScene(seed);
+      const table = buildRuntimeIndexTable(scene);
+      const mechanics = scene.billboards.filter(
+        (billboard) => runtimeRoleOf(billboard) === CROWD_ROLE_MECHANIC,
+      );
+      mechanicCount += mechanics.length;
+
+      for (const mechanic of mechanics) {
+        const frameIndex = computePublicRuntimeFrameIndex(
+          mechanic,
+          CROWD_CAMERA_WORLD,
+          CROWD_CAR_POSITION,
+          CROWD_RUNTIME_TIME_SECONDS,
+          table,
+          CROWD_CAMERA_FORWARD,
+        );
+
+        if (frameIndex < 0) {
+          violations.push(`seed=${seed} a mechanic resolves no atlas frame`);
+          continue;
+        }
+
+        const pose = poseIndexOfRuntimeFrameIndex(frameIndex);
+        if (pose !== PUBLIC_POSE_INDEX_STAND) {
+          violations.push(
+            `seed=${seed} a mechanic renders pose ${pose} ` +
+              `instead of the stand pose ${PUBLIC_POSE_INDEX_STAND}`,
+          );
+          continue;
+        }
+
+        const reference = seatedReferenceBillboard(mechanic.position);
+        const referenceIndex = computePublicRuntimeFrameIndex(
+          reference,
+          CROWD_CAMERA_WORLD,
+          CROWD_CAR_POSITION,
+          CROWD_RUNTIME_TIME_SECONDS,
+          table,
+          CROWD_CAMERA_FORWARD,
+        );
+
+        if (referenceIndex < 0) {
+          violations.push(
+            `seed=${seed} the look-at-car reference resolves no atlas frame`,
+          );
+          continue;
+        }
+
+        const mechanicDirection = directionIndexOfRuntimeFrameIndex(frameIndex);
+        const referenceDirection =
+          directionIndexOfRuntimeFrameIndex(referenceIndex);
+
+        if (mechanicDirection !== referenceDirection) {
+          violations.push(
+            `seed=${seed} a mechanic faces direction ${mechanicDirection}, ` +
+              `the look-at-car direction is ${referenceDirection}`,
+          );
+        }
+      }
+    }
+
+    expect(mechanicCount).toBeGreaterThan(0);
+    expect(violations).toEqual([]);
+  });
+
+  it('gives every walker billboard a slow walk-cycle frame', () => {
+    // RED-D (AC-074): the walkers walk again, on the seeded SLOW walk
+    // cycle. The build-time frame id is a walk frame, the resolved pose is
+    // a walk pose, and the pose does not flip inside a one-second window,
+    // which is what makes the cycle slow.
+    const violations: string[] = [];
+    let walkerCount = 0;
+
+    for (const seed of NEATRACING_CROWD_FIXTURE_SEEDS) {
+      const scene = buildFixtureScene(seed);
+      const table = buildRuntimeIndexTable(scene);
+      const walkers = scene.billboards.filter(
+        (billboard) => runtimeRoleOf(billboard) === CROWD_ROLE_WALKER,
+      );
+      walkerCount += walkers.length;
+
+      for (const walker of walkers) {
+        if (!/-walk[12]$/.test(walker.frameId)) {
+          violations.push(
+            `seed=${seed} a walker carries the frame id ` +
+              `"${walker.frameId}" instead of a walk frame`,
+          );
+        }
+
+        const frameIndex = computePublicRuntimeFrameIndex(
+          walker,
+          CROWD_CAMERA_WORLD,
+          CROWD_CAR_POSITION,
+          CROWD_RUNTIME_TIME_SECONDS,
+          table,
+          CROWD_CAMERA_FORWARD,
+        );
+
+        if (frameIndex < 0) {
+          violations.push(`seed=${seed} a walker resolves no atlas frame`);
+          continue;
+        }
+
+        const pose = poseIndexOfRuntimeFrameIndex(frameIndex);
+        if (
+          pose !== PUBLIC_POSE_INDEX_WALK1 &&
+          pose !== PUBLIC_POSE_INDEX_WALK2
+        ) {
+          violations.push(
+            `seed=${seed} a walker renders pose ${pose} ` +
+              'instead of a walk pose',
+          );
+          continue;
+        }
+
+        const laterFrameIndex = computePublicRuntimeFrameIndex(
+          walker,
+          CROWD_CAMERA_WORLD,
+          CROWD_CAR_POSITION,
+          CROWD_RUNTIME_TIME_LATER_SECONDS,
+          table,
+          CROWD_CAMERA_FORWARD,
+        );
+        const laterPose = poseIndexOfRuntimeFrameIndex(laterFrameIndex);
+
+        if (laterPose !== pose) {
+          violations.push(
+            `seed=${seed} a walker flips its walk pose inside one second ` +
+              `(${pose} -> ${laterPose})`,
+          );
+        }
+      }
+    }
+
+    expect(walkerCount).toBeGreaterThan(0);
+    expect(violations).toEqual([]);
+  });
+
+  it('keeps the off-bleacher agents at 1 m personal space', () => {
+    // RED-D (AC-074): the off-bleacher agents - the walkers, the standing
+    // spectators, and the inner-ring mechanics - keep the 1 m personal
+    // space of the re-populated world.
+    const violations: string[] = [];
+    let offBleacherCount = 0;
+
+    for (const seed of NEATRACING_CROWD_FIXTURE_SEEDS) {
+      const scene = buildFixtureScene(seed);
+      const offBleacher = getOffBleacherBillboards(scene);
+      offBleacherCount += offBleacher.length;
+
+      if (offBleacher.length < 2) {
+        violations.push(
+          `seed=${seed} the scene carries ${offBleacher.length} ` +
+            'off-bleacher agents, so no personal space is measured',
+        );
+        continue;
       }
 
-      const atlasCalls = harness.texImage2DCalls.filter(
-        (call) => call.format === 0x1908 && call.type === 0x1401,
+      const minDistance = minRobotXZDistance(
+        offBleacher.map((billboard) => billboard.position),
       );
 
-      expect(thrown).toBeNull();
-      expect(atlasCalls.length).toBe(1);
-      // The larger of the two recorded dimensions is what has to respect the
-      // device bound, so one comparison covers width AND height.
-      expect(
-        Math.max(atlasCalls[0]!.width, atlasCalls[0]!.height),
-      ).toBeLessThanOrEqual(deviceLimit);
-    });
-
-    it('keeps the packed atlas within a device limit that is only just wide enough', () => {
-      // AC-071 (d1): the bound must be honoured at the TIGHTEST limit that
-      // can still hold the public-only atlas. 2304 px is exactly the 12 x 12
-      // grid of 192 px cells the 144-frame public atlas needs, so a packer
-      // that reads the device limit must produce a 2304 x 2304 texture and
-      // still succeed. A packer that ignores the queried limit (or that only
-      // bounds the column count and lets the HEIGHT overflow) fails here.
-      const harness = createRightWorldMockGlHarness({ maxTextureSize: 2304 });
-      const deviceLimit = harness.gl.getParameter(
-        harness.gl.MAX_TEXTURE_SIZE,
-      ) as number;
-      let thrown: unknown = null;
-
-      try {
-        createRightWorldPass(harness.gl);
-      } catch (error) {
-        thrown = error;
-      }
-
-      const atlasCalls = harness.texImage2DCalls.filter(
-        (call) => call.format === 0x1908 && call.type === 0x1401,
-      );
-
-      expect(thrown).toBeNull();
-      expect(atlasCalls.length).toBe(1);
-      expect(
-        Math.max(atlasCalls[0]!.width, atlasCalls[0]!.height),
-      ).toBeLessThanOrEqual(deviceLimit);
-    });
-
-    it('raises the documented atlas error instead of uploading when the device limit is too small', () => {
-      // AC-071 (d2): the over-limit path must RAISE the documented atlas
-      // error instead of uploading an oversized texture. The documented error
-      // names the frame count of the atlas that is actually packed, so it can
-      // only report the PUBLIC-ONLY frame count once the mechanic frames are
-      // retired (AC-070). 1536 px is far below the 2304 px the public-only
-      // atlas needs, so the throw is guaranteed.
-      const harness = createRightWorldMockGlHarness({ maxTextureSize: 1536 });
-      let thrown: unknown = null;
-
-      try {
-        createRightWorldPass(harness.gl);
-      } catch (error) {
-        thrown = error;
-      }
-
-      const message = thrown instanceof Error ? thrown.message : '';
-
-      expect(thrown).toBeInstanceOf(Error);
-      expect(message).toMatch(
-        /cannot pack 144 sprite frames \(\d+x\d+\) within GPU max texture size 1536/,
-      );
-      // The atlas texture upload is the only texImage2D call of the pass, so
-      // an over-limit pack must fail BEFORE any texture reaches the GPU.
-      expect(harness.texImage2DCalls.length).toBe(0);
-    });
-  },
-);
-
-describe(
-  'right-world.pass public-only atlas texture bound (AC-075, RED-E)',
-  () => {
-    it('keeps the recorded atlas WIDTH within the device-reported GPU max texture size', () => {
-      // RED-E (AC-075): the atlas that now serves the seated spectators, the
-      // mechanics, the walkers and the standing spectators must never exceed
-      // the device bound in WIDTH. The limit is read back from the mock's own
-      // getParameter, so the assertion can never drift into a hard-coded
-      // constant. 2304 px is the tightest limit that still holds the
-      // public-only 12 x 12 pack of 192 px cells.
-      const probe = probeRightWorldAtlas(PUBLIC_ONLY_ATLAS_SIDE_PX);
-      const deviceLimit = probe.harness.gl.getParameter(
-        probe.harness.gl.MAX_TEXTURE_SIZE,
-      ) as number;
-
-      expect(probe.thrown).toBeNull();
-      expect(probe.atlasCalls.length).toBe(1);
-      expect(probe.atlasCalls[0]!.width).toBeLessThanOrEqual(deviceLimit);
-    });
-
-    it('keeps the recorded atlas HEIGHT within the device-reported GPU max texture size', () => {
-      // RED-E (AC-075): the HEIGHT is a SEPARATE bound. A packer that only
-      // bounds the column count and lets the row count overflow the device
-      // limit would keep the width inside the bound and blow the height, so
-      // the two dimensions are asserted independently.
-      const probe = probeRightWorldAtlas(PUBLIC_ONLY_ATLAS_SIDE_PX);
-      const deviceLimit = probe.harness.gl.getParameter(
-        probe.harness.gl.MAX_TEXTURE_SIZE,
-      ) as number;
-
-      expect(probe.thrown).toBeNull();
-      expect(probe.atlasCalls.length).toBe(1);
-      expect(probe.atlasCalls[0]!.height).toBeLessThanOrEqual(deviceLimit);
-    });
-
-    it('packs the public-only atlas into the 12 x 12 grid of 192 px cells', () => {
-      // AC-075: the atlas stays the PUBLIC-ONLY 144-frame atlas (6 accents x
-      // 8 directions x 3 poses), so the pack is a 12 x 12 grid of 192 px
-      // cells = 2304 x 2304 px. The off-bleacher roles REUSE those frames
-      // instead of adding a mechanic frame block, so the pack geometry must
-      // not grow with the re-populated crowd.
-      const probe = probeRightWorldAtlas(16384);
-
-      expect(probe.atlasCalls.length).toBe(1);
-      expect(probe.atlasCalls[0]!.width).toBe(PUBLIC_ONLY_ATLAS_SIDE_PX);
-      expect(probe.atlasCalls[0]!.height).toBe(PUBLIC_ONLY_ATLAS_SIDE_PX);
-    });
-
-    it('raises the documented atlas error when only the atlas HEIGHT exceeds the device limit', () => {
-      // RED-E (AC-075): a 192 px limit forces the packer into a single column
-      // of 144 cells, so the packed WIDTH (192 px) still fits the device
-      // bound while the packed HEIGHT (144 x 192 = 27648 px) does not. The
-      // over-limit path must therefore RAISE the documented atlas error
-      // instead of uploading a texture whose height overflows the bound.
-      const probe = probeRightWorldAtlas(PUBLIC_ONLY_ATLAS_CELL_PX);
-      const message =
-        probe.thrown instanceof Error ? probe.thrown.message : '';
-      // The documented error names the PUBLIC-ONLY frame count of the atlas
-      // that is actually packed, and the device limit that rejected it.
-      const documentedError = new RegExp(
-        `cannot pack ${PUBLIC_ONLY_ATLAS_FRAME_COUNT} sprite frames ` +
-          `\\(\\d+x\\d+\\) within GPU max texture size ${PUBLIC_ONLY_ATLAS_CELL_PX}`,
-      );
-
-      expect(probe.thrown).toBeInstanceOf(Error);
-      expect(message).toMatch(documentedError);
-      // The atlas texture upload is the only texImage2D call of the pass, so
-      // an over-limit pack must fail BEFORE any texture reaches the GPU.
-      expect(probe.harness.texImage2DCalls.length).toBe(0);
-    });
-
-    it('keeps the recorded atlas WIDTH and HEIGHT within the device bound for the re-populated crowd', () => {
-      // RED-E (AC-075): the atlas bound is asserted FOR THE RE-POPULATED
-      // WORLD, not for the retired single-host crowd. The world under the
-      // bound is the scene the pass itself packs (the default right-world
-      // build tuple), and that world has to BE the re-populated one: 20
-      // bleachers and at least 240 seated billboards (20 x 12).
-      //
-      // The device limit is the TIGHTEST one that still holds the public-only
-      // 12 x 12 pack of 192 px cells (2304 px), and it is read back from the
-      // mock's own getParameter, so the assertion can never drift into a
-      // hard-coded constant.
-      const harness = createRightWorldMockGlHarness({
-        maxTextureSize: PUBLIC_ONLY_ATLAS_SIDE_PX,
-      });
-      const deviceLimit = harness.gl.getParameter(
-        harness.gl.MAX_TEXTURE_SIZE,
-      ) as number;
-      let thrown: unknown = null;
-
-      try {
-        createRightWorldPass(harness.gl);
-      } catch (error) {
-        thrown = error;
-      }
-
-      const atlasCalls = harness.texImage2DCalls.filter(
-        (call) => call.format === 0x1908 && call.type === 0x1401,
-      );
-      // The pass packs the default right-world scene, so the world under the
-      // atlas bound is that very scene.
-      const scene = buildRightWorldSceneData();
-      const bleacherCount = scene.props.filter(
-        (prop) => prop.kind === 'bleacher',
-      ).length;
-      const seatedCount = scene.billboards.filter(
-        (billboard) => runtimeRoleOf(billboard) === CROWD_ROLE_SEATED,
-      ).length;
-
-      const violations: string[] = [];
-
-      if (thrown !== null) {
+      if (
+        minDistance <
+        NEATRACING_ROBOT_PERSONAL_SPACE_M -
+          NEATRACING_ROBOT_PERSONAL_SPACE_EPSILON_M
+      ) {
         violations.push(
-          'the pass threw while packing the atlas of the re-populated world: ' +
-            (thrown instanceof Error ? thrown.message : String(thrown)),
+          `seed=${seed} two off-bleacher agents stand ` +
+            `${minDistance.toFixed(4)} m apart`,
         );
       }
-      if (atlasCalls.length !== 1) {
-        violations.push(
-          `the atlas texture was uploaded ${atlasCalls.length} times, expected 1`,
-        );
-      }
-      if (bleacherCount !== REPOPULATED_BLEACHER_COUNT) {
-        violations.push(
-          `the world under the atlas bound carries ${bleacherCount} bleachers, ` +
-            `expected ${REPOPULATED_BLEACHER_COUNT}`,
-        );
-      }
-      if (seatedCount < REPOPULATED_SEATED_CROWD) {
-        violations.push(
-          `the world under the atlas bound carries ${seatedCount} seated ` +
-            `billboards, expected at least ${REPOPULATED_SEATED_CROWD}`,
-        );
-      }
+    }
 
-      const atlasWidth = atlasCalls[0]?.width ?? 0;
-      const atlasHeight = atlasCalls[0]?.height ?? 0;
+    expect(offBleacherCount).toBeGreaterThan(1);
+    expect(violations).toEqual([]);
+  });
+});
 
-      if (atlasWidth > deviceLimit) {
-        violations.push(
-          `the recorded atlas WIDTH ${atlasWidth} px exceeds the device limit ` +
-            `${deviceLimit} px`,
-        );
-      }
-      if (atlasHeight > deviceLimit) {
-        violations.push(
-          `the recorded atlas HEIGHT ${atlasHeight} px exceeds the device limit ` +
-            `${deviceLimit} px`,
-        );
-      }
+describe('right-world.pass device-sourced atlas texture bound (AC-071, RED-D)', () => {
+  it('packs the sprite atlas into the device-reported GPU max texture size', () => {
+    // AC-071 (d1): the atlas bound must come from the DEVICE, never from a
+    // hard-coded 16384. The mocked limit below is 2400 px, which is TIGHTER
+    // than 16384 and is only satisfiable by a public-only atlas:
+    //   - before the AC-070 retirement (192 merged frames): 12 columns x
+    //     16 rows of 192 px = 2304 x 3072 px, so the 3072 px height blows
+    //     the 2400 px limit and the pass throws instead of packing;
+    //   - after the AC-070 retirement (144 public frames): 12 x 12 cells of
+    //     192 px = 2304 x 2304 px, which fits into 2400 px.
+    // The limit is read back from the mock's getParameter so the assertion
+    // can never drift into a hard-coded constant.
+    const harness = createRightWorldMockGlHarness({ maxTextureSize: 2400 });
+    const deviceLimit = harness.gl.getParameter(
+      harness.gl.MAX_TEXTURE_SIZE,
+    ) as number;
+    let thrown: unknown = null;
 
-      expect(violations).toEqual([]);
-    });
-  },
-);
-
-describe(
-  'right-world.pass per-frame billboard capacity (AC-076, RED-F)',
-  () => {
-    it('keeps every culled-in seated billboard of the re-populated crowd in the per-frame selection', () => {
-      // RED-F (AC-076): the per-frame billboard selection must keep EVERY
-      // seated billboard of EVERY bleacher that is inside the decoration
-      // cull distance, so the retired 128-billboard cap cannot silently
-      // truncate the visible crowd. The comparison is the plan's named one:
-      // the selected billboard count against the assembled seated-billboard
-      // count of the culled-in bleachers.
-      const harness = createRightWorldMockGlHarness();
-      const pass = createRightWorldPass(harness.gl);
-      const state = createRightWorldDrawState();
-      pass.draw(state);
-
-      const scene = buildRightWorldSceneData();
-      const selectedCount = countSelectedBillboards(harness.drawCalls);
-      const culledInSeatedCount = countCulledInSeatedBillboards(
-        scene,
-        state.cameraWorld,
-      );
-
-      expect(selectedCount).toBeGreaterThanOrEqual(culledInSeatedCount);
-    });
-
-    it('keeps every billboard inside the decoration cull distance in the per-frame selection', () => {
-      // RED-F (AC-076): the truncation of the retired cap happened in SCENE
-      // ORDER: the collection loop stopped at the budget, so the billboards
-      // beyond the cap were dropped even though they were inside the cull
-      // distance. The per-frame selection must therefore keep EVERY
-      // billboard the cull distance admits.
-      const harness = createRightWorldMockGlHarness();
-      const pass = createRightWorldPass(harness.gl);
-      const state = createRightWorldDrawState();
-      pass.draw(state);
-
-      const scene = buildRightWorldSceneData();
-      const selectedCount = countSelectedBillboards(harness.drawCalls);
-      const culledInCount = countCulledInBillboards(scene, state.cameraWorld);
-
-      expect(selectedCount).toBe(culledInCount);
-    });
-
-    it('sizes the per-frame billboard upload buffer for the re-populated crowd', () => {
-      // RED-F (AC-076): the per-frame billboard upload buffer is sized from
-      // the per-frame billboard budget, so it must hold the re-populated
-      // crowd of 20 bleachers x 12 seated billboards = 240 quads of 120 bytes.
-      // BEFORE AC-076 the buffer was sized from the RETIRED shared cap
-      // (128 quads = 15360 bytes), which is what truncated the visible
-      // crowd.
-      const harness = createRightWorldMockGlHarness();
+    try {
       createRightWorldPass(harness.gl);
+    } catch (error) {
+      thrown = error;
+    }
 
-      const uploadBytes = billboardUploadBufferBytes(harness);
+    const atlasCalls = harness.texImage2DCalls.filter(
+      (call) => call.format === 0x1908 && call.type === 0x1401,
+    );
 
-      expect(uploadBytes).toBeGreaterThanOrEqual(
-        REPOPULATED_SEATED_CROWD * BILLBOARD_UPLOAD_BYTES,
-      );
-      expect(uploadBytes / BILLBOARD_UPLOAD_BYTES).toBeGreaterThanOrEqual(
-        REPOPULATED_SEATED_CROWD,
-      );
-    });
+    expect(thrown).toBeNull();
+    expect(atlasCalls.length).toBe(1);
+    // The larger of the two recorded dimensions is what has to respect the
+    // device bound, so one comparison covers width AND height.
+    expect(
+      Math.max(atlasCalls[0]!.width, atlasCalls[0]!.height),
+    ).toBeLessThanOrEqual(deviceLimit);
+  });
 
-    it('sizes the per-frame billboard budget independently of the retired shared prop LOD budget', () => {
-      // RED-F (AC-076): the billboard budget becomes its own NAMED constant
-      // sized for the re-populated world, while the prop LOD budget keeps
-      // governing the voxel props. BEFORE AC-076 the per-frame upload buffer
-      // held exactly the retired shared cap of 128 quads - the coupling
-      // AC-076 removes.
-      const harness = createRightWorldMockGlHarness();
+  it('keeps the packed atlas within a device limit that is only just wide enough', () => {
+    // AC-071 (d1): the bound must be honoured at the TIGHTEST limit that
+    // can still hold the public-only atlas. 2304 px is exactly the 12 x 12
+    // grid of 192 px cells the 144-frame public atlas needs, so a packer
+    // that reads the device limit must produce a 2304 x 2304 texture and
+    // still succeed. A packer that ignores the queried limit (or that only
+    // bounds the column count and lets the HEIGHT overflow) fails here.
+    const harness = createRightWorldMockGlHarness({ maxTextureSize: 2304 });
+    const deviceLimit = harness.gl.getParameter(
+      harness.gl.MAX_TEXTURE_SIZE,
+    ) as number;
+    let thrown: unknown = null;
+
+    try {
       createRightWorldPass(harness.gl);
+    } catch (error) {
+      thrown = error;
+    }
 
-      const billboardCapacity =
-        billboardUploadBufferBytes(harness) / BILLBOARD_UPLOAD_BYTES;
+    const atlasCalls = harness.texImage2DCalls.filter(
+      (call) => call.format === 0x1908 && call.type === 0x1401,
+    );
 
-      expect(billboardCapacity).not.toBe(NEATRACING_DECORATION_LOD_BUDGET);
+    expect(thrown).toBeNull();
+    expect(atlasCalls.length).toBe(1);
+    expect(
+      Math.max(atlasCalls[0]!.width, atlasCalls[0]!.height),
+    ).toBeLessThanOrEqual(deviceLimit);
+  });
+
+  it('raises the documented atlas error instead of uploading when the device limit is too small', () => {
+    // AC-071 (d2): the over-limit path must RAISE the documented atlas
+    // error instead of uploading an oversized texture. The documented error
+    // names the frame count of the atlas that is actually packed, so it can
+    // only report the PUBLIC-ONLY frame count once the mechanic frames are
+    // retired (AC-070). 1536 px is far below the 2304 px the public-only
+    // atlas needs, so the throw is guaranteed.
+    const harness = createRightWorldMockGlHarness({ maxTextureSize: 1536 });
+    let thrown: unknown = null;
+
+    try {
+      createRightWorldPass(harness.gl);
+    } catch (error) {
+      thrown = error;
+    }
+
+    const message = thrown instanceof Error ? thrown.message : '';
+
+    expect(thrown).toBeInstanceOf(Error);
+    expect(message).toMatch(
+      /cannot pack 144 sprite frames \(\d+x\d+\) within GPU max texture size 1536/,
+    );
+    // The atlas texture upload is the only texImage2D call of the pass, so
+    // an over-limit pack must fail BEFORE any texture reaches the GPU.
+    expect(harness.texImage2DCalls.length).toBe(0);
+  });
+});
+
+describe('right-world.pass public-only atlas texture bound (AC-075, RED-E)', () => {
+  it('keeps the recorded atlas WIDTH within the device-reported GPU max texture size', () => {
+    // RED-E (AC-075): the atlas that now serves the seated spectators, the
+    // mechanics, the walkers and the standing spectators must never exceed
+    // the device bound in WIDTH. The limit is read back from the mock's own
+    // getParameter, so the assertion can never drift into a hard-coded
+    // constant. 2304 px is the tightest limit that still holds the
+    // public-only 12 x 12 pack of 192 px cells.
+    const probe = probeRightWorldAtlas(PUBLIC_ONLY_ATLAS_SIDE_PX);
+    const deviceLimit = probe.harness.gl.getParameter(
+      probe.harness.gl.MAX_TEXTURE_SIZE,
+    ) as number;
+
+    expect(probe.thrown).toBeNull();
+    expect(probe.atlasCalls.length).toBe(1);
+    expect(probe.atlasCalls[0]!.width).toBeLessThanOrEqual(deviceLimit);
+  });
+
+  it('keeps the recorded atlas HEIGHT within the device-reported GPU max texture size', () => {
+    // RED-E (AC-075): the HEIGHT is a SEPARATE bound. A packer that only
+    // bounds the column count and lets the row count overflow the device
+    // limit would keep the width inside the bound and blow the height, so
+    // the two dimensions are asserted independently.
+    const probe = probeRightWorldAtlas(PUBLIC_ONLY_ATLAS_SIDE_PX);
+    const deviceLimit = probe.harness.gl.getParameter(
+      probe.harness.gl.MAX_TEXTURE_SIZE,
+    ) as number;
+
+    expect(probe.thrown).toBeNull();
+    expect(probe.atlasCalls.length).toBe(1);
+    expect(probe.atlasCalls[0]!.height).toBeLessThanOrEqual(deviceLimit);
+  });
+
+  it('packs the public-only atlas into the 12 x 12 grid of 192 px cells', () => {
+    // AC-075: the atlas stays the PUBLIC-ONLY 144-frame atlas (6 accents x
+    // 8 directions x 3 poses), so the pack is a 12 x 12 grid of 192 px
+    // cells = 2304 x 2304 px. The off-bleacher roles REUSE those frames
+    // instead of adding a mechanic frame block, so the pack geometry must
+    // not grow with the re-populated crowd.
+    const probe = probeRightWorldAtlas(16384);
+
+    expect(probe.atlasCalls.length).toBe(1);
+    expect(probe.atlasCalls[0]!.width).toBe(PUBLIC_ONLY_ATLAS_SIDE_PX);
+    expect(probe.atlasCalls[0]!.height).toBe(PUBLIC_ONLY_ATLAS_SIDE_PX);
+  });
+
+  it('raises the documented atlas error when only the atlas HEIGHT exceeds the device limit', () => {
+    // RED-E (AC-075): a 192 px limit forces the packer into a single column
+    // of 144 cells, so the packed WIDTH (192 px) still fits the device
+    // bound while the packed HEIGHT (144 x 192 = 27648 px) does not. The
+    // over-limit path must therefore RAISE the documented atlas error
+    // instead of uploading a texture whose height overflows the bound.
+    const probe = probeRightWorldAtlas(PUBLIC_ONLY_ATLAS_CELL_PX);
+    const message = probe.thrown instanceof Error ? probe.thrown.message : '';
+    // The documented error names the PUBLIC-ONLY frame count of the atlas
+    // that is actually packed, and the device limit that rejected it.
+    const documentedError = new RegExp(
+      `cannot pack ${PUBLIC_ONLY_ATLAS_FRAME_COUNT} sprite frames ` +
+        `\\(\\d+x\\d+\\) within GPU max texture size ${PUBLIC_ONLY_ATLAS_CELL_PX}`,
+    );
+
+    expect(probe.thrown).toBeInstanceOf(Error);
+    expect(message).toMatch(documentedError);
+    // The atlas texture upload is the only texImage2D call of the pass, so
+    // an over-limit pack must fail BEFORE any texture reaches the GPU.
+    expect(probe.harness.texImage2DCalls.length).toBe(0);
+  });
+
+  it('keeps the recorded atlas WIDTH and HEIGHT within the device bound for the re-populated crowd', () => {
+    // RED-E (AC-075): the atlas bound is asserted FOR THE RE-POPULATED
+    // WORLD, not for the retired single-host crowd. The world under the
+    // bound is the scene the pass itself packs (the default right-world
+    // build tuple), and that world has to BE the re-populated one: 20
+    // bleachers and at least 240 seated billboards (20 x 12).
+    //
+    // The device limit is the TIGHTEST one that still holds the public-only
+    // 12 x 12 pack of 192 px cells (2304 px), and it is read back from the
+    // mock's own getParameter, so the assertion can never drift into a
+    // hard-coded constant.
+    const harness = createRightWorldMockGlHarness({
+      maxTextureSize: PUBLIC_ONLY_ATLAS_SIDE_PX,
     });
-  },
-);
+    const deviceLimit = harness.gl.getParameter(
+      harness.gl.MAX_TEXTURE_SIZE,
+    ) as number;
+    let thrown: unknown = null;
+
+    try {
+      createRightWorldPass(harness.gl);
+    } catch (error) {
+      thrown = error;
+    }
+
+    const atlasCalls = harness.texImage2DCalls.filter(
+      (call) => call.format === 0x1908 && call.type === 0x1401,
+    );
+    // The pass packs the default right-world scene, so the world under the
+    // atlas bound is that very scene.
+    const scene = buildRightWorldSceneData();
+    const bleacherCount = scene.props.filter(
+      (prop) => prop.kind === 'bleacher',
+    ).length;
+    const seatedCount = scene.billboards.filter(
+      (billboard) => runtimeRoleOf(billboard) === CROWD_ROLE_SEATED,
+    ).length;
+
+    const violations: string[] = [];
+
+    if (thrown !== null) {
+      violations.push(
+        'the pass threw while packing the atlas of the re-populated world: ' +
+          (thrown instanceof Error ? thrown.message : String(thrown)),
+      );
+    }
+    if (atlasCalls.length !== 1) {
+      violations.push(
+        `the atlas texture was uploaded ${atlasCalls.length} times, expected 1`,
+      );
+    }
+    if (bleacherCount !== REPOPULATED_BLEACHER_COUNT) {
+      violations.push(
+        `the world under the atlas bound carries ${bleacherCount} bleachers, ` +
+          `expected ${REPOPULATED_BLEACHER_COUNT}`,
+      );
+    }
+    if (seatedCount < REPOPULATED_SEATED_CROWD) {
+      violations.push(
+        `the world under the atlas bound carries ${seatedCount} seated ` +
+          `billboards, expected at least ${REPOPULATED_SEATED_CROWD}`,
+      );
+    }
+
+    const atlasWidth = atlasCalls[0]?.width ?? 0;
+    const atlasHeight = atlasCalls[0]?.height ?? 0;
+
+    if (atlasWidth > deviceLimit) {
+      violations.push(
+        `the recorded atlas WIDTH ${atlasWidth} px exceeds the device limit ` +
+          `${deviceLimit} px`,
+      );
+    }
+    if (atlasHeight > deviceLimit) {
+      violations.push(
+        `the recorded atlas HEIGHT ${atlasHeight} px exceeds the device limit ` +
+          `${deviceLimit} px`,
+      );
+    }
+
+    expect(violations).toEqual([]);
+  });
+});
+
+describe('right-world.pass per-frame billboard capacity (AC-076, RED-F)', () => {
+  it('keeps every culled-in seated billboard of the re-populated crowd in the per-frame selection', () => {
+    // RED-F (AC-076): the per-frame billboard selection must keep EVERY
+    // seated billboard of EVERY bleacher that is inside the decoration
+    // cull distance, so the retired 128-billboard cap cannot silently
+    // truncate the visible crowd. The comparison is the plan's named one:
+    // the selected billboard count against the assembled seated-billboard
+    // count of the culled-in bleachers.
+    const harness = createRightWorldMockGlHarness();
+    const pass = createRightWorldPass(harness.gl);
+    const state = createRightWorldDrawState();
+    pass.draw(state);
+
+    const scene = buildRightWorldSceneData();
+    const selectedCount = countSelectedBillboards(harness.drawCalls);
+    const culledInSeatedCount = countCulledInSeatedBillboards(
+      scene,
+      state.cameraWorld,
+    );
+
+    expect(selectedCount).toBeGreaterThanOrEqual(culledInSeatedCount);
+  });
+
+  it('keeps every billboard inside the decoration cull distance in the per-frame selection', () => {
+    // RED-F (AC-076): the truncation of the retired cap happened in SCENE
+    // ORDER: the collection loop stopped at the budget, so the billboards
+    // beyond the cap were dropped even though they were inside the cull
+    // distance. The per-frame selection must therefore keep EVERY
+    // billboard the cull distance admits.
+    const harness = createRightWorldMockGlHarness();
+    const pass = createRightWorldPass(harness.gl);
+    const state = createRightWorldDrawState();
+    pass.draw(state);
+
+    const scene = buildRightWorldSceneData();
+    const selectedCount = countSelectedBillboards(harness.drawCalls);
+    const culledInCount = countCulledInBillboards(scene, state.cameraWorld);
+
+    expect(selectedCount).toBe(culledInCount);
+  });
+
+  it('sizes the per-frame billboard upload buffer for the re-populated crowd', () => {
+    // RED-F (AC-076): the per-frame billboard upload buffer is sized from
+    // the per-frame billboard budget, so it must hold the re-populated
+    // crowd of 20 bleachers x 12 seated billboards = 240 quads of 120 bytes.
+    // BEFORE AC-076 the buffer was sized from the RETIRED shared cap
+    // (128 quads = 15360 bytes), which is what truncated the visible
+    // crowd.
+    const harness = createRightWorldMockGlHarness();
+    createRightWorldPass(harness.gl);
+
+    const uploadBytes = billboardUploadBufferBytes(harness);
+
+    expect(uploadBytes).toBeGreaterThanOrEqual(
+      REPOPULATED_SEATED_CROWD * BILLBOARD_UPLOAD_BYTES,
+    );
+    expect(uploadBytes / BILLBOARD_UPLOAD_BYTES).toBeGreaterThanOrEqual(
+      REPOPULATED_SEATED_CROWD,
+    );
+  });
+
+  it('sizes the per-frame billboard budget independently of the retired shared prop LOD budget', () => {
+    // RED-F (AC-076): the billboard budget becomes its own NAMED constant
+    // sized for the re-populated world, while the prop LOD budget keeps
+    // governing the voxel props. BEFORE AC-076 the per-frame upload buffer
+    // held exactly the retired shared cap of 128 quads - the coupling
+    // AC-076 removes.
+    const harness = createRightWorldMockGlHarness();
+    createRightWorldPass(harness.gl);
+
+    const billboardCapacity =
+      billboardUploadBufferBytes(harness) / BILLBOARD_UPLOAD_BYTES;
+
+    expect(billboardCapacity).not.toBe(NEATRACING_DECORATION_LOD_BUDGET);
+  });
+});
 
 /**
  * Walkers of the off-bleacher crowd of the re-populated world (AC-074).
@@ -2423,349 +2427,337 @@ const EXPECTED_OFF_BLEACHER_STANDING = 10;
 /** Inner-ring mechanics of the re-populated world (AC-074). */
 const EXPECTED_OFF_BLEACHER_MECHANICS = 4;
 
-describe(
-  'right-world.pass rendered crowd billboard quad (P1-sprite-scale-red-contracts, RED-C, AC-077)',
-  () => {
-    it('renders every crowd billboard quad at the halved world height', () => {
-      // RED-C (AC-077): the halving has to be proven on the RENDERED
-      // geometry, not only on the module constant. The pass uploads one
-      // camera-facing quad per crowd billboard, and the quad is as tall as
-      // the frame is high: `frame.height * world scale * meters per pixel`.
-      // BEFORE the halving the quad measured 9.6 m (the 1:1 world scale),
-      // so a 4.8 m quad can only come from the halved world scale.
-      const { scene, quads } = probeRenderedCrowdQuads();
-      const frame = scene.atlas.frames[0]!;
-      const expectedHeight =
-        frame.height *
+describe('right-world.pass rendered crowd billboard quad (P1-sprite-scale-red-contracts, RED-C, AC-077)', () => {
+  it('renders every crowd billboard quad at the halved world height', () => {
+    // RED-C (AC-077): the halving has to be proven on the RENDERED
+    // geometry, not only on the module constant. The pass uploads one
+    // camera-facing quad per crowd billboard, and the quad is as tall as
+    // the frame is high: `frame.height * world scale * meters per pixel`.
+    // BEFORE the halving the quad measured 9.6 m (the 1:1 world scale),
+    // so a 4.8 m quad can only come from the halved world scale.
+    const { scene, quads } = probeRenderedCrowdQuads();
+    const frame = scene.atlas.frames[0]!;
+    const expectedHeight =
+      frame.height *
+      EXPECTED_BILLBOARD_WORLD_SCALE *
+      EXPECTED_METERS_PER_SPRITE_PIXEL;
+    const violations: string[] = [];
+
+    if (quads.length === 0) {
+      violations.push('the frame uploaded no crowd billboard quad');
+    }
+
+    for (let quadIndex = 0; quadIndex < quads.length; quadIndex += 1) {
+      const quad = quads[quadIndex]!;
+
+      if (Math.abs(quad.height - expectedHeight) > RENDERED_QUAD_TOLERANCE_M) {
+        violations.push(
+          `quad=${quadIndex} is ${quad.height.toFixed(3)} m tall, ` +
+            `expected ${expectedHeight.toFixed(3)} m`,
+        );
+      }
+    }
+
+    expect(violations).toEqual([]);
+  });
+
+  it('renders every crowd billboard quad at the halved half width', () => {
+    // RED-C (AC-077): the world WIDTH follows the SAME factor, so the
+    // square 192 x 192 px atlas frames keep their aspect ratio. The half
+    // width of the rendered quad is `frame.width * world scale * meters per
+    // pixel / 2`, which is 2.4 m after the halving and 4.8 m before it.
+    const { scene, quads } = probeRenderedCrowdQuads();
+    const frame = scene.atlas.frames[0]!;
+    const expectedHalfWidth =
+      (frame.width *
         EXPECTED_BILLBOARD_WORLD_SCALE *
-        EXPECTED_METERS_PER_SPRITE_PIXEL;
-      const violations: string[] = [];
+        EXPECTED_METERS_PER_SPRITE_PIXEL) /
+      2;
+    const violations: string[] = [];
 
-      if (quads.length === 0) {
-        violations.push('the frame uploaded no crowd billboard quad');
+    if (quads.length === 0) {
+      violations.push('the frame uploaded no crowd billboard quad');
+    }
+
+    for (let quadIndex = 0; quadIndex < quads.length; quadIndex += 1) {
+      const quad = quads[quadIndex]!;
+
+      if (
+        Math.abs(quad.halfWidth - expectedHalfWidth) > RENDERED_QUAD_TOLERANCE_M
+      ) {
+        violations.push(
+          `quad=${quadIndex} is ${quad.halfWidth.toFixed(3)} m wide, ` +
+            `expected ${expectedHalfWidth.toFixed(3)} m`,
+        );
+      }
+    }
+
+    expect(violations).toEqual([]);
+  });
+
+  it('expands every crowd billboard quad upward from the billboard base Y', () => {
+    // RED-C (AC-077): the halving changes the SIZE of the quad, never its
+    // ANCHOR. The bottom vertices of the uploaded quad have to sit exactly
+    // on the base Y of the billboard the quad draws, and the top vertices
+    // have to be ABOVE it, so the sprite keeps growing UPWARD out of its
+    // foot anchor instead of sinking into the surface.
+    const { scene, quads } = probeRenderedCrowdQuads();
+    const violations: string[] = [];
+
+    if (quads.length === 0) {
+      violations.push('the frame uploaded no crowd billboard quad');
+    }
+
+    for (let quadIndex = 0; quadIndex < quads.length; quadIndex += 1) {
+      const quad = quads[quadIndex]!;
+      let nearest = scene.billboards[0];
+      let nearestDistance = Number.POSITIVE_INFINITY;
+
+      for (const billboard of scene.billboards) {
+        const distance = Math.hypot(
+          billboard.position[0] - quad.centerX,
+          billboard.position[2] - quad.centerZ,
+        );
+
+        if (distance < nearestDistance) {
+          nearestDistance = distance;
+          nearest = billboard;
+        }
       }
 
-      for (let quadIndex = 0; quadIndex < quads.length; quadIndex += 1) {
-        const quad = quads[quadIndex]!;
+      if (
+        nearest === undefined ||
+        nearestDistance > RENDERED_QUAD_TOLERANCE_M
+      ) {
+        violations.push(
+          `quad=${quadIndex} is centered at ${quad.centerX.toFixed(3)}, ` +
+            `${quad.centerZ.toFixed(3)}, which is no billboard position`,
+        );
+        continue;
+      }
 
-        if (
-          Math.abs(quad.height - expectedHeight) > RENDERED_QUAD_TOLERANCE_M
-        ) {
+      if (
+        Math.abs(quad.baseY - nearest.position[1]) > RENDERED_QUAD_TOLERANCE_M
+      ) {
+        violations.push(
+          `quad=${quadIndex} starts at ${quad.baseY.toFixed(3)} m, the ` +
+            `billboard base is ${nearest.position[1].toFixed(3)} m`,
+        );
+      }
+      if (quad.topY <= quad.baseY) {
+        violations.push(
+          `quad=${quadIndex} does not grow upward ` +
+            `(base ${quad.baseY.toFixed(3)} m, top ${quad.topY.toFixed(3)} m)`,
+        );
+      }
+    }
+
+    expect(violations).toEqual([]);
+  });
+});
+
+describe('right-world.pass billboard meter scale is single-sourced (P1-sprite-scale-render-quad, RED-G, AC-077)', () => {
+  it('keeps no module-local copy of the meters-per-pixel constant', () => {
+    // RED-G (AC-077): the duplicated twin is a DRIFT hazard. A second copy
+    // of the meters-per-pixel value can silently diverge from the shared
+    // export, and the placement footprint would then disagree with the
+    // rendered quad. The pass must declare NO local constant of its own.
+    const source = readRightWorldPassSource();
+
+    expect(source).not.toMatch(LOCAL_METERS_PER_PIXEL_DECLARATION_PATTERN);
+  });
+
+  it('imports the shared meters-per-pixel constant from the public sprite module', () => {
+    // RED-G (AC-077): the single source of truth is the EXPORT
+    // `NEATRACING_BILLBOARD_WORLD_PIXEL_SCALE_M` of `public.sprite.ts`, so
+    // the pass has to import it from that module.
+    const source = readRightWorldPassSource();
+    const importMatch = PUBLIC_SPRITE_VALUE_IMPORT_PATTERN.exec(source);
+    const importedNames = (importMatch?.[1] ?? '')
+      .split(',')
+      .map((name) => name.trim())
+      .filter((name) => name.length > 0);
+
+    expect(importedNames).toContain('NEATRACING_BILLBOARD_WORLD_PIXEL_SCALE_M');
+  });
+
+  it('sizes the rendered quad from the shared meters-per-pixel export', () => {
+    // RED-G (AC-077): the two checks above prove the pass READS the shared
+    // export; this one proves it USES it. The rendered quad height is
+    // measured against the SHARED constants, so a twin that drifted to
+    // another value fails here even when the import stayed in place.
+    const { scene, quads } = probeRenderedCrowdQuads();
+    const frame = scene.atlas.frames[0]!;
+    const expectedHeight =
+      frame.height *
+      NEATRACING_PUBLIC_BILLBOARD_WORLD_SCALE *
+      NEATRACING_BILLBOARD_WORLD_PIXEL_SCALE_M;
+    const violations: string[] = [];
+
+    if (quads.length === 0) {
+      violations.push('the frame uploaded no crowd billboard quad');
+    }
+
+    for (let quadIndex = 0; quadIndex < quads.length; quadIndex += 1) {
+      const quad = quads[quadIndex]!;
+
+      if (Math.abs(quad.height - expectedHeight) > RENDERED_QUAD_TOLERANCE_M) {
+        violations.push(
+          `quad=${quadIndex} is ${quad.height.toFixed(3)} m tall, ` +
+            `expected ${expectedHeight.toFixed(3)} m`,
+        );
+      }
+    }
+
+    expect(violations).toEqual([]);
+  });
+});
+
+describe('right-world.pass crowd counts under the halved sprite (P1-sprite-scale-red-contracts, RED-D, AC-077 + AC-072 + AC-074)', () => {
+  it('seats twelve spectators on every bleacher and 240 seated billboards in total at every fixture seed', () => {
+    // RED-D (AC-072 + AC-077): the halving changes the GEOMETRY of the
+    // crowd, not its SIZE. Every bleacher of every fixture seed still
+    // seats exactly twelve spectators - four on each of its three levels -
+    // and the assembled scene still carries the full 240 seated billboards
+    // of the 20 populated bleachers.
+    const violations: string[] = [];
+
+    for (const seed of NEATRACING_CROWD_FIXTURE_SEEDS) {
+      const scene = buildFixtureScene(seed);
+      const bleachers = scene.props.filter((prop) => prop.kind === 'bleacher');
+      let seatedTotal = 0;
+
+      if (bleachers.length !== REPOPULATED_BLEACHER_COUNT) {
+        violations.push(
+          `seed=${seed} carries ${bleachers.length} bleachers, ` +
+            `expected ${REPOPULATED_BLEACHER_COUNT}`,
+        );
+      }
+
+      for (const bleacher of bleachers) {
+        const hosted = scene.billboards.filter(
+          (billboard) =>
+            runtimeRoleOf(billboard) === CROWD_ROLE_SEATED &&
+            findBleacherHostProp(billboard, scene.props) === bleacher,
+        );
+        seatedTotal += hosted.length;
+
+        if (hosted.length !== REPOPULATED_SEATED_BILLBOARDS_PER_BLEACHER) {
           violations.push(
-            `quad=${quadIndex} is ${quad.height.toFixed(3)} m tall, ` +
-              `expected ${expectedHeight.toFixed(3)} m`,
+            `seed=${seed} bleacher=${scene.props.indexOf(bleacher)} seats ` +
+              `${hosted.length} spectators, expected ` +
+              `${REPOPULATED_SEATED_BILLBOARDS_PER_BLEACHER}`,
           );
         }
       }
 
-      expect(violations).toEqual([]);
-    });
-
-    it('renders every crowd billboard quad at the halved half width', () => {
-      // RED-C (AC-077): the world WIDTH follows the SAME factor, so the
-      // square 192 x 192 px atlas frames keep their aspect ratio. The half
-      // width of the rendered quad is `frame.width * world scale * meters per
-      // pixel / 2`, which is 2.4 m after the halving and 4.8 m before it.
-      const { scene, quads } = probeRenderedCrowdQuads();
-      const frame = scene.atlas.frames[0]!;
-      const expectedHalfWidth =
-        (frame.width *
-          EXPECTED_BILLBOARD_WORLD_SCALE *
-          EXPECTED_METERS_PER_SPRITE_PIXEL) /
-        2;
-      const violations: string[] = [];
-
-      if (quads.length === 0) {
-        violations.push('the frame uploaded no crowd billboard quad');
+      if (seatedTotal !== REPOPULATED_SEATED_CROWD) {
+        violations.push(
+          `seed=${seed} carries ${seatedTotal} seated billboards, ` +
+            `expected ${REPOPULATED_SEATED_CROWD}`,
+        );
       }
+    }
 
-      for (let quadIndex = 0; quadIndex < quads.length; quadIndex += 1) {
-        const quad = quads[quadIndex]!;
+    expect(violations).toEqual([]);
+  });
 
-        if (
-          Math.abs(quad.halfWidth - expectedHalfWidth) >
-          RENDERED_QUAD_TOLERANCE_M
-        ) {
+  it('keeps 20 walkers, 10 standing spectators and 4 mechanics off the bleachers at every fixture seed', () => {
+    // RED-D (AC-074 + AC-077): the off-bleacher crowd of the re-populated
+    // world - the slow walkers on the trackside, the standing spectators
+    // outside the ring and the team-colored inner-ring mechanics - keeps
+    // its named counts. The halving shrinks the sprite footprint of every
+    // agent, so a count that silently grew or shrank with the sprite size
+    // would break the crowd budget.
+    const violations: string[] = [];
+
+    for (const seed of NEATRACING_CROWD_FIXTURE_SEEDS) {
+      const scene = buildFixtureScene(seed);
+      const offBleacher = getOffBleacherBillboards(scene);
+      const walkers = offBleacher.filter(
+        (billboard) => runtimeRoleOf(billboard) === CROWD_ROLE_WALKER,
+      );
+      const standing = offBleacher.filter(
+        (billboard) => runtimeRoleOf(billboard) === CROWD_ROLE_STANDING,
+      );
+      const mechanics = offBleacher.filter(
+        (billboard) => runtimeRoleOf(billboard) === CROWD_ROLE_MECHANIC,
+      );
+
+      if (walkers.length !== EXPECTED_OFF_BLEACHER_WALKERS) {
+        violations.push(
+          `seed=${seed} carries ${walkers.length} walkers, ` +
+            `expected ${EXPECTED_OFF_BLEACHER_WALKERS}`,
+        );
+      }
+      if (standing.length !== EXPECTED_OFF_BLEACHER_STANDING) {
+        violations.push(
+          `seed=${seed} carries ${standing.length} standing spectators, ` +
+            `expected ${EXPECTED_OFF_BLEACHER_STANDING}`,
+        );
+      }
+      if (mechanics.length !== EXPECTED_OFF_BLEACHER_MECHANICS) {
+        violations.push(
+          `seed=${seed} carries ${mechanics.length} mechanics, ` +
+            `expected ${EXPECTED_OFF_BLEACHER_MECHANICS}`,
+        );
+      }
+      if (
+        offBleacher.length !== NEATRACING_PUBLIC_OFF_BLEACHER_AGENT_ALLOWANCE
+      ) {
+        violations.push(
+          `seed=${seed} carries ${offBleacher.length} off-bleacher agents, ` +
+            `expected ${NEATRACING_PUBLIC_OFF_BLEACHER_AGENT_ALLOWANCE}`,
+        );
+      }
+    }
+
+    expect(violations).toEqual([]);
+  });
+
+  it('keeps every seated billboard on its bleacher level at every fixture seed', () => {
+    // RED-D (AC-077 + AC-072): the halving may not drop the seated
+    // spectators to the ground. Every seated billboard still stands on the
+    // seat surface of its hosting bleacher, so the base Y of the billboard
+    // matches the bleacher level it sits on.
+    const violations: string[] = [];
+
+    for (const seed of NEATRACING_CROWD_FIXTURE_SEEDS) {
+      const scene = buildFixtureScene(seed);
+      const seated = scene.billboards.filter(
+        (billboard) => runtimeRoleOf(billboard) === CROWD_ROLE_SEATED,
+      );
+
+      for (const billboard of seated) {
+        const host = findBleacherHostProp(billboard, scene.props);
+
+        if (host === undefined) {
           violations.push(
-            `quad=${quadIndex} is ${quad.halfWidth.toFixed(3)} m wide, ` +
-              `expected ${expectedHalfWidth.toFixed(3)} m`,
-          );
-        }
-      }
-
-      expect(violations).toEqual([]);
-    });
-
-    it('expands every crowd billboard quad upward from the billboard base Y', () => {
-      // RED-C (AC-077): the halving changes the SIZE of the quad, never its
-      // ANCHOR. The bottom vertices of the uploaded quad have to sit exactly
-      // on the base Y of the billboard the quad draws, and the top vertices
-      // have to be ABOVE it, so the sprite keeps growing UPWARD out of its
-      // foot anchor instead of sinking into the surface.
-      const { scene, quads } = probeRenderedCrowdQuads();
-      const violations: string[] = [];
-
-      if (quads.length === 0) {
-        violations.push('the frame uploaded no crowd billboard quad');
-      }
-
-      for (let quadIndex = 0; quadIndex < quads.length; quadIndex += 1) {
-        const quad = quads[quadIndex]!;
-        let nearest = scene.billboards[0];
-        let nearestDistance = Number.POSITIVE_INFINITY;
-
-        for (const billboard of scene.billboards) {
-          const distance = Math.hypot(
-            billboard.position[0] - quad.centerX,
-            billboard.position[2] - quad.centerZ,
-          );
-
-          if (distance < nearestDistance) {
-            nearestDistance = distance;
-            nearest = billboard;
-          }
-        }
-
-        if (nearest === undefined || nearestDistance > RENDERED_QUAD_TOLERANCE_M) {
-          violations.push(
-            `quad=${quadIndex} is centered at ${quad.centerX.toFixed(3)}, ` +
-              `${quad.centerZ.toFixed(3)}, which is no billboard position`,
+            `seed=${seed} seated billboard at ` +
+              `${billboard.position.join(',')} has no bleacher host`,
           );
           continue;
         }
 
-        if (
-          Math.abs(quad.baseY - nearest.position[1]) > RENDERED_QUAD_TOLERANCE_M
-        ) {
-          violations.push(
-            `quad=${quadIndex} starts at ${quad.baseY.toFixed(3)} m, the ` +
-              `billboard base is ${nearest.position[1].toFixed(3)} m`,
-          );
-        }
-        if (quad.topY <= quad.baseY) {
-          violations.push(
-            `quad=${quadIndex} does not grow upward ` +
-              `(base ${quad.baseY.toFixed(3)} m, top ${quad.topY.toFixed(3)} m)`,
-          );
-        }
-      }
-
-      expect(violations).toEqual([]);
-    });
-  },
-);
-
-describe(
-  'right-world.pass billboard meter scale is single-sourced (P1-sprite-scale-render-quad, RED-G, AC-077)',
-  () => {
-    it('keeps no module-local copy of the meters-per-pixel constant', () => {
-      // RED-G (AC-077): the duplicated twin is a DRIFT hazard. A second copy
-      // of the meters-per-pixel value can silently diverge from the shared
-      // export, and the placement footprint would then disagree with the
-      // rendered quad. The pass must declare NO local constant of its own.
-      const source = readRightWorldPassSource();
-
-      expect(source).not.toMatch(LOCAL_METERS_PER_PIXEL_DECLARATION_PATTERN);
-    });
-
-    it('imports the shared meters-per-pixel constant from the public sprite module', () => {
-      // RED-G (AC-077): the single source of truth is the EXPORT
-      // `NEATRACING_BILLBOARD_WORLD_PIXEL_SCALE_M` of `public.sprite.ts`, so
-      // the pass has to import it from that module.
-      const source = readRightWorldPassSource();
-      const importMatch = PUBLIC_SPRITE_VALUE_IMPORT_PATTERN.exec(source);
-      const importedNames = (importMatch?.[1] ?? '')
-        .split(',')
-        .map((name) => name.trim())
-        .filter((name) => name.length > 0);
-
-      expect(importedNames).toContain(
-        'NEATRACING_BILLBOARD_WORLD_PIXEL_SCALE_M',
-      );
-    });
-
-    it('sizes the rendered quad from the shared meters-per-pixel export', () => {
-      // RED-G (AC-077): the two checks above prove the pass READS the shared
-      // export; this one proves it USES it. The rendered quad height is
-      // measured against the SHARED constants, so a twin that drifted to
-      // another value fails here even when the import stayed in place.
-      const { scene, quads } = probeRenderedCrowdQuads();
-      const frame = scene.atlas.frames[0]!;
-      const expectedHeight =
-        frame.height *
-        NEATRACING_PUBLIC_BILLBOARD_WORLD_SCALE *
-        NEATRACING_BILLBOARD_WORLD_PIXEL_SCALE_M;
-      const violations: string[] = [];
-
-      if (quads.length === 0) {
-        violations.push('the frame uploaded no crowd billboard quad');
-      }
-
-      for (let quadIndex = 0; quadIndex < quads.length; quadIndex += 1) {
-        const quad = quads[quadIndex]!;
+        const levelY = getBleacherSeatTopY(
+          host,
+          billboard.position[0],
+          billboard.position[2],
+        );
 
         if (
-          Math.abs(quad.height - expectedHeight) > RENDERED_QUAD_TOLERANCE_M
+          Math.abs(billboard.position[1] - levelY) > SEATED_BASE_Y_TOLERANCE_M
         ) {
           violations.push(
-            `quad=${quadIndex} is ${quad.height.toFixed(3)} m tall, ` +
-              `expected ${expectedHeight.toFixed(3)} m`,
+            `seed=${seed} seated billboard at ` +
+              `${billboard.position.join(',')} stands at ` +
+              `${billboard.position[1].toFixed(3)} m, the bleacher level ` +
+              `is ${levelY.toFixed(3)} m`,
           );
         }
       }
+    }
 
-      expect(violations).toEqual([]);
-    });
-  },
-);
-
-describe(
-  'right-world.pass crowd counts under the halved sprite (P1-sprite-scale-red-contracts, RED-D, AC-077 + AC-072 + AC-074)',
-  () => {
-    it('seats twelve spectators on every bleacher and 240 seated billboards in total at every fixture seed', () => {
-      // RED-D (AC-072 + AC-077): the halving changes the GEOMETRY of the
-      // crowd, not its SIZE. Every bleacher of every fixture seed still
-      // seats exactly twelve spectators - four on each of its three levels -
-      // and the assembled scene still carries the full 240 seated billboards
-      // of the 20 populated bleachers.
-      const violations: string[] = [];
-
-      for (const seed of NEATRACING_CROWD_FIXTURE_SEEDS) {
-        const scene = buildFixtureScene(seed);
-        const bleachers = scene.props.filter((prop) => prop.kind === 'bleacher');
-        let seatedTotal = 0;
-
-        if (bleachers.length !== REPOPULATED_BLEACHER_COUNT) {
-          violations.push(
-            `seed=${seed} carries ${bleachers.length} bleachers, ` +
-              `expected ${REPOPULATED_BLEACHER_COUNT}`,
-          );
-        }
-
-        for (const bleacher of bleachers) {
-          const hosted = scene.billboards.filter(
-            (billboard) =>
-              runtimeRoleOf(billboard) === CROWD_ROLE_SEATED &&
-              findBleacherHostProp(billboard, scene.props) === bleacher,
-          );
-          seatedTotal += hosted.length;
-
-          if (hosted.length !== REPOPULATED_SEATED_BILLBOARDS_PER_BLEACHER) {
-            violations.push(
-              `seed=${seed} bleacher=${scene.props.indexOf(bleacher)} seats ` +
-                `${hosted.length} spectators, expected ` +
-                `${REPOPULATED_SEATED_BILLBOARDS_PER_BLEACHER}`,
-            );
-          }
-        }
-
-        if (seatedTotal !== REPOPULATED_SEATED_CROWD) {
-          violations.push(
-            `seed=${seed} carries ${seatedTotal} seated billboards, ` +
-              `expected ${REPOPULATED_SEATED_CROWD}`,
-          );
-        }
-      }
-
-      expect(violations).toEqual([]);
-    });
-
-    it('keeps 20 walkers, 10 standing spectators and 4 mechanics off the bleachers at every fixture seed', () => {
-      // RED-D (AC-074 + AC-077): the off-bleacher crowd of the re-populated
-      // world - the slow walkers on the trackside, the standing spectators
-      // outside the ring and the team-colored inner-ring mechanics - keeps
-      // its named counts. The halving shrinks the sprite footprint of every
-      // agent, so a count that silently grew or shrank with the sprite size
-      // would break the crowd budget.
-      const violations: string[] = [];
-
-      for (const seed of NEATRACING_CROWD_FIXTURE_SEEDS) {
-        const scene = buildFixtureScene(seed);
-        const offBleacher = getOffBleacherBillboards(scene);
-        const walkers = offBleacher.filter(
-          (billboard) => runtimeRoleOf(billboard) === CROWD_ROLE_WALKER,
-        );
-        const standing = offBleacher.filter(
-          (billboard) => runtimeRoleOf(billboard) === CROWD_ROLE_STANDING,
-        );
-        const mechanics = offBleacher.filter(
-          (billboard) => runtimeRoleOf(billboard) === CROWD_ROLE_MECHANIC,
-        );
-
-        if (walkers.length !== EXPECTED_OFF_BLEACHER_WALKERS) {
-          violations.push(
-            `seed=${seed} carries ${walkers.length} walkers, ` +
-              `expected ${EXPECTED_OFF_BLEACHER_WALKERS}`,
-          );
-        }
-        if (standing.length !== EXPECTED_OFF_BLEACHER_STANDING) {
-          violations.push(
-            `seed=${seed} carries ${standing.length} standing spectators, ` +
-              `expected ${EXPECTED_OFF_BLEACHER_STANDING}`,
-          );
-        }
-        if (mechanics.length !== EXPECTED_OFF_BLEACHER_MECHANICS) {
-          violations.push(
-            `seed=${seed} carries ${mechanics.length} mechanics, ` +
-              `expected ${EXPECTED_OFF_BLEACHER_MECHANICS}`,
-          );
-        }
-        if (offBleacher.length !== NEATRACING_PUBLIC_OFF_BLEACHER_AGENT_ALLOWANCE) {
-          violations.push(
-            `seed=${seed} carries ${offBleacher.length} off-bleacher agents, ` +
-              `expected ${NEATRACING_PUBLIC_OFF_BLEACHER_AGENT_ALLOWANCE}`,
-          );
-        }
-      }
-
-      expect(violations).toEqual([]);
-    });
-
-    it('keeps every seated billboard on its bleacher level at every fixture seed', () => {
-      // RED-D (AC-077 + AC-072): the halving may not drop the seated
-      // spectators to the ground. Every seated billboard still stands on the
-      // seat surface of its hosting bleacher, so the base Y of the billboard
-      // matches the bleacher level it sits on.
-      const violations: string[] = [];
-
-      for (const seed of NEATRACING_CROWD_FIXTURE_SEEDS) {
-        const scene = buildFixtureScene(seed);
-        const seated = scene.billboards.filter(
-          (billboard) => runtimeRoleOf(billboard) === CROWD_ROLE_SEATED,
-        );
-
-        for (const billboard of seated) {
-          const host = findBleacherHostProp(billboard, scene.props);
-
-          if (host === undefined) {
-            violations.push(
-              `seed=${seed} seated billboard at ` +
-                `${billboard.position.join(',')} has no bleacher host`,
-            );
-            continue;
-          }
-
-          const levelY = getBleacherSeatTopY(
-            host,
-            billboard.position[0],
-            billboard.position[2],
-          );
-
-          if (
-            Math.abs(billboard.position[1] - levelY) >
-            SEATED_BASE_Y_TOLERANCE_M
-          ) {
-            violations.push(
-              `seed=${seed} seated billboard at ` +
-                `${billboard.position.join(',')} stands at ` +
-                `${billboard.position[1].toFixed(3)} m, the bleacher level ` +
-                `is ${levelY.toFixed(3)} m`,
-            );
-          }
-        }
-      }
-
-      expect(violations).toEqual([]);
-    });
-  },
-);
+    expect(violations).toEqual([]);
+  });
+});

@@ -107,7 +107,10 @@ describe('the lap floor is the shared precondition (OQ-002)', () => {
       describeNeatRacingAiModeGoalPhase(
         createNeatRacingAiModeGoalSession(NEATRACING_AI_MODE_START_LEVEL),
       ),
-    ).toEqual({ kind: 'lapFloor', remainingLaps: NEATRACING_AI_MIN_SESSION_LAPS });
+    ).toEqual({
+      kind: 'lapFloor',
+      remainingLaps: NEATRACING_AI_MIN_SESSION_LAPS,
+    });
   });
 
   it('counts forward crossings below the floor but stays ineligible', () => {
@@ -188,7 +191,9 @@ describe('growth-goal continuation (promotion-threshold-driven)', () => {
   });
 
   it('names the next rung while the session chases its growth goal', () => {
-    expect(describeNeatRacingAiModeGoalPhase(buildFloorReachedSession())).toEqual({
+    expect(
+      describeNeatRacingAiModeGoalPhase(buildFloorReachedSession()),
+    ).toEqual({
       kind: 'chasingGoal',
       promotionTargetLevel: LEVEL_SECOND,
     });
@@ -294,7 +299,9 @@ describe('level 3 — the unbounded cap (until the user stops)', () => {
       buildCrossing({ nodeCount: ABOVE_LVL2 }),
     );
 
-    expect(describeNeatRacingAiModeGoalPhase(lastOutcome(outcomes).session)).toEqual({
+    expect(
+      describeNeatRacingAiModeGoalPhase(lastOutcome(outcomes).session),
+    ).toEqual({
       kind: 'unboundedCap',
     });
   });
@@ -320,9 +327,9 @@ describe('level 3 — the unbounded cap (until the user stops)', () => {
   });
 
   it('re-applies the lap floor on the fresh capped round', () => {
-    expect(describeNeatRacingAiModeGoalPhase(buildLevelThreeSession()).kind).toBe(
-      'lapFloor',
-    );
+    expect(
+      describeNeatRacingAiModeGoalPhase(buildLevelThreeSession()).kind,
+    ).toBe('lapFloor');
   });
 });
 
@@ -332,7 +339,9 @@ describe('level 3 — the unbounded cap (until the user stops)', () => {
 
 describe('reverse crossings are ignored', () => {
   it('keeps the round untouched and never evaluates a reverse crossing', () => {
-    const session = createNeatRacingAiModeGoalSession(NEATRACING_AI_MODE_START_LEVEL);
+    const session = createNeatRacingAiModeGoalSession(
+      NEATRACING_AI_MODE_START_LEVEL,
+    );
     const outcome = recordNeatRacingAiModeGoalCrossing(
       session,
       buildCrossing({ forwardCrossing: false }),
@@ -381,7 +390,9 @@ describe('validation', () => {
     // counter cannot be produced by the machine itself.
     expect(() =>
       recordNeatRacingAiModeGoalCrossing(
-        { level: LEVEL_FIRST } as Partial<NeatRacingAiModeGoalSession> as NeatRacingAiModeGoalSession,
+        {
+          level: LEVEL_FIRST,
+        } as Partial<NeatRacingAiModeGoalSession> as NeatRacingAiModeGoalSession,
         buildCrossing(),
       ),
     ).toThrow(RangeError);

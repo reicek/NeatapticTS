@@ -56,9 +56,7 @@
  * packing is a pure state->bytes function of its input.
  */
 
-import type {
-  PhysicsCarState,
-} from '../../physics/physics.step.service';
+import type { PhysicsCarState } from '../../physics/physics.step.service';
 import type { RaceRulesState, RaceStatus } from '../../physics/race-rules';
 
 /** Schema sentinel for forward-compatibility rejection on packed frames. */
@@ -148,14 +146,15 @@ export const NEATRACING_PACKED_RACE_STATUS_CODES = Object.freeze({
 });
 
 /** Race-status names indexed by their packed code (single derived table). */
-const NEATRACING_PACKED_RACE_STATUS_BY_CODE: Readonly<Record<number, RaceStatus>> =
-  Object.freeze(
-    Object.fromEntries(
-      Object.entries(NEATRACING_PACKED_RACE_STATUS_CODES).map(
-        ([statusName, statusCode]) => [statusCode, statusName],
-      ),
+const NEATRACING_PACKED_RACE_STATUS_BY_CODE: Readonly<
+  Record<number, RaceStatus>
+> = Object.freeze(
+  Object.fromEntries(
+    Object.entries(NEATRACING_PACKED_RACE_STATUS_CODES).map(
+      ([statusName, statusCode]) => [statusCode, statusName],
     ),
-  ) as Readonly<Record<number, RaceStatus>>;
+  ),
+) as Readonly<Record<number, RaceStatus>>;
 
 /**
  * The SINGLE fixed channel mapping for the packed SoA layout.
@@ -180,7 +179,10 @@ export const NEATRACING_PACKED_CAR_CHANNELS: Readonly<
   { name: 'carTractionSeverity', reader: (car) => car.tractionSeverity },
   { name: 'carLateralVelocity', reader: (car) => car.lateralVelocity },
   { name: 'carDriftCommittedSlip', reader: (car) => car.drift.committed.slip },
-  { name: 'carDriftCommittedTurnSign', reader: (car) => car.drift.committed.turnSign },
+  {
+    name: 'carDriftCommittedTurnSign',
+    reader: (car) => car.drift.committed.turnSign,
+  },
   {
     name: 'carDriftCommittedReArmed',
     // Booleans ride as exact 0/1 floats in the D8a channel space.
@@ -379,7 +381,10 @@ export function resolveNeatRacingPackedFrameFloatWordCount(
 export function resolveNeatRacingPackedSlotByteLength(
   carCapacity: number,
 ): number {
-  return resolveNeatRacingPackedFrameFloatWordCount(carCapacity) * NEATRACING_PACKED_WORD_BYTES;
+  return (
+    resolveNeatRacingPackedFrameFloatWordCount(carCapacity) *
+    NEATRACING_PACKED_WORD_BYTES
+  );
 }
 
 /**
@@ -562,9 +567,10 @@ function validatePackedFrameRules(
 ): FramePackValidationError | null {
   // Step 1: The status must map through the fixed code table (plain keyed
   // lookup — no per-frame allocation in the validation path).
-  const statusCode = NEATRACING_PACKED_RACE_STATUS_CODES[
-    rules.raceStatus as keyof typeof NEATRACING_PACKED_RACE_STATUS_CODES
-  ];
+  const statusCode =
+    NEATRACING_PACKED_RACE_STATUS_CODES[
+      rules.raceStatus as keyof typeof NEATRACING_PACKED_RACE_STATUS_CODES
+    ];
   if (statusCode === undefined) {
     return { error: 'frame pack failed: raceStatus is not a packed code' };
   }
@@ -585,10 +591,7 @@ function validatePackedFrameRules(
   }
 
   // Step 3: nextRaceLevel must be null or finite.
-  if (
-    rules.nextRaceLevel !== null &&
-    !Number.isFinite(rules.nextRaceLevel)
-  ) {
+  if (rules.nextRaceLevel !== null && !Number.isFinite(rules.nextRaceLevel)) {
     return {
       error: 'frame pack failed: rules nextRaceLevel must be null or finite',
     };
@@ -617,20 +620,25 @@ interface PoolSlot {
  * @returns The slot bundle (buffer + views + reusable frame object).
  */
 function createPoolSlot(carCapacity: number): PoolSlot {
-  const buffer = new ArrayBuffer(resolveNeatRacingPackedSlotByteLength(carCapacity));
+  const buffer = new ArrayBuffer(
+    resolveNeatRacingPackedSlotByteLength(carCapacity),
+  );
   const rulesChannel = new Float32Array(
     buffer,
     0,
     NEATRACING_PACKED_RULES_FLOAT_COUNT,
   );
   // Channel views are created in the fixed channel-table declaration order.
-  const carChannels = NEATRACING_PACKED_CAR_CHANNELS.map((channel, channelIndex) =>
-    new Float32Array(
-      buffer,
-      resolveNeatRacingPackedChannelFirstFloatWord(channelIndex, carCapacity) *
-        NEATRACING_PACKED_WORD_BYTES,
-      carCapacity,
-    ),
+  const carChannels = NEATRACING_PACKED_CAR_CHANNELS.map(
+    (channel, channelIndex) =>
+      new Float32Array(
+        buffer,
+        resolveNeatRacingPackedChannelFirstFloatWord(
+          channelIndex,
+          carCapacity,
+        ) * NEATRACING_PACKED_WORD_BYTES,
+        carCapacity,
+      ),
   );
   // The frame object is built once and reused for every pack of this slot;
   // the literal field order mirrors the channel-table order above.
@@ -684,9 +692,10 @@ function writePackedFrameHeader(
   // Discrete rules scalars: exact numbers (never float32-rounded).
   frame.level = input.rules.level;
   frame.lapsCompleted = input.rules.lapsCompleted;
-  frame.raceStatusCode = NEATRACING_PACKED_RACE_STATUS_CODES[
-    input.rules.raceStatus as keyof typeof NEATRACING_PACKED_RACE_STATUS_CODES
-  ];
+  frame.raceStatusCode =
+    NEATRACING_PACKED_RACE_STATUS_CODES[
+      input.rules.raceStatus as keyof typeof NEATRACING_PACKED_RACE_STATUS_CODES
+    ];
   frame.nextRaceLevel =
     input.rules.nextRaceLevel === null
       ? NEATRACING_PACK_NULL_LEVEL_SENTINEL
@@ -745,7 +754,8 @@ function fillPackedFrameCarChannels(
 function reconstructPackedFrameRules(
   frame: NeatRacingPackedFrame,
 ): RaceRulesState {
-  const raceStatus = NEATRACING_PACKED_RACE_STATUS_BY_CODE[frame.raceStatusCode];
+  const raceStatus =
+    NEATRACING_PACKED_RACE_STATUS_BY_CODE[frame.raceStatusCode];
   if (raceStatus === undefined) {
     throw new RangeError(
       `Unsupported NeatRacingPackedFrame raceStatusCode: ${String(frame.raceStatusCode)}`,
@@ -866,7 +876,10 @@ export function createNeatRacingFramePackPool(
       const slot = slots[slotCursor];
       slotCursor = (slotCursor + 1) % poolSlots;
       // Step 2: Validate the fleet and rules before touching any slot bytes.
-      const carsError = validatePackedFrameCars(input.cars, options.carCapacity);
+      const carsError = validatePackedFrameCars(
+        input.cars,
+        options.carCapacity,
+      );
       if (carsError !== null) {
         throw new RangeError(carsError.error);
       }

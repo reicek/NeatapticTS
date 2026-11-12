@@ -515,16 +515,16 @@ executed so that concurrency stays safe, bounded, and reviewable. RPE is
 binding on every dispatch in this repository and is the execution form of
 rules 1–5.
 
-| Clause   | Name                       | Binding requirement                                                                                                                                                                                                                                     |
-| -------- | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **RPE-1** | **Auxiliary scope only**  | A dispatched sub-agent receives a **quick, targeted, auxiliary** task — one question, one boundary, the minimum file set (Rule 1). It is never handed the orchestrator's whole job, a multi-phase goal, or an open-ended "figure it out and also do X" scope. If the task needs the orchestrator's judgment, the orchestrator keeps it. |
-| **RPE-2** | **Ownership, no forwarding** | A dispatched agent **OWNS** the work it was given and returns the result. It MUST NOT forward, re-dispatch, or chain its assignment onward to another sub-agent — not even "just for the next small piece". Escalating an unresolved blocker back to the orchestrator is correct; delegating it sideways is not. |
+| Clause    | Name                             | Binding requirement                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| --------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **RPE-1** | **Auxiliary scope only**         | A dispatched sub-agent receives a **quick, targeted, auxiliary** task — one question, one boundary, the minimum file set (Rule 1). It is never handed the orchestrator's whole job, a multi-phase goal, or an open-ended "figure it out and also do X" scope. If the task needs the orchestrator's judgment, the orchestrator keeps it.                                                                                                                 |
+| **RPE-2** | **Ownership, no forwarding**     | A dispatched agent **OWNS** the work it was given and returns the result. It MUST NOT forward, re-dispatch, or chain its assignment onward to another sub-agent — not even "just for the next small piece". Escalating an unresolved blocker back to the orchestrator is correct; delegating it sideways is not.                                                                                                                                        |
 | **RPE-3** | **No nested self-orchestration** | A dispatched agent does not re-enter the orchestration machinery on its own initiative: it does not spawn its own RED → IMPLEMENT → GREEN loop, its own reviewer chain, or its own phase transitions. Tier-authorized delegation inside an agent's own scope (a Tier-2 coordinator dispatching its own Tier-3 scouts) is permitted, but stays bounded by RPE-1, RPE-4, and RPE-5. Dispatching an SDLC phase agent from inside a dispatched task is not. |
-| **RPE-4** | **Disjoint write sets**  | Parallel writes happen **only** over non-overlapping files. Two agents that would touch the same file are serialized through the file-lock tracker (§12) and never co-written. This is the execution form of Rule 4. |
-| **RPE-5** | **Bounded fan-out**      | The orchestrator keeps the sub-agent pool **below saturation**: it reserves at least one slot for itself (§12), dispatches only as many agents as the remaining capacity allows, and queues the rest. Fan-out is sized to the task, never to the number of free slots. |
-| **RPE-6** | **Fresh, never recycled** | Every dispatch is a **fresh** agent instance on a small, targeted slice. An idle, stopped, or previously-used instance is **never** reused, recycled, or resumed with `write_agent` for a new slice, second pass, or fix iteration. Reuse is a workflow defect: a recycled instance carries stale context, violates thin scope (Rule 1), and cannot re-read the plan cleanly. |
-| **RPE-7** | **RAG-only context** | All context reaches the agent through Cortex RAG keyed by **slice/step ID** (`get_slice_context`, `search_context`, `pre_execute_hook`). The orchestrator MUST NOT inline design context, file lists, diffs, or step-by-step instructions in the prompt. If the plan lacks the context the agent needs, dispatch `01-planning` to write it into the plan — do not paste it into the prompt. |
-| **RPE-8** | **Stall-stop, no nudge** | A **stalled** agent (no tool-call progress) or a **narration-stalled** agent (emits prose/status narration instead of doing the work) is **STOPPED** by the orchestrator — never nudged, never pinged, never "given a hint" to continue. Stop the instance, capture its gap report, and dispatch a **fresh** instance against the same slice (RPE-6). A nudge converts a recoverable stall into an unbounded burn of the time budget. |
+| **RPE-4** | **Disjoint write sets**          | Parallel writes happen **only** over non-overlapping files. Two agents that would touch the same file are serialized through the file-lock tracker (§12) and never co-written. This is the execution form of Rule 4.                                                                                                                                                                                                                                    |
+| **RPE-5** | **Bounded fan-out**              | The orchestrator keeps the sub-agent pool **below saturation**: it reserves at least one slot for itself (§12), dispatches only as many agents as the remaining capacity allows, and queues the rest. Fan-out is sized to the task, never to the number of free slots.                                                                                                                                                                                  |
+| **RPE-6** | **Fresh, never recycled**        | Every dispatch is a **fresh** agent instance on a small, targeted slice. An idle, stopped, or previously-used instance is **never** reused, recycled, or resumed with `write_agent` for a new slice, second pass, or fix iteration. Reuse is a workflow defect: a recycled instance carries stale context, violates thin scope (Rule 1), and cannot re-read the plan cleanly.                                                                           |
+| **RPE-7** | **RAG-only context**             | All context reaches the agent through Cortex RAG keyed by **slice/step ID** (`get_slice_context`, `search_context`, `pre_execute_hook`). The orchestrator MUST NOT inline design context, file lists, diffs, or step-by-step instructions in the prompt. If the plan lacks the context the agent needs, dispatch `01-planning` to write it into the plan — do not paste it into the prompt.                                                             |
+| **RPE-8** | **Stall-stop, no nudge**         | A **stalled** agent (no tool-call progress) or a **narration-stalled** agent (emits prose/status narration instead of doing the work) is **STOPPED** by the orchestrator — never nudged, never pinged, never "given a hint" to continue. Stop the instance, capture its gap report, and dispatch a **fresh** instance against the same slice (RPE-6). A nudge converts a recoverable stall into an unbounded burn of the time budget.                   |
 
 **The dispatch obligations.** Every dispatch in this repository is bound by
 all eight clauses: a small targeted auxiliary scope (RPE-1), work owned and
@@ -639,8 +639,8 @@ violation — the remaining work is unowned.
 A stalled agent has stopped making tool-call progress against its slice. Two
 forms matter:
 
-| Form                  | Symptom                                                                                             | Response                                                                |
-| --------------------- | --------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| Form                  | Symptom                                                                                              | Response                                                                  |
+| --------------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
 | **Stalled**           | `tool_calls_completed` is static across multiple checks while the slice is still unfinished.         | STOP the instance, capture the gap report, dispatch a **fresh** instance. |
 | **Narration-stalled** | The agent emits prose — status updates, restated plans, task narration — instead of executing calls. | STOP the instance, capture the gap report, dispatch a **fresh** instance. |
 
@@ -665,8 +665,8 @@ replaced, never resumed.
   completion).
 - **Always reserve ≥ 1 slot for the orchestrator.** See §12 for concurrency
   limits.
-- **Fresh instance per dispatch.** Background mode changes *when* an agent
-  runs, not *which* instance runs it: every dispatch — background or
+- **Fresh instance per dispatch.** Background mode changes _when_ an agent
+  runs, not _which_ instance runs it: every dispatch — background or
   foreground — is a fresh instance on a small targeted slice, with context
   delivered via slice/step ID (RPE-6, RPE-7).
 - **Background stall-stop.** A background agent that stalls or
@@ -840,8 +840,8 @@ apply a fix, not even for a one-line change.
   size of the fix does not change the instance rule; it only changes the
   slice boundary.
 - **Recording:** record the iteration with the standard `fix-loop:
-  <slice-id> iteration <n> status=<failed|passed>` marker in `## Latest
-  validation evidence`. There is no `fix-inline` marker and no reuse counter
+<slice-id> iteration <n> status=<failed|passed>` marker in `## Latest
+validation evidence`. There is no `fix-inline` marker and no reuse counter
   — every iteration is a fresh dispatch, and the convergence tracker counts
   them all.
 - **Stalled fix iterations:** a fix instance that stalls or narration-stalls

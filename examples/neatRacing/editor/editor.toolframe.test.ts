@@ -188,7 +188,9 @@ describe('Neat Racing editor tool frame (slice P1-editor-toolframe)', () => {
       const container = getToolframeContainer();
       const missing = Object.values(
         NEATRACING_EDITOR_TOOLFRAME_CONTROL_IDS,
-      ).filter((controlId) => container?.querySelector(`#${controlId}`) === null);
+      ).filter(
+        (controlId) => container?.querySelector(`#${controlId}`) === null,
+      );
       expect(missing).toEqual([]);
       expect(session.controls.paletteList.isConnected).toBe(true);
     });
@@ -293,7 +295,9 @@ describe('Neat Racing editor tool frame (slice P1-editor-toolframe)', () => {
     it('mirrors the tool-frame model selection on the session state container', async () => {
       const session = bootEditorSession();
       await session.toolframe.ready;
-      expect(session.state.model).toBe(session.toolframe.state.snapshot().model);
+      expect(session.state.model).toBe(
+        session.toolframe.state.snapshot().model,
+      );
     });
   });
 

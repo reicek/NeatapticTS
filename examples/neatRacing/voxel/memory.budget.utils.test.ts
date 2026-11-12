@@ -248,9 +248,7 @@ function decodeMeshSubtotalBytes(
     );
   }
   return (
-    account.denseGridBytes +
-    account.quadRecordBytes +
-    account.vertexDataBytes
+    account.denseGridBytes + account.quadRecordBytes + account.vertexDataBytes
   );
 }
 
@@ -265,11 +263,9 @@ function decodeMeshSubtotalBytes(
 function denseManifestEntries(
   account: VoxelModelMemoryAccount,
 ): VoxelBufferManifestEntry[] {
-  const denseGridBytes =
-    account.dims[0] * account.dims[1] * account.dims[2];
+  const denseGridBytes = account.dims[0] * account.dims[1] * account.dims[2];
   return account.retainedManifest.filter(
-    (entry) =>
-      entry.isDenseVolumeGrid || entry.byteLength === denseGridBytes,
+    (entry) => entry.isDenseVolumeGrid || entry.byteLength === denseGridBytes,
   );
 }
 
@@ -380,9 +376,7 @@ describe('accountVoxelModelMemory on the shipped model documents (AC-036)', () =
 
     expect(carInput.quadCount).toBe(CAR_QUAD_COUNT);
     expect(carInput.paletteEntryCount).toBe(MODEL_PALETTE_ENTRY_COUNT);
-    expect(
-      accountVoxelModelMemory(carInput).quadRecordBytes,
-    ).toBe(2_604);
+    expect(accountVoxelModelMemory(carInput).quadRecordBytes).toBe(2_604);
   });
 
   it('reports the car body decode and mesh subtotal of 2,146,628 bytes', () => {
@@ -412,9 +406,7 @@ describe('accountVoxelModelMemory on the shipped model documents (AC-036)', () =
 
     expect(wheelInput.quadCount).toBe(WHEEL_QUAD_COUNT);
     expect(wheelInput.paletteEntryCount).toBe(MODEL_PALETTE_ENTRY_COUNT);
-    expect(
-      accountVoxelModelMemory(wheelInput).quadRecordBytes,
-    ).toBe(2_280);
+    expect(accountVoxelModelMemory(wheelInput).quadRecordBytes).toBe(2_280);
   });
 
   it('reports the wheel decode and mesh subtotal of 76,088 bytes', () => {
@@ -474,7 +466,8 @@ describe('sparse-only retention manifest (AC-036, risk R-07)', () => {
     expect(denseManifestEntries(carAccount)).toEqual([]);
     expect(denseManifestEntries(wheelAccount)).toEqual([]);
     expect(
-      carAccount.denseGridBuffersRetained + wheelAccount.denseGridBuffersRetained,
+      carAccount.denseGridBuffersRetained +
+        wheelAccount.denseGridBuffersRetained,
     ).toBe(0);
   });
 

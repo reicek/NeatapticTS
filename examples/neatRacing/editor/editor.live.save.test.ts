@@ -36,7 +36,14 @@
  * absent (batch 90/93 right-reason precedent).
  */
 
-import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  jest,
+} from '@jest/globals';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -286,9 +293,17 @@ function countVolumeMismatches(
   state: EditorState,
 ): number {
   let mismatches = 0;
-  for (let sliceIndex = 0; sliceIndex < NEATRACING_EDITOR_VOLUME_EDGE; sliceIndex += 1) {
+  for (
+    let sliceIndex = 0;
+    sliceIndex < NEATRACING_EDITOR_VOLUME_EDGE;
+    sliceIndex += 1
+  ) {
     const decodedSlice = decoded.slices[sliceIndex];
-    for (let rowIndex = 0; rowIndex < NEATRACING_EDITOR_VOLUME_EDGE; rowIndex += 1) {
+    for (
+      let rowIndex = 0;
+      rowIndex < NEATRACING_EDITOR_VOLUME_EDGE;
+      rowIndex += 1
+    ) {
       const rowStart =
         NEATRACING_EDITOR_VOLUME_ROW_STRIDE * rowIndex +
         NEATRACING_EDITOR_VOLUME_SLICE_STRIDE * sliceIndex;
@@ -481,8 +496,13 @@ describe('Neat Racing editor live save (slice P1-editor-symmetry-save)', () => {
     });
 
     it('reports a failed save and issues no rebuild flight', async () => {
-      const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-      const harness = createRecordingSaveFetch(() => ({ ok: false, status: 500 }));
+      const errorSpy = jest
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
+      const harness = createRecordingSaveFetch(() => ({
+        ok: false,
+        status: 500,
+      }));
       const { liveSave } = createLiveSaveHarness({
         fetchImpl: harness.fetchImpl,
       });
@@ -505,7 +525,9 @@ describe('Neat Racing editor live save (slice P1-editor-symmetry-save)', () => {
     });
 
     it('refuses an over-budget payload before any request leaves the editor', async () => {
-      const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      const errorSpy = jest
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       const { liveSave, requests } = createLiveSaveHarness({
         maxBodyBytes: 64,
       });

@@ -378,8 +378,7 @@ export const NEATRACING_PHYSICS_TURN_RATE_SUFFICIENCY_CORNER_RADIUS_M = 8;
  * driven at, so it is where the corner's kinematic requirement is
  * largest and where the USER channel is measured.
  */
-export const NEATRACING_PHYSICS_TURN_RATE_SUFFICIENCY_CORNER_SPEED_UNITS_PER_S =
-  17.8;
+export const NEATRACING_PHYSICS_TURN_RATE_SUFFICIENCY_CORNER_SPEED_UNITS_PER_S = 17.8;
 
 /**
  * The command-sufficiency margin of the USER channel (1) (Step 14Y,
@@ -791,11 +790,8 @@ function advanceCarState(
   const scrubbedSpeed = Math.max(
     0,
     nextSpeed -
-      computeLongitudinalSpeedScrub(
-        state.slipAngle,
-        nextSpeed,
-        speedPercent,
-      ) * NEATRACING_PHYSICS_FIXED_TIMESTEP_SECONDS,
+      computeLongitudinalSpeedScrub(state.slipAngle, nextSpeed, speedPercent) *
+        NEATRACING_PHYSICS_FIXED_TIMESTEP_SECONDS,
   );
   // Step 4c-bis: the OFF-ROAD FLOOR on the POST-SCRUB speed (RC-1).
   // The floor used to be applied to the PRE-scrub speed ONLY, so the
@@ -1106,8 +1102,7 @@ export function resolveTurnRateSpeedFactor(speedPercent: number): number {
   const excessPercent =
     clampControlRatio(speedPercent - bandPercent) / (1 - bandPercent);
   const factor =
-    1 -
-    NEATRACING_PHYSICS_TURN_RATE_SPEED_REDUCTION_FRACTION * excessPercent;
+    1 - NEATRACING_PHYSICS_TURN_RATE_SPEED_REDUCTION_FRACTION * excessPercent;
   return Math.max(NEATRACING_PHYSICS_TURN_RATE_SPEED_FACTOR_FLOOR, factor);
 }
 

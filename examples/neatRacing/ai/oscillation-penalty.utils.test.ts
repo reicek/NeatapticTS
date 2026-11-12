@@ -270,10 +270,7 @@ describe('node-count gate (AC-030 — below-threshold never penalized)', () => {
 
   it('engages at exactly the promotion threshold (the intentional >= asymmetry)', () => {
     const engagement = evaluateTicks(
-      buildInput(
-        NEATRACING_PROMOTION_NODE_THRESHOLD_LVL_2,
-        METRIC_OSCILLATING,
-      ),
+      buildInput(NEATRACING_PROMOTION_NODE_THRESHOLD_LVL_2, METRIC_OSCILLATING),
       1,
     );
 
@@ -310,10 +307,7 @@ describe('node-count gate (AC-030 — below-threshold never penalized)', () => {
 describe('hysteresis grace window (TP-09)', () => {
   it('ramps the engagement up by one grace step per sustained evaluation', () => {
     const engagement = evaluateTicks(
-      buildInput(
-        NEATRACING_PROMOTION_NODE_THRESHOLD_LVL_2,
-        METRIC_OSCILLATING,
-      ),
+      buildInput(NEATRACING_PROMOTION_NODE_THRESHOLD_LVL_2, METRIC_OSCILLATING),
       3,
     );
 
@@ -322,10 +316,7 @@ describe('hysteresis grace window (TP-09)', () => {
 
   it('reaches full engagement only at the end of the grace window', () => {
     const engagement = evaluateTicks(
-      buildInput(
-        NEATRACING_PROMOTION_NODE_THRESHOLD_LVL_2,
-        METRIC_OSCILLATING,
-      ),
+      buildInput(NEATRACING_PROMOTION_NODE_THRESHOLD_LVL_2, METRIC_OSCILLATING),
       NEATRACING_OSCILLATION_GRACE_TICKS,
     );
 
@@ -334,10 +325,7 @@ describe('hysteresis grace window (TP-09)', () => {
 
   it('caps the sustained tick counter at the grace window', () => {
     const engagement = evaluateTicks(
-      buildInput(
-        NEATRACING_PROMOTION_NODE_THRESHOLD_LVL_2,
-        METRIC_OSCILLATING,
-      ),
+      buildInput(NEATRACING_PROMOTION_NODE_THRESHOLD_LVL_2, METRIC_OSCILLATING),
       NEATRACING_OSCILLATION_GRACE_TICKS + 5,
     );
 
@@ -348,17 +336,11 @@ describe('hysteresis grace window (TP-09)', () => {
 
   it('ramps the engagement down by one grace step per inactive evaluation', () => {
     const engaged = evaluateTicks(
-      buildInput(
-        NEATRACING_PROMOTION_NODE_THRESHOLD_LVL_2,
-        METRIC_OSCILLATING,
-      ),
+      buildInput(NEATRACING_PROMOTION_NODE_THRESHOLD_LVL_2, METRIC_OSCILLATING),
       NEATRACING_OSCILLATION_GRACE_TICKS,
     );
     const fading = evaluateOscillationEngagement(
-      buildInput(
-        NEATRACING_PROMOTION_NODE_THRESHOLD_LVL_2,
-        METRIC_DEADBANDED,
-      ),
+      buildInput(NEATRACING_PROMOTION_NODE_THRESHOLD_LVL_2, METRIC_DEADBANDED),
       engaged.state,
     );
 
@@ -367,17 +349,11 @@ describe('hysteresis grace window (TP-09)', () => {
 
   it('resets the sustained tick counter on an inactive evaluation', () => {
     const engaged = evaluateTicks(
-      buildInput(
-        NEATRACING_PROMOTION_NODE_THRESHOLD_LVL_2,
-        METRIC_OSCILLATING,
-      ),
+      buildInput(NEATRACING_PROMOTION_NODE_THRESHOLD_LVL_2, METRIC_OSCILLATING),
       NEATRACING_OSCILLATION_GRACE_TICKS,
     );
     const fading = evaluateOscillationEngagement(
-      buildInput(
-        NEATRACING_PROMOTION_NODE_THRESHOLD_LVL_2,
-        METRIC_DEADBANDED,
-      ),
+      buildInput(NEATRACING_PROMOTION_NODE_THRESHOLD_LVL_2, METRIC_DEADBANDED),
       engaged.state,
     );
 
@@ -393,10 +369,7 @@ describe('hysteresis grace window (TP-09)', () => {
     // threshold sees ONE grace step of penalty on the crossing tick — never
     // the full weight, so the score never jumps in a single tick.
     const engagement = evaluateTicks(
-      buildInput(
-        NEATRACING_PROMOTION_NODE_THRESHOLD_LVL_2,
-        METRIC_OSCILLATING,
-      ),
+      buildInput(NEATRACING_PROMOTION_NODE_THRESHOLD_LVL_2, METRIC_OSCILLATING),
       1,
     );
 
@@ -410,10 +383,7 @@ describe('hysteresis grace window (TP-09)', () => {
 describe('penalty fraction (multiplicative, proportional)', () => {
   it('scales the penalty fraction by the ramp, the metric and the penalty weight', () => {
     const engagement = evaluateTicks(
-      buildInput(
-        NEATRACING_PROMOTION_NODE_THRESHOLD_LVL_2,
-        METRIC_OSCILLATING,
-      ),
+      buildInput(NEATRACING_PROMOTION_NODE_THRESHOLD_LVL_2, METRIC_OSCILLATING),
       NEATRACING_OSCILLATION_GRACE_TICKS,
     );
 
@@ -425,10 +395,7 @@ describe('penalty fraction (multiplicative, proportional)', () => {
 
   it('never removes more than the penalty weight of the score', () => {
     const engagement = evaluateTicks(
-      buildInput(
-        NEATRACING_PROMOTION_NODE_THRESHOLD_LVL_2,
-        METRIC_OSCILLATING,
-      ),
+      buildInput(NEATRACING_PROMOTION_NODE_THRESHOLD_LVL_2, METRIC_OSCILLATING),
       NEATRACING_OSCILLATION_GRACE_TICKS,
     );
 
@@ -439,22 +406,18 @@ describe('penalty fraction (multiplicative, proportional)', () => {
 
   it('damps a positive score without inverting its sign', () => {
     const engagement = evaluateTicks(
-      buildInput(
-        NEATRACING_PROMOTION_NODE_THRESHOLD_LVL_2,
-        METRIC_OSCILLATING,
-      ),
+      buildInput(NEATRACING_PROMOTION_NODE_THRESHOLD_LVL_2, METRIC_OSCILLATING),
       NEATRACING_OSCILLATION_GRACE_TICKS,
     );
 
-    expect(applyOscillationPenalty(BASELINE_SCORE, engagement)).toBeGreaterThan(0);
+    expect(applyOscillationPenalty(BASELINE_SCORE, engagement)).toBeGreaterThan(
+      0,
+    );
   });
 
   it('damps the score by exactly the penalty fraction', () => {
     const engagement = evaluateTicks(
-      buildInput(
-        NEATRACING_PROMOTION_NODE_THRESHOLD_LVL_2,
-        METRIC_OSCILLATING,
-      ),
+      buildInput(NEATRACING_PROMOTION_NODE_THRESHOLD_LVL_2, METRIC_OSCILLATING),
       NEATRACING_OSCILLATION_GRACE_TICKS,
     );
 
@@ -482,10 +445,7 @@ describe('penalty fraction (multiplicative, proportional)', () => {
 describe('symmetry (AC-030 — one engagement, both sides)', () => {
   it('applies the same fraction to the baseline and the variant score', () => {
     const engagement = evaluateTicks(
-      buildInput(
-        NEATRACING_PROMOTION_NODE_THRESHOLD_LVL_2,
-        METRIC_OSCILLATING,
-      ),
+      buildInput(NEATRACING_PROMOTION_NODE_THRESHOLD_LVL_2, METRIC_OSCILLATING),
       NEATRACING_OSCILLATION_GRACE_TICKS,
     );
     const scores = applyOscillationPenaltySymmetrically(
@@ -502,10 +462,7 @@ describe('symmetry (AC-030 — one engagement, both sides)', () => {
 
   it('preserves the baseline-versus-variant ordering', () => {
     const engagement = evaluateTicks(
-      buildInput(
-        NEATRACING_PROMOTION_NODE_THRESHOLD_LVL_2,
-        METRIC_OSCILLATING,
-      ),
+      buildInput(NEATRACING_PROMOTION_NODE_THRESHOLD_LVL_2, METRIC_OSCILLATING),
       NEATRACING_OSCILLATION_GRACE_TICKS,
     );
     const scores = applyOscillationPenaltySymmetrically(
@@ -519,10 +476,7 @@ describe('symmetry (AC-030 — one engagement, both sides)', () => {
 
   it('applies the single-tick engagement to both sides of the comparison', () => {
     const engagement = evaluateTicks(
-      buildInput(
-        NEATRACING_PROMOTION_NODE_THRESHOLD_LVL_2,
-        METRIC_OSCILLATING,
-      ),
+      buildInput(NEATRACING_PROMOTION_NODE_THRESHOLD_LVL_2, METRIC_OSCILLATING),
       NEATRACING_OSCILLATION_GRACE_TICKS,
     );
     const scores = applyOscillationPenaltySymmetrically(
@@ -553,10 +507,7 @@ describe('growth-commit threshold boost (the additive mechanism)', () => {
 
   it('grants no boost below the commit threshold', () => {
     const engagement = evaluateTicks(
-      buildInput(
-        NEATRACING_PROMOTION_NODE_THRESHOLD_LVL_2,
-        METRIC_MILD,
-      ),
+      buildInput(NEATRACING_PROMOTION_NODE_THRESHOLD_LVL_2, METRIC_MILD),
       NEATRACING_OSCILLATION_GRACE_TICKS,
     );
 
@@ -565,10 +516,7 @@ describe('growth-commit threshold boost (the additive mechanism)', () => {
 
   it('grants the boost above the commit threshold', () => {
     const engagement = evaluateTicks(
-      buildInput(
-        NEATRACING_PROMOTION_NODE_THRESHOLD_LVL_2,
-        METRIC_OSCILLATING,
-      ),
+      buildInput(NEATRACING_PROMOTION_NODE_THRESHOLD_LVL_2, METRIC_OSCILLATING),
       NEATRACING_OSCILLATION_GRACE_TICKS,
     );
 
@@ -580,10 +528,7 @@ describe('growth-commit threshold boost (the additive mechanism)', () => {
 
   it('scales the boost down with the ramp (no step change)', () => {
     const engagement = evaluateTicks(
-      buildInput(
-        NEATRACING_PROMOTION_NODE_THRESHOLD_LVL_2,
-        METRIC_OSCILLATING,
-      ),
+      buildInput(NEATRACING_PROMOTION_NODE_THRESHOLD_LVL_2, METRIC_OSCILLATING),
       1,
     );
 
@@ -601,10 +546,7 @@ describe('deadband (RACING_OSCILLATION_MIN_MEAN_STEERING = 0.15)', () => {
 
   it('never engages on a deadband-filtered metric of exactly zero', () => {
     const engagement = evaluateTicks(
-      buildInput(
-        NEATRACING_PROMOTION_NODE_THRESHOLD_LVL_2,
-        METRIC_DEADBANDED,
-      ),
+      buildInput(NEATRACING_PROMOTION_NODE_THRESHOLD_LVL_2, METRIC_DEADBANDED),
       NEATRACING_OSCILLATION_GRACE_TICKS,
     );
 
@@ -640,10 +582,7 @@ describe('purity and determinism', () => {
     const state = createOscillationPredicateState();
 
     evaluateOscillationEngagement(
-      buildInput(
-        NEATRACING_PROMOTION_NODE_THRESHOLD_LVL_2,
-        METRIC_OSCILLATING,
-      ),
+      buildInput(NEATRACING_PROMOTION_NODE_THRESHOLD_LVL_2, METRIC_OSCILLATING),
       state,
     );
 
@@ -652,17 +591,11 @@ describe('purity and determinism', () => {
 
   it('is deterministic across repeated identical evaluations', () => {
     const first = evaluateTicks(
-      buildInput(
-        NEATRACING_PROMOTION_NODE_THRESHOLD_LVL_2,
-        METRIC_OSCILLATING,
-      ),
+      buildInput(NEATRACING_PROMOTION_NODE_THRESHOLD_LVL_2, METRIC_OSCILLATING),
       3,
     );
     const second = evaluateTicks(
-      buildInput(
-        NEATRACING_PROMOTION_NODE_THRESHOLD_LVL_2,
-        METRIC_OSCILLATING,
-      ),
+      buildInput(NEATRACING_PROMOTION_NODE_THRESHOLD_LVL_2, METRIC_OSCILLATING),
       3,
     );
 

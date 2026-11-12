@@ -8,7 +8,12 @@ import { join } from 'node:path';
  * is NOT removed and no wrapper code is introduced.
  */
 const REPO_ROOT = process.cwd();
-const RACING_README_PATH = join(REPO_ROOT, 'examples', 'racing_curriculum', 'README.md');
+const RACING_README_PATH = join(
+  REPO_ROOT,
+  'examples',
+  'racing_curriculum',
+  'README.md',
+);
 const EXAMPLES_README_PATH = join(REPO_ROOT, 'examples', 'README.md');
 
 describe('racing_curriculum deprecation notices (AC-039)', () => {

@@ -62,7 +62,16 @@ export async function findArchivedSliceDescriptor(
 
   const blocks = extractYamlBlocks(contents);
   for (const yamlText of blocks) {
-    const parsed = parsePlanYamlBlock(yamlText);
+    // An archived block that the plan parser rejects (learning event
+    // `learn-20261109-f9-plan-parser-silent-skip-overindented-id-items`)
+    // must not crash the archive lookup: the malformed block is skipped and
+    // the remaining blocks are still searched.
+    let parsed;
+    try {
+      parsed = parsePlanYamlBlock(yamlText);
+    } catch {
+      continue;
+    }
     const slices = Array.isArray(parsed.slices) ? parsed.slices : [];
     const slice = slices.find((s) => s && s.slice_id === sliceId);
     if (slice) {

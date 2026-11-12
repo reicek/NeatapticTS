@@ -121,7 +121,8 @@ const OSCILLATION_ABOVE_BOUND = NEATRACING_DRIVABILITY_OSCILLATION_MAX + 0.01;
 const OFF_TRACK_LOW = 0.05;
 
 /** An off-track fraction above the drivability bound. */
-const OFF_TRACK_ABOVE_BOUND = NEATRACING_DRIVABILITY_OFF_TRACK_MAX_FRACTION + 0.01;
+const OFF_TRACK_ABOVE_BOUND =
+  NEATRACING_DRIVABILITY_OFF_TRACK_MAX_FRACTION + 0.01;
 
 /** The lvl 1 -> 2 band's TP-07 node threshold (300). */
 const AT_LVL1_THRESHOLD = NEATRACING_PROMOTION_NODE_THRESHOLD_LVL_2;
@@ -287,7 +288,9 @@ const REAL_TRACK_SPEC: TrackSpec = generateTrack({
 describe('the OQ-002 session-lap floor precondition', () => {
   it('allows evaluation from the floor lap on and rejects the lap below it', () => {
     expect(isNeatRacingPromotionEvaluationEligible(AT_FLOOR_LAPS)).toBe(true);
-    expect(isNeatRacingPromotionEvaluationEligible(BELOW_FLOOR_LAPS)).toBe(false);
+    expect(isNeatRacingPromotionEvaluationEligible(BELOW_FLOOR_LAPS)).toBe(
+      false,
+    );
   });
 
   it('never promotes below the floor even with a fully-promotable tick', () => {
@@ -376,7 +379,10 @@ describe('condition (b) — the STRICT level-relative node threshold', () => {
 
   it('re-bases the strict threshold at lvl 2 (600)', () => {
     const atThreshold = evaluateNeatRacingPromotion(
-      buildEvaluationFixture({ level: LEVEL_SECOND, nodeCount: AT_LVL2_THRESHOLD }),
+      buildEvaluationFixture({
+        level: LEVEL_SECOND,
+        nodeCount: AT_LVL2_THRESHOLD,
+      }),
     );
     const above = evaluateNeatRacingPromotion(
       buildEvaluationFixture({
@@ -389,13 +395,15 @@ describe('condition (b) — the STRICT level-relative node threshold', () => {
   });
 
   it('climbs exactly one rung and caps at the ladder end', () => {
-    expect(resolveNeatRacingPromotionTargetLevel(LEVEL_FIRST, ABOVE_LVL1_THRESHOLD)).toBe(LEVEL_SECOND);
+    expect(
+      resolveNeatRacingPromotionTargetLevel(LEVEL_FIRST, ABOVE_LVL1_THRESHOLD),
+    ).toBe(LEVEL_SECOND);
     expect(
       resolveNeatRacingPromotionTargetLevel(LEVEL_SECOND, ABOVE_LVL2_THRESHOLD),
     ).toBe(LEVEL_FINAL);
-    expect(
-      resolveNeatRacingPromotionTargetLevel(LEVEL_FINAL, 900),
-    ).toBe(NEATRACING_PROMOTION_MAX_LEVEL);
+    expect(resolveNeatRacingPromotionTargetLevel(LEVEL_FINAL, 900)).toBe(
+      NEATRACING_PROMOTION_MAX_LEVEL,
+    );
   });
 });
 
@@ -508,7 +516,10 @@ describe('the pinned scripted-baseline probe episode (N3)', () => {
 
   it('refuses to attempt a lap on a course too short to own a circuit', () => {
     const probe = runNeatRacingScriptedBaselineProbeEpisode({
-      trackSpec: { ...REAL_TRACK_SPEC, splineSamples: REAL_TRACK_SPEC.splineSamples.slice(0, 2) },
+      trackSpec: {
+        ...REAL_TRACK_SPEC,
+        splineSamples: REAL_TRACK_SPEC.splineSamples.slice(0, 2),
+      },
     });
     expect(probe.completedLap).toBe(false);
     expect(probe.meanLapSpeed).toBe(0);
@@ -570,7 +581,10 @@ describe('the round boundary (E6/D4) — fresh tuple, reset, carried counter', (
 
   it('rejects a seed-network payload without weights', () => {
     expect(() =>
-      createNeatRacingSeedNetworkPayload(new Float32Array([]), ENVELOPE_FIXTURE),
+      createNeatRacingSeedNetworkPayload(
+        new Float32Array([]),
+        ENVELOPE_FIXTURE,
+      ),
     ).toThrow(RangeError);
   });
 });
@@ -699,7 +713,10 @@ describe('the carried-innovation-counter contract (D4 identity field)', () => {
       createNeatRacingRoundBoundaryState(LEVEL_SECOND, Number.NaN),
     ).toThrow(RangeError);
     expect(() =>
-      createNeatRacingRoundBoundaryState(LEVEL_SECOND, Number.POSITIVE_INFINITY),
+      createNeatRacingRoundBoundaryState(
+        LEVEL_SECOND,
+        Number.POSITIVE_INFINITY,
+      ),
     ).toThrow(RangeError);
   });
 
@@ -751,19 +768,14 @@ class FixtureClassInstance {}
  * @param corruptFieldValue - The runtime value that must not serialize.
  * @returns The round tuple with the corrupted envelope.
  */
-function buildTupleWithCorruptEnvelope(
-  corruptFieldValue: unknown,
-) {
+function buildTupleWithCorruptEnvelope(corruptFieldValue: unknown) {
   return buildNeatRacingNextRoundTuple({
     base: buildBaseTupleFixture(),
     targetLevel: LEVEL_SECOND,
-    seedNetwork: createNeatRacingSeedNetworkPayload(
-      SEED_WEIGHTS,
-      {
-        ...ENVELOPE_FIXTURE,
-        fingerprint: corruptFieldValue,
-      } as unknown as NgeDnaCanonicalEnvelope,
-    ),
+    seedNetwork: createNeatRacingSeedNetworkPayload(SEED_WEIGHTS, {
+      ...ENVELOPE_FIXTURE,
+      fingerprint: corruptFieldValue,
+    } as unknown as NgeDnaCanonicalEnvelope),
     carriedInnovationCounter: CARRIED_INNOVATION_COUNTER,
   });
 }
@@ -805,7 +817,8 @@ describe('the strict envelope canonicalizer (never a silent null)', () => {
 
   it('keeps the serial injective over the envelope region', () => {
     const nullEnvelopeTuple = buildTupleWithCorruptEnvelope(null);
-    const nullSerial = serializeNeatRacingPromotionRoundTuple(nullEnvelopeTuple);
+    const nullSerial =
+      serializeNeatRacingPromotionRoundTuple(nullEnvelopeTuple);
     expect(typeof nullSerial).toBe('string');
     expect(() =>
       serializeNeatRacingPromotionRoundTuple(
