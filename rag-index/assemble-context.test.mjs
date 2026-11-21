@@ -21,7 +21,12 @@ describe('assemble-context.mjs', () => {
       expect(DEFAULT_COSINE_THRESHOLD).toBe(0.95);
       expect(DEFAULT_TIER_THRESHOLDS).toEqual({ essential: 0.7, supporting: 0.4 });
       expect(DEFAULT_FAMILY_PRIORITY).toContain('ts-source');
-      expect(DEFAULT_FAMILY_PRIORITY).toContain('readme');
+      // The PLAN families rank at the head of the published priority. The comparison is set-wise, so
+      // the internal order of the two plan families stays the publishing lane's choice.
+      expect(DEFAULT_FAMILY_PRIORITY.slice(0, 2).toSorted()).toEqual([
+        'completed-plan',
+        'plan',
+      ]);
     });
   });
 
@@ -360,9 +365,9 @@ describe('assemble-context.mjs', () => {
     it('uses custom familyPriority list', () => {
       const chunks = [
         { chunk_id: 1, file_path: 'a.ts', char_start: 0, score: 0.5, family: 'demo' },
-        { chunk_id: 2, file_path: 'b.ts', char_start: 0, score: 0.5, family: 'readme' },
+        { chunk_id: 2, file_path: 'b.ts', char_start: 0, score: 0.5, family: 'plan' },
       ];
-      const result = orderChunks(chunks, { familyPriority: ['demo', 'readme'] });
+      const result = orderChunks(chunks, { familyPriority: ['demo', 'plan'] });
       expect(result[0].family).toBe('demo');
     });
   });

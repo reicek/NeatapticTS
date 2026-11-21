@@ -63,6 +63,7 @@ import { classifyAndRoute } from '../../../rag-index/routing-table.mjs';
 import {
   validateFilter,
   compileFilterToSqlAliased,
+  compileFamilySetFilter,
 } from '../../../rag-index/metadata-filter.mjs';
 import { expandQuery } from '../../../rag-index/expand-query.mjs';
 import { runParallelQueries } from '../../../rag-index/parallel-search.mjs';
@@ -884,7 +885,7 @@ export async function buildResponseFreshness(databasePath, client) {
  * @param {object} [options={}] - Search options.
  * @param {string} options.query - Free-text query string (required for BM25; optional for dense).
  * @param {number} [options.limit=10] - Maximum result count, clamped to [1, 50].
- * @param {string} [options.family] - Optional document family filter.
+ * @param {string} [options.family] - Optional document family filter; a CSV list (for example 'plan,completed-plan') is applied as a parameterized set filter.
  * @param {boolean} [options.use_dense=true] - Enable hybrid dense reranking when the index is warm.
  * @param {number} [options.alpha] - Deprecated legacy blend weight; retained for API compatibility but RRF ranking ignores it.
  * @param {string} [options.query_class] - Override query classification for routing. One of: simple_lookup, cross_boundary, multi_hop, exploratory, code_specific, plan_specific.
@@ -937,6 +938,13 @@ export async function searchCorpus(options = {}) {
         broadResponse.results.length > 0
       ) {
         response = broadResponse;
+      } else {
+        // The safety net FIRED but the broadened query matched nothing
+        // either: the empty result set stays and the broaden is REPORTED
+        // through the EXISTING `family_fallback` flag, so a caller can tell
+        // an empty corpus from an empty family set. `classification_fallback`
+        // keeps its value: the classifier itself did NOT degrade.
+        response.family_fallback = true;
       }
     }
 
@@ -1304,7 +1312,7 @@ async function tryExactSymbolLookup({
  * corpus database is missing or the lookup fails, returns an empty array so
  * the caller can fall back to the normal search path.
  *
- * @param {{ compiledFilter?: { sql: string, params: Array<unknown> } | null, databasePath?: string, family: string | null, limit: number, rawQuery: string }} params - Lookup parameters.
+ * @param {{ compiledFilter?: { sql: string, params: Array<unknown> } | null, databasePath?: string, family: string | null, limit: number, rawQuery: string }} params - Lookup parameters. The `family` value may be a CSV list of families, applied as a parameterized set filter.
  * @returns {Array<object>} Matching chunk rows, or an empty array when no symbol matches.
  */
 async function runExactSymbolLookup({
@@ -1317,7 +1325,8 @@ async function runExactSymbolLookup({
 }) {
   const resolvedClient = client ?? (await getTursoClient(databasePath));
   try {
-    const familyFilter = family ? 'AND d.doc_family = ?' : '';
+    const familySet = compileFamilySetFilter(family);
+    const familyFilter = familySet.sql ? `AND ${familySet.sql}` : '';
     const filterSql = compiledFilter ? `AND ${compiledFilter.sql}` : '';
     const filterParams = compiledFilter ? compiledFilter.params : [];
     const sql = `
@@ -1333,9 +1342,7 @@ async function runExactSymbolLookup({
       ORDER BY c.chunk_id
       LIMIT ?
     `;
-    const args = family
-      ? [rawQuery, family, ...filterParams, limit]
-      : [rawQuery, ...filterParams, limit];
+    const args = [rawQuery, ...familySet.params, ...filterParams, limit];
 
     const result = await resolvedClient.execute({ sql, args });
     return result.rows.map((row) => ({
@@ -1352,8 +1359,9 @@ async function runExactSymbolLookup({
  *
  * Queries the FTS5 virtual table (`chunks_fts`) joined with `chunks` and
  * `documents`. Applies an optional family filter via a safe parameterized
- * clause, and an optional compiled metadata filter via AND, then returns
- * the top `limit` rows ordered by descending BM25 score.
+ * clause (a CSV family list is applied as a parameterized `IN` set, one bound
+ * parameter per family), and an optional compiled metadata filter via AND,
+ * then returns the top `limit` rows ordered by descending BM25 score.
  *
  * When a compiled metadata filter is provided, its `?` placeholders are
  * bound as positional parameters alongside the FTS query and family
@@ -1374,7 +1382,8 @@ async function runBm25Search({
 }) {
   const resolvedClient = client ?? (await getTursoClient(databasePath));
 
-  const familyFilter = family ? 'AND d.doc_family = ?' : '';
+  const familySet = compileFamilySetFilter(family);
+  const familyFilter = familySet.sql ? `AND ${familySet.sql}` : '';
 
   let metadataFilterSql = '';
   const metadataArgs = [];
@@ -1431,10 +1440,7 @@ async function runBm25Search({
     LIMIT ?
   `;
 
-  const args = [query];
-  if (family) args.push(family);
-  args.push(...metadataArgs);
-  args.push(limit);
+  const args = [query, ...familySet.params, ...metadataArgs, limit];
 
   let result;
   try {

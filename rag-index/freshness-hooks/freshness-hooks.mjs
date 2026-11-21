@@ -19,6 +19,7 @@ import { pathToFileURL } from 'node:url';
 import { getTursoClient } from '../../scripts/mcp-semantic/tools/cortex-db.mjs';
 
 import { buildSemanticIndex } from '../build-index.mjs';
+import { CORPUS_SOURCES } from '../corpus-sources.mjs';
 import { buildEmbeddingIndex } from '../embed-index.mjs';
 import { defaultDatabasePath, repoRoot } from '../init-schema.mjs';
 import { parseCliArgs, writeJsonOrText } from '../cli-utils.mjs';
@@ -45,43 +46,6 @@ const DEFAULT_DEBOUNCE_MS = 2000;
 const require = createRequire(import.meta.url);
 /** @type {import('minimatch')} */
 const minimatch = require('minimatch');
-
-/** @type {ReadonlyArray<{ family: string, patterns: ReadonlyArray<string>, ignore?: ReadonlyArray<string> }>} */
-const FAMILY_RULES = Object.freeze([
-  { family: 'readme', patterns: ['src/**/README.md'] },
-  {
-    family: 'ts-source',
-    patterns: ['src/**/*.ts'],
-    ignore: ['src/**/*.d.ts', 'src/**/*.test.ts', 'src/**/*.spec.ts'],
-  },
-  {
-    family: 'plan',
-    patterns: ['plans/**/*.md'],
-    ignore: ['plans/completed/**'],
-  },
-  { family: 'completed-plan', patterns: ['plans/completed/**/*.md'] },
-  { family: 'demo', patterns: ['examples/**/README.md', 'examples/**/*.ts'] },
-  {
-    family: 'benchmark',
-    patterns: ['benchmarks/README.md', 'benchmarks/**/*.test.ts'],
-  },
-  {
-    family: 'root-doc',
-    patterns: ['README.md', 'STYLEGUIDE.md', 'CONTRIBUTING.md'],
-  },
-  {
-    family: 'skill',
-    patterns: ['.github/skills/**/SKILL.md'],
-  },
-  {
-    family: 'agent',
-    patterns: ['.github/agents/*.agent.md'],
-  },
-  {
-    family: 'copilot-instructions',
-    patterns: ['.github/copilot-instructions.md'],
-  },
-]);
 
 /** Globs that should never trigger a build, even if they match an include glob. */
 const DEFAULT_IGNORE_GLOBS = Object.freeze([
@@ -423,14 +387,16 @@ function normalizeRepoPath(filePath) {
 /**
  * Infer the document family for a path that is not yet in the corpus.
  *
- * Falls back to 'unknown' when no rule matches. Unknown families still chunk
- * as markdown by default.
+ * Reads the published corpus contract, so the freshness lane and the corpus
+ * builder can never disagree about which family owns a document. Falls back to
+ * 'unknown' when no rule matches. Unknown families still chunk as markdown by
+ * default.
  *
  * @param {string} filePath - Repo-relative POSIX path.
  * @returns {string}
  */
 function inferFamily(filePath) {
-  for (const rule of FAMILY_RULES) {
+  for (const rule of CORPUS_SOURCES) {
     if (matchesAnyGlob(filePath, rule.patterns)) {
       if (rule.ignore && matchesAnyGlob(filePath, rule.ignore)) {
         continue;

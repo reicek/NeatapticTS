@@ -30,6 +30,17 @@ const mockSanitizeFtsQuery = jest.fn();
 const mockCompileFilterToSqlAliased = jest.fn();
 const mockValidateFilter = jest.fn();
 
+// The REAL metadata-filter module, captured BEFORE the mock registration
+// below (a dynamic import placed AFTER `jest.unstable_mockModule` would
+// resolve to the mock itself). The mock factory re-exposes the REAL
+// `compileFamilySetFilter` through a delegating spy, so a source import of
+// that helper is never `undefined` and the family lanes of this home never
+// degrade into a TypeError failure.
+const realMetadataFilter = await import('./metadata-filter.mjs');
+const mockCompileFamilySetFilter = jest.fn((family) =>
+  realMetadataFilter.compileFamilySetFilter(family),
+);
+
 jest.unstable_mockModule('./cli-utils.mjs', () => ({
   fail: mockFail,
   parseCliArgs: mockParseCliArgs,
@@ -55,9 +66,16 @@ jest.unstable_mockModule('../scripts/mcp-semantic/tools/cortex-db.mjs', () => ({
 jest.unstable_mockModule('./metadata-filter.mjs', () => ({
   compileFilterToSqlAliased: mockCompileFilterToSqlAliased,
   validateFilter: mockValidateFilter,
+  compileFamilySetFilter: mockCompileFamilySetFilter,
 }));
 
 const { queryDenseIndex } = await import('./query-dense.mjs');
+
+// The MOCKED metadata-filter namespace - this is the exact namespace the
+// source under test imports from, so the mock-factory repair is asserted
+// through the namespace itself (a dropped export would make the source
+// import `undefined`).
+const mockedMetadataFilter = await import('./metadata-filter.mjs');
 
 function setupDefaults() {
   mockSanitizeFtsQuery.mockImplementation((q) => q);
@@ -496,6 +514,56 @@ describe('query-dense: ANN-first with brute-force fallback', () => {
     await queryDenseIndex({ query: 'neat', client, dense: true, family: 'docs', embedText });
     const bfArgs = client.execute.mock.calls[2][0];
     expect(bfArgs.args).toContain('docs');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Single-family anti-regression lane (GREEN)
+// ---------------------------------------------------------------------------
+
+describe('query-dense: single-family anti-regression lane', () => {
+  function makeMockEmbedText() {
+    const fn = jest.fn().mockResolvedValue(new Float32Array([0.1, 0.2, 0.3, 0.4]));
+    fn.release = jest.fn().mockResolvedValue(undefined);
+    return fn;
+  }
+
+  beforeEach(() => {
+    mockReadModelMeta.mockResolvedValue({ dimension: 4, model_id: 'test-model', model_sha256: 'abc' });
+    mockNormalizeEmbeddingVector.mockReturnValue(new Float32Array([0.1, 0.2, 0.3, 0.4]));
+  });
+
+  it('exposes compileFamilySetFilter through the mocked metadata-filter module', () => {
+    expect(typeof mockedMetadataFilter.compileFamilySetFilter).toBe('function');
+    expect(mockedMetadataFilter.compileFamilySetFilter('plan,completed-plan')).toEqual({
+      sql: 'd.doc_family IN (?, ?)',
+      params: ['plan', 'completed-plan'],
+    });
+  });
+
+  it('keeps the single-family equality predicate with exactly one bound family parameter (BM25 site)', async () => {
+    const client = makeMockClient([]);
+    await queryDenseIndex({ query: 'neat', client, family: 'docs' });
+    const bm25Call = client.execute.mock.calls[0][0];
+    expect(bm25Call.sql).toMatch(/d\.doc_family\s*=\s*\?/);
+    expect(bm25Call.args.filter((arg) => arg === 'docs')).toHaveLength(1);
+  });
+
+  it('keeps the single-family equality predicate with exactly one bound family parameter (dense ANN site)', async () => {
+    const embedText = makeMockEmbedText();
+    const client = makeMockClient([]);
+    await queryDenseIndex({ query: 'neat', client, dense: true, family: 'docs', embedText });
+    const annCall = client.execute.mock.calls[1][0];
+    expect(annCall.sql).toMatch(/d\.doc_family\s*=\s*\?/);
+    expect(annCall.args.filter((arg) => arg === 'docs')).toHaveLength(1);
+  });
+
+  it('carries no family predicate when no family is requested', async () => {
+    const client = makeMockClient([]);
+    await queryDenseIndex({ query: 'neat', client });
+    const bm25Call = client.execute.mock.calls[0][0];
+    expect(bm25Call.sql).not.toMatch(/d\.doc_family\s*(=|\bIN\b)/);
+    expect(bm25Call.args).not.toContain('docs');
   });
 });
 

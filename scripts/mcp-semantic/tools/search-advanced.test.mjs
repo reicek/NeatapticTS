@@ -13,6 +13,7 @@ import {
   TEST_PARENT_CHUNK_ID,
   TEST_FILE_PATH,
   TEST_FAMILY,
+  UNIQUE_QUERY_TERM,
 } from '../__tests__/turso-test-helpers.mjs';
 
 // Mock upstream modules
@@ -303,8 +304,8 @@ describe('search-advanced', () => {
     });
   });
 
-  describe('include_code_only', () => {
-    it('filters out readme and generated-readme families by default for code_specific', async () => {
+  describe('the retired family suppression', () => {
+    it('returns every retrieved result for a code_specific query (no family suppression)', async () => {
       mockClassifyAndRoute.mockReturnValue({
         query_class: 'code_specific',
         confidence: 0.9,
@@ -321,44 +322,8 @@ describe('search-advanced', () => {
 
       const result = await searchAdvanced({ query: 'test', client });
 
-      expect(result.include_code_only).toBe(true);
-      expect(result.results).toHaveLength(1);
-      expect(result.results[0].family).toBe('src');
-    });
-
-    it('does NOT filter when include_code_only is false', async () => {
-      mockClassifyAndRoute.mockReturnValue({
-        query_class: 'code_specific',
-        confidence: 0.9,
-        strategy: { family: null },
-      });
-      mockSearchCorpus.mockResolvedValue({
-        results: [
-          mockResult({ chunk_id: 1, family: 'src' }),
-          mockResult({ chunk_id: 2, family: 'readme' }),
-        ],
-        dense_state: 'cold',
-      });
-
-      const result = await searchAdvanced({
-        query: 'test',
-        include_code_only: false,
-        client,
-      });
-
-      expect(result.results).toHaveLength(2);
-    });
-
-    it('does NOT filter for non-code_specific classes by default', async () => {
-      mockSearchCorpus.mockResolvedValue({
-        results: [mockResult({ chunk_id: 1, family: 'readme' })],
-        dense_state: 'cold',
-      });
-
-      const result = await searchAdvanced({ query: 'test', client });
-
-      expect(result.include_code_only).toBe(false);
-      expect(result.results).toHaveLength(1);
+      expect(result.results).toHaveLength(3);
+      expect(result.include_code_only).toBeUndefined();
     });
   });
 
@@ -413,6 +378,126 @@ describe('search-advanced', () => {
       });
 
       expect(result.fallback_triggered).toBe(false);
+    });
+
+    it('applies the routed family set as bound parameters in the native fallback', async () => {
+      const FAMILY_CLAUSE = /(?:AND|WHERE) d\.doc_family (?:IN \([^)]*\)|= \?)/;
+
+      function createRecordingClient() {
+        const statements = [];
+        return {
+          statements,
+          async execute(statement) {
+            statements.push(statement);
+            return client.execute(statement);
+          },
+        };
+      }
+
+      function fallbackClauses(recorder) {
+        return recorder.statements
+          .filter(
+            (statement) =>
+              typeof statement?.sql === 'string' &&
+              statement.sql.includes('FROM chunks c'),
+          )
+          .map((statement) => ({
+            clause: statement.sql.match(FAMILY_CLAUSE)?.[0] ?? null,
+            args: statement.args,
+            csvInterpolated: statement.sql.includes('plan,completed-plan'),
+          }));
+      }
+
+      mockSearchCorpus.mockResolvedValue({
+        results: [],
+        dense_state: 'cold',
+      });
+
+      // The routed family SET is honoured as a SET: two bound parameters,
+      // never the whole CSV as one value.
+      mockClassifyAndRoute.mockReturnValue({
+        query_class: 'cross_boundary',
+        confidence: 0.9,
+        strategy: { family: 'plan,completed-plan' },
+      });
+
+      const setRecorder = createRecordingClient();
+      const setResult = await searchAdvanced({
+        query: UNIQUE_QUERY_TERM,
+        auto_fallback: true,
+        client: setRecorder,
+      });
+
+      // A SINGLE family keeps its byte-identical equality form with exactly
+      // one bound parameter.
+      mockClassifyAndRoute.mockReturnValue({
+        query_class: 'cross_boundary',
+        confidence: 0.9,
+        strategy: { family: 'plan' },
+      });
+
+      const singleRecorder = createRecordingClient();
+      const singleResult = await searchAdvanced({
+        query: UNIQUE_QUERY_TERM,
+        auto_fallback: true,
+        client: singleRecorder,
+      });
+
+      expect(fallbackClauses(setRecorder)).toEqual([
+        {
+          clause: 'AND d.doc_family IN (?, ?)',
+          args: [
+            `%${UNIQUE_QUERY_TERM}%`,
+            `%${UNIQUE_QUERY_TERM}%`,
+            'plan',
+            'completed-plan',
+            5,
+          ],
+          csvInterpolated: false,
+        },
+        {
+          clause: 'WHERE d.doc_family IN (?, ?)',
+          args: ['plan', 'completed-plan', 5],
+          csvInterpolated: false,
+        },
+      ]);
+      expect(fallbackClauses(singleRecorder)).toEqual([
+        {
+          clause: 'AND d.doc_family = ?',
+          args: [`%${UNIQUE_QUERY_TERM}%`, `%${UNIQUE_QUERY_TERM}%`, 'plan', 5],
+          csvInterpolated: false,
+        },
+        {
+          clause: 'WHERE d.doc_family = ?',
+          args: ['plan', 5],
+          csvInterpolated: false,
+        },
+      ]);
+      // The fixture rows carry the family `turso-test`, which is OUTSIDE the
+      // routed set, so an honouring lane returns no out-of-set row.
+      expect({
+        set: {
+          fallback_triggered: setResult.fallback_triggered,
+          family: setResult.family,
+          results: setResult.results,
+        },
+        single: {
+          fallback_triggered: singleResult.fallback_triggered,
+          family: singleResult.family,
+          results: singleResult.results,
+        },
+      }).toEqual({
+        set: {
+          fallback_triggered: true,
+          family: 'plan,completed-plan',
+          results: [],
+        },
+        single: {
+          fallback_triggered: true,
+          family: 'plan',
+          results: [],
+        },
+      });
     });
   });
 

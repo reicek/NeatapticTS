@@ -1125,6 +1125,38 @@ const advance = resolveNeatRacingLapFactAdvance(0, 1);
 // { lapBaseline: 1, lapsSinceLastCrossing: 1, crossed: true }
 ```
 
+### resolveNeatRacingLoopRelativeM
+
+```ts
+resolveNeatRacingLoopRelativeM(
+  totalM: number,
+  loopLengthM: number,
+): number
+```
+
+Normalises a cumulative along-track total into its loop-relative
+position.
+
+Educational note — WHY THE NORMALISATION: the host-owned progress meter
+accumulates the along-track distance FORWARD across the loop, so a car
+that waits BEHIND the start line (the AC-105 start grid) carries a total
+near the loop TAIL while a car near the loop HEAD carries a small total.
+The JavaScript percent keeps the dividend's sign, so the double modulo
+folds every total into `[0, loopLengthM)` — the loop-relative position
+the rivals-ahead ranking compares.
+
+Parameters:
+- `totalM` - The cumulative along-track total (meters).
+- `loopLengthM` - The loop length (meters).
+
+Returns: The loop-relative position in `[0, loopLengthM)`.
+
+Example:
+
+```ts
+const posM = resolveNeatRacingLoopRelativeM(1540.26, 1544.55);
+```
+
 ### resolveNeatRacingObservationRung
 
 ```ts

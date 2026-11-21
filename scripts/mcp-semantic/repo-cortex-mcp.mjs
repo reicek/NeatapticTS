@@ -680,11 +680,6 @@ export function createRepoCortexTools(databasePath) {
             description:
               'When true, every result includes a ranking_explanation object showing BM25, dense, rerank, and final scores plus a short reason.',
           },
-          include_code_only: {
-            type: 'boolean',
-            description:
-              'When true, suppress generated README families and focus on code-source results. Defaults to true for the code_specific query class.',
-          },
           auto_fallback: {
             type: 'boolean',
             description:

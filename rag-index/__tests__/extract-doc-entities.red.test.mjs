@@ -36,10 +36,34 @@ describe('extract-doc-entities', () => {
       expect(mapFamilyToEntityType('demo')).toBe('demo');
     });
 
-    it('maps benchmark family to benchmark entity type', async () => {
+    it('maps test family to demo entity type', async () => {
       const { mapFamilyToEntityType } =
         await import('../extract-doc-entities.mjs');
-      expect(mapFamilyToEntityType('benchmark')).toBe('benchmark');
+      expect(mapFamilyToEntityType('test')).toBe('demo');
+    });
+
+    it('maps no retired family to an entity type', async () => {
+      const { mapFamilyToEntityType } =
+        await import('../extract-doc-entities.mjs');
+      expect(mapFamilyToEntityType('readme')).toBeNull();
+      expect(mapFamilyToEntityType('benchmark')).toBeNull();
+    });
+
+    it('publishes a doc entity for every corpus family that carries one', async () => {
+      const { CORPUS_FAMILY_NAMES } = await import('../corpus-sources.mjs');
+      const { mapFamilyToEntityType } =
+        await import('../extract-doc-entities.mjs');
+      const carried = CORPUS_FAMILY_NAMES.filter(
+        (family) => mapFamilyToEntityType(family) !== null,
+      );
+      expect(carried.toSorted()).toEqual([
+        'agent',
+        'completed-plan',
+        'demo',
+        'plan',
+        'skill',
+        'test',
+      ]);
     });
 
     it('returns null for non-doc families (ts-source, readme, etc.)', async () => {
@@ -102,14 +126,28 @@ describe('extract-doc-entities', () => {
       expect(result).toMatch(/^demos\//);
     });
 
-    it('constructs benchmark qualified name from benchmarks/ file path', async () => {
+    it('constructs demo qualified name for a test document', async () => {
       const { constructDocQualifiedName } =
         await import('../extract-doc-entities.mjs');
       const result = constructDocQualifiedName(
-        'benchmarks/memory-optimization/README.md',
-        'benchmark',
+        'examples/flappy-bird-lstm/flappy.test.ts',
+        'demo',
       );
-      expect(result).toMatch(/^benchmarks\//);
+      expect(result).toBe('demos/flappy-bird-lstm');
+    });
+
+    it('projects a test document onto its project demo entity', async () => {
+      const { constructDocQualifiedName } =
+        await import('../extract-doc-entities.mjs');
+      const demoQualifiedName = constructDocQualifiedName(
+        'examples/flappy-bird-lstm/README.md',
+        'demo',
+      );
+      const testQualifiedName = constructDocQualifiedName(
+        'examples/flappy-bird-lstm/flappy.test.ts',
+        'demo',
+      );
+      expect(testQualifiedName).toBe(demoQualifiedName);
     });
   });
 

@@ -750,6 +750,77 @@ export function compileFilterToSqlAliased(predicate) {
 }
 
 /**
+ * Parse a document-family filter into an ordered, de-duplicated SET.
+ *
+ * The routing table and the query classifier publish the plan-family filter
+ * as a CSV LIST (`'plan,completed-plan'`), so a family filter that reaches
+ * the corpus SQL may carry SEVERAL families in one string. Every accepted
+ * form (a CSV string, an array of names, a single name) is normalized here
+ * into the SET the `in` operator consumes.
+ *
+ * @param {string | string[] | null | undefined} family - The family filter: a CSV list, an array of names, or a single name.
+ * @returns {string[]} The family names, in order, without duplicates.
+ *
+ * @example
+ * parseFamilySet('plan,completed-plan'); // ['plan', 'completed-plan']
+ * parseFamilySet('ts-source');           // ['ts-source']
+ */
+export function parseFamilySet(family) {
+  const entries = Array.isArray(family) ? family : [family];
+  const families = [];
+  for (const entry of entries) {
+    if (typeof entry !== 'string') continue;
+    for (const part of entry.split(',')) {
+      const name = part.trim();
+      if (name.length > 0 && !families.includes(name)) {
+        families.push(name);
+      }
+    }
+  }
+  return families;
+}
+
+/**
+ * Compile a document-family filter into a parameterized SQL fragment.
+ *
+ * A SET of families reuses the EXISTING `in` operator of this module: the
+ * SQL carries one `?` placeholder per family and every family is a BOUND
+ * parameter (NEVER string-interpolated into the SQL). A SINGLE family keeps
+ * its exact current behaviour: the `d.doc_family = ?` equality filter with
+ * one bound parameter.
+ *
+ * @param {string | string[] | null | undefined} family - The family filter: a CSV list, an array of names, or a single name.
+ * @returns {{ sql: string, params: string[] }} The SQL fragment and its bound parameters.
+ * @throws {FilterError} When the family set violates the `in` operator rules.
+ *
+ * @example
+ * compileFamilySetFilter('plan,completed-plan');
+ * // { sql: 'd.doc_family IN (?, ?)', params: ['plan', 'completed-plan'] }
+ * compileFamilySetFilter('ts-source');
+ * // { sql: 'd.doc_family = ?', params: ['ts-source'] }
+ */
+export function compileFamilySetFilter(family) {
+  const families = parseFamilySet(family);
+  if (families.length === 0) {
+    // A filter that is PRESENT but names NO family (a bare separator, a
+    // whitespace-only value, an array of unusable entries) must NOT
+    // silently widen the search: bind it as ONE family so it matches
+    // nothing, exactly as the pre-set-filter code did. Only a genuinely
+    // ABSENT filter (null, undefined, '') is dropped.
+    if (family === null || family === undefined || family === '') {
+      return { sql: '', params: [] };
+    }
+    return { sql: 'd.doc_family = ?', params: [String(family)] };
+  }
+  if (families.length === 1) {
+    return { sql: 'd.doc_family = ?', params: [families[0]] };
+  }
+  const predicate = { op: 'in', field: 'family', values: families };
+  validateFilter(predicate);
+  return compileFilterToSqlAliased(predicate);
+}
+
+/**
  * Recursively compile a predicate using short table aliases.
  *
  * @param {object} predicate - The predicate to compile.

@@ -2,7 +2,7 @@
  * @module extract-cross-refs
  * @description Extract cross-reference edges from document body text using pattern
  * matching. Produces `references` edges linking doc entities (plan, skill, agent,
- * demo, benchmark) to code entities (module, class, function, interface, type-alias,
+ * demo) to code entities (module, class, function, interface, type-alias,
  * variable, error-class).
  *
  * Cross-reference patterns, in priority order:
@@ -30,6 +30,7 @@ import {
   printHelp,
   writeJsonOrText,
 } from './cli-utils.mjs';
+import { CORPUS_SOURCES, GLOBAL_IGNORE } from './corpus-sources.mjs';
 
 /** Maximum chars of each heading section to scan for cross-references. */
 const MAX_CROSS_REF_SCAN_CHARS = 2_000;
@@ -469,26 +470,15 @@ export async function main() {
       codeResult.entities.map((e) => [e.qualified_name, e]),
     );
 
-    // Extract doc entities.
-    const docSources = [
-      {
-        family: 'plan',
-        patterns: ['plans/**/*.md'],
-        ignore: ['plans/completed/**'],
-      },
-      { family: 'completed-plan', patterns: ['plans/completed/**/*.md'] },
-      { family: 'demo', patterns: ['examples/**/README.md'] },
-      { family: 'benchmark', patterns: ['benchmarks/README.md'] },
-    ];
-
+    // Extract doc entities from the published corpus contract.
     const documents = [];
-    for (const source of docSources) {
+    for (const source of CORPUS_SOURCES) {
       const entries = await fg(source.patterns, {
         cwd: repoRoot,
         absolute: false,
         onlyFiles: true,
         dot: true,
-        ignore: source.ignore ?? [],
+        ignore: [...GLOBAL_IGNORE, ...(source.ignore ?? [])],
       });
       for (const filePath of entries) {
         documents.push({ filePath, family: source.family });

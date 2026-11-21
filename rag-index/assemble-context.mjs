@@ -48,12 +48,16 @@ export const DEFAULT_TIER_THRESHOLDS = { essential: 0.7, supporting: 0.4 };
 /**
  * Known document families ordered from most to least authoritative.
  * Used as the default family priority tiebreaker.
+ *
+ * The PLAN families rank FIRST, so a plan-shaped query ranks the plan-family chunks above the
+ * source chunks. Every entry is a family the corpus can publish (`CORPUS_FAMILY_NAMES`), so the
+ * list never names a family that no document carries.
  * @type {string[]}
  */
 export const DEFAULT_FAMILY_PRIORITY = [
-  'ts-source',
-  'readme',
   'plan',
+  'completed-plan',
+  'ts-source',
   'agent',
   'skill',
   'demo',

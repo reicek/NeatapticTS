@@ -3,8 +3,8 @@
  * @description Red tests for the premium primary search pipeline integration in the RAG eval runner.
  *
  * The eval runner must load and exercise the integrated `search_advanced` pipeline
- * with the premium LLM-facing defaults (compact, read_top_result, auto_fallback,
- * include_code_only for code_specific). Until Step 11 implementation lands, the
+ * with the premium LLM-facing defaults (compact, read_top_result, auto_fallback).
+ * Until Step 11 implementation lands, the
  * runner does not forward these defaults and the red contracts fail.
  */
 
@@ -47,7 +47,7 @@ function makeQuery(overrides: Record<string, unknown> = {}) {
     query: 'how does NEAT crossover work',
     class: 'simple_lookup',
     difficulty: 'easy',
-    expected_doc_families: ['readme'],
+    expected_doc_families: ['root-doc'],
     expected_heading_contains: 'crossover',
     expected_symbol_contains: null,
     expected_chunk_ids: [],
@@ -77,32 +77,6 @@ describe('eval-runner premium pipeline integration', () => {
         compact: true,
         read_top_result: true,
         auto_fallback: true,
-      }),
-    );
-  });
-
-  it('advanced_default passes include_code_only true for code_specific queries', () => {
-    const query = makeQuery({
-      query_id: 'cs-001',
-      query: 'Network class architecture',
-      class: 'code_specific',
-      expected_doc_families: ['ts-source'],
-    });
-    const calls = runModuleEvaluation<SearchCall[]>(`
-      import { runEval } from './rag-index/eval-runner.mjs';
-      const calls = [];
-      const searchFn = (querySpec, conditionOptions) => {
-        calls.push({ querySpec, conditionOptions });
-        return [];
-      };
-      await runEval({ queries: ${JSON.stringify([query])}, condition: 'advanced_default', searchFn });
-      console.log(JSON.stringify(calls));
-    `);
-
-    expect(calls).toHaveLength(1);
-    expect(calls[0].conditionOptions).toEqual(
-      expect.objectContaining({
-        include_code_only: true,
       }),
     );
   });

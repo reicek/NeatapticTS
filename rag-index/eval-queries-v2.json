@@ -4,18 +4,18 @@
     "query": "how does NEAT crossover work",
     "class": "simple_lookup",
     "difficulty": "easy",
-    "expected_doc_families": ["readme", "plan"],
+    "expected_doc_families": ["root-doc", "plan"],
     "expected_heading_contains": "crossover",
     "expected_symbol_contains": null,
     "expected_chunk_ids": [],
     "relevance_grades": [
-      { "heading_path_contains": "crossover", "family": "readme", "grade": 3 },
+      { "heading_path_contains": "crossover", "family": "root-doc", "grade": 3 },
       {
         "heading_path_contains": "crossover",
         "family": "ts-source",
         "grade": 2
       },
-      { "heading_path_contains": "NEAT", "family": "readme", "grade": 1 }
+      { "heading_path_contains": "NEAT", "family": "root-doc", "grade": 1 }
     ],
     "notes": "Canonical NEAT crossover lookup."
   },
@@ -24,7 +24,7 @@
     "query": "Network activate forward pass",
     "class": "simple_lookup",
     "difficulty": "easy",
-    "expected_doc_families": ["ts-source", "readme"],
+    "expected_doc_families": ["ts-source", "root-doc"],
     "expected_heading_contains": "activate",
     "expected_symbol_contains": "activate",
     "expected_chunk_ids": [],
@@ -34,7 +34,7 @@
         "family": "ts-source",
         "grade": 3
       },
-      { "heading_path_contains": "activate", "family": "readme", "grade": 2 }
+      { "heading_path_contains": "activate", "family": "root-doc", "grade": 2 }
     ],
     "notes": "Direct symbol lookup."
   },
@@ -53,7 +53,7 @@
         "family": "ts-source",
         "grade": 3
       },
-      { "heading_path_contains": "speciation", "family": "readme", "grade": 2 }
+      { "heading_path_contains": "speciation", "family": "root-doc", "grade": 2 }
     ],
     "notes": "NEAT speciation parameter lookup."
   },
@@ -62,7 +62,7 @@
     "query": "mutation add node connection",
     "class": "simple_lookup",
     "difficulty": "easy",
-    "expected_doc_families": ["ts-source", "readme"],
+    "expected_doc_families": ["ts-source", "root-doc"],
     "expected_heading_contains": "mutation",
     "expected_symbol_contains": "mutate",
     "expected_chunk_ids": [],
@@ -100,13 +100,13 @@
     "query": "deterministic seed replay RNG state",
     "class": "simple_lookup",
     "difficulty": "easy",
-    "expected_doc_families": ["plan", "readme", "ts-source"],
+    "expected_doc_families": ["plan", "root-doc", "ts-source"],
     "expected_heading_contains": "determin",
     "expected_symbol_contains": null,
     "expected_chunk_ids": [],
     "relevance_grades": [
       { "heading_path_contains": "determin", "family": "plan", "grade": 3 },
-      { "heading_path_contains": "determin", "family": "readme", "grade": 2 }
+      { "heading_path_contains": "determin", "family": "root-doc", "grade": 2 }
     ],
     "notes": "Reproducibility contract lookup."
   },
@@ -115,13 +115,13 @@
     "query": "ONNX import constrained recurrent network",
     "class": "simple_lookup",
     "difficulty": "medium",
-    "expected_doc_families": ["plan", "readme", "ts-source"],
+    "expected_doc_families": ["plan", "root-doc", "ts-source"],
     "expected_heading_contains": "onnx",
     "expected_symbol_contains": null,
     "expected_chunk_ids": [],
     "relevance_grades": [
       { "heading_path_contains": "onnx", "family": "plan", "grade": 3 },
-      { "heading_path_contains": "onnx", "family": "readme", "grade": 2 }
+      { "heading_path_contains": "onnx", "family": "root-doc", "grade": 2 }
     ],
     "notes": "ONNX portability lookup."
   },
@@ -130,7 +130,7 @@
     "query": "adaptive mutation complexity phases",
     "class": "simple_lookup",
     "difficulty": "easy",
-    "expected_doc_families": ["ts-source", "readme"],
+    "expected_doc_families": ["ts-source", "root-doc"],
     "expected_heading_contains": "adaptive",
     "expected_symbol_contains": null,
     "expected_chunk_ids": [],
@@ -140,7 +140,7 @@
         "family": "ts-source",
         "grade": 3
       },
-      { "heading_path_contains": "adaptive", "family": "readme", "grade": 2 }
+      { "heading_path_contains": "adaptive", "family": "root-doc", "grade": 2 }
     ],
     "notes": "Adaptive mutation controller."
   },
@@ -177,7 +177,7 @@
     "query": "graph surgery remove connection prune topology",
     "class": "simple_lookup",
     "difficulty": "medium",
-    "expected_doc_families": ["readme", "ts-source"],
+    "expected_doc_families": ["root-doc", "ts-source"],
     "expected_heading_contains": "topology",
     "expected_symbol_contains": null,
     "expected_chunk_ids": [],
@@ -187,7 +187,7 @@
         "family": "ts-source",
         "grade": 3
       },
-      { "heading_path_contains": "topology", "family": "readme", "grade": 2 }
+      { "heading_path_contains": "topology", "family": "root-doc", "grade": 2 }
     ],
     "notes": "Graph topology operations."
   },
@@ -215,7 +215,7 @@
     "query": "how does Network activation use the slab fast path",
     "class": "cross_boundary",
     "difficulty": "medium",
-    "expected_doc_families": ["ts-source", "readme"],
+    "expected_doc_families": ["ts-source", "root-doc"],
     "expected_heading_contains": "slab",
     "expected_symbol_contains": "activate",
     "expected_chunk_ids": [],
@@ -226,7 +226,7 @@
         "family": "ts-source",
         "grade": 2
       },
-      { "heading_path_contains": "slab", "family": "readme", "grade": 1 }
+      { "heading_path_contains": "slab", "family": "root-doc", "grade": 1 }
     ],
     "notes": "Crosses activation and slab subsystems."
   },
@@ -235,13 +235,13 @@
     "query": "worker pool evaluation ordered results dataset broadcast",
     "class": "cross_boundary",
     "difficulty": "medium",
-    "expected_doc_families": ["plan", "readme", "ts-source"],
+    "expected_doc_families": ["plan", "root-doc", "ts-source"],
     "expected_heading_contains": "worker",
     "expected_symbol_contains": null,
     "expected_chunk_ids": [],
     "relevance_grades": [
       { "heading_path_contains": "worker", "family": "ts-source", "grade": 3 },
-      { "heading_path_contains": "worker", "family": "readme", "grade": 2 },
+      { "heading_path_contains": "worker", "family": "root-doc", "grade": 2 },
       { "heading_path_contains": "evaluat", "family": "plan", "grade": 1 }
     ],
     "notes": "Crosses multithreading and evaluation."
@@ -251,7 +251,7 @@
     "query": "multiobjective telemetry lineage diversity selection",
     "class": "cross_boundary",
     "difficulty": "medium",
-    "expected_doc_families": ["readme", "ts-source"],
+    "expected_doc_families": ["root-doc", "ts-source"],
     "expected_heading_contains": "telemetry",
     "expected_symbol_contains": null,
     "expected_chunk_ids": [],
@@ -262,7 +262,7 @@
         "grade": 3
       },
       { "heading_path_contains": "lineage", "family": "ts-source", "grade": 2 },
-      { "heading_path_contains": "diversity", "family": "readme", "grade": 1 }
+      { "heading_path_contains": "diversity", "family": "root-doc", "grade": 1 }
     ],
     "notes": "Crosses observability lanes."
   },
@@ -271,13 +271,13 @@
     "query": "browser runtime worker url packaging bundle",
     "class": "cross_boundary",
     "difficulty": "medium",
-    "expected_doc_families": ["plan", "readme"],
+    "expected_doc_families": ["plan", "root-doc"],
     "expected_heading_contains": "browser",
     "expected_symbol_contains": null,
     "expected_chunk_ids": [],
     "relevance_grades": [
       { "heading_path_contains": "browser", "family": "plan", "grade": 3 },
-      { "heading_path_contains": "browser", "family": "readme", "grade": 2 }
+      { "heading_path_contains": "browser", "family": "root-doc", "grade": 2 }
     ],
     "notes": "Browser build and runtime cross-family."
   },
@@ -286,13 +286,13 @@
     "query": "BM25 semantic index freshness validation",
     "class": "cross_boundary",
     "difficulty": "medium",
-    "expected_doc_families": ["plan", "readme"],
+    "expected_doc_families": ["plan", "root-doc"],
     "expected_heading_contains": "fresh",
     "expected_symbol_contains": null,
     "expected_chunk_ids": [],
     "relevance_grades": [
       { "heading_path_contains": "fresh", "family": "plan", "grade": 3 },
-      { "heading_path_contains": "fresh", "family": "readme", "grade": 2 }
+      { "heading_path_contains": "fresh", "family": "root-doc", "grade": 2 }
     ],
     "notes": "Indexer freshness and validation."
   },
@@ -301,14 +301,14 @@
     "query": "feed forward recurrent intent policy architecture",
     "class": "cross_boundary",
     "difficulty": "medium",
-    "expected_doc_families": ["readme", "ts-source"],
+    "expected_doc_families": ["root-doc", "ts-source"],
     "expected_heading_contains": "feed forward",
     "expected_symbol_contains": null,
     "expected_chunk_ids": [],
     "relevance_grades": [
       {
         "heading_path_contains": "feed forward",
-        "family": "readme",
+        "family": "root-doc",
         "grade": 3
       },
       {
@@ -324,14 +324,14 @@
     "query": "ordered batch evaluation worker pool fallback",
     "class": "cross_boundary",
     "difficulty": "medium",
-    "expected_doc_families": ["plan", "readme", "ts-source"],
+    "expected_doc_families": ["plan", "root-doc", "ts-source"],
     "expected_heading_contains": "evaluat",
     "expected_symbol_contains": null,
     "expected_chunk_ids": [],
     "relevance_grades": [
       { "heading_path_contains": "evaluat", "family": "plan", "grade": 3 },
       { "heading_path_contains": "worker", "family": "ts-source", "grade": 2 },
-      { "heading_path_contains": "evaluat", "family": "readme", "grade": 1 }
+      { "heading_path_contains": "evaluat", "family": "root-doc", "grade": 1 }
     ],
     "notes": "Evaluation and worker pool cross-family."
   },
@@ -359,13 +359,13 @@
     "query": "repo cortex semantic search corpus context",
     "class": "cross_boundary",
     "difficulty": "medium",
-    "expected_doc_families": ["plan", "readme"],
+    "expected_doc_families": ["plan", "root-doc"],
     "expected_heading_contains": "cortex",
     "expected_symbol_contains": null,
     "expected_chunk_ids": [],
     "relevance_grades": [
       { "heading_path_contains": "cortex", "family": "plan", "grade": 3 },
-      { "heading_path_contains": "cortex", "family": "readme", "grade": 2 }
+      { "heading_path_contains": "cortex", "family": "root-doc", "grade": 2 }
     ],
     "notes": "Repo Cortex retrieval cross-family."
   },
@@ -374,13 +374,13 @@
     "query": "neat chat persistent session memory routing",
     "class": "cross_boundary",
     "difficulty": "medium",
-    "expected_doc_families": ["plan", "readme"],
+    "expected_doc_families": ["plan", "root-doc"],
     "expected_heading_contains": "neatchat",
     "expected_symbol_contains": null,
     "expected_chunk_ids": [],
     "relevance_grades": [
       { "heading_path_contains": "neatchat", "family": "plan", "grade": 3 },
-      { "heading_path_contains": "chat", "family": "readme", "grade": 1 }
+      { "heading_path_contains": "chat", "family": "root-doc", "grade": 1 }
     ],
     "notes": "NEATchat system cross-family."
   },
@@ -389,13 +389,13 @@
     "query": "visualizer canvas tooltip overflow layout parity",
     "class": "cross_boundary",
     "difficulty": "medium",
-    "expected_doc_families": ["plan", "readme"],
+    "expected_doc_families": ["plan", "root-doc"],
     "expected_heading_contains": "visualizer",
     "expected_symbol_contains": null,
     "expected_chunk_ids": [],
     "relevance_grades": [
       { "heading_path_contains": "visualizer", "family": "plan", "grade": 3 },
-      { "heading_path_contains": "visualizer", "family": "readme", "grade": 2 }
+      { "heading_path_contains": "visualizer", "family": "root-doc", "grade": 2 }
     ],
     "notes": "Visualizer workflow cross-family."
   },
@@ -404,13 +404,13 @@
     "query": "NGE core algorithm DNA development lifecycle",
     "class": "cross_boundary",
     "difficulty": "medium",
-    "expected_doc_families": ["plan", "readme"],
+    "expected_doc_families": ["plan", "root-doc"],
     "expected_heading_contains": "NGE",
     "expected_symbol_contains": null,
     "expected_chunk_ids": [],
     "relevance_grades": [
       { "heading_path_contains": "NGE", "family": "plan", "grade": 3 },
-      { "heading_path_contains": "NGE", "family": "readme", "grade": 2 }
+      { "heading_path_contains": "NGE", "family": "root-doc", "grade": 2 }
     ],
     "notes": "NGE benchmark and core cross-family."
   },
@@ -419,13 +419,13 @@
     "query": "how does NEAT use speciation to protect innovation during crossover",
     "class": "multi_hop",
     "difficulty": "hard",
-    "expected_doc_families": ["readme", "ts-source", "plan"],
+    "expected_doc_families": ["root-doc", "ts-source", "plan"],
     "expected_heading_contains": "speciation",
     "expected_symbol_contains": "crossover",
     "expected_chunk_ids": [],
     "relevance_grades": [
-      { "heading_path_contains": "speciation", "family": "readme", "grade": 3 },
-      { "heading_path_contains": "crossover", "family": "readme", "grade": 2 },
+      { "heading_path_contains": "speciation", "family": "root-doc", "grade": 3 },
+      { "heading_path_contains": "crossover", "family": "root-doc", "grade": 2 },
       {
         "heading_path_contains": "speciation",
         "family": "ts-source",
@@ -439,7 +439,7 @@
     "query": "how does the adaptive mutation controller change rates across evolution phases",
     "class": "multi_hop",
     "difficulty": "hard",
-    "expected_doc_families": ["ts-source", "readme", "plan"],
+    "expected_doc_families": ["ts-source", "root-doc", "plan"],
     "expected_heading_contains": "adaptive",
     "expected_symbol_contains": "mutation",
     "expected_chunk_ids": [],
@@ -454,7 +454,7 @@
         "family": "ts-source",
         "grade": 2
       },
-      { "heading_path_contains": "adaptive", "family": "readme", "grade": 1 }
+      { "heading_path_contains": "adaptive", "family": "root-doc", "grade": 1 }
     ],
     "notes": "Chains adaptive mutation and lifecycle."
   },
@@ -463,14 +463,14 @@
     "query": "how does deterministic seeding affect worker pool ordered evaluation",
     "class": "multi_hop",
     "difficulty": "hard",
-    "expected_doc_families": ["plan", "ts-source", "readme"],
+    "expected_doc_families": ["plan", "ts-source", "root-doc"],
     "expected_heading_contains": "determin",
     "expected_symbol_contains": "worker",
     "expected_chunk_ids": [],
     "relevance_grades": [
       { "heading_path_contains": "determin", "family": "plan", "grade": 3 },
       { "heading_path_contains": "worker", "family": "ts-source", "grade": 2 },
-      { "heading_path_contains": "determin", "family": "readme", "grade": 1 }
+      { "heading_path_contains": "determin", "family": "root-doc", "grade": 1 }
     ],
     "notes": "Chains determinism and multithreading."
   },
@@ -479,14 +479,14 @@
     "query": "how does context assembly rank chunks across family boundaries",
     "class": "multi_hop",
     "difficulty": "hard",
-    "expected_doc_families": ["plan", "ts-source", "readme"],
+    "expected_doc_families": ["plan", "ts-source", "root-doc"],
     "expected_heading_contains": "context",
     "expected_symbol_contains": null,
     "expected_chunk_ids": [],
     "relevance_grades": [
       { "heading_path_contains": "context", "family": "plan", "grade": 3 },
       { "heading_path_contains": "context", "family": "ts-source", "grade": 2 },
-      { "heading_path_contains": "assembly", "family": "readme", "grade": 1 }
+      { "heading_path_contains": "assembly", "family": "root-doc", "grade": 1 }
     ],
     "notes": "Chains context assembly and cross-family ranking."
   },
@@ -540,7 +540,7 @@
     "query": "how does the multithread evaluator fallback to single thread",
     "class": "multi_hop",
     "difficulty": "hard",
-    "expected_doc_families": ["ts-source", "readme", "plan"],
+    "expected_doc_families": ["ts-source", "root-doc", "plan"],
     "expected_heading_contains": "multithread",
     "expected_symbol_contains": null,
     "expected_chunk_ids": [],
@@ -550,7 +550,7 @@
         "family": "ts-source",
         "grade": 3
       },
-      { "heading_path_contains": "fallback", "family": "readme", "grade": 2 }
+      { "heading_path_contains": "fallback", "family": "root-doc", "grade": 2 }
     ],
     "notes": "Chains worker pool and fallback behavior."
   },
@@ -559,7 +559,7 @@
     "query": "how does neuron activation propagate through gating connections",
     "class": "multi_hop",
     "difficulty": "hard",
-    "expected_doc_families": ["ts-source", "readme"],
+    "expected_doc_families": ["ts-source", "root-doc"],
     "expected_heading_contains": "gate",
     "expected_symbol_contains": "activate",
     "expected_chunk_ids": [],
@@ -570,7 +570,7 @@
         "family": "ts-source",
         "grade": 2
       },
-      { "heading_path_contains": "gate", "family": "readme", "grade": 1 }
+      { "heading_path_contains": "gate", "family": "root-doc", "grade": 1 }
     ],
     "notes": "Chains activation and gating."
   },
@@ -579,7 +579,7 @@
     "query": "how does population evolution maintain lineage and diversity",
     "class": "multi_hop",
     "difficulty": "hard",
-    "expected_doc_families": ["ts-source", "readme"],
+    "expected_doc_families": ["ts-source", "root-doc"],
     "expected_heading_contains": "lineage",
     "expected_symbol_contains": "diversity",
     "expected_chunk_ids": [],
@@ -590,7 +590,7 @@
         "family": "ts-source",
         "grade": 2
       },
-      { "heading_path_contains": "population", "family": "readme", "grade": 1 }
+      { "heading_path_contains": "population", "family": "root-doc", "grade": 1 }
     ],
     "notes": "Chains lineage, diversity, evolution."
   },
@@ -599,14 +599,14 @@
     "query": "overview of NeatapticTS architecture layers",
     "class": "exploratory",
     "difficulty": "medium",
-    "expected_doc_families": ["readme", "plan"],
+    "expected_doc_families": ["root-doc", "plan"],
     "expected_heading_contains": "architecture",
     "expected_symbol_contains": null,
     "expected_chunk_ids": [],
     "relevance_grades": [
       {
         "heading_path_contains": "architecture",
-        "family": "readme",
+        "family": "root-doc",
         "grade": 3
       },
       { "heading_path_contains": "architecture", "family": "plan", "grade": 2 }
@@ -618,12 +618,12 @@
     "query": "what are the main components of the NEAT evolutionary algorithm",
     "class": "exploratory",
     "difficulty": "medium",
-    "expected_doc_families": ["readme", "ts-source"],
+    "expected_doc_families": ["root-doc", "ts-source"],
     "expected_heading_contains": "NEAT",
     "expected_symbol_contains": null,
     "expected_chunk_ids": [],
     "relevance_grades": [
-      { "heading_path_contains": "NEAT", "family": "readme", "grade": 3 },
+      { "heading_path_contains": "NEAT", "family": "root-doc", "grade": 3 },
       { "heading_path_contains": "NEAT", "family": "ts-source", "grade": 2 }
     ],
     "notes": "Broad NEAT components overview."
@@ -633,12 +633,12 @@
     "query": "examples of neural network demos and benchmarks",
     "class": "exploratory",
     "difficulty": "medium",
-    "expected_doc_families": ["readme", "plan"],
+    "expected_doc_families": ["root-doc", "plan"],
     "expected_heading_contains": "demo",
     "expected_symbol_contains": null,
     "expected_chunk_ids": [],
     "relevance_grades": [
-      { "heading_path_contains": "demo", "family": "readme", "grade": 3 },
+      { "heading_path_contains": "demo", "family": "root-doc", "grade": 3 },
       { "heading_path_contains": "benchmark", "family": "plan", "grade": 2 }
     ],
     "notes": "Demos and benchmarks discovery."
@@ -648,12 +648,12 @@
     "query": "documentation and generated README conventions",
     "class": "exploratory",
     "difficulty": "medium",
-    "expected_doc_families": ["readme", "ts-source"],
+    "expected_doc_families": ["root-doc", "ts-source"],
     "expected_heading_contains": "README",
     "expected_symbol_contains": null,
     "expected_chunk_ids": [],
     "relevance_grades": [
-      { "heading_path_contains": "README", "family": "readme", "grade": 3 },
+      { "heading_path_contains": "README", "family": "root-doc", "grade": 3 },
       { "heading_path_contains": "README", "family": "ts-source", "grade": 2 }
     ],
     "notes": "Documentation conventions discovery."
@@ -663,13 +663,13 @@
     "query": "repo cortex advanced RAG architecture steps",
     "class": "exploratory",
     "difficulty": "medium",
-    "expected_doc_families": ["plan", "readme"],
+    "expected_doc_families": ["plan", "root-doc"],
     "expected_heading_contains": "RAG",
     "expected_symbol_contains": null,
     "expected_chunk_ids": [],
     "relevance_grades": [
       { "heading_path_contains": "RAG", "family": "plan", "grade": 3 },
-      { "heading_path_contains": "cortex", "family": "readme", "grade": 2 }
+      { "heading_path_contains": "cortex", "family": "root-doc", "grade": 2 }
     ],
     "notes": "RAG architecture roadmap discovery."
   },
@@ -678,12 +678,12 @@
     "query": "testing and coverage guard conventions",
     "class": "exploratory",
     "difficulty": "medium",
-    "expected_doc_families": ["readme", "ts-source"],
+    "expected_doc_families": ["root-doc", "ts-source"],
     "expected_heading_contains": "coverage",
     "expected_symbol_contains": null,
     "expected_chunk_ids": [],
     "relevance_grades": [
-      { "heading_path_contains": "coverage", "family": "readme", "grade": 3 },
+      { "heading_path_contains": "coverage", "family": "root-doc", "grade": 3 },
       { "heading_path_contains": "coverage", "family": "ts-source", "grade": 2 }
     ],
     "notes": "Testing conventions discovery."
@@ -693,13 +693,13 @@
     "query": "agent customization routing table and skills",
     "class": "exploratory",
     "difficulty": "medium",
-    "expected_doc_families": ["plan", "readme"],
+    "expected_doc_families": ["plan", "root-doc"],
     "expected_heading_contains": "agent",
     "expected_symbol_contains": null,
     "expected_chunk_ids": [],
     "relevance_grades": [
       { "heading_path_contains": "agent", "family": "plan", "grade": 3 },
-      { "heading_path_contains": "agent", "family": "readme", "grade": 2 }
+      { "heading_path_contains": "agent", "family": "root-doc", "grade": 2 }
     ],
     "notes": "Agent system overview."
   },
@@ -723,13 +723,13 @@
     "query": "public API entry points and exports",
     "class": "exploratory",
     "difficulty": "medium",
-    "expected_doc_families": ["ts-source", "readme"],
+    "expected_doc_families": ["ts-source", "root-doc"],
     "expected_heading_contains": "export",
     "expected_symbol_contains": null,
     "expected_chunk_ids": [],
     "relevance_grades": [
       { "heading_path_contains": "export", "family": "ts-source", "grade": 3 },
-      { "heading_path_contains": "export", "family": "readme", "grade": 2 }
+      { "heading_path_contains": "export", "family": "root-doc", "grade": 2 }
     ],
     "notes": "Public API discovery."
   },

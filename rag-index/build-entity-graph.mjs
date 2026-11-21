@@ -2,7 +2,7 @@
  * @module build-entity-graph
  * @description Main entity graph extraction orchestration script. Extracts code
  * entities (module, class, function, interface, type-alias, variable, error-class),
- * doc entities (plan, skill, agent, demo, benchmark), and cross-reference edges,
+ * doc entities (plan, skill, agent, demo), and cross-reference edges,
  * then inserts them into the `entities` and `edges` tables in `turso-replica.sqlite`.
  *
  * Follows the same freshness-based incremental update pattern as `build-index.mjs`:
@@ -18,6 +18,7 @@
  * @returns {void} Exits 0 on success, 1 on error.
  */
 import fg from 'fast-glob';
+import { Buffer } from 'node:buffer';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -29,6 +30,7 @@ import {
   toRepoRelative,
   writeJsonOrText,
 } from './cli-utils.mjs';
+import { CORPUS_SOURCES, GLOBAL_IGNORE } from './corpus-sources.mjs';
 import { getFreshnessProof, isFreshDocument } from './freshness.mjs';
 import {
   defaultDatabasePath,
@@ -45,33 +47,6 @@ import {
 } from './extract-doc-entities.mjs';
 import { extractCrossRefs } from './extract-cross-refs.mjs';
 
-/** Document sources for doc entity extraction. */
-const DOC_ENTITY_SOURCES = [
-  {
-    family: 'plan',
-    patterns: ['plans/**/*.md'],
-    ignore: ['plans/completed/**'],
-  },
-  { family: 'completed-plan', patterns: ['plans/completed/**/*.md'] },
-  { family: 'demo', patterns: ['examples/**/README.md', 'examples/**/*.ts'] },
-  {
-    family: 'benchmark',
-    patterns: ['benchmarks/README.md', 'benchmarks/**/*.test.ts'],
-  },
-  {
-    family: 'skill',
-    patterns: ['.github/skills/**/SKILL.md'],
-  },
-  {
-    family: 'agent',
-    patterns: ['.github/agents/*.agent.md'],
-  },
-  {
-    family: 'copilot-instructions',
-    patterns: ['.github/copilot-instructions.md'],
-  },
-];
-
 /**
  * Build the entity/relationship graph in the semantic index database.
  *
@@ -86,7 +61,7 @@ const DOC_ENTITY_SOURCES = [
  * @param {boolean} [options.dryRun] - Scan without writing.
  * @param {boolean} [options.force] - Re-extract unchanged documents.
  * @param {string} [options.databasePath] - Override database path.
- * @returns {Promise<{ entities: number, edges: number, skipped: number, indexed: number, elapsedMs: number }>} Build summary.
+ * @returns {Promise<{ entities: number, edges: number, skipped: number, indexed: number, elapsedMs: number, codeEntityCount: number, codeEdgeCount: number, docEntityCount: number, docEdgeCount: number, crossRefEdgeCount: number, docHeadingMapFileReadCount: number, docHeadingMapFileBytesRead: number, docHeadingMapDistinctFileCount: number, headingTextBytes: number }>} Build summary. The three `docHeadingMap*` counters measure THE HEADING-TEXT PATH ONLY (one read per distinct corpus file that carries doc entities) and are NOT stage-wide read counts: `rag-index/extract-doc-entities.mjs` reads every corpus doc file once as well, so the stage as a whole reads each corpus file twice. `headingTextBytes` is a UTF-8 BYTE count of the RETAINED heading text, whereas `docHeadingMapFileBytesRead` is the BYTES-READ-FROM-DISK counter of the heading-text path; the two are different quantities (retained text bytes vs bytes read from disk) and must not be compared.
  */
 /* istanbul ignore next -- defensive: always called with explicit options */
 export async function buildEntityGraph(options = {}) {
@@ -124,7 +99,16 @@ export async function buildEntityGraph(options = {}) {
   const docEntityMap = docResult.entityMap;
 
   // Build heading text map for cross-reference scanning.
-  const headingsByDoc = await buildHeadingTextMap(docResult.entities);
+  const { headingsByDoc, stats: headingTextStats } = await buildHeadingTextMap(
+    docResult.entities,
+  );
+  summary.docHeadingMapFileReadCount =
+    headingTextStats.docHeadingMapFileReadCount;
+  summary.docHeadingMapFileBytesRead =
+    headingTextStats.docHeadingMapFileBytesRead;
+  summary.docHeadingMapDistinctFileCount =
+    headingTextStats.docHeadingMapDistinctFileCount;
+  summary.headingTextBytes = headingTextStats.headingTextBytes;
 
   // Only scan top-level doc entities (not heading sub-entities) for cross-refs.
   const topLevelDocEntities = docResult.entities.filter((e) => {
@@ -365,20 +349,20 @@ async function buildEntityGraphWithClient({
 /**
  * Collect document records for doc entity extraction.
  *
- * Scans the configured DOC_ENTITY_SOURCES patterns and returns
+ * Scans the published corpus contract patterns and returns
  * file records with filePath and family fields.
  *
  * @returns {Promise<Array<{ filePath: string, family: string }>>} Document records.
  */
 async function collectDocDocuments() {
   const records = await Promise.all(
-    DOC_ENTITY_SOURCES.map(async (source) => {
+    CORPUS_SOURCES.map(async (source) => {
       const entries = await fg(source.patterns, {
         cwd: repoRoot,
         absolute: false,
         onlyFiles: true,
         dot: true,
-        ignore: source.ignore ?? [],
+        ignore: [...GLOBAL_IGNORE, ...(source.ignore ?? [])],
       });
       return entries.toSorted().map((filePath) => ({
         filePath: toRepoRelative(path.join(repoRoot, filePath)),
@@ -391,34 +375,197 @@ async function collectDocDocuments() {
 }
 
 /**
+ * Encoding used for every corpus file read by this stage.
+ * UTF-8 is the encoding Node's `readFile` decodes markdown sources with.
+ */
+const UTF8_ENCODING = 'utf8';
+
+/**
+ * Encoding used for the surrogate-safe fallback copy of a section slice.
+ * UTF-16LE round trips lone surrogates exactly, which UTF-8 cannot.
+ */
+const UTF16LE_ENCODING = 'utf16le';
+
+/**
+ * First code point of the UTF-16 high-surrogate range (U+D800-U+DBFF).
+ * A high surrogate at the END of a slice means the pair was cut in half.
+ */
+const HIGH_SURROGATE_START = 0xd800;
+
+/**
+ * Last code point of the UTF-16 high-surrogate range (U+D800-U+DBFF).
+ */
+const HIGH_SURROGATE_END = 0xdbff;
+
+/**
+ * First code point of the UTF-16 low-surrogate range (U+DC00-U+DFFF).
+ * A low surrogate at the START of a slice means the pair was cut in half.
+ */
+const LOW_SURROGATE_START = 0xdc00;
+
+/**
+ * Last code point of the UTF-16 low-surrogate range (U+DC00-U+DFFF).
+ */
+const LOW_SURROGATE_END = 0xdfff;
+
+/**
  * Build a map of parent qualified_name → heading text content for cross-reference scanning.
  *
+ * The doc entities of one source file are grouped together and the file is read
+ * exactly ONCE for the whole group. Every retained section is materialised as
+ * an independent flat string so that no retained value pins the buffer of the
+ * file it came from. The retained text and the per-parent section order are
+ * identical to a per-entity read of the same file.
+ *
  * @param {Array} docEntities - Doc entities with file paths and character positions.
- * @returns {Promise<Map<string, string[]>>} Map of parent QN → heading text arrays.
+ * @returns {Promise<{ headingsByDoc: Map<string, string[]>, stats: { docHeadingMapFileReadCount: number, docHeadingMapFileBytesRead: number, docHeadingMapDistinctFileCount: number, headingTextBytes: number } }>} Map of parent QN → heading text arrays plus the read/retention counters of the HEADING-TEXT PATH. The three `docHeadingMap*` counters measure THE HEADING-TEXT PATH ONLY (one read per distinct corpus file that carries doc entities) and are NOT stage-wide read counts — `rag-index/extract-doc-entities.mjs` reads every corpus doc file once as well. `headingTextBytes` is a UTF-8 BYTE count of the RETAINED heading text, whereas `docHeadingMapFileBytesRead` is the BYTES-READ-FROM-DISK counter of the heading-text path; the two are different quantities (retained text bytes vs bytes read from disk) and must not be compared.
  */
 async function buildHeadingTextMap(docEntities) {
   const headingsByDoc = new Map();
+  const stats = {
+    docHeadingMapFileReadCount: 0,
+    docHeadingMapFileBytesRead: 0,
+    docHeadingMapDistinctFileCount: 0,
+    headingTextBytes: 0,
+  };
 
-  for (const entity of docEntities) {
-    const parentQName = getParentQualifiedName(entity.qualified_name);
-    if (!headingsByDoc.has(parentQName)) {
-      headingsByDoc.set(parentQName, []);
-    }
+  // Step 1: Group the doc entities by source file, keeping input order.
+  const entityIndexesByFile = groupDocEntitiesByFile(docEntities);
+  stats.docHeadingMapDistinctFileCount = entityIndexesByFile.size;
 
-    try {
-      const absolutePath = path.join(repoRoot, entity.file_path);
-      const content = await readFile(absolutePath, 'utf8');
+  // Step 2: Read each distinct file exactly once and materialize its sections.
+  const sectionTextByEntityIndex = new Array(docEntities.length).fill(null);
+  for (const [filePath, entityIndexes] of entityIndexesByFile) {
+    stats.docHeadingMapFileReadCount += 1;
+    const content = await readFileSafely(filePath);
+    if (content === null) continue;
+
+    stats.docHeadingMapFileBytesRead += Buffer.byteLength(
+      content,
+      UTF8_ENCODING,
+    );
+    for (const entityIndex of entityIndexes) {
+      const entity = docEntities[entityIndex];
       const sectionText = content.slice(
         entity.char_start ?? 0,
         entity.char_end ?? content.length,
       );
-      headingsByDoc.get(parentQName).push(sectionText);
-    } catch {
-      // Skip unreadable files.
+      sectionTextByEntityIndex[entityIndex] = materializeSectionText(sectionText);
     }
   }
 
-  return headingsByDoc;
+  // Step 3: Assemble the parent → section arrays in the original entity order.
+  for (let entityIndex = 0; entityIndex < docEntities.length; entityIndex++) {
+    const entity = docEntities[entityIndex];
+    const parentQName = getParentQualifiedName(entity.qualified_name);
+    let sections = headingsByDoc.get(parentQName);
+    if (!sections) {
+      sections = [];
+      headingsByDoc.set(parentQName, sections);
+    }
+
+    const sectionText = sectionTextByEntityIndex[entityIndex];
+    if (sectionText === null) continue;
+
+    sections.push(sectionText);
+    stats.headingTextBytes += Buffer.byteLength(sectionText, UTF8_ENCODING);
+  }
+
+  return { headingsByDoc, stats };
+}
+
+/**
+ * Group doc entity indexes by the source file they were extracted from.
+ *
+ * The insertion order of the returned map follows the first appearance of each
+ * file path, and the indexes inside a group follow the original entity order.
+ *
+ * @param {Array} docEntities - Doc entities in extraction order.
+ * @returns {Map<string, number[]>} Map of file path → doc entity indexes.
+ */
+function groupDocEntitiesByFile(docEntities) {
+  const entityIndexesByFile = new Map();
+  for (let entityIndex = 0; entityIndex < docEntities.length; entityIndex++) {
+    const filePath = docEntities[entityIndex].file_path;
+    const entityIndexes = entityIndexesByFile.get(filePath);
+    if (entityIndexes) {
+      entityIndexes.push(entityIndex);
+    } else {
+      entityIndexesByFile.set(filePath, [entityIndex]);
+    }
+  }
+  return entityIndexesByFile;
+}
+
+/**
+ * Read a corpus file and return its content, or `null` when it cannot be read.
+ *
+ * @param {string} filePath - Repo-relative path of the file to read.
+ * @returns {Promise<string|null>} Decoded file content, or null when unreadable.
+ */
+async function readFileSafely(filePath) {
+  try {
+    return await readFile(path.join(repoRoot, filePath), UTF8_ENCODING);
+  } catch {
+    // Skip unreadable files.
+    return null;
+  }
+}
+
+/**
+ * Materialize a section slice as an independent flat string.
+ *
+ * WHY this copy is required: `String.prototype.slice` returns a V8
+ * `SlicedString` that keeps a reference to its ENTIRE parent buffer. Retaining
+ * one slice per doc entity therefore retained one full copy of the source file
+ * per entity (6,584 entities over a ~26 MB corpus). Copying the slice into a
+ * fresh flat string lets the file buffer be reclaimed once the read loop ends.
+ *
+ * WHY the UTF-8 round trip is character-exact: the content was decoded from
+ * UTF-8 by Node's decoder, which never emits lone surrogates (malformed byte
+ * sequences become U+FFFD), so re-encoding the slice to UTF-8 and decoding it
+ * again reproduces exactly the same code points.
+ *
+ * WHY the UTF-16LE fallback exists: `String.prototype.slice` can cut a
+ * surrogate pair in half. A slice that starts with a lone low surrogate or
+ * ends with a lone high surrogate would be re-encoded as U+FFFD by the UTF-8
+ * round trip, silently corrupting the retained heading text. The UTF-16LE
+ * round trip preserves lone surrogates EXACTLY and still yields a flat
+ * (non-SlicedString) copy, so the "no retained parent buffer" property holds
+ * in BOTH branches.
+ *
+ * PRECONDITION: the section offsets are expected to be code-point aligned.
+ * The fallback makes a mis-aligned offset lossless instead of corrupting it.
+ *
+ * @param {string} sectionText - Section text sliced out of a file's content.
+ * @returns {string} Independent flat copy of the section text.
+ */
+function materializeSectionText(sectionText) {
+  if (sectionText.length === 0) return '';
+  if (hasDamagedSurrogateEdge(sectionText)) {
+    return Buffer.from(sectionText, UTF16LE_ENCODING).toString(
+      UTF16LE_ENCODING,
+    );
+  }
+  return Buffer.from(sectionText, UTF8_ENCODING).toString(UTF8_ENCODING);
+}
+
+/**
+ * Detect a surrogate pair that a section slice cut in half.
+ *
+ * Only the two edges of a slice can be damaged: the FIRST code unit may be a
+ * lone low surrogate and the LAST code unit may be a lone high surrogate.
+ *
+ * @param {string} sectionText - Section text sliced out of a file's content.
+ * @returns {boolean} True when an edge code unit is an unpaired surrogate.
+ */
+function hasDamagedSurrogateEdge(sectionText) {
+  const firstCode = sectionText.charCodeAt(0);
+  if (firstCode >= LOW_SURROGATE_START && firstCode <= LOW_SURROGATE_END) {
+    return true;
+  }
+  const lastCode = sectionText.charCodeAt(sectionText.length - 1);
+  return lastCode >= HIGH_SURROGATE_START && lastCode <= HIGH_SURROGATE_END;
 }
 
 /**

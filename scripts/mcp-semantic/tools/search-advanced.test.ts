@@ -32,11 +32,6 @@ interface RankingExplanationResult {
   firstReason: string | null;
 }
 
-interface GeneratedReadmeFilterResult {
-  hasGeneratedReadmeResults: boolean;
-  resultCount: number;
-}
-
 interface StructuredFallbackResult {
   hasFallbackField: boolean;
   fallbackResultCount: number;
@@ -321,44 +316,6 @@ async function makeMixedCorpusFixture(): Promise<{
   return { databasePath, tempDir };
 }
 
-describe('search-advanced README suppression', () => {
-  describe('include_code_only option suppresses generated README chunks', () => {
-    it('excludes readme family results when include_code_only is true', async () => {
-      const { databasePath, tempDir } = await makeMixedCorpusFixture();
-      try {
-        const result = runModuleEvaluation<{
-          hasReadmeResults: boolean;
-          resultCount: number;
-        }>(`
-        import { searchAdvanced } from './scripts/mcp-semantic/tools/search-advanced.mjs';
-        const databasePath = ${JSON.stringify(databasePath)};
-
-        const response = await searchAdvanced({
-          query: 'neural network',
-          query_class: 'simple_lookup',
-          include_code_only: true,
-          use_dense: false,
-          limit: 10,
-          databasePath,
-        });
-        console.log(JSON.stringify({
-          hasReadmeResults: response.results?.some((r) => r.family === 'readme'),
-          resultCount: response.results?.length ?? 0,
-        }));
-      `);
-
-        expect(result.hasReadmeResults).toBe(false);
-      } finally {
-        try {
-          fs.rmSync(tempDir, { recursive: true, force: true });
-        } catch {
-          // Ignore best-effort cleanup failures.
-        }
-      }
-    });
-  });
-});
-
 describe('search-advanced native fallback', () => {
   describe('auto_fallback option triggers when main results are empty', () => {
     it('sets fallback_triggered when auto_fallback is true and no results match', async () => {
@@ -398,17 +355,17 @@ describe('search-advanced native fallback', () => {
 });
 
 /**
- * Build a corpus fixture where the README family is named `generated-readme`,
- * matching the real corpus convention for auto-generated README documents.
- * Used to verify that `include_code_only` suppresses generated READMEs
- * regardless of the exact family string.
+ * Build a corpus fixture that pairs a root-document doc with a `ts-source` doc.
+ * The corpus no longer publishes a generated-README family, so the fixture uses
+ * the live `root-doc` family for the README-shaped document. It is used by the
+ * fallback describes.
  */
-async function makeGeneratedReadmeFixture(): Promise<{
+async function makeRootDocFixture(): Promise<{
   databasePath: string;
   tempDir: string;
 }> {
   const tempDir = fs.mkdtempSync(
-    path.join(os.tmpdir(), 'search-advanced-generated-readme-red-'),
+    path.join(os.tmpdir(), 'search-advanced-root-doc-'),
   );
   const databasePath = path.join(tempDir, 'corpus.sqlite');
   const db = createClient({ url: 'file:' + databasePath });
@@ -450,7 +407,7 @@ async function makeGeneratedReadmeFixture(): Promise<{
       );
       INSERT INTO documents (doc_id, doc_family, file_path, title)
         VALUES
-          (1, 'generated-readme', 'README.md', 'Project overview'),
+          (1, 'root-doc', 'README.md', 'Project overview'),
           (2, 'ts-source', 'src/network.ts', 'Network source');
       INSERT INTO chunks (
         chunk_id, doc_id, body_text, char_end, context_header
@@ -551,48 +508,10 @@ describe('search-advanced ranking explanation', () => {
   });
 });
 
-describe('search-advanced generated-readme suppression', () => {
-  describe('include_code_only option filters generated-readme family', () => {
-    it('excludes generated-readme family results when include_code_only is true', async () => {
-      const { databasePath, tempDir } = await makeGeneratedReadmeFixture();
-      try {
-        const result = runModuleEvaluation<GeneratedReadmeFilterResult>(`
-          import { searchAdvanced } from './scripts/mcp-semantic/tools/search-advanced.mjs';
-          const databasePath = ${JSON.stringify(databasePath)};
-
-          const response = await searchAdvanced({
-            query: 'neural network',
-            query_class: 'simple_lookup',
-            include_code_only: true,
-            use_dense: false,
-            limit: 10,
-            databasePath,
-          });
-
-          const results = response.results ?? [];
-          const hasGeneratedReadmeResults = results.some((r) => r.family === 'generated-readme');
-          console.log(JSON.stringify({
-            hasGeneratedReadmeResults,
-            resultCount: results.length,
-          }));
-        `);
-
-        expect(result.hasGeneratedReadmeResults).toBe(false);
-      } finally {
-        try {
-          fs.rmSync(tempDir, { recursive: true, force: true });
-        } catch {
-          // Ignore best-effort cleanup failures.
-        }
-      }
-    });
-  });
-});
-
 describe('search-advanced structured fallback', () => {
   describe('auto_fallback option exposes merged fallback results', () => {
     it('returns a fallback object with triggered=true and merged results', async () => {
-      const { databasePath, tempDir } = await makeGeneratedReadmeFixture();
+      const { databasePath, tempDir } = await makeRootDocFixture();
       try {
         const result = runModuleEvaluation<StructuredFallbackResult>(`
           import { searchAdvanced } from './scripts/mcp-semantic/tools/search-advanced.mjs';

@@ -5,7 +5,17 @@
  * Validates that the orchestrator dispatched specialist review agents
  * (Tier-3 scouts/specialists) to review 04-implementing output BEFORE
  * dispatching 05-green-testing. This gate checks the active plan's
- * VALIDATION_EVIDENCE section for evidence of specialist review.
+ * validation-evidence section for evidence of specialist review.
+ *
+ * TWO EVIDENCE ANCHOR FORMS ARE ACCEPTED:
+ *
+ * 1. HEADING (canonical) — a Markdown heading whose text names a
+ *    validation-evidence section: `## Latest validation evidence`,
+ *    `### Validation evidence`, `#### FINAL VALIDATION EVIDENCE`. This is
+ *    the form live plans carry, and the form the sibling gates
+ *    (`plan-readiness`, `step-packet`, `convergence-tracker`) already read.
+ * 2. TOKEN (legacy) — the underscore token `VALIDATION_EVIDENCE` /
+ *    `validation_evidence:` used by older plans and step-packet YAML blocks.
  *
  * Gate contract: { pass: boolean, evidence: object, fixHint: string, owner: string }
  *
@@ -27,15 +37,123 @@ const REPO_ROOT = path.resolve(
 const options = parseArgs(process.argv.slice(2));
 
 const planDir = path.join(REPO_ROOT, 'plans');
-const planArg = options.plan ? path.resolve(REPO_ROOT, options.plan) : null;
+
+/**
+ * Read the EXPLICIT `--plan` value from the raw argv.
+ *
+ * `parseArgs` injects a DEFAULT plan
+ * (`plans/completed/Agentic_Workflow_Architecture.plans.md`) when `--plan`
+ * is absent. That default is a COMPLETED plan, so trusting it would
+ * silently validate a stale artifact instead of the live plan and mask a
+ * real RED. The gate therefore resolves the plan from the raw argv and
+ * falls back to the active-plan scan when `--plan` was not passed.
+ *
+ * @param {string[]} argv - Raw CLI arguments.
+ * @returns {string|null} The explicit plan path, or null when absent.
+ */
+function readExplicitPlanArg(argv) {
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index];
+    if (arg.startsWith('--plan=')) return arg.slice('--plan='.length).trim();
+    if (arg === '--plan' && argv[index + 1] !== undefined) {
+      return argv[index + 1].trim();
+    }
+  }
+  return null;
+}
+
+const explicitPlanArg = readExplicitPlanArg(process.argv.slice(2));
+const planArg = explicitPlanArg
+  ? path.resolve(REPO_ROOT, explicitPlanArg)
+  : null;
 
 function findActivePlans() {
   if (planArg) {
     return [planArg];
   }
-  return readdirSync(planDir)
-    .filter((f) => f.endsWith('.plans.md'))
-    .map((f) => path.join(planDir, f));
+  try {
+    return readdirSync(planDir)
+      .filter((f) => f.endsWith('.plans.md'))
+      .map((f) => path.join(planDir, f));
+  } catch {
+    return [];
+  }
+}
+
+// --- Validation-evidence region discovery --------------------------------
+
+/** Matches a Markdown ATX heading and captures its level and text. */
+const HEADING_RE = /^(#{1,6})[ \t]+(.*)$/;
+
+/**
+ * True when a heading's text names a validation-evidence section.
+ *
+ * Accepts the canonical SPACED form (`Latest validation evidence`) and the
+ * legacy UNDERSCORE form (`VALIDATION_EVIDENCE`).
+ *
+ * @param {string} text - Heading text.
+ * @returns {boolean} Whether the heading names a validation-evidence section.
+ */
+function isEvidenceHeading(text) {
+  return (
+    /validation[ \t]+evidence/i.test(text) || /VALIDATION_EVIDENCE/.test(text)
+  );
+}
+
+/**
+ * Collect every validation-evidence region in the plan.
+ *
+ * Heading anchors are resolved OUTSIDE fenced code blocks so a heading
+ * quoted inside a ``` fence is not mistaken for a live section. A
+ * heading-anchored region runs from the heading to the next heading of the
+ * SAME OR SHALLOWER level, so `###` sub-blocks stay inside their `##`
+ * section. A token-anchored region runs from the token to the next `##` /
+ * `PlanUpdate` / end of file.
+ *
+ * @param {string} content - Raw plan Markdown text.
+ * @returns {string[]} Evidence region bodies (may contain empty strings).
+ */
+function collectEvidenceRegions(content) {
+  const regions = [];
+
+  // (1) Legacy token anchors — `VALIDATION_EVIDENCE` / `validation_evidence:`.
+  for (const match of content.matchAll(
+    /VALIDATION_EVIDENCE[\s\S]*?(?=##|PlanUpdate|$)/gi,
+  )) {
+    regions.push(match[0]);
+  }
+
+  // (2) Canonical heading anchors — `## Latest validation evidence`.
+  const lines = content.split(/\r?\n/);
+  const headings = [];
+  let inCodeFence = false;
+
+  for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
+    const trimmed = lines[lineIndex].trim();
+    if (trimmed.startsWith('```')) {
+      inCodeFence = !inCodeFence;
+      continue;
+    }
+    if (inCodeFence) continue;
+    const match = HEADING_RE.exec(trimmed);
+    if (!match) continue;
+    headings.push({ level: match[1].length, text: match[2], lineIndex });
+  }
+
+  for (let index = 0; index < headings.length; index += 1) {
+    const anchor = headings[index];
+    if (!isEvidenceHeading(anchor.text)) continue;
+    let endLine = lines.length;
+    for (let next = index + 1; next < headings.length; next += 1) {
+      if (headings[next].level <= anchor.level) {
+        endLine = headings[next].lineIndex;
+        break;
+      }
+    }
+    regions.push(lines.slice(anchor.lineIndex + 1, endLine).join('\n'));
+  }
+
+  return regions;
 }
 
 function checkPlanForSpecialistReview(planPath) {
@@ -85,15 +203,15 @@ function checkPlanForSpecialistReview(planPath) {
   // packet and per PlanUpdate, so a leftmost-match scan reads the evidence
   // of a CLOSED step and reports "no specialist review evidence" for a step
   // that was in fact reviewed.
-  const evidenceSections = [
-    ...content.matchAll(/VALIDATION_EVIDENCE[\s\S]*?(?=##|PlanUpdate|$)/gi),
-  ].map((match) => match[0]);
+  const evidenceSections = collectEvidenceRegions(content).filter(
+    (section) => section.trim().length > 0,
+  );
 
   if (evidenceSections.length === 0) {
     return {
       plan: path.basename(planPath),
       found: false,
-      reason: 'no VALIDATION_EVIDENCE section found',
+      reason: 'no validation evidence section found',
     };
   }
 
@@ -114,7 +232,7 @@ function checkPlanForSpecialistReview(planPath) {
     reason: found
       ? matchedTrivial.length > 0
         ? 'TRIVIAL slice — specialist review exempt'
-        : 'specialist review evidence found in VALIDATION_EVIDENCE'
+        : 'specialist review evidence found in the validation evidence section'
       : 'no specialist review evidence found',
   };
 }
@@ -157,13 +275,13 @@ if (wipPlans.length === 0) {
       gate: 'specialist-review',
       tier: 1,
       check:
-        'Each [WIP] plan with implementation slices must have specialist review evidence in VALIDATION_EVIDENCE before 05-green-testing is dispatched.',
+        'Each [WIP] plan with implementation slices must have specialist review evidence in its validation evidence section (## Latest validation evidence) before 05-green-testing is dispatched.',
       wipPlans: wipPlans.length,
       planResults: results,
     },
     fixHint: allFound
       ? 'Specialist review evidence confirmed.'
-      : "Dispatch 1 Tier-3 specialist (e.g., implementation-pattern-scout or the domain-aligned scout) to review each FULL 04-implementing slice BEFORE dispatching 05-green-testing. TRIVIAL slices (docs, comments, formatting, plan-only) skip specialist review — record 'severity: TRIVIAL' in VALIDATION_EVIDENCE. Record APPROVE/REQUEST_CHANGES verdicts in the plan's VALIDATION_EVIDENCE section.",
+      : "Dispatch 1 Tier-3 specialist (e.g., implementation-pattern-scout or the domain-aligned scout) to review each FULL 04-implementing slice BEFORE dispatching 05-green-testing. TRIVIAL slices (docs, comments, formatting, plan-only) skip specialist review — record 'severity: TRIVIAL' in the plan's validation evidence section. Record APPROVE/REQUEST_CHANGES verdicts in the plan's `## Latest validation evidence` section.",
     owner: 'orchestrator (Agent Zero)',
   };
 

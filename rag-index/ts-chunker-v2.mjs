@@ -29,6 +29,7 @@
  * node rag-index/ts-chunker-v2.mjs --json --source src/neat.ts
  * ```
  */
+/* global process */
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -36,19 +37,17 @@ import {
   fail,
   parseCliArgs,
   printHelp,
-  toRepoRelative,
   writeJsonOrText,
 } from './cli-utils.mjs';
-import { repoRoot } from './init-schema.mjs';
 import {
-  countWords,
   createTypeScriptProject,
+  getTsMorphNode,
   loadExportedTypeScriptDeclarations,
+  releaseTypeScriptProject,
   resolveJsdocSummaryText,
   resolveSignatureText,
   resolveTypeScriptSourcePaths,
 } from './ts-chunker.mjs';
-import { Node } from 'ts-morph';
 
 /** Hard maximum body text length — never exceed. */
 const HARD_MAX_CHARS = 2048;
@@ -73,6 +72,9 @@ const OVERLAP_CHARS = 256;
  * Phase 3: For each substantive declaration, apply sub-chunking if needed.
  * Phase 4: Assign sequential chunk indices within each file.
  *
+ * The flat array is the concatenation of the per-file groups produced by
+ * {@link chunkTypeScriptSourcesV2Stream}, in the same order.
+ *
  * @param {object} [options={}] - Chunking options.
  * @param {string[]} [options.sourcePaths] - Explicit source file paths to chunk.
  * @param {string[]} [options.patterns] - Glob patterns for source files.
@@ -83,57 +85,176 @@ const OVERLAP_CHARS = 256;
 export async function chunkTypeScriptSourcesV2(options) {
   /* istanbul ignore next -- defensive: always called with options from main() or tests */
   if (options == null) options = {};
-  const exportedDeclarations =
-    await loadExportedTypeScriptDeclarations(options);
-  const fileGroups = groupByFilePath(exportedDeclarations);
+
   const allChunks = [];
+  for await (const group of chunkTypeScriptSourcesV2Stream(options)) {
+    allChunks.push(...group.chunks);
+  }
+  return allChunks;
+}
 
-  for (const [filePath, fileDeclarations] of fileGroups) {
-    const modulePath = deriveModulePath(filePath);
-    const { reexports, substantive } = partitionDeclarations(fileDeclarations);
+/**
+ * Stream the TypeScript chunks of every source file, one file at a time.
+ *
+ * The ts-morph AST is released as soon as the last group was produced, so the
+ * resident chunk set no longer scales with the size of the corpus. The groups
+ * are produced in the same file order the flat array uses, so the flat array is
+ * the concatenation of the yielded groups.
+ *
+ * OWNERSHIP: when `options.project` is supplied, the CALLER owns that project
+ * and it is NOT released here. A project created by this function IS released
+ * before the generator completes.
+ *
+ * @param {object} [options={}] - Chunking options.
+ * @param {string[]} [options.sourcePaths] - Explicit source file paths to chunk.
+ * @param {string[]} [options.patterns] - Glob patterns for source files.
+ * @param {string[]} [options.ignore] - Glob patterns to ignore.
+ * @param {object} [options.project] - Pre-created ts-morph Project instance.
+ * @yields {{ file_path: string, chunks: Array<import('./chunker.d.mts').TypeScriptChunkV2> }} One group per source file.
+ * @returns {AsyncGenerator<{ file_path: string, chunks: Array<import('./chunker.d.mts').TypeScriptChunkV2> }, void, void>} Per-file chunk groups.
+ *
+ * @example
+ * ```js
+ * for await (const { file_path, chunks } of chunkTypeScriptSourcesV2Stream({ sourcePaths })) {
+ *   console.log(file_path, chunks.length);
+ * }
+ * ```
+ */
+export async function* chunkTypeScriptSourcesV2Stream(options) {
+  /* istanbul ignore next -- defensive: always called with options from main() or tests */
+  if (options == null) options = {};
 
-    const chunks = [];
+  const sourcePaths = await resolveTypeScriptSourcePaths(options);
+  // Nothing to chunk: return without creating a project and without loading
+  // the ts-morph compiler at all.
+  if (sourcePaths.length === 0) return;
 
-    // Merge re-exports into a module-index chunk.
-    if (reexports.length > 0) {
-      chunks.push(createModuleIndexChunk(filePath, modulePath, reexports));
-    }
+  const callerOwnsProject = options.project != null;
+  const project = options.project ?? createTypeScriptProject(options);
 
-    // Chunk each substantive declaration.
-    for (const declaration of substantive) {
-      const declarationChunks = chunkDeclaration(
-        declaration,
-        filePath,
-        modulePath,
-      );
-      chunks.push(...declarationChunks);
-    }
+  // Holder for the live ts-morph nodes. The `finally` block clears the
+  // properties, so the AST becomes collectable BEFORE the project that owns
+  // it is released.
+  const liveNodes = { declarations: null, fileGroups: null };
 
-    // Assign sequential chunk indices within this file.
-    chunks.forEach((chunk, chunkIndex) => {
-      chunk.chunk_index = chunkIndex;
+  try {
+    liveNodes.declarations = await loadExportedTypeScriptDeclarations({
+      ...options,
+      project,
+      sourcePaths,
     });
+    liveNodes.fileGroups = groupByFilePath(liveNodes.declarations);
+    // The flat holder is redundant once the groups own the entries: dropping
+    // it here lets the per-file entries be collected as each group is
+    // consumed, instead of keeping every entry alive until the very end.
+    liveNodes.declarations = null;
 
-    // Second pass: resolve parent_chunk_id for depth=1 sub-chunks.
-    // Each depth=1 chunk belongs to the nearest preceding depth=0 chunk.
-    let lastParentIndex = null;
-    for (const chunk of chunks) {
-      let depth = chunk.depth;
-      /* istanbul ignore next -- defensive: chunk always has depth set by buildTypeScriptChunk */
-      if (depth == null) depth = 0;
-      if (depth === 0) {
-        lastParentIndex = chunk.chunk_index;
+    for (const filePath of [...liveNodes.fileGroups.keys()]) {
+      const fileDeclarations = liveNodes.fileGroups.get(filePath);
+      liveNodes.fileGroups.delete(filePath);
+      const chunks = chunkFileDeclarations(filePath, fileDeclarations);
+
+      // The group was produced, so the source file that owns it (and the
+      // TypeScript AST behind it) is released now: the resident AST does not
+      // scale with the size of the corpus.
+      if (!callerOwnsProject) {
+        releaseChunkedSourceFile(project, fileDeclarations);
       }
-      /* istanbul ignore next -- defensive: depth is always 0 or 1, and parent always precedes children */
-      if (depth > 0 && lastParentIndex !== null) {
-        chunk.parent_chunk_id = lastParentIndex;
-      }
+
+      yield {
+        file_path: filePath,
+        chunks,
+      };
     }
+  } finally {
+    // Drop the live-node references FIRST, so the AST becomes collectable,
+    // THEN release the project that owns it.
+    liveNodes.declarations = null;
+    liveNodes.fileGroups = null;
+    if (!callerOwnsProject) {
+      releaseTypeScriptProject(project);
+    }
+  }
+}
 
-    allChunks.push(...chunks);
+/**
+ * Release the source file that owns a chunked group.
+ *
+ * Removing the source file from the project forgets its ts-morph nodes and
+ * hands the TypeScript AST they belong to back to the compiler. This is safe
+ * here because a group only ever reads nodes of its OWN file: the data a
+ * re-export needs from another file is materialized up front by
+ * `materializeReexport`.
+ *
+ * @param {object} project - The ts-morph project that owns the source file.
+ * @param {Array} fileDeclarations - Exported declarations of the chunked file.
+ * @returns {void}
+ */
+function releaseChunkedSourceFile(project, fileDeclarations) {
+  const sourceFile = fileDeclarations[0]?.sourceFile;
+  if (sourceFile == null) return;
+
+  try {
+    project.removeSourceFile(sourceFile);
+  } catch {
+    // Releasing the source file is a memory optimisation: the build must not
+    // fail when the runtime refuses to release it.
+  }
+}
+
+/**
+ * Chunk the exported declarations of a single source file.
+ *
+ * The body is shared by the flat and the streaming API, so both produce
+ * byte-identical chunk records for the same file.
+ *
+ * @param {string} filePath - Repository-relative file path.
+ * @param {Array} fileDeclarations - Exported declarations of that file.
+ * @returns {Array<import('./chunker.d.mts').TypeScriptChunkV2>} Chunks for this file.
+ */
+function chunkFileDeclarations(filePath, fileDeclarations) {
+  const modulePath = deriveModulePath(filePath);
+  const { reexports, substantive } = partitionDeclarations(fileDeclarations);
+
+  const chunks = [];
+
+  // Merge re-exports into a module-index chunk.
+  if (reexports.length > 0) {
+    chunks.push(createModuleIndexChunk(filePath, modulePath, reexports));
   }
 
-  return allChunks;
+  // Chunk each substantive declaration.
+  for (const declaration of substantive) {
+    const declarationChunks = chunkDeclaration(
+      declaration,
+      filePath,
+      modulePath,
+    );
+    chunks.push(...declarationChunks);
+  }
+
+  // Assign sequential chunk indices within this file.
+  chunks.forEach((chunk, chunkIndex) => {
+    chunk.chunk_index = chunkIndex;
+  });
+
+  // Second pass: resolve parent_chunk_id for depth=1 sub-chunks.
+  // Each depth=1 chunk belongs to the nearest preceding depth=0 chunk.
+  let lastParentIndex = null;
+  for (const chunk of chunks) {
+    let depth = chunk.depth;
+    /* istanbul ignore next -- defensive: chunk always has depth set by buildTypeScriptChunk */
+    if (depth == null) depth = 0;
+    if (depth === 0) {
+      lastParentIndex = chunk.chunk_index;
+    }
+    /* istanbul ignore next -- defensive: depth is always 0 or 1, and parent always precedes children */
+    if (depth > 0 && lastParentIndex !== null) {
+      chunk.parent_chunk_id = lastParentIndex;
+    }
+  }
+
+  return chunks;
 }
 
 /**
@@ -204,11 +325,11 @@ function isReexport(declaration) {
   // A re-export is a declaration whose actual source file differs from the
   // file it was exported from (i.e., the declaration was resolved from another
   // module via `export { X } from '...'` or `export * as X from '...'`).
-  const declFilePath = toRepoRelative(
-    /* istanbul ignore next -- defensive: declaration always has a source file */
-    declaration.declaration.getSourceFile?.().getFilePath?.() ?? '',
-  );
-  return Boolean(declFilePath) && declFilePath !== declaration.file_path;
+  //
+  // The classification is MATERIALIZED while every source file is still
+  // resident, so chunking a file never reads a node that belongs to another
+  // file. See `materializeReexport` in `ts-chunker.mjs`.
+  return declaration.reexport !== null && declaration.reexport !== undefined;
 }
 
 /**
@@ -224,17 +345,11 @@ function createModuleIndexChunk(filePath, modulePath, reexports) {
   const bodyText = [
     `Module: ${filePath}`,
     `Re-exports: ${symbolNames.join(', ')}`,
-    ...reexports.map((decl) => {
-      /* istanbul ignore next -- defensive: declaration always has getText */
-      const text = cleanWhitespace(decl.declaration.getText?.() ?? '');
-      return text;
-    }),
+    ...reexports.map((decl) => cleanWhitespace(decl.reexport.text)),
   ].join('\n');
 
-  /* istanbul ignore next -- defensive: reexports always have declarations with positions */
-  const charEnd = reexports.at(-1)?.declaration.getEnd?.() ?? 0;
-  /* istanbul ignore next -- defensive: reexports always have declarations with positions */
-  const charStart = reexports[0]?.declaration.getStart?.() ?? 0;
+  const charEnd = reexports.at(-1)?.reexport.end ?? 0;
+  const charStart = reexports[0]?.reexport.start ?? 0;
 
   return {
     body_text: bodyText,
@@ -270,6 +385,8 @@ function createModuleIndexChunk(filePath, modulePath, reexports) {
  * @returns {Array<import('./chunker.d.mts').TypeScriptChunkV2>} Chunks for this declaration.
  */
 function chunkDeclaration(declaration, filePath, modulePath) {
+  const Node = getTsMorphNode();
+
   const {
     declaration: declNode,
     symbol_name: symbolName,
@@ -950,6 +1067,8 @@ function buildTypeScriptChunk(params) {
  * @returns {string} One of: 'function', 'class', 'interface', 'type', 'variable'.
  */
 function resolveExportType(declaration) {
+  const Node = getTsMorphNode();
+
   if (Node.isFunctionDeclaration(declaration)) return 'function';
   if (Node.isClassDeclaration(declaration)) return 'class';
   if (Node.isInterfaceDeclaration(declaration)) return 'interface';

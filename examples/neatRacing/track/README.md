@@ -174,6 +174,14 @@ radius and the bright stroke covers the inner-to-outer radius band, so the
 matte slab below never shows through as a black outline. There are no
 vertical pillars or side faces.
 
+THE START LINE IS AN ALONG-TRACK BAND: the GREEN 2-hex start line (plan
+slice P5-S27-2, AC-104) is painted across the roadway in the EXISTING
+green fill + edge tokens. It rides on a NEW along-track classification
+(`./road-edge.start-line` - the forward arc length along the published
+closed spline polyline), so the EXPORTED `TileColorway` surface stays at
+its FOUR members: the band tiles keep their 'road' colorway and the
+green/yellow/red border rings beyond the track edge stay untouched.
+
 The honeycomb lattice is derived from the same track geometry that builds
 the 0.5 m slab ribbon, so the paint aligns with the ribbon and its edge
 markers rather than being a separate approximation. The sampled lattice
@@ -431,14 +439,15 @@ Darker yellow border-line fill color (0-255 RGB).
 
 ```ts
 resolveEdgeColor(
-  colorway: TileColorway,
-  neighborColorway: TileColorway | null,
+  tile: RoadEdgeHexLatticeTile,
+  neighborTile: RoadEdgeHexLatticeTile | null,
 ): readonly [number, number, number]
 ```
 
-Chooses the visible color for a shared edge. The colorway with higher
+Chooses the visible color for a shared edge. The paint with higher
 precedence wins, matching the border-line ordering (road → red → yellow →
-green). Boundary edges use the tile's own edge color.
+green) with the start-line band sitting between the plain road paint and
+the border ladder. Boundary edges use the tile's own edge color.
 
 ### ROAD_EDGE_BORDER_GREEN_M
 
@@ -502,6 +511,29 @@ Tile colorway emitted for one honeycomb cell.
 `road` covers the drivable ribbon and its curb band; the three border
 colorways name the successive rings painted beyond the track edge.
 
+### tileEdgeColor
+
+```ts
+tileEdgeColor(
+  tile: RoadEdgeHexLatticeTile,
+): readonly [number, number, number]
+```
+
+The EDGE (stroke) color of one tile.
+
+### tileFillColor
+
+```ts
+tileFillColor(
+  tile: RoadEdgeHexLatticeTile,
+): readonly [number, number, number]
+```
+
+The FILL color of one tile.
+
+The start-line band paints in the EXISTING green fill token, so the band
+reads as a green stripe across the racing line without a new palette.
+
 ### tileOuterEdgeVertices
 
 ```ts
@@ -513,6 +545,17 @@ tileOuterEdgeVertices(
 ```
 
 Computes the two outer vertices that form an edge of a tile.
+
+### tilePaintPrecedence
+
+```ts
+tilePaintPrecedence(
+  tile: RoadEdgeHexLatticeTile,
+): number
+```
+
+The paint PRECEDENCE of one tile: the border ladder rank of its colorway,
+or the start-line band rank when the tile carries the band paint.
 
 ## track/track.edge.ts
 
@@ -5922,6 +5965,110 @@ const indices = selectPeopleRingSampleIndices(
 
 console.log(indices.length); // 10 - one midpoint per bleacher pair
 ```
+
+## track/road-edge.start-line.ts
+
+The GREEN 2-hex start line: the ALONG-TRACK classification seam of the
+neatRacing hexagonal neon road-edge painter (plan slice P5-S27-2,
+AC-104).
+
+THE START LINE IS AN ALONG-TRACK QUESTION, NOT A CROSS-TRACK ONE: the
+road-edge painter classifies every honeycomb tile by its distance PAST the
+track edge (the green/yellow/red border rings), so the start/finish line -
+which lies ON the drivable surface - has no home in that channel. This
+module owns the missing axis: the forward ARC LENGTH along the published
+closed spline polyline, measured from the start/finish plane.
+
+THE MEASURE IS THE ARC LENGTH, NEVER THE SEGMENT-0 CHORD: the track is a
+CLOSED loop, so a chord-relative measure spreads the start-line tiles over
+the whole lap (~570-810 m) instead of the first few meters. The arc is
+measured FORWARD from `splineSamples[0]` (segment 0's start point - the
+plane the lap-line detector counts the crossing on), so the band is the
+FIRST 4.0 m of the lap and is NOT centred on the line.
+
+THE BAND IS A NEW CHANNEL BESIDE THE COLORWAY, NEVER A FIFTH COLORWAY:
+the EXPORTED `TileColorway` surface stays at its four members ('road' |
+'red' | 'yellow' | 'green'), because the 'green' colorway is the BORDER
+ring beyond the track edge and every one of its tiles must sit OUTSIDE
+the roadway - a road tile can never carry it.
+
+THE WORLD/GENERATOR MIRROR: the generator plane (x, y) is mirrored into
+the world plane by `worldZ = -y`, the same handedness the slab rasterizer
+and the road-edge painter use.
+
+Determinism: every export is a pure function of the published spline
+samples and the point it is given - no RNG, no clock, no hidden state.
+
+### isWithinStartLineBand
+
+```ts
+isWithinStartLineBand(
+  arcM: number,
+  bandDepthM: number,
+): boolean
+```
+
+Whether an along-track arc position falls inside the start-line band.
+
+The band runs FORWARD from the start/finish plane (arc 0) and is NOT
+centred on it: the lap-line detector counts the crossing ON the plane, so
+the paint sits in front of it, on the first metres of the lap.
+
+Parameters:
+- `arcM` - Forward arc length from the start/finish plane, in meters.
+- `bandDepthM` - The forward depth of the band, in meters.
+
+Returns: True when the position lies inside the band.
+
+### projectOntoClosedSpline
+
+```ts
+projectOntoClosedSpline(
+  samples: readonly SplineSample[],
+  worldX: number,
+  worldZ: number,
+): StartLineProjection
+```
+
+Projects a world point onto the nearest point of the CLOSED spline
+polyline and measures its position along the lap.
+
+The closest point of the SEGMENT that owns the nearest sample wins: the
+factor along the segment is clamped to [0, 1], and the candidate wins by
+the SMALLEST squared distance (the FIRST minimum wins a tie, so the
+measure is stable).
+
+Parameters:
+- `samples` - The published closed-loop spline samples.
+- `worldX` - World x of the projected point.
+- `worldZ` - World z of the projected point (`worldZ = -y`, the same
+handedness the slab rasterizer uses).
+
+Returns: The forward arc length and the signed lateral offset.
+
+### resolveStartLineBandDepthM
+
+```ts
+resolveStartLineBandDepthM(
+  hexDiameterM: number,
+): number
+```
+
+The forward depth of the start-line band for one hex tile diameter: TWO
+hexes deep.
+
+The depth is DERIVED from the hex diameter instead of being spelled out,
+so the band can never drift away from the tile size it is painted on.
+
+Parameters:
+- `hexDiameterM` - The corner-to-corner diameter of one hex tile, in
+meters.
+
+Returns: The forward depth of the band, in meters.
+
+### StartLineProjection
+
+One projected position of a world point on the closed spline polyline.
 
 ## track/right-world.prop-sizes.ts
 

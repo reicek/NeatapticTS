@@ -57,6 +57,10 @@ jest.unstable_mockModule('./extract-cross-refs.mjs', () => ({
   extractCrossRefs: mockExtractCrossRefs,
 }));
 
+// The published corpus contract owns the family list, so the family-COUNT pin in this file
+// tracks the published contract instead of a hand-written number.
+const { CORPUS_SOURCES } = await import('./corpus-sources.mjs');
+
 const { buildEntityGraph } = await import('./build-entity-graph.mjs');
 
 function makeMockClient({ docRows = [], chunkRows = [], entityRows = [] } = {}) {
@@ -752,8 +756,8 @@ describe('build-entity-graph: collectDocDocuments', () => {
 
     const result = await buildEntityGraph({ dryRun: true });
     expect(result.docEntityCount).toBe(2);
-    // fg should be called 7 times (7 DOC_ENTITY_SOURCES)
-    expect(mockFg).toHaveBeenCalledTimes(7);
+    // fg should be called once per published corpus family (CORPUS_SOURCES.length)
+    expect(mockFg).toHaveBeenCalledTimes(CORPUS_SOURCES.length);
   });
 });
 

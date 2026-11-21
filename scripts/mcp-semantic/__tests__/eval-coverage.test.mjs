@@ -666,7 +666,6 @@ describe('eval-runner remaining coverage', () => {
       compact: true,
       read_top_result: true,
       auto_fallback: true,
-      include_code_only: false,
     });
   });
 

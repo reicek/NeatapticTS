@@ -29,6 +29,7 @@ import {
   toRepoRelative,
   writeJsonOrText,
 } from './cli-utils.mjs';
+import { CORPUS_SOURCES } from './corpus-sources.mjs';
 import { getFreshnessProof, isFreshDocument } from './freshness.mjs';
 import { defaultDatabasePath, repoRoot } from './init-schema.mjs';
 
@@ -44,11 +45,10 @@ const MANIFEST_PATH = path.join(
 const PLAN_MAX_SYNC_WAIT_MS = 60_000;
 
 const DEFAULT_FAMILY_GATING = {
-  readme: true,
   'ts-source': true,
   plan: true,
   demo: true,
-  benchmark: true,
+  test: true,
   'root-doc': true,
   skill: true,
   agent: true,
@@ -57,11 +57,10 @@ const DEFAULT_FAMILY_GATING = {
 };
 
 const DEFAULT_FAMILY_MAX_SYNC_WAIT_MS = {
-  readme: 0,
   'ts-source': 0,
   plan: PLAN_MAX_SYNC_WAIT_MS,
   demo: 0,
-  benchmark: 0,
+  test: 0,
   'root-doc': 0,
   'completed-plan': 0,
 };
@@ -73,11 +72,10 @@ const DEFAULT_FAMILY_MAX_SYNC_WAIT_MS = {
  * The signal is warning-only and applies to deleted/missing files only.
  */
 const DEFAULT_FAMILY_MAX_AGE_MS = {
-  readme: null,
   'ts-source': null,
   plan: null,
   demo: null,
-  benchmark: null,
+  test: null,
   'root-doc': null,
   skill: null,
   agent: null,
@@ -87,42 +85,6 @@ const DEFAULT_FAMILY_MAX_AGE_MS = {
 const STALE_FIX_HINT = `Stale paths detected. Run: ${REBUILD_COMMAND}`;
 const MISSING_FIX_HINT = `Missing paths detected. Run: ${REBUILD_COMMAND}`;
 const GENERIC_FIX_HINT = `Run: ${REBUILD_COMMAND}`;
-
-const CORPUS_SOURCES = [
-  { family: 'readme', patterns: ['src/**/README.md'] },
-  {
-    family: 'ts-source',
-    patterns: ['src/**/*.ts'],
-    ignore: ['src/**/*.d.ts', 'src/**/*.test.ts', 'src/**/*.spec.ts'],
-  },
-  {
-    family: 'plan',
-    patterns: ['plans/**/*.md'],
-    ignore: ['plans/completed/**'],
-  },
-  { family: 'completed-plan', patterns: ['plans/completed/**/*.md'] },
-  { family: 'demo', patterns: ['examples/**/README.md', 'examples/**/*.ts'] },
-  {
-    family: 'benchmark',
-    patterns: ['benchmarks/README.md', 'benchmarks/**/*.test.ts'],
-  },
-  {
-    family: 'root-doc',
-    patterns: ['README.md', 'STYLEGUIDE.md', 'CONTRIBUTING.md'],
-  },
-  {
-    family: 'skill',
-    patterns: ['.github/skills/**/SKILL.md'],
-  },
-  {
-    family: 'agent',
-    patterns: ['.github/agents/*.agent.md'],
-  },
-  {
-    family: 'copilot-instructions',
-    patterns: ['.github/copilot-instructions.md'],
-  },
-];
 
 export async function discoverFamilyAssignments(sources = CORPUS_SOURCES) {
   const assignments = new Map();

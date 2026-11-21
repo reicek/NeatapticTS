@@ -322,7 +322,7 @@ describe('per-family max_age_ms sanity signal (P3-S1-B)', () => {
       const manifest = await writeFreshnessManifest({}, outputPath);
 
       expect(Object.values(manifest.families).map((entry) => entry.max_age_ms)).toEqual(
-        Array(10).fill(null),
+        Array(9).fill(null),
       );
     });
 
@@ -340,7 +340,7 @@ describe('per-family max_age_ms sanity signal (P3-S1-B)', () => {
       );
 
       expect(manifest.families.plan.max_age_ms).toBe(86_400_000);
-      expect(manifest.families.readme.max_age_ms).toBe(null);
+      expect(manifest.families['root-doc'].max_age_ms).toBe(null);
     });
 
     it('normalizes invalid max_age_ms values to null', async () => {
@@ -348,7 +348,7 @@ describe('per-family max_age_ms sanity signal (P3-S1-B)', () => {
       const previousManifest = makeManifest({
         plan: { max_age_ms: 'bogus' },
         demo: { max_age_ms: 0 },
-        benchmark: { max_age_ms: -5 },
+        test: { max_age_ms: -5 },
       });
 
       const manifest = await writeFreshnessManifest(
@@ -360,7 +360,7 @@ describe('per-family max_age_ms sanity signal (P3-S1-B)', () => {
 
       expect(manifest.families.plan.max_age_ms).toBe(null);
       expect(manifest.families.demo.max_age_ms).toBe(null);
-      expect(manifest.families.benchmark.max_age_ms).toBe(null);
+      expect(manifest.families.test.max_age_ms).toBe(null);
     });
 
     it('persists max_age_ms to the written manifest file', async () => {

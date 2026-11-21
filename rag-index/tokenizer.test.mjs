@@ -96,4 +96,64 @@ describe('sanitizeFtsQuery', () => {
     // Single uppercase letter doesn't match ACRONYM_PATTERN (requires 2+ chars)
     expect(sanitizeFtsQuery('X')).toBe('X*');
   });
+
+  describe('threshold-gated join (implicit AND at or below three tokens)', () => {
+    it('keeps the implicit-AND space join at the pinned threshold of three tokens', () => {
+      expect(sanitizeFtsQuery('alpha beta gamma')).toBe('alpha* beta* gamma*');
+    });
+
+    it('OR-joins the tokens with the uppercase FTS5 keyword at four tokens', () => {
+      expect(sanitizeFtsQuery('alpha beta gamma delta')).toBe('alpha* OR beta* OR gamma* OR delta*');
+    });
+
+    it('preserves identifier and acronym formatting while OR-joining four tokens', () => {
+      expect(sanitizeFtsQuery('network.activate NEAT selection code')).toBe(
+        '"network.activate" OR NEAT OR selection* OR code*',
+      );
+    });
+
+    it('OR-joins a plan-shaped natural-language query so no chunk must carry every token', () => {
+      expect(sanitizeFtsQuery('design specification for network activation runtime')).toBe(
+        'design* OR specification* OR for* OR network* OR activation* OR runtime*',
+      );
+    });
+
+    it('OR-joins the canonical plan-shaped fixture query', () => {
+      expect(sanitizeFtsQuery('how should the network activation runtime be specified in the plan')).toBe(
+        'how* OR should* OR the* OR network* OR activation* OR runtime* OR be* OR specified* OR in* OR the* OR plan*',
+      );
+    });
+  });
+
+  describe('reserved FTS5 keyword tokens', () => {
+    it('quotes a user token that is exactly the reserved keyword AND', () => {
+      expect(sanitizeFtsQuery('AND')).toBe('"AND"');
+    });
+
+    it('quotes a user token that is exactly the reserved keyword OR', () => {
+      expect(sanitizeFtsQuery('OR')).toBe('"OR"');
+    });
+
+    it('quotes a user token that is exactly the reserved keyword NOT', () => {
+      expect(sanitizeFtsQuery('NOT')).toBe('"NOT"');
+    });
+
+    it('quotes a reserved keyword user token inside a space-joined query', () => {
+      expect(sanitizeFtsQuery('alpha OR beta')).toBe('alpha* "OR" beta*');
+    });
+
+    it('keeps a reserved keyword user token quoted when the query is OR-joined', () => {
+      expect(sanitizeFtsQuery('alpha OR beta gamma delta')).toBe(
+        'alpha* OR "OR" beta* OR gamma* OR delta*',
+      );
+    });
+
+    it('keeps a lowercase reserved keyword word as a plain word', () => {
+      expect(sanitizeFtsQuery('or')).toBe('or*');
+    });
+
+    it('does not quote an acronym that merely starts with a reserved keyword', () => {
+      expect(sanitizeFtsQuery('ANDROID')).toBe('ANDROID');
+    });
+  });
 });

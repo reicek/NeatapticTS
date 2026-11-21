@@ -703,16 +703,20 @@ equality check against the constant alone does NOT match. The suffix stays
 because the resolver's race-mode parameter exists only to name the mode
 here, and the resolver arity is pinned by the byte-frozen RED homes.
 
-### NEATRACING_SIM_WORKER_SPAWN_ALONG_LEAD_M
+### NEATRACING_SIM_WORKER_SPAWN_BEHIND_CLEARANCE_M
 
-Along-track lead distance (meters past segment 0's START point) where the
-first fleet car spawns, matching the phase-1 host spawn recipe exactly
-(segment-0 chord heading, 2 m along it) so the AC-026 baseline run keeps
-the same opening pose the host used.
+The clearance (meters) the fleet grid stands FULLY BEHIND the green start
+line, measured to the car CENTRE.
 
-### NEATRACING_SIM_WORKER_SPAWN_GRID_PITCH_M
+THE DERIVED CLEARANCE: the value is NEVER a literal - it IS the ONE
+published car length (`NEATRACING_VOXEL_CAR_LENGTH_M`, 4.5 m), so a drift
+in the car's published size moves the grid WITH it. Measured to the
+centre, the car's NOSE stands 2.25 m upstream of the plane and its TAIL
+6.75 m upstream, so the WHOLE footprint stays behind the line and can
+never overlap the forward green band `[0, 4.0] m`.
 
-Line-astern grid pitch (meters) between consecutive fleet spawn slots.
+The constant is EXPORTED so the GREEN lane can cross-check the production
+value against the RED home's test-local literal.
 
 ### NEATRACING_SIM_WORKER_SPAWN_PATH_ANCHOR_EPS_M
 
@@ -806,6 +810,82 @@ Neutral control sample replayed for car 0 in BOTH race modes before the
 host has sent any sample. Frozen: it is a constant, never a live
 accumulator.
 
+### resolveSimWorkerArmedLapLineDetectorStep
+
+```ts
+resolveSimWorkerArmedLapLineDetectorStep(
+  car: PhysicsCarState,
+  prevSide: number | null,
+  started: boolean,
+  firstSegment: TrackSegment | undefined,
+): { crossing: boolean; nextSide: number | null; started: boolean; }
+```
+
+One step of the ARMED worker lap-line detector: the phase-1 detector plus
+the PRE-PLANE arming the AC-105 behind-the-line law demands.
+
+Educational note — WHY THE ARMING EXISTS: the AC-105 start grid moves the
+WHOLE fleet UPSTREAM of the start-line plane, so at t=0 every car sits on
+the NEGATIVE side of it. The phase-1 detector latches the side of the
+FIRST QUALIFYING SAMPLE and counts ANY sign flip, so a fleet that starts
+behind the line latches `-1` and banks a SPURIOUS lap the moment it
+crosses the plane forward. The arming splits "crossing the line at the
+START" from "completing a lap": while the detector is NOT armed, a
+QUALIFYING sample BEHIND the plane never latches a side and never banks a
+crossing, and the first qualifying sample IN FRONT of the plane arms the
+detector WITHOUT banking a lap. Once armed the phase-1 semantics run
+UNCHANGED (the lateral-gate reset, the along deadband, the
+first-qualifying-sample latch and the sign-flip crossing), so the first
+GENUINE lap completion banks lap 1.
+
+Educational note — WHY THE ARMING SURVIVES THE GATE RESET: leaving the
+lateral gate drops the latched side (a car that wandered off can never
+bank a stale side), but it must NOT un-arm the detector — the arming
+records that the car has already crossed the plane once, which the gate
+reset says nothing about. The arming is therefore PER CAR (car 0 AND
+every rival: the rival-propagation tick runs the SAME detector for every
+rival, so a fleet that starts behind the line would otherwise fire a
+SPURIOUS rival-swap event at the race start) and it lives in the INTERNAL
+session state, so the PUBLIC snapshot shape never grows a field.
+
+Parameters:
+- `car` - Fleet car state (the tick's entering pose).
+- `prevSide` - Latched along-track side from the previous qualifying
+sample, or null before the first one.
+- `started` - Whether the detector has already been armed by a forward
+crossing of the start-line plane.
+- `firstSegment` - Segment 0 of the owned track (or undefined when the
+geometry is degenerate; the detector then never reports a crossing).
+
+Returns: The crossing verdict plus the baseline and the arming flag to
+carry forward.
+
+### resolveSimWorkerChordSpawnGrid
+
+```ts
+resolveSimWorkerChordSpawnGrid(
+  profile: TrackEdgeProfile,
+  firstSegment: TrackSegment,
+  agentCount: number,
+): PhysicsCarSpawnPose[]
+```
+
+Lays the side-by-side grid on the ONE station of the legacy chord walk.
+
+Educational note: the hand-authored fixture rings do NOT anchor their
+spline at segment 0's start, so their grid walks segment 0's chord - and
+the upstream direction of that walk is the chord's BACKWARD direction, so
+the ONE shared station sits `-clearance` behind segment 0's start point.
+The lanes, the room and the clamp are the SAME law the road-anchored walk
+uses.
+
+Parameters:
+- `profile` - The published edge profile of the loop.
+- `firstSegment` - Segment 0 of the owned track.
+- `agentCount` - Fleet size (>= 1).
+
+Returns: One spawn pose per fleet slot, ordered car 0 first.
+
 ### resolveSimWorkerFleetSpawnPoses
 
 ```ts
@@ -817,17 +897,16 @@ resolveSimWorkerFleetSpawnPoses(
 
 Resolves the deterministic fleet spawn poses from the owned track.
 
-Educational note: car 0 inherits the phase-1 host recipe exactly (a 2 m
-lead past segment 0's start on the start straight), while cars behind it
-line up astern at fixed grid pitch so the fleet start stays a function of
-the init config alone (no RNG anywhere). The formal child-seed system is
-the byte-parity slice's job (P2-S1-C); this slice derives per-car seeds by
-the documented index offset when it builds the fleet. THE PATH REFINEMENT
-(the P4-S2 live rival lane): on the generated layouts the grid is laid on
-the ROAD-ANCHORED spline (the road the autopilot reads) instead of the
-segment-0 control chord the spline diverges from; layouts whose spline
-does not anchor at the segment-0 start (the hand-authored fixture rings)
-keep the phase-1 chord walk verbatim.
+Educational note: the grid is the AC-105 START GRID - the WHOLE fleet
+(the player AND every rival) waits FULLY BEHIND the green start line,
+SIDE BY SIDE on ONE shared station, one distinct lane each. The
+placement is a PURE function of the track geometry and the fleet size (no
+RNG, no clock anywhere), and every pose stays inside the published
+asymmetric half-width READ AT ITS OWN SPAWN STATION. THE PATH: on the
+generated layouts the station sits on the ROAD-ANCHORED spline (the road
+the autopilot reads) at the lap tail; on the hand-authored fixture rings
+(whose spline does not anchor at segment 0's start) it sits on segment 0's
+chord, `clearance` behind its start point.
 
 Parameters:
 - `trackSpec` - Owned track geometry.
@@ -943,29 +1022,138 @@ Parameters:
 
 Returns: The rung the rules machine seeds from.
 
+### resolveSimWorkerSpawnBoundM
+
+```ts
+resolveSimWorkerSpawnBoundM(
+  profile: TrackEdgeProfile,
+  station: SimWorkerSpawnStation,
+  x: number,
+  y: number,
+): number
+```
+
+Resolves the published half-width bound at one spawn station, for the side
+the pose actually sits on.
+
+Parameters:
+- `profile` - The published edge profile of the loop.
+- `station` - The published station edge (the half-width pair).
+- `x` - The pose's generator-plane x, in meters.
+- `y` - The pose's generator-plane y, in meters.
+
+Returns: The side-resolved half-width at the station, in meters.
+
+### resolveSimWorkerSpawnLaneOffsetsM
+
+```ts
+resolveSimWorkerSpawnLaneOffsetsM(
+  roomWidthM: number,
+  agentCount: number,
+): number[]
+```
+
+Resolves the side-by-side lane offsets of one fleet grid.
+
+THE DERIVED LATERAL PITCH: the pitch is NOT a constant - it is the
+SMALLEST of the published car length and the station's own room per car,
+so a big fleet still fits inside the road while a small fleet keeps the
+cars one car-length apart. The lanes are SYMMETRIC about the path (the
+road centreline), so the grid is centred on the racing line, and car `k`
+takes lane `k`.
+
+Parameters:
+- `roomWidthM` - The station's total room (left + right), in meters.
+- `agentCount` - Fleet size (>= 1).
+
+Returns: One lateral offset per fleet slot, in car order.
+
+### resolveSimWorkerSpawnLanePose
+
+```ts
+resolveSimWorkerSpawnLanePose(
+  centreX: number,
+  centreY: number,
+  leftNormalX: number,
+  leftNormalY: number,
+  laneOffsetM: number,
+  profile: TrackEdgeProfile,
+  station: SimWorkerSpawnStation,
+): { readonly x: number; readonly y: number; readonly lateralM: number; }
+```
+
+Places one lane's car on the road, clamped to the published half-width at
+the spawn station.
+
+THE STATION-READ BOUND: the bound is the SIDE-RESOLVED published
+half-width at the car's OWN station (the road widens on the outer side of
+a corner, so the two sides differ) - never the width at the start line and
+never a hard-coded road width. The side is resolved against the station's
+own chord, and the bound is re-read after the clamp moves the car, so the
+published pose is inside the road under the side it actually sits on.
+
+Parameters:
+- `centreX` - The station's centre point x, in meters.
+- `centreY` - The station's centre point y, in meters.
+- `leftNormalX` - The path's LEFT normal x component (unit length).
+- `leftNormalY` - The path's LEFT normal y component (unit length).
+- `laneOffsetM` - The lane's lateral offset, in meters.
+- `profile` - The published edge profile of the loop.
+- `station` - The published station edge (the half-width pair).
+
+Returns: The car's pose and the lateral offset it settled at.
+
+### resolveSimWorkerSpawnRoomM
+
+```ts
+resolveSimWorkerSpawnRoomM(
+  station: SimWorkerSpawnStation,
+  profile: TrackEdgeProfile,
+): { readonly leftRoomM: number; readonly rightRoomM: number; }
+```
+
+Resolves the published room on each side of the road centreline at one
+spawn station.
+
+THE ASYMMETRIC ROOM: the road is WIDER on the outer side of a corner, so
+the room is asymmetric - and WHICH side is the outer one is a property of
+the WHOLE loop (the profile publishes the outer side's sign), not of the
+local turn. On a counter-clockwise loop the outer side is the RIGHT of
+travel, so the LEFT room is the inner half-width; on a clockwise loop the
+two sides swap.
+
+Parameters:
+- `station` - The published station edge (the half-width pair).
+- `profile` - The published edge profile of the loop.
+
+Returns: The room to the LEFT and to the RIGHT of the path, in meters.
+
 ### resolveSimWorkerSplineSpawnGrid
 
 ```ts
 resolveSimWorkerSplineSpawnGrid(
   path: { samples: readonly SplineSample[]; loopLengthM: number; },
+  profile: TrackEdgeProfile,
   agentCount: number,
 ): PhysicsCarSpawnPose[]
 ```
 
-Lays the line-astern grid along one road-anchored spawn path.
+Lays the side-by-side grid on ONE station of the road-anchored spawn path.
 
-Educational note: the lead and the pitch stay EXACTLY the phase-1 law's
-values (2 m lead, 12 m astern pitch) - only the PATH they are measured
-along changes, from the control chord to the road the spline publishes.
-Each pose reads its span chord's direction as the heading, so the spawn
-heading IS the road direction the autopilot's own lookahead reads, and the
-in-span interpolation keeps the pose on the lane-center curve between
-samples. The walk wraps the closed loop, so an oversized agent count still
-resolves deterministic poses (the init cap of 32 keeps the grid far below
-one lap on the served layouts anyway).
+Educational note: the law is the AC-105 START GRID - the WHOLE fleet (the
+player AND every rival) waits FULLY BEHIND the green start line, SIDE BY
+SIDE on ONE shared station, so no car starts on or above the line. The
+upstream direction of the closed-loop arc frame is the lap TAIL, so the
+station is `loopLengthM - clearance` (the wrap is MANDATORY: the raw
+`-clearance` would clamp onto sample 0, which is ON the line). Each lane
+is offset along the SPAN CHORD's normal - the frame the pose and the
+heading already use - so a lateral offset can never slip the car along the
+road, and the lane's lateral offset is clamped to the published
+half-width READ AT THIS STATION.
 
 Parameters:
 - `path` - The road-anchored spawn path (samples + loop length).
+- `profile` - The published edge profile of the loop.
 - `agentCount` - Fleet size (>= 1).
 
 Returns: One spawn pose per fleet slot, ordered car 0 first.
@@ -1001,6 +1189,30 @@ Parameters:
 
 Returns: The ordered spline samples plus the closed-loop length, or `null`
 when the spline does not anchor at segment 0's start (or degenerates).
+
+### resolveSimWorkerSplineSpawnStation
+
+```ts
+resolveSimWorkerSplineSpawnStation(
+  edges: readonly TrackSplineEdge[],
+  boundaryIndex: number,
+  fraction: number,
+): SimWorkerSpawnStation
+```
+
+Resolves the published edge AT one spline station.
+
+THE STATION-READ EDGE: the road's width changes along the loop, so the
+half-width is READ AT THE STATION - the linear interpolation between the
+two published sample edges that own it - instead of the nearest sample's
+edge (which can be a metre away and centimetres narrower or wider).
+
+Parameters:
+- `edges` - The published per-sample edges of the loop.
+- `boundaryIndex` - Index of the sample whose span owns the station.
+- `fraction` - The station's fraction along that span (0..1).
+
+Returns: The published station edge.
 
 ### serializeSimWorkerRivalMindWeights
 
@@ -1039,6 +1251,15 @@ per-car child seed, serialized in positional connection order.
 ### SimWorkerSessionState
 
 Internal mutable session bag: all sim truth owned by the worker lives here.
+
+### SimWorkerSpawnStation
+
+The published road room at ONE spawn station: the half-width on each side
+of the road centreline, read AT the station.
+
+THE STATION-DEPENDENT ROOM: the road widens on the OUTER side of a corner,
+so the half-width is NOT a constant of the track - it is read at the
+station the fleet waits on (the lap tail), never at the start line.
 
 ### SimWorkerValidationError
 

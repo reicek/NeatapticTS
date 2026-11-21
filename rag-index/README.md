@@ -3,9 +3,10 @@
 A Turso (libSQL) backed retrieval system for the NeatapticTS repository. Two
 cooperating layers provide complementary coverage:
 
-- **BM25 layer** — full-text search over every textual surface: generated folder
-  READMEs, skill files, agent files, plan trackers, demo source summaries, and key
-  root docs. Exact keyword and phrase matching.
+- **BM25 layer** — full-text search over every textual surface: TypeScript sources,
+  the handwritten example READMEs and example sources, the test files, the plan
+  trackers, the skill and agent files, the copilot instructions, and the root docs.
+  Exact keyword and phrase matching.
 - **Dense embedding layer** — locally cached `all-MiniLM-L6-v2` ONNX
   sentence-transformer producing 384-dimensional vectors for each corpus chunk,
   stored as F8_BLOB quantized vectors (8-bit quantization, ~4× compression vs
@@ -141,9 +142,9 @@ Readiness states map directly to MCP behavior:
 | `model-only` | Model exists, but embeddings are absent or incomplete.     | Returns BM25 results with `dense_degraded: true`, `dense_state: "model-only"`, and `dense_reason`. |
 | `warm`       | Model exists and at least one usable embedding is present. | Uses hybrid dense ranking by default and emits `dense_state: "warm"`.                              |
 
-Rewarm whenever the corpus changes: source JSDoc regenerated into `src/**/README.md`,
-plans, skills, agents, examples, benchmarks, or root docs. The standard rewarm
-cycle is:
+Rewarm whenever the corpus changes: a TypeScript source, a plan tracker, a skill or
+agent file, an example source or README, a test file, or a root doc. The standard
+rewarm cycle is:
 
 ```sh
 npm run index:build
@@ -218,20 +219,28 @@ embeddings into JS memory.
 
 ## Corpus families
 
-Documents are collected in the following priority order and tagged with a family label:
+**Single source of truth:** `rag-index/corpus-sources.mjs`. That module publishes the
+family set (`CORPUS_SOURCES` / `CORPUS_FAMILY_NAMES`), the glob patterns and the ignore
+rules of every family, the docs-generator target roots, the generated-README exclusion
+and the handwritten-README allow-list. `build-index.mjs` and `validate-index.mjs` import
+that module instead of declaring their own copies of the corpus rules, so the builder
+and the validator can never disagree about which documents belong to the corpus. The
+table below renders that contract — when the two ever disagree, the module wins.
 
-| Priority | Family label           | Glob                                              | Chunker                                  |
-| -------- | ---------------------- | ------------------------------------------------- | ---------------------------------------- |
-| 1        | `readme`               | `src/**/README.md`                                | Markdown heading-window                  |
-| 2        | `ts-source`            | `src/**/*.ts` excluding `*.test.ts`, `*.spec.ts`, `*.d.ts` | ts-morph symbol-level (`ts-chunker.mjs`) |
-| 3        | `skill`                | `.github/skills/**/SKILL.md`                      | Markdown heading-window                  |
-| 4        | `agent`                | `.github/agents/*.agent.md`                       | Markdown heading-window                  |
-| 5        | `plan`                 | `plans/**/*.md` (excluding `plans/completed/`)    | Markdown heading-window                  |
-| 6        | `completed-plan`       | `plans/completed/**/*.md`                         | Markdown heading-window                  |
-| 7        | `demo`                 | `examples/**/README.md`, `examples/**/*.ts`       | Markdown heading-window                  |
-| 8        | `benchmark`            | `benchmarks/README.md`, `benchmarks/**/*.test.ts` | Markdown heading-window                  |
-| 9        | `root-doc`             | `README.md`, `STYLEGUIDE.md`, `CONTRIBUTING.md`   | Markdown heading-window                  |
-| 10       | `copilot-instructions` | `.github/copilot-instructions.md`                 | Markdown heading-window                  |
+The contract publishes **nine** corpus families. Every indexed document is tagged with
+exactly one family label:
+
+| Order | Family label           | Members                                                                    | Chunker                                  |
+| ----- | ---------------------- | -------------------------------------------------------------------------- | ---------------------------------------- |
+| 1     | `ts-source`            | `src/**/*.ts` minus the declarations (`*.d.ts`) and the tests (`*.test.ts`, `*.spec.ts`) | ts-morph symbol-level (`ts-chunker.mjs`) |
+| 2     | `plan`                 | `plans/**/*.md` minus `plans/completed/**` (the trackers AND their `.logs.md` companions) | Markdown heading-window |
+| 3     | `completed-plan`       | `plans/completed/**/*.md`                                                  | Markdown heading-window                  |
+| 4     | `demo`                 | the 13 handwritten example READMEs + the example sources that are not tests and not the session snapshot | Markdown heading-window |
+| 5     | `test`                 | `examples/**/*.test.ts` + `benchmarks/**/*.test.ts`                         | Markdown heading-window                  |
+| 6     | `root-doc`             | `README.md`, `STYLEGUIDE.md`, `CONTRIBUTING.md`                             | Markdown heading-window                  |
+| 7     | `skill`                | `.github/skills/**/SKILL.md`                                                | Markdown heading-window                  |
+| 8     | `agent`                | `.github/agents/*.agent.md`                                                 | Markdown heading-window                  |
+| 9     | `copilot-instructions` | `.github/copilot-instructions.md`                                           | Markdown heading-window                  |
 
 The `ts-source` family uses the **ts-morph AST chunker** (`ts-chunker.mjs`) instead of
 the text-window chunker. Each chunk covers one exported symbol (function, class,
@@ -239,6 +248,36 @@ interface, or type alias) with its full JSDoc comment, signature, and source pat
 This enables semantic search to resolve queries like "NEAT mutation add node" directly
 to the `mutate` function definition — vocabulary that does not appear verbatim in any
 README.
+
+### The handwritten allow-list
+
+The `demo` family holds the **13 handwritten example READMEs** — the closed allow-list
+the contract publishes as `HANDWRITTEN_EXAMPLE_READMES`:
+
+`examples/README.md`, `examples/asciiMaze/README.md`, `examples/evolveXor/README.md`,
+`examples/flappy_bird/README.md`, `examples/helloNetwork/README.md`,
+`examples/neatChat/README.md`, `examples/neatChat/memory/README.md`,
+`examples/neatRacing/README.md`, `examples/neatenstein/README.md`,
+`examples/neatenstein/browser-entry/README.md`, `examples/racing_curriculum/README.md`,
+`examples/sequenceReset/README.md`, `examples/shared/semantic/README.md`.
+
+Every other README below a docs-generator target root is GENERATED output and is
+excluded by `GENERATED_README_IGNORE`; the allow-list is what keeps the handwritten ones
+in the corpus. The six generator target roots are published as `DOCS_TARGET_ROOTS`
+(`src`, `examples/asciiMaze`, `examples/flappy_bird`, `examples/racing_curriculum`,
+`examples/shared/network-visualization`, `examples/neatRacing`). The generated session
+snapshot `examples/neatChat/default-pretrained-session-snapshot.ts` leaves the corpus as
+well — the contract publishes its path as `SESSION_SNAPSHOT_PATH`.
+
+### Retired families
+
+Two family labels were retired from the corpus contract. Neither owns a document any
+more, and no row of the table above names them.
+
+| Retired label | Replaced by | Why it was retired |
+| ------------- | ----------- | ----------------- |
+| `readme` | `root-doc` | Every member was generated output — the 173 `src/**/README.md` files and the 58 generated example READMEs that the docs generator owns. They duplicated the sources they were rendered from, so the three hand-authored root documents now carry the `root-doc` label and the handwritten example READMEs carry `demo`. |
+| `benchmark` | `test` | Every member was a test document. The reclassification moved the existing test documents into `test` — no test document was dropped and none was authored. |
 
 Use `--family <label>` in `query-index.mjs` or `query-dense.mjs` to restrict results
 to one family.
@@ -710,7 +749,7 @@ substring. Zero is scored for queries with no hit in the top 5.
 
 The eval set (`eval-queries.json`) contains **20 canonical queries** covering:
 
-- BM25-friendly exact-match queries (`readme`, `plan`, `skill` families).
+- BM25-friendly exact-match queries (`root-doc`, `plan`, `skill` families).
 - Semantic paraphrase queries that benefit from dense retrieval.
 - 16 queries targeting the `ts-source` family (TypeScript symbol lookup).
 
@@ -736,8 +775,8 @@ node rag-index/query-index.mjs "Network activation"
 # Restrict to TypeScript source symbols (ts-source family)
 node rag-index/query-index.mjs "NEAT mutation" --family ts-source
 
-# Restrict to generated src/ READMEs
-node rag-index/query-index.mjs "NEAT mutation" --family readme
+# Restrict to the repository root documents
+node rag-index/query-index.mjs "NEAT mutation" --family root-doc
 
 # Restrict to agent files, JSON output, top 5 results
 node rag-index/query-index.mjs "orchestrator handoff" --family agent --limit 5 --json
@@ -757,33 +796,31 @@ node rag-index/query-dense.mjs --query "speciation compatibility" --dense --fami
 
 ---
 
-## Rebuild flow after `npm run docs`
+## Rebuild flow after a source change
 
-The generated `src/**/README.md` files (family `readme`) are the highest-priority
-corpus source. After any JSDoc change that triggers a docs refresh, the BM25 index
-will be stale for those files until you rebuild. The embedding index will also be
-stale for chunks whose text changed.
+The generated `src/**/README.md` files are NOT indexed — they left the corpus with the
+retired `readme` family — so a JSDoc-driven `npm run docs` refresh no longer makes the
+BM25 index stale. Rebuild when a document that IS indexed changed: a `src/**/*.ts`
+file, a plan tracker, an example source, a test file, a skill file or an agent file.
+The embedding index will also be stale for chunks whose text changed.
 
 **Standard rebuild sequence:**
 
 ```sh
-# 1. Regenerate all src/**/README.md from JSDoc
-npm run docs
-
-# 2. Incrementally re-index only changed files (freshness proof detects the update)
+# 1. Incrementally re-index only changed files (freshness proof detects the update)
 npm run index:build
 
-# 3. Incrementally re-embed only changed chunks and validate the dense store
+# 2. Incrementally re-embed only changed chunks and validate the dense store
 npm run index:prewarm
 
-# 4. Confirm index health
+# 3. Confirm index health
 npm run index:validate
 npm run index:dense-readiness
 ```
 
-The incremental BM25 rebuild in step 2 typically re-indexes only the handful of changed
-README files and completes in well under a second. The incremental embedding rebuild in
-step 3 re-embeds only chunks whose `chunk_sha256` changed. Use `--force` on
+The incremental BM25 rebuild in step 1 typically re-indexes only the handful of changed
+documents and completes in well under a second. The incremental embedding rebuild in
+step 2 re-embeds only chunks whose `chunk_sha256` changed. Use `--force` on
 `build-index.mjs` only when you need to reprocess every document from scratch (e.g.,
 after changing the chunking window size or schema).
 
@@ -803,7 +840,7 @@ developer or CI job that needs this database must build it locally:
 
 ```sh
 # Standard full setup
-npm run docs            # generate src/**/README.md from JSDoc
+npm run docs            # optional: regenerate src/**/README.md from JSDoc (not indexed)
 npm run index:build     # build BM25 index
 npm run index:prewarm   # download model if absent, build embeddings, validate readiness
 ```
@@ -812,22 +849,24 @@ npm run index:prewarm   # download model if absent, build embeddings, validate r
 
 ## Validation expectations
 
-A healthy BM25 index produced from the full NeatapticTS corpus contains approximately
-**1249 documents** and **29,315 chunks** across the ten corpus families (including
-`ts-source`).
+A healthy BM25 index produced from the full NeatapticTS corpus must clear the enforced
+minimums of **1000 documents** and **25000 chunks** across the nine published corpus
+families (including `ts-source`). The exact census is a measured quantity, not a
+published constant — read it from the validator output rather than from this file.
 
 ```sh
 node rag-index/validate-index.mjs --json --min-documents 1000 --min-chunks 25000
 ```
 
-Expected shape when healthy:
+Expected shape when healthy (`documents` and `chunks` are the measured counts; the
+validator asserts them against the minimums above):
 
 ```json
 {
   "ok": true,
   "pass": true,
-  "documents": 1249,
-  "chunks": 29315,
+  "documents": <the measured document count>,
+  "chunks": <the measured chunk count>,
   "failures": []
 }
 ```

@@ -608,7 +608,7 @@ describe('createFreshnessHook — defaultRunIncrementalBuild', () => {
 // inferFamily — tested via defaultRunIncrementalBuild
 // ---------------------------------------------------------------------------
 describe('inferFamily via defaultRunIncrementalBuild', () => {
-  it('infers readme family for src/**/README.md', async () => {
+  it('infers unknown for src/**/README.md (the generated READMEs left the corpus)', async () => {
     const mockClient = createMockClient([]);
     mockBuildSemanticIndex.mockResolvedValue({ indexed: 1, skipped: 0, chunks: 1, elapsedMs: 50 });
     const hook = createFreshnessHook({
@@ -621,7 +621,7 @@ describe('inferFamily via defaultRunIncrementalBuild', () => {
     await hook.flush();
     const buildCall = mockBuildSemanticIndex.mock.calls[0][0];
     const doc = buildCall.corpusDocuments.find((d) => d.filePath === 'src/module/README.md');
-    expect(doc.family).toBe('readme');
+    expect(doc.family).toBe('unknown');
   });
 
   it('infers plan family for plans/**/*.md', async () => {
@@ -721,7 +721,7 @@ describe('inferFamily via defaultRunIncrementalBuild', () => {
     expect(doc.family).toBe('demo');
   });
 
-  it('infers benchmark family for benchmarks/**/*.test.ts', async () => {
+  it('infers test family for benchmarks/**/*.test.ts', async () => {
     const mockClient = createMockClient([]);
     mockBuildSemanticIndex.mockResolvedValue({ indexed: 1, skipped: 0, chunks: 1, elapsedMs: 50 });
     const hook = createFreshnessHook({
@@ -734,7 +734,7 @@ describe('inferFamily via defaultRunIncrementalBuild', () => {
     await hook.flush();
     const buildCall = mockBuildSemanticIndex.mock.calls[0][0];
     const doc = buildCall.corpusDocuments.find((d) => d.filePath === 'benchmarks/perf.test.ts');
-    expect(doc.family).toBe('benchmark');
+    expect(doc.family).toBe('test');
   });
 
   it('infers root-doc family for README.md', async () => {

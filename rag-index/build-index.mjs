@@ -21,6 +21,8 @@ import fg from 'fast-glob';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import v8 from 'node:v8';
+import vm from 'node:vm';
 import { chunkMarkdownV2 } from './chunker-v2.mjs';
 import {
   fail,
@@ -29,6 +31,7 @@ import {
   toRepoRelative,
   writeJsonOrText,
 } from './cli-utils.mjs';
+import { CORPUS_SOURCES, GLOBAL_IGNORE } from './corpus-sources.mjs';
 import { getFreshnessProof, isFreshDocument } from './freshness.mjs';
 import {
   defaultDatabasePath,
@@ -40,60 +43,12 @@ import {
   enrichDocumentMetadata,
   loadCoverageReport,
 } from './metadata-enrichment.mjs';
-import { chunkTypeScriptSourcesV2 } from './ts-chunker-v2.mjs';
+// Namespace import: the module is mocked in tests with a single export, so a
+// named import of any other export would be a module link error.
+import * as tsChunkerV2 from './ts-chunker-v2.mjs';
 
 /** Maximum number of SQL statements per client.batch() call. */
 const BATCH_SIZE = 1000;
-
-const GLOBAL_IGNORE = [
-  '**/node_modules/**',
-  '**/dist/**',
-  '**/build/**',
-  '**/out/**',
-  '**/coverage/**',
-  '**/.cache/**',
-  '**/artifacts/**',
-  'rag-index/data/**',
-  'rag-index/models/**',
-  'rag-index/snapshots/**',
-  'rag-index/freshness-proofs/**',
-];
-
-const CORPUS_SOURCES = [
-  { family: 'readme', patterns: ['src/**/README.md'] },
-  {
-    family: 'ts-source',
-    patterns: ['src/**/*.ts'],
-    ignore: ['src/**/*.d.ts', 'src/**/*.test.ts', 'src/**/*.spec.ts'],
-  },
-  {
-    family: 'plan',
-    patterns: ['plans/**/*.md'],
-    ignore: ['plans/completed/**'],
-  },
-  { family: 'completed-plan', patterns: ['plans/completed/**/*.md'] },
-  { family: 'demo', patterns: ['examples/**/README.md', 'examples/**/*.ts'] },
-  {
-    family: 'benchmark',
-    patterns: ['benchmarks/README.md', 'benchmarks/**/*.test.ts'],
-  },
-  {
-    family: 'root-doc',
-    patterns: ['README.md', 'STYLEGUIDE.md', 'CONTRIBUTING.md'],
-  },
-  {
-    family: 'skill',
-    patterns: ['.github/skills/**/SKILL.md'],
-  },
-  {
-    family: 'agent',
-    patterns: ['.github/agents/*.agent.md'],
-  },
-  {
-    family: 'copilot-instructions',
-    patterns: ['.github/copilot-instructions.md'],
-  },
-];
 
 /* istanbul ignore next -- defensive: always called with explicit options */
 export async function buildSemanticIndex(options = {}) {
@@ -107,8 +62,6 @@ export async function buildSemanticIndex(options = {}) {
   const documents = isTargeted
     ? allDocuments.filter(({ filePath }) => targetFiles.includes(filePath))
     : allDocuments;
-  const tsSourceChunksByFilePath =
-    await collectTypeScriptChunksByFilePath(documents);
   const coverageReport =
     options.coverageReport ?? (await loadCoverageReport(repoRoot));
   const summary = {
@@ -126,22 +79,34 @@ export async function buildSemanticIndex(options = {}) {
 
   if (options.dryRun) return summary;
 
+  // The ts-source paths are resolved here, but the ts-morph compiler is only
+  // loaded when the document loop actually consumes a TypeScript chunk.
+  const tsSourcePaths = documents
+    .filter(({ family }) => family === 'ts-source')
+    .map(({ filePath }) => path.join(repoRoot, filePath));
+
   const client = await initSemanticIndex({
     databasePath,
     client: options.client,
   });
   const ownsClient = !options.client;
+  let tsChunkSource = null;
 
   try {
+    tsChunkSource = createTypeScriptChunkSource(tsSourcePaths);
     return await buildSemanticIndexWithClient({
       client,
       documents,
       coverageReport,
       summary,
       options,
-      tsSourceChunksByFilePath,
+      tsChunkSource,
     });
   } finally {
+    // The error path releases the ts-morph AST as well.
+    if (tsChunkSource !== null) {
+      await tsChunkSource.close();
+    }
     if (ownsClient) {
       await client.close();
     }
@@ -161,6 +126,7 @@ export async function buildSemanticIndex(options = {}) {
  * @param {object} params.coverageReport - Coverage report for metadata enrichment.
  * @param {object} params.summary - Summary object to populate.
  * @param {object} params.options - Original options (force flag, etc.).
+ * @param {object} params.tsChunkSource - Per-document TypeScript chunk source.
  * @returns {Promise<object>} Populated summary.
  */
 async function buildSemanticIndexWithClient({
@@ -169,7 +135,7 @@ async function buildSemanticIndexWithClient({
   coverageReport,
   summary,
   options,
-  tsSourceChunksByFilePath,
+  tsChunkSource,
 }) {
   const targetFiles = normalizeFiles(options.files);
   const isTargeted = Array.isArray(targetFiles) && targetFiles.length > 0;
@@ -223,7 +189,7 @@ async function buildSemanticIndexWithClient({
     const chunks = await chunkDocument(
       documentRecord,
       absolutePath,
-      tsSourceChunksByFilePath,
+      tsChunkSource,
     );
 
     // Step 2a: Enrich document-level metadata.
@@ -435,31 +401,194 @@ async function collectCorpusDocuments() {
 async function chunkDocument(
   documentRecord,
   absolutePath,
-  tsSourceChunksByFilePath,
+  tsChunkSource,
 ) {
   if (documentRecord.family === 'ts-source') {
-    return /* istanbul ignore next -- defensive: tsSourceChunksByFilePath always has the filePath in test data */ tsSourceChunksByFilePath.get(documentRecord.filePath) ?? [];
+    return tsChunkSource.take(documentRecord.filePath);
   }
 
   const markdownText = await readFile(absolutePath, 'utf8');
   return chunkMarkdownV2(markdownText, { filePath: documentRecord.filePath });
 }
 
-async function collectTypeScriptChunksByFilePath(documents) {
-  const tsSourcePaths = documents
-    .filter(({ family }) => family === 'ts-source')
-    .map(({ filePath }) => path.join(repoRoot, filePath));
-  if (tsSourcePaths.length === 0) return new Map();
+/**
+ * Create the per-document TypeScript chunk source.
+ *
+ * The chunks are produced UP FRONT, on the first request, and the ts-morph AST
+ * is released before the first database write of the `ts-source` family: the
+ * AST is several hundred megabytes, and the database phase must not allocate
+ * on top of a resident AST. The chunk payload itself is plain data of a few
+ * megabytes, and every group is released again as the index loop consumes it.
+ *
+ * The ts-morph compiler is loaded lazily, so a build that never reaches the
+ * `ts-source` family never loads it.
+ *
+ * STREAMING branch: used when the chunker exposes
+ * `chunkTypeScriptSourcesV2Stream`. The async iterator is created lazily on
+ * the first `take()` call.
+ *
+ * FLAT fallback branch: used ONLY when the streaming export is absent, i.e.
+ * when the module is mocked with a single `chunkTypeScriptSourcesV2` export.
+ * The flat chunk array is then grouped by `file_path` and the group of the
+ * requested file is returned. This is the frozen-test-host compatibility
+ * path.
+ *
+ * @param {string[]} tsSourcePaths - Absolute paths of the `ts-source` documents.
+ * @returns {{ prime: () => Promise<void>, take: (filePath: string) => Promise<Array>, close: () => Promise<void> }} Chunk source.
+ */
+function createTypeScriptChunkSource(tsSourcePaths) {
+  if (tsSourcePaths.length === 0) {
+    // No TypeScript source to chunk: never load the ts-morph compiler.
+    return {
+      prime: async () => {},
+      take: async () => [],
+      close: async () => {},
+    };
+  }
 
-  const tsSourceChunks = await chunkTypeScriptSourcesV2({
-    sourcePaths: tsSourcePaths,
-  });
-  return tsSourceChunks.reduce((chunksByFilePath, chunk) => {
+  const useStreaming =
+    typeof tsChunkerV2.chunkTypeScriptSourcesV2Stream === 'function';
+  const bufferedGroups = new Map();
+  let iterator = null;
+  let closed = false;
+  let primed = false;
+
+  /**
+   * Produce every TypeScript chunk and release the ts-morph AST.
+   *
+   * The AST of the `ts-source` family is several hundred megabytes. When the
+   * chunks are produced lazily, the database phase runs WHILE that AST is
+   * still resident, so the two allocations stack and the recorded peak is the
+   * SUM of the AST and the database phase.
+   *
+   * Producing the chunks up front releases the AST BEFORE the first database
+   * write of the family, so the recorded peak becomes the larger of the two
+   * phases instead of their sum.
+   *
+   * @returns {Promise<void>} Resolves once the chunks are produced and the AST is released.
+   */
+  async function prime() {
+    if (primed || closed) return;
+
+    if (useStreaming) {
+      if (iterator === null) {
+        iterator = tsChunkerV2.chunkTypeScriptSourcesV2Stream({
+          sourcePaths: tsSourcePaths,
+        });
+      }
+      for (;;) {
+        const { value, done } = await iterator.next();
+        if (done) break;
+        bufferedGroups.set(value.file_path, value.chunks);
+      }
+      // The generator completed, so its `finally` block already released the
+      // ts-morph project and its AST.
+      iterator = null;
+    } else {
+      // The flat fallback materialises the whole chunk array in one call; the
+      // chunker releases its own project before that call resolves.
+      const flatChunks = await tsChunkerV2.chunkTypeScriptSourcesV2({
+        sourcePaths: tsSourcePaths,
+      });
+      for (const [filePath, chunks] of groupChunksByFilePath(flatChunks)) {
+        bufferedGroups.set(filePath, chunks);
+      }
+    }
+
+    primed = true;
+
+    // Reclaim the heap pages the released AST occupied DURING the ts-source
+    // phase, so the memory the database phase allocates is not stacked on top
+    // of an AST that is already gone.
+    forceHeapRelease();
+  }
+
+  /**
+   * Take the chunks of one source file.
+   *
+   * @param {string} filePath - Repository-relative file path.
+   * @returns {Promise<Array>} The chunks of that file.
+   */
+  async function take(filePath) {
+    if (closed) return [];
+
+    // The chunks are produced up front on the first request, so the ts-morph
+    // AST is released before the first database write of the family.
+    if (!primed) {
+      await prime();
+      if (closed) return [];
+    }
+
+    const buffered = bufferedGroups.get(filePath);
+    if (buffered !== undefined) {
+      // The group is released as soon as the document that consumes it has
+      // been chunked.
+      bufferedGroups.delete(filePath);
+      return buffered;
+    }
+
+    return [];
+  }
+
+  /**
+   * Close the chunk source and release the ts-morph AST.
+   *
+   * @returns {Promise<void>} Resolves once the source is closed.
+   */
+  async function close() {
+    if (closed) return;
+    closed = true;
+    bufferedGroups.clear();
+    if (iterator !== null) {
+      // Closing the generator runs its `finally` block, which releases the
+      // ts-morph project and its AST.
+      await iterator.return?.();
+      iterator = null;
+    }
+    forceHeapRelease();
+  }
+
+  return { prime, take, close };
+}
+
+/**
+ * Ask the runtime to reclaim the heap pages of the released AST.
+ *
+ * The ts-morph AST is several hundred megabytes of old-space objects. A full
+ * garbage collection compacts the heap and hands the empty pages back to the
+ * operating system, so they are no longer resident while the database phase
+ * allocates. This runs after the chunk iterator has been dropped, otherwise
+ * the AST is still reachable and the collection would keep it alive.
+ *
+ * @returns {void}
+ */
+function forceHeapRelease() {
+  try {
+    v8.setFlagsFromString('--expose-gc');
+    const forceGarbageCollection = vm.runInNewContext('gc');
+    if (typeof forceGarbageCollection === 'function') {
+      forceGarbageCollection();
+    }
+  } catch {
+    // The page release is a best-effort optimisation: the build must not fail
+    // when the runtime refuses to expose the garbage collector.
+  }
+}
+
+/**
+ * Group a flat chunk array by its `file_path`.
+ *
+ * @param {Array} chunks - Flat chunk array.
+ * @returns {Map<string, Array>} Chunks grouped by file path.
+ */
+function groupChunksByFilePath(chunks) {
+  const chunksByFilePath = new Map();
+  for (const chunk of chunks) {
     const existingChunks = chunksByFilePath.get(chunk.file_path) ?? [];
     existingChunks.push(chunk);
     chunksByFilePath.set(chunk.file_path, existingChunks);
-    return chunksByFilePath;
-  }, new Map());
+  }
+  return chunksByFilePath;
 }
 
 function normalizeFiles(files) {

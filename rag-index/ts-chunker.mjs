@@ -12,10 +12,11 @@
  * @returns {void} Exits 0 on success, 1 on error. JSON written to stdout when `--json` is
  *   passed; each chunk includes `{ family, symbolName, heading_path, body_text, filePath }`.
  */
+/* global process */
 import fg from 'fast-glob';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { Node, Project } from 'ts-morph';
 import {
   fail,
   parseCliArgs,
@@ -32,6 +33,53 @@ const DEFAULT_TS_IGNORE = [
   'src/**/*.spec.ts',
 ];
 const DEFAULT_TSCONFIG_PATH = path.join(repoRoot, 'tsconfig.json');
+
+/**
+ * Require hook used to load the CJS-only `ts-morph` package on demand.
+ *
+ * The package is loaded LAZILY, so a build that never chunks a TypeScript
+ * source never loads the TypeScript compiler at all.
+ */
+const requireTsMorph = createRequire(import.meta.url);
+
+/**
+ * Cached ts-morph module exports.
+ *
+ * @type {object | null}
+ */
+let tsMorphModule = null;
+
+/**
+ * Load the ts-morph module exports, caching them for the process lifetime.
+ *
+ * @returns {object} The ts-morph module exports.
+ */
+function loadTsMorphModule() {
+  tsMorphModule ??= requireTsMorph('ts-morph');
+  return tsMorphModule;
+}
+
+/**
+ * Resolve the ts-morph `Node` type-guard helpers.
+ *
+ * The lookup is LAZY: the ts-morph compiler is only loaded when a TypeScript
+ * source is actually chunked. Callers MUST resolve the guards inside the
+ * function that needs them, never at module scope, otherwise the compiler is
+ * loaded for every consumer of this module.
+ *
+ * @returns {object} The ts-morph `Node` namespace with the type-guard helpers.
+ *
+ * @example
+ * ```js
+ * const Node = getTsMorphNode();
+ * if (Node.isClassDeclaration(declaration)) {
+ *   // ...
+ * }
+ * ```
+ */
+export function getTsMorphNode() {
+  return loadTsMorphModule().Node;
+}
 
 export async function resolveTypeScriptSourcePaths(options = {}) {
   const sourcePaths = options.sourcePaths;
@@ -61,9 +109,18 @@ export function createTypeScriptProject(options = {}) {
   const tsConfigFilePath = path.resolve(
     options.tsConfigFilePath ?? DEFAULT_TSCONFIG_PATH,
   );
+  const { Project } = loadTsMorphModule();
   return new Project({
     compilerOptions: {
       allowJs: true,
+      // The indexer only reads declaration TEXT (names, JSDoc, offsets and
+      // kinds); it never resolves ambient type packages. Leaving `types`
+      // unset makes TypeScript auto-include every package under
+      // `node_modules/@types` (78 packages, ~4 MB of `.d.ts`) as program root
+      // files, and parsing plus binding those ambient declarations inflates
+      // the ts-source phase peak RSS by roughly 125 MB. Opting out keeps the
+      // exported declarations byte-identical while removing that cost.
+      types: [],
     },
     skipAddingFilesFromTsConfig: true,
     skipFileDependencyResolution: true,
@@ -71,6 +128,67 @@ export function createTypeScriptProject(options = {}) {
   });
 }
 
+/**
+ * Projects whose AST and compiler were already released.
+ *
+ * The guard makes {@link releaseTypeScriptProject} idempotent, so a project
+ * can be released from several release paths without double-disposing the
+ * TypeScript compiler.
+ *
+ * @type {WeakSet<object>}
+ */
+const releasedProjects = new WeakSet();
+
+/**
+ * Release the ts-morph AST and the underlying TypeScript compiler.
+ *
+ * The release removes every source file that was added to the project (which
+ * forgets the corresponding AST nodes) and then disposes the compiler that
+ * backs the language service. The `Project` class of ts-morph has NO
+ * `dispose()` and NO `forget()` method, so neither is called here.
+ *
+ * The caller MUST have finished reading plain data out of the AST first: a
+ * removed source file is forgotten, and every later read on one of its nodes
+ * throws. The function is idempotent — calling it twice for the same project
+ * is a no-op.
+ *
+ * @param {object | null | undefined} project - The ts-morph project to release.
+ * @returns {void}
+ *
+ * @example
+ * ```js
+ * const project = createTypeScriptProject();
+ * // ... extract plain chunk data out of the AST ...
+ * releaseTypeScriptProject(project);
+ * ```
+ */
+export function releaseTypeScriptProject(project) {
+  if (project == null) return;
+  if (releasedProjects.has(project)) return;
+  releasedProjects.add(project);
+
+  // Snapshot the source files: removing one mutates the project collection.
+  for (const sourceFile of [...project.getSourceFiles()]) {
+    project.removeSourceFile(sourceFile);
+  }
+
+  project.getLanguageService().compilerObject.dispose();
+}
+
+/**
+ * Load the exported declarations of the given TypeScript sources.
+ *
+ * OWNERSHIP CONTRACT: the returned entries hold LIVE ts-morph nodes
+ * (`declaration`, `jsdoc_source_node`, `sourceFile`). The project that owns
+ * those nodes is NEVER released by this function — the caller must keep it
+ * alive for as long as it reads the nodes, and it is the caller that decides
+ * when {@link releaseTypeScriptProject} is invoked.
+ *
+ * @param {object} [options={}] - Loading options.
+ * @param {string[]} [options.sourcePaths] - Explicit source file paths to load.
+ * @param {object} [options.project] - Pre-created ts-morph project to load into.
+ * @returns {Promise<Array<object>>} Exported declarations, sorted by file path then symbol name.
+ */
 export async function loadExportedTypeScriptDeclarations(options) {
   /* istanbul ignore next -- defensive: always called with options from chunkTypeScriptSources */
   if (options == null) options = {};
@@ -89,15 +207,18 @@ export async function loadExportedTypeScriptDeclarations(options) {
         /* istanbul ignore if -- defensive: selectPrimaryDeclaration always returns a declaration */
         if (!declaration) return [];
 
+        const filePath = toRepoRelative(sourceFile.getFilePath());
+
         return [
           {
             declaration,
-            file_path: toRepoRelative(sourceFile.getFilePath()),
+            file_path: filePath,
             jsdoc_source_node: resolveExportJsdocSourceNode(
               sourceFile,
               exportName,
               declaration,
             ),
+            reexport: materializeReexport(declaration, filePath),
             sourceFile,
             symbol_name: resolveSymbolName(declaration, exportName),
           },
@@ -126,6 +247,40 @@ export async function loadExportedTypeScriptDeclarations(options) {
       ? pathOrder
       : leftSymbol.symbol_name.localeCompare(rightSymbol.symbol_name, 'en');
   });
+}
+
+/**
+ * Materialize the cross-file data a re-export chunk needs.
+ *
+ * A re-export declaration (`export { X } from './other'`) is chunked under the
+ * file that RE-EXPORTS the symbol, but its ts-morph node lives in the file
+ * that DECLARES it. Reading that node while the group is chunked couples the
+ * chunking of one file to the AST of another file, which is what makes it
+ * impossible to release a source file as soon as its own group was chunked.
+ *
+ * The values are therefore read ONCE, while every source file is still
+ * resident, and stored as plain data on the entry. A re-export chunk then
+ * reads plain data only, so a source file can be released as soon as its own
+ * group was chunked.
+ *
+ * @param {object} declaration - ts-morph declaration node.
+ * @param {string} filePath - Repository-relative path of the EXPORTING file.
+ * @returns {{ end: number, start: number, text: string } | null} The materialized re-export data, or `null` when the declaration is not a re-export.
+ */
+export function materializeReexport(declaration, filePath) {
+  const declarationFilePath = toRepoRelative(
+    /* istanbul ignore next -- defensive: declaration always has a source file */
+    declaration.getSourceFile?.().getFilePath?.() ?? '',
+  );
+  if (!declarationFilePath || declarationFilePath === filePath) {
+    return null;
+  }
+
+  return {
+    end: declaration.getEnd(),
+    start: declaration.getStart(),
+    text: declaration.getText(),
+  };
 }
 
 export async function chunkTypeScriptSources(options) {
@@ -182,6 +337,8 @@ export function countWords(value) {
 }
 
 function resolveJsdocNodes(declaration) {
+  const Node = getTsMorphNode();
+
   if (typeof declaration?.getJsDocs === 'function') {
     const directJsDocs = declaration.getJsDocs();
     /* istanbul ignore else -- defensive: declarations with JSDoc always have direct JsDocs */
@@ -227,6 +384,8 @@ function resolveCompilerJsdocComment(comment) {
 }
 
 function resolveExportJsdocSourceNode(sourceFile, exportName, declaration) {
+  const Node = getTsMorphNode();
+
   if (!Node.isSourceFile(declaration)) return null;
 
   return (
@@ -249,6 +408,8 @@ function resolveExportJsdocSourceNode(sourceFile, exportName, declaration) {
  * @returns {string} Signature text.
  */
 export function resolveSignatureText(declaration) {
+  const Node = getTsMorphNode();
+
   const declarationText = cleanWhitespace(declaration.getText());
   /* istanbul ignore if -- defensive: declaration.getText() always returns non-empty text */
   if (!declarationText) return '';
@@ -298,6 +459,8 @@ function resolveSymbolName(declaration, exportName) {
 }
 
 function selectPrimaryDeclaration(declarations) {
+  const Node = getTsMorphNode();
+
   /* istanbul ignore next -- defensive: declarations array always has at least one element */
   return (
     declarations.find(

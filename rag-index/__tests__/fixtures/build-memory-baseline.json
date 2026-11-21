@@ -1,0 +1,490 @@
+{
+  "schema": "rag-index/build-memory-baseline/v1",
+  "capturedAt": "2026-11-15T20:29:43.484Z",
+  "corpus": {
+    "identity": "9d306328d3160323879db93114f24410d1c02dfb81585ed213c4c01738f6013c",
+    "familyCount": 10,
+    "families": [
+      {
+        "family": "agent",
+        "documentCount": 39
+      },
+      {
+        "family": "benchmark",
+        "documentCount": 22
+      },
+      {
+        "family": "completed-plan",
+        "documentCount": 211
+      },
+      {
+        "family": "copilot-instructions",
+        "documentCount": 1
+      },
+      {
+        "family": "demo",
+        "documentCount": 1040
+      },
+      {
+        "family": "plan",
+        "documentCount": 8
+      },
+      {
+        "family": "readme",
+        "documentCount": 173
+      },
+      {
+        "family": "root-doc",
+        "documentCount": 3
+      },
+      {
+        "family": "skill",
+        "documentCount": 67
+      },
+      {
+        "family": "ts-source",
+        "documentCount": 516
+      }
+    ],
+    "documentCount": 2080
+  },
+  "measurements": {
+    "peakRssBytes": 585711616,
+    "peakRssRaw": 571984,
+    "peakRssUnit": "kilobytes",
+    "replicaBytes": 111783936,
+    "documentCount": 2080,
+    "chunkCount": 33008
+  },
+  "build": {
+    "scanned": 2080,
+    "indexed": 2080,
+    "chunks": 33008,
+    "purged": 0,
+    "elapsedMs": 87347,
+    "replica": "<temporary-database-path>",
+    "liveIndexPath": "C:\\NeatapticTS\\rag-index\\data\\turso-replica.sqlite",
+    "liveIndexUntouched": true,
+    "temporaryDirectoryRemoved": false
+  },
+  "environment": {
+    "node": "v26.5.0",
+    "platform": "win32",
+    "arch": "x64",
+    "repositoryRoot": "C:\\NeatapticTS"
+  },
+  "multiSample": {
+    "role": "the multi-sample re-freeze required by PLAN AMENDMENT RECORD A5 rule 4 - the PRE-change arm is a NOISE REFERENCE, never a threshold and never an allowance; the frozen ceiling in measurements.peakRssBytes is NOT regenerated and NOT altered by this block, and every key the RED home asserts is untouched",
+    "capturedAt": "2026-11-16T01:18:34.216Z",
+    "environment": {
+      "node": "v26.5.0",
+      "platform": "win32",
+      "arch": "x64"
+    },
+    "instrument": {
+      "primary": "tmp/p1-s1-4-control.mjs --arm=post",
+      "corroborating": "rag-index/__tests__/fixtures/build-memory-probe.mjs (unmodified, invoked through tmp/p1-s1-4-original-probe-run.mjs)",
+      "preChangeArm": "tmp/p1-s1-4-control.mjs --arm=pre",
+      "oneRunPerProcess": true,
+      "resourceUsageReadBeforeCensus": "the primary instrument and the pre-change arm read process.resourceUsage() BEFORE readIndexCensus(); the unmodified probe reads it AFTER the census, so the unmodified probe and the frozen ceiling are the HIGHER, CONSERVATIVE reading",
+      "temporaryDirectoryRemoval": "the instrument ATTEMPTS the removal in a finally block on every run and RECORDS the outcome in build.temporaryDirectoryRemoved; it does NOT fail the run when the removal fails, so removal is NOT a blanket invariant - all 24 POST-change runs removed their temporary database (true) and all 5 PRE-change runs FAILED the removal (false, a Windows file-lock EBUSY on the open libSQL handle) and leaked their temporary database; the outcome is therefore recorded per run and the leaked directories were removed by the lane that measured them"
+    },
+    "preChange": {
+      "role": "noise-reference",
+      "runCount": 5,
+      "peakRssBytes": {
+        "perRun": [605167616, 595083264, 583303168, 584118272, 615759872],
+        "median": 595083264,
+        "min": 583303168,
+        "max": 615759872,
+        "spread": 32456704
+      },
+      "replicaBytes": 112291840,
+      "documentCount": 2080,
+      "chunkCount": 33103,
+      "buildElapsedMsMedian": 85057,
+      "corpusNote": "the pre-change corpus measured today is NOT byte-identical to the corpus that produced the frozen capture - it carries 33103 chunks against the frozen 33008 and a 112291840-byte replica against the frozen 111783936 bytes, because plans/**/*.md grew during the implementing lane; this arm is therefore a NOISE REFERENCE and not a like-for-like reproduction of the frozen capture"
+    },
+    "postChange": {
+      "role": "the measured quantity - the median of N >= 5 runs of the SAME probe against the POST-change corpus",
+      "corpusIdentity": "841a8a69b63d6aa7d6e9ea1624860c8199dfddf7c549e6537c7fd2f33752d597",
+      "corpusIdentityDefinition": "the probe's identity is the sha256 of the FAMILY CENSUS (the family:documentCount lines), NOT of the chunk count and NOT of any file content - it is therefore byte-identical in the 22:12 capture (20,899 chunks) and in the 01:24-01:30 UTC runs (20,977 chunks) recorded here, so the identity proves the family census is unchanged and does NOT by itself prove that two captures chunked the same corpus identically",
+      "corpusIdentityCapturedAt": "2026-11-16T01:24:49.788Z",
+      "familyCount": 9,
+      "primary": {
+        "instrument": "tmp/p1-s1-4-control.mjs --arm=post",
+        "runCount": 9,
+        "peakRssBytes": {
+          "perRun": [611815424, 582049792, 585990144, 585981952, 587415552, 586260480, 587595776, 588414976, 584814592],
+          "median": 586260480,
+          "min": 582049792,
+          "max": 611815424,
+          "spread": 29765632
+        },
+        "replicaBytes": 71761920,
+        "documentCount": 1848,
+        "chunkCount": 20977
+      },
+      "corroborating": {
+        "instrument": "rag-index/__tests__/fixtures/build-memory-probe.mjs (unmodified)",
+        "runCount": 9,
+        "peakRssBytes": {
+          "perRun": [586956800, 586457088, 582062080, 587558912, 585998336, 586432512, 586940416, 586829824, 586088448],
+          "median": 586457088,
+          "min": 582062080,
+          "max": 587558912,
+          "spread": 5496832
+        },
+        "replicaBytes": 71761920,
+        "documentCount": 1848,
+        "chunkCount": 20977
+      },
+      "exploratoryPilot": {
+        "note": "the pilot matrix ran while other work was in flight; it is DISCLOSED as an exploratory pass and is NOT part of the verdict",
+        "controlArm": {
+          "runCount": 5,
+          "median": 586330112,
+          "min": 582586368,
+          "max": 603500544,
+          "spread": 20914176
+        },
+        "unmodifiedProbeArm": {
+          "runCount": 5,
+          "median": 586227712,
+          "min": 585674752,
+          "max": 587866112,
+          "spread": 2191360
+        }
+      },
+      "pooled": {
+        "runCount": 28,
+        "peakRssBytes": {
+          "median": 586381312,
+          "min": 582049792,
+          "max": 611815424
+        }
+      }
+    },
+    "hardGates": {
+      "replicaBytes": {
+        "measured": 71761920,
+        "ceiling": 111783936,
+        "pass": true
+      },
+      "documentCount": {
+        "measured": 1848,
+        "expected": 1848,
+        "expectedDerivation": "2080 - 173 - 58 - 1",
+        "pass": true
+      },
+      "chunkCount": {
+        "measured": 20977,
+        "ceiling": 33008,
+        "pass": true
+      },
+      "peakRssBytes": {
+        "measuredMedian": 586260480,
+        "frozenCeiling": 585711616,
+        "deltaBytes": 548864,
+        "deltaPercent": 0.0937,
+        "pass": false,
+        "note": "the bound is median <= 585711616 with NO allowance of any kind (PLAN AMENDMENT RECORD A5 rules 2 and 3); the measured median is 548864 bytes above the ceiling"
+      }
+    },
+    "ceilingComparison": {
+      "frozenCeilingBytes": 585711616,
+      "primaryMedianBytes": 586260480,
+      "primaryDeltaBytes": 548864,
+      "corroboratingMedianBytes": 586457088,
+      "corroboratingDeltaBytes": 745472,
+      "pooledMedianBytes": 586381312,
+      "pooledDeltaBytes": 669696,
+      "warmOnlyMedianBytes": 586295296,
+      "warmOnlyDeltaBytes": 583680,
+      "warmOnlyNote": "sensitivity disclosure only - the first (cold) run of each matrix excluded; the verdict does NOT depend on it",
+      "preChangeMedianBytes": 595083264,
+      "preChangeDeltaBytes": 9371648,
+      "corpusContractReductionBytes": 8701952,
+      "corpusContractReductionBytesPrimaryVsPre": 8822784,
+      "corpusContractReductionPercent": 1.462,
+      "corpusContractReductionBasis": "pre-change median minus the POOLED post-change median (586,381,312); against the PRIMARY arm median (586,260,480) the reduction is 8,822,784 bytes (1.483 percent)",
+      "verdict": "NOT MET",
+      "notReproducibleFinding": "the PRE-change corpus - the very corpus that produced the frozen ceiling - measures 9371648 bytes (1.6 percent) ABOVE that ceiling today under the LOWER-biased corrected protocol, so the frozen single-sample ceiling is not reproducible in this environment by ANY corpus, including the corpus that generated it"
+    },
+    "postRemediation": {
+      "role": "the OPERATIVE arm - the INDEPENDENTLY re-measured post-remediation memory arm captured by the P1-S3-3 GREEN lane; this block is a purely ADDITIVE extension: no frozen key (schema, corpus.*, measurements.*, build.*) and no pre-existing multiSample sub-key was altered, regenerated or re-baselined",
+      "capturedAt": "2026-11-16T05:55:32.776Z",
+      "capturedBy": "P1-S3-3 GREEN lane (05-green-testing)",
+      "operativeArm": "multiSample.postRemediation",
+      "operativeArmNote": "multiSample.postChange and multiSample.ceilingComparison are HISTORICAL PRE-REMEDIATION evidence and are NOT rewritten; multiSample.postRemediation is the arm the P1-S3-4 remediation is judged against",
+      "scope": "this arm measures the BUILD stage only - the corpus build into a TEMPORARY database - exactly like the frozen ceiling it is compared against; it does NOT measure the build-graph entity stage, which is a SEPARATE stage with its OWN retention defect recorded in the plan and NOT in this fixture",
+      "environment": {
+        "node": "v26.5.0",
+        "platform": "win32",
+        "arch": "x64"
+      },
+      "instrument": {
+        "primary": "tmp/p1-s1-4-control.mjs --arm=post --record=tmp/p1-s3-3-post-<n>.json",
+        "corroborating": "rag-index/__tests__/fixtures/build-memory-probe.mjs --out=tmp/p1-s3-3-orig-<n>.json",
+        "oneRunPerProcess": true,
+        "resourceUsageReadBeforeCensus": "the primary instrument reads process.resourceUsage() BEFORE readIndexCensus(); the unmodified probe reads it AFTER the census, so the corroborating arm is the HIGHER, CONSERVATIVE reading",
+        "temporaryDirectoryRemoval": "all 10 runs recorded build.temporaryDirectoryRemoved = true and build.liveIndexUntouched = true - the live index was never opened, written or replaced",
+        "loadConditions": "no concurrent CPU or RAM load; each sample ran in its own process; 17764 MB free physical memory before the arm started"
+      },
+      "corpusIdentity": "841a8a69b63d6aa7d6e9ea1624860c8199dfddf7c549e6537c7fd2f33752d597",
+      "corpusIdentityNote": "the family census is BYTE-IDENTICAL to the pre-remediation post-change arm (multiSample.postChange.corpusIdentity) - the remediation changed the chunking PATH, not the corpus contract",
+      "familyCount": 9,
+      "documentCount": 1848,
+      "chunkCount": 21030,
+      "primary": {
+        "instrument": "tmp/p1-s1-4-control.mjs --arm=post",
+        "runCount": 5,
+        "peakRssBytes": {
+          "perRun": [570806272, 561987584, 570916864, 562057216, 563331072],
+          "median": 563331072,
+          "min": 561987584,
+          "max": 570916864,
+          "spread": 8929280
+        },
+        "replicaBytes": 71589888,
+        "documentCount": 1848,
+        "chunkCount": 21030
+      },
+      "corroborating": {
+        "instrument": "rag-index/__tests__/fixtures/build-memory-probe.mjs (unmodified)",
+        "runCount": 5,
+        "peakRssBytes": {
+          "perRun": [570454016, 571305984, 573771776, 574812160, 573227008],
+          "median": 573227008,
+          "min": 570454016,
+          "max": 574812160,
+          "spread": 4358144
+        },
+        "replicaBytes": 71589888,
+        "documentCount": 1848,
+        "chunkCount": 21030
+      },
+      "pooled": {
+        "runCount": 10,
+        "peakRssBytes": {
+          "median": 570861568,
+          "min": 561987584,
+          "max": 574812160,
+          "spread": 12824576
+        }
+      },
+      "hardGates": {
+        "replicaBytes": {
+          "measured": 71589888,
+          "ceiling": 111783936,
+          "pass": true
+        },
+        "documentCount": {
+          "measured": 1848,
+          "expected": 1848,
+          "expectedDerivation": "2080 - 173 - 58 - 1",
+          "pass": true
+        },
+        "chunkCount": {
+          "measured": 21030,
+          "ceiling": 33008,
+          "pass": true
+        },
+        "peakRssBytes": {
+          "measuredMedian": 563331072,
+          "frozenCeiling": 585711616,
+          "deltaBytes": -22380544,
+          "deltaPercent": -3.821,
+          "pass": true,
+          "note": "the bound is median <= 585711616 with NO allowance of any kind (PLAN AMENDMENT RECORD A5 rules 2 and 3); the negative delta is HEADROOM, not an allowance"
+        }
+      },
+      "ceilingComparison": {
+        "frozenCeilingBytes": 585711616,
+        "primaryMedianBytes": 563331072,
+        "primaryDeltaBytes": -22380544,
+        "corroboratingMedianBytes": 573227008,
+        "corroboratingDeltaBytes": -12484608,
+        "pooledMedianBytes": 570861568,
+        "pooledDeltaBytes": -14850048,
+        "preRemediationPrimaryMedianBytes": 586260480,
+        "primaryReductionBytes": 22929408,
+        "primaryReductionPercent": 3.911,
+        "allowance": "NONE - the bound is median <= 585711616 with NO allowance of any kind (PLAN AMENDMENT RECORD A5 rules 2 and 3); every delta here is NEGATIVE, i.e. headroom under the frozen ceiling",
+        "verdict": "MET"
+      },
+      "byteIdentity": {
+        "tsSourceCorpusSha256": "35251d11c8a43275291f257c74a2217662b9295c8db842ffbf0796245ef1a64d",
+        "tsSourceCorpusSha256Expected": "35251d11c8a43275291f257c74a2217662b9295c8db842ffbf0796245ef1a64d",
+        "tsSourceMatch": true,
+        "tsSourceScope": "516 ts-source documents / 2616 chunks / 438 files - the exact surface the P1-S3-4 streaming-path remediation changed",
+        "corpusIdentity": "841a8a69b63d6aa7d6e9ea1624860c8199dfddf7c549e6537c7fd2f33752d597",
+        "corpusIdentityMatch": true,
+        "documentDigest": "5bc7d28ffd007ec13a3117fbacd0e6cf9b455e929336d7de96a01a5f7d3812a8",
+        "documentDigestExpected": "78c67c2a35395dcd4b8da703dc3bb6e83b842c4979e10778ce51a651c29863fd",
+        "documentDigestMatch": false,
+        "chunkDigest": "a9bd3c8d351bbe22790b629210cc76ee9a582a8247d58edf18186e706713b4c6",
+        "chunkDigestExpected": "6efb8639b2a8bfde3263e13532775dbe514318ecb514797c5ed99d7f6abe6f34",
+        "chunkDigestMatch": false,
+        "fullCorpusDigestDeltaAttribution": "exactly ONE corpus document changed since the P1-S3-4 baseline capture - plans/cortex-plan-first-retrieval.plans.md (542786 bytes, modified 2026-11-16T05:33:14.058Z, family 'plan'); the ts-source family - the only family the remediation touched - is byte-identical, so the full-corpus digest delta is the PLAN DOCUMENT'S OWN growth and NOT the remediation",
+        "chunkCountDelta": "+53 chunks versus the pre-remediation post-change arm (20977 -> 21030), attributable to the same single changed plan document",
+        "replicaBytesDelta": "-217088 bytes versus the P1-S3-4 recorded replica (71806976 -> 71589888), attributable to the same single changed plan document"
+      }
+    },
+    "postGraphRepair": {
+      "role": "the OPERATIVE arm of the P1-S3-3 GREEN lane ROUND 2 - the re-measurement taken AFTER the P1-S3-5 entity-graph repair; this block is a purely ADDITIVE extension: no frozen key (schema, capturedAt, corpus.*, measurements.*, build.*, environment.*) and no pre-existing multiSample sub-key was altered, regenerated or re-baselined, and the frozen ceiling in measurements.peakRssBytes is untouched",
+      "capturedAt": "2026-11-16T11:10:38.937Z",
+      "capturedBy": "P1-S3-3 GREEN lane (05-green-testing), round 2 - the re-run after the P1-S3-5 entity-graph repair",
+      "operativeArm": "multiSample.postGraphRepair",
+      "operativeArmNote": "multiSample.postRemediation remains the arm the P1-S3-4 remediation was judged against and is NOT rewritten; multiSample.postGraphRepair is the arm the P1-S3-5 entity-graph repair is judged against, measured with the SAME two instruments and the SAME protocol against the SAME corpus contract",
+      "scope": "this arm measures the BUILD stage only - the corpus build into a TEMPORARY database - exactly like the frozen ceiling it is compared against; it does NOT measure the build-graph entity stage, which is a SEPARATE stage measured by the chain runner's OWN per-stage peak publication (1,017,413,632 bytes in the OPERATIVE capture and 895,311,872 bytes in the pre-append capture - both are SINGLE-RUN RSS high-water marks, NOT medians, and the two figures vary by 122,101,760 bytes across runs at a near-identical corpus size, which is exactly why no median-based comparison is defined for that stage - see V-OBS-042); the two figures are produced by DIFFERENT instruments on DIFFERENT processes and, per PLAN AMENDMENT RECORD A7 D3 and the AC-203-GRAPH-B scope note, are NOT comparable - this block claims the ceiling for the BUILD arm ONLY, claims NOTHING for the entity stage, and creates NO second threshold",
+      "environment": {
+        "node": "v26.5.0",
+        "platform": "win32",
+        "arch": "x64"
+      },
+      "instrument": {
+        "primary": "tmp/p1-s1-4-control.mjs --arm=post --record=tmp/p1-s3-3-repair2-post-<n>.json",
+        "corroborating": "rag-index/__tests__/fixtures/build-memory-probe.mjs --out=tmp/p1-s3-3-repair2-orig-<n>.json (unmodified; the DEFAULT --out was never used because it overwrites this fixture)",
+        "oneRunPerProcess": true,
+        "resourceUsageReadBeforeCensus": "the primary instrument reads process.resourceUsage() BEFORE readIndexCensus(); the unmodified probe reads it AFTER the census, so the corroborating arm is the HIGHER, CONSERVATIVE reading and is the instrument that produced the frozen ceiling",
+        "temporaryDirectoryRemoval": "all 10 runs of this arm recorded build.temporaryDirectoryRemoved = true and build.liveIndexUntouched = true - the live index was never opened, written or replaced; the PRE-APPEND capture of the same round leaked 3 temporary databases (Windows EBUSY on the open libSQL handle, the V-OBS-023 class, 217,128,960 bytes in total) and THIS LANE REMOVED ALL THREE",
+        "loadConditions": "no concurrent CPU or RAM load; each sample ran in its own process; the AMBIENT 8192 MB old-space cap was in force for every run (no --max-old-space-size override anywhere); the measurement window was 2026-11-16T11:10:38.937Z - 2026-11-16T11:17:35.347Z"
+      },
+      "corpusIdentity": "841a8a69b63d6aa7d6e9ea1624860c8199dfddf7c549e6537c7fd2f33752d597",
+      "corpusIdentityNote": "the family census is BYTE-IDENTICAL to the pre-change, post-change and post-remediation arms - the P1-S3-5 repair changed the ENTITY stage and rag-index/** is in NO published corpus family, so the repair CANNOT change the corpus contract",
+      "familyCount": 9,
+      "documentCount": 1848,
+      "chunkCount": 21144,
+      "primary": {
+        "instrument": "tmp/p1-s1-4-control.mjs --arm=post",
+        "runCount": 5,
+        "peakRssBytes": {
+          "perRun": [578637824, 579174400, 575799296, 575193088, 577118208],
+          "median": 577118208,
+          "min": 575193088,
+          "max": 579174400,
+          "spread": 3981312
+        },
+        "replicaBytes": 71376896,
+        "documentCount": 1848,
+        "chunkCount": 21144
+      },
+      "corroborating": {
+        "instrument": "rag-index/__tests__/fixtures/build-memory-probe.mjs (unmodified)",
+        "runCount": 5,
+        "peakRssBytes": {
+          "perRun": [575303680, 574754816, 574033920, 573472768, 570843136],
+          "median": 574033920,
+          "min": 570843136,
+          "max": 575303680,
+          "spread": 4460544
+        },
+        "replicaBytes": 71376896,
+        "documentCount": 1848,
+        "chunkCount": 21144
+      },
+      "pooled": {
+        "runCount": 10,
+        "peakRssBytes": {
+          "median": 575248384,
+          "min": 570843136,
+          "max": 579174400,
+          "spread": 8331264
+        }
+      },
+      "hardGates": {
+        "replicaBytes": {
+          "measured": 71376896,
+          "ceiling": 111783936,
+          "pass": true
+        },
+        "documentCount": {
+          "measured": 1848,
+          "expected": 1848,
+          "expectedDerivation": "2080 - 173 - 58 - 1",
+          "pass": true
+        },
+        "chunkCount": {
+          "measured": 21144,
+          "ceiling": 33008,
+          "pass": true
+        },
+        "peakRssBytes": {
+          "measuredMedian": 577118208,
+          "frozenCeiling": 585711616,
+          "deltaBytes": -8593408,
+          "deltaPercent": -1.467,
+          "pass": true,
+          "note": "the bound is median <= 585711616 with NO allowance of any kind (PLAN AMENDMENT RECORD A5 rules 2 and 3); the negative delta is HEADROOM, not an allowance"
+        }
+      },
+      "ceilingComparison": {
+        "frozenCeilingBytes": 585711616,
+        "primaryMedianBytes": 577118208,
+        "primaryDeltaBytes": -8593408,
+        "corroboratingMedianBytes": 574033920,
+        "corroboratingDeltaBytes": -11677696,
+        "pooledMedianBytes": 575248384,
+        "pooledDeltaBytes": -10463232,
+        "everySampleUnderCeiling": true,
+        "largestSampleBytes": 579174400,
+        "largestSampleHeadroomBytes": 6537216,
+        "postRemediationPrimaryMedianBytes": 563331072,
+        "primaryDeltaVsPostRemediationBytes": 13787136,
+        "allowance": "NONE - the bound is median <= 585711616 with NO allowance of any kind (PLAN AMENDMENT RECORD A5 rules 2 and 3); every delta here is NEGATIVE, i.e. headroom under the frozen ceiling",
+        "verdict": "MET"
+      },
+      "byteIdentity": {
+        "tsSourceCorpusSha256": "35251d11c8a43275291f257c74a2217662b9295c8db842ffbf0796245ef1a64d",
+        "tsSourceCorpusSha256Expected": "35251d11c8a43275291f257c74a2217662b9295c8db842ffbf0796245ef1a64d",
+        "tsSourceMatch": true,
+        "tsSourceScope": "516 ts-source documents / 2616 chunks / 438 files - byte-identical to the post-remediation capture, because the P1-S3-5 repair did not touch this family",
+        "corpusIdentity": "841a8a69b63d6aa7d6e9ea1624860c8199dfddf7c549e6537c7fd2f33752d597",
+        "corpusIdentityMatch": true,
+        "documentDigest": "e840a0d089517e7dc4745a27f0381006cac1e9103eaf3846a163dbf21171b3dd",
+        "chunkDigest": "875379e6f5b287d86e408d74ef629eab325e5b3ac21bac927289a61df6b73e5b",
+        "fullCorpusDigestDeltaAttribution": "the full-corpus document and chunk digests are NOT stable across tracker appends, because plans/cortex-plan-first-retrieval.plans.md IS a published corpus document (family 'plan') and every append changes it; the STABLE invariants are the family census (byte-identical: 9 families / 1848 documents) and the ts-source corpus hash (byte-identical: 35251d11...); the corpus FILE SET is unchanged and NO chunker was modified between the captures, so every full-corpus digest delta is the PLAN DOCUMENT'S OWN growth and NOT the P1-S3-5 repair",
+        "chunkCountDelta": "+114 chunks versus the post-remediation arm (21030 -> 21144), attributable to the same single changed plan document",
+        "replicaBytesDelta": "-212992 bytes versus the post-remediation arm (71589888 -> 71376896), attributable to the same single changed plan document"
+      },
+      "preAppendCapture": {
+        "role": "the FIRST capture of this round, taken BEFORE the tracker append - disclosed because the plan file IS a corpus document and every append changes the corpus; the arm above is the operative one because it is measured at the final corpus state",
+        "capturedAt": "2026-11-16T10:36:04.424Z",
+        "measurementWindow": "2026-11-16T10:36:04.424Z - 2026-11-16T10:53:56.921Z",
+        "primary": {
+          "runCount": 5,
+          "peakRssBytes": {
+            "perRun": [573587456, 578527232, 574939136, 482877440, 572567552],
+            "median": 573587456,
+            "min": 482877440,
+            "max": 578527232,
+            "spread": 95649792
+          }
+        },
+        "corroborating": {
+          "runCount": 5,
+          "peakRssBytes": {
+            "perRun": [578641920, 573198336, 573919232, 577429504, 578023424],
+            "median": 577429504,
+            "min": 573198336,
+            "max": 578641920,
+            "spread": 5443584
+          }
+        },
+        "pooled": {
+          "runCount": 10,
+          "peakRssBytes": {
+            "median": 574429184,
+            "min": 482877440,
+            "max": 578641920
+          }
+        },
+        "replicaBytes": 72376320,
+        "chunkCount": 21131,
+        "verdict": "MET",
+        "note": "all 10 samples were under the ceiling here as well (largest 578641920, headroom 7069696); the primary arm's sample 4 (482877440) is a 90662208-byte LOW OUTLIER that was RETAINED - no outlier exclusion is permitted - and the verdict is identical with and without it"
+      }
+    }
+  }
+}

@@ -1,6 +1,8 @@
 import { jest } from '@jest/globals';
 import path from 'node:path';
 
+import { CORPUS_FAMILY_NAMES } from './corpus-sources.mjs';
+
 // ---------------------------------------------------------------------------
 // Mocks
 // ---------------------------------------------------------------------------
@@ -54,14 +56,30 @@ describe('mapFamilyToEntityType', () => {
   it('maps demo to demo', () => {
     expect(mapFamilyToEntityType('demo')).toBe('demo');
   });
-  it('maps benchmark to benchmark', () => {
-    expect(mapFamilyToEntityType('benchmark')).toBe('benchmark');
+  it('maps test to demo', () => {
+    expect(mapFamilyToEntityType('test')).toBe('demo');
+  });
+  it('returns null for the retired benchmark family', () => {
+    expect(mapFamilyToEntityType('benchmark')).toBeNull();
   });
   it('returns null for unknown family', () => {
     expect(mapFamilyToEntityType('unknown')).toBeNull();
   });
   it('returns null for undefined', () => {
     expect(mapFamilyToEntityType(undefined)).toBeNull();
+  });
+  it('publishes a doc entity for every corpus family that carries one', () => {
+    const carried = CORPUS_FAMILY_NAMES.filter(
+      (family) => mapFamilyToEntityType(family) !== null,
+    );
+    expect(carried.toSorted()).toEqual([
+      'agent',
+      'completed-plan',
+      'demo',
+      'plan',
+      'skill',
+      'test',
+    ]);
   });
 });
 
@@ -97,9 +115,9 @@ describe('constructDocQualifiedName', () => {
     const result = constructDocQualifiedName('examples/flappy-bird-lstm/README.md', 'demo');
     expect(result).toMatch(/^demos\//);
   });
-  it('constructs benchmark qualified name from benchmarks subdirectory', () => {
-    const result = constructDocQualifiedName('benchmarks/memory-optimization/README.md', 'benchmark');
-    expect(result).toMatch(/^benchmarks\//);
+  it('constructs demo qualified name for a test document', () => {
+    const result = constructDocQualifiedName('examples/flappy-bird-lstm/flappy.test.ts', 'demo');
+    expect(result).toBe('demos/flappy-bird-lstm');
   });
   it('falls back to dot-separated path for unknown entity type', () => {
     expect(constructDocQualifiedName('other/file.md', 'unknown')).toBe('other.file');

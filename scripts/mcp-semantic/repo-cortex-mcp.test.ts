@@ -156,21 +156,5 @@ describeOrSkip('repo cortex MCP premium primary search defaults', () => {
 
       expect(result.structuredContent?.fallback_triggered).toBe(true);
     });
-
-    it('applies include_code_only by default for code_specific queries', () => {
-      const result = runModuleEvaluation<ToolCallResult>(`
-        import { createRepoCortexMcpServer } from './scripts/mcp-semantic/repo-cortex-mcp.mjs';
-        const server = createRepoCortexMcpServer({ databasePath: './rag-index/data/turso-replica.sqlite' });
-        const result = await server.dispatch({
-          jsonrpc: '2.0',
-          id: 1,
-          method: 'tools/call',
-          params: { name: 'search_advanced', arguments: { query: 'Network class architecture', query_class: 'code_specific' } },
-        });
-        console.log(JSON.stringify(result));
-      `);
-
-      expect(result.structuredContent?.include_code_only).toBe(true);
-    });
   });
 });

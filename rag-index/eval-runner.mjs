@@ -72,7 +72,7 @@ const SELFTEST_QUERIES = Object.freeze([
     query: 'NEAT crossover',
     class: 'simple_lookup',
     difficulty: 'easy',
-    expected_doc_families: ['readme'],
+    expected_doc_families: ['root-doc', 'ts-source'],
     expected_heading_contains: 'crossover',
     expected_symbol_contains: null,
     expected_chunk_ids: [],
@@ -84,7 +84,7 @@ const SELFTEST_QUERIES = Object.freeze([
     query: 'completely nonexistent query xyz',
     class: 'simple_lookup',
     difficulty: 'easy',
-    expected_doc_families: ['readme'],
+    expected_doc_families: ['root-doc'],
     expected_heading_contains: 'nonexistent',
     expected_symbol_contains: null,
     expected_chunk_ids: [],
@@ -96,7 +96,7 @@ const SELFTEST_QUERIES = Object.freeze([
     query: 'NEAT speciation',
     class: 'cross_boundary',
     difficulty: 'medium',
-    expected_doc_families: ['readme', 'ts-source'],
+    expected_doc_families: ['root-doc', 'ts-source'],
     expected_heading_contains: 'speciation',
     expected_symbol_contains: null,
     expected_chunk_ids: [],
@@ -212,7 +212,7 @@ function sortQueries(queries) {
 async function syntheticSearch(querySpec, _options) {
   const family =
     querySpec.expected_doc_families?.[0] ??
-    (querySpec.class === 'code_specific' ? 'ts-source' : 'readme');
+    (querySpec.class === 'code_specific' ? 'ts-source' : 'root-doc');
   return [
     {
       chunk_id: 1,
@@ -288,7 +288,9 @@ export async function resolveSearchFn(condition, options) {
  * Build condition-specific search options.
  *
  * @param {string} condition
- * @param {object} querySpec
+ * @param {object} querySpec Accepted for call-signature compatibility; it no
+ *   longer selects a code-only default because the retired `include_code_only`
+ *   option was removed from the search path.
  * @param {object} options
  * @returns {object}
  */
@@ -296,7 +298,6 @@ export function buildConditionOptions(condition, querySpec, options) {
   const resolvedOptions = options ?? {};
   const limit = Number(resolvedOptions.limit ?? 10);
   const alpha = Number(resolvedOptions.alpha ?? 0.5);
-  const isCodeSpecific = querySpec?.class === 'code_specific';
 
   switch (condition) {
     case 'bm25_only':
@@ -315,7 +316,6 @@ export function buildConditionOptions(condition, querySpec, options) {
         compact: true,
         read_top_result: true,
         auto_fallback: true,
-        include_code_only: isCodeSpecific,
       };
     default:
       throw new Error(`Unsupported condition: ${condition}`);

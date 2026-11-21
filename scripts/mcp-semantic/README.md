@@ -367,7 +367,7 @@ Use `search_context` when the next step is to pass evidence directly to a langua
 
 Full-pipeline search with classification-aware defaults, automatic fallback, and optional result explanations.
 
-`auto_fallback` defaults to `true`: if the primary search returns no relevant results, the tool automatically rewrites the query (for example by removing code punctuation or falling back to BM25-only retrieval) and appends a second result set. `include_code_only` defaults to `true` for `code_specific` queries so only source-code chunks are returned. Set `explain_ranking: true` to receive a `ranking_explanation` field that describes why each result was selected.
+`auto_fallback` defaults to `true`: if the primary search returns no relevant results, the tool automatically rewrites the query (for example by removing code punctuation or falling back to BM25-only retrieval) and appends a second result set. Set `explain_ranking: true` to receive a `ranking_explanation` field that describes why each result was selected.
 
 Schema:
 
@@ -449,10 +449,6 @@ Schema:
       "type": "boolean",
       "default": true,
       "description": "Automatically retry with a fallback query if the primary search is empty."
-    },
-    "include_code_only": {
-      "type": "boolean",
-      "description": "For code_specific queries, return only source-code chunks. Defaults to true."
     },
     "explain_ranking": {
       "type": "boolean",

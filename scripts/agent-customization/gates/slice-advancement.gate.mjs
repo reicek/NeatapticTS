@@ -74,8 +74,9 @@ Options:
   --json               Output JSON gate contract
   --slice-id=<id>      Slice identifier (required)
   --changed-files=f1,f2  Comma-separated changed file paths
-  --plan=<path>        Forward the plan to plan-command-lint (auto-resolved
-                       from data/mcp-session-override.json or a unique [WIP]
+  --plan=<path>        Forward the plan to plan-command-lint and
+                       specialist-review (auto-resolved from
+                       data/mcp-session-override.json or a unique [WIP]
                        plan when omitted)
   --help               Show this help text
 `);
@@ -193,21 +194,25 @@ function classifySeverity(files) {
 }
 
 /**
- * Resolve the plan path forwarded to the plan-command-lint sub-gate.
+ * Resolve the plan path forwarded to the plan-command-lint and
+ * specialist-review sub-gates.
  *
  * Without a forwarded plan, plan-command-lint silently falls back to its own
  * hard-coded DEFAULT_PLAN (plans/orchestration-fixes.plans.md), linting a
- * stale plan instead of the active one. Precedence:
+ * stale plan instead of the active one. The same hazard applies to
+ * specialist-review: it must validate the ACTIVE plan's specialist-review
+ * evidence, not a completed plan that happens to carry the legacy
+ * VALIDATION_EVIDENCE token. Precedence:
  *   1. Explicit --plan CLI argument.
  *   2. Active plan recorded in data/mcp-session-override.json (plan_path).
  *   3. A unique top-level [WIP] plan in plans/ (mirrors the sibling
  *      plan-slice-quality / step-packet scan convention).
- * Returns null when nothing resolves, in which case plan-command-lint keeps
+ * Returns null when nothing resolves, in which case each sub-gate keeps
  * its documented default rather than guessing.
  *
  * @returns {Promise<string|null>} Repo-relative plan path, or null.
  */
-async function resolveLintPlanPath() {
+async function resolveActivePlanPath() {
   if (planArg) {
     return planArg;
   }
@@ -251,8 +256,8 @@ const changedFiles = changedFilesRaw
 // Step 1: Classify severity
 const { severity, specialistCount } = classifySeverity(changedFiles);
 
-// Step 1b: Resolve the plan forwarded to plan-command-lint.
-const lintPlanPath = await resolveLintPlanPath();
+// Step 1b: Resolve the plan forwarded to plan-command-lint and specialist-review.
+const activePlanPath = await resolveActivePlanPath();
 
 // Step 2: Run gates based on severity
 // TRIVIAL gates always run
@@ -281,8 +286,16 @@ const results = gatesToRun.map((gateName) => {
     extraArgs.push(`--changed-files=${changedFiles.join(',')}`);
     extraArgs.push('--exemptions=coverage/coverage-exemptions.json');
   }
-  if (gateName === 'plan-command-lint' && lintPlanPath) {
-    extraArgs.push(`--plan=${lintPlanPath}`);
+  if (gateName === 'plan-command-lint' && activePlanPath) {
+    extraArgs.push(`--plan=${activePlanPath}`);
+  }
+  // Forward the ACTIVE plan to specialist-review as well. Without it, the
+  // sub-gate falls back to its own DEFAULT plan (a COMPLETED plan under
+  // plans/completed/), so the consolidated gate would validate a stale
+  // artifact and report a green specialist-review that never touched the
+  // plan being advanced.
+  if (gateName === 'specialist-review' && activePlanPath) {
+    extraArgs.push(`--plan=${activePlanPath}`);
   }
   return runSubGate(gateName, extraArgs);
 });
@@ -315,7 +328,8 @@ const result = {
     sliceId,
     severity,
     specialistCount,
-    planCommandLintPlan: lintPlanPath,
+    planCommandLintPlan: activePlanPath,
+    specialistReviewPlan: activePlanPath,
     gatesRun: gatesToRun,
     gateCount: gatesToRun.length,
     results: sub_gates,

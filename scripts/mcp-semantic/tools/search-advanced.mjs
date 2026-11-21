@@ -19,6 +19,7 @@
 import { expandQuery } from '../../../rag-index/expand-query.mjs';
 import { assembleContext } from '../../../rag-index/assemble-context.mjs';
 import { classifyAndRoute } from '../../../rag-index/routing-table.mjs';
+import { compileFamilySetFilter } from '../../../rag-index/metadata-filter.mjs';
 import {
   buildRankingExplanation,
   buildResponseFreshness,
@@ -80,8 +81,6 @@ const FALLBACK_DEFAULTS = Object.freeze({
   use_dense: true,
 });
 
-const README_FAMILY = 'readme';
-const GENERATED_README_FAMILY = 'generated-readme';
 const FALLBACK_CONFIDENCE_THRESHOLD = 0.5;
 
 /**
@@ -274,7 +273,14 @@ async function runRetrieval(query, config) {
     client: config.client,
   });
 
-  return searchResult;
+  // The routed family SET is carried on its own key: the corpus response
+  // omits `family` on the dense path and drops it when the broaden-on-empty
+  // safety net fires, so `searchResult.family` is not a reliable source for
+  // the family set this path applies.
+  return {
+    ...searchResult,
+    routed_family: routing.strategy.family ?? null,
+  };
 }
 
 /**
@@ -372,9 +378,11 @@ function mergeResults(primary, fallback) {
  * @param {string} query - Normalized query string.
  * @param {string | undefined} databasePath - Corpus database path.
  * @param {number} limit - Maximum number of fallback results.
+ * @param {import('@libsql/client').Client | null} client - Optional libSQL client for the async path.
+ * @param {string | string[] | null | undefined} family - The routed document-family set applied as a parameterized filter.
  * @returns {Promise<Array<object>>} Native fallback results.
  */
-async function runNativeFallback(query, databasePath, limit, client) {
+async function runNativeFallback(query, databasePath, limit, client, family) {
   const fallbackResults = [];
   /* istanbul ignore if -- defensive guard: searchAdvanced always provides databasePath or client */
   if (!databasePath && !client) {
@@ -393,6 +401,7 @@ async function runNativeFallback(query, databasePath, limit, client) {
       return fallbackResults;
     }
 
+    const familySet = compileFamilySetFilter(family);
     const conditions = [];
     const args = [];
     for (const token of tokens) {
@@ -402,6 +411,8 @@ async function runNativeFallback(query, databasePath, limit, client) {
       );
       args.push(pattern, pattern);
     }
+    const familyPredicate = familySet.sql ? ` AND ${familySet.sql}` : '';
+    args.push(...familySet.params);
     args.push(limit);
 
     const sql = `
@@ -413,7 +424,7 @@ async function runNativeFallback(query, databasePath, limit, client) {
           c.cyclomatic_complexity, c.test_coverage, c.source_path_pattern
         FROM chunks c
         JOIN documents d ON d.doc_id = c.doc_id
-        WHERE ${conditions.join(' OR ')}
+        WHERE (${conditions.join(' OR ')})${familyPredicate}
         ORDER BY c.chunk_id
         LIMIT ?
       `;
@@ -438,10 +449,11 @@ async function runNativeFallback(query, databasePath, limit, client) {
             c.cyclomatic_complexity, c.test_coverage, c.source_path_pattern
           FROM chunks c
           JOIN documents d ON d.doc_id = c.doc_id
+          ${familySet.sql ? `WHERE ${familySet.sql}` : ''}
           ORDER BY c.chunk_id
           LIMIT ?
         `,
-        args: [limit],
+        args: [...familySet.params, limit],
       });
       for (const row of broadResult.rows) {
         fallbackResults.push({
@@ -597,7 +609,7 @@ async function appendNextSequentialChunk(results, client) {
           c.chunk_id,
           c.doc_id,
           c.chunk_index,
-          d.doc_family AS family,
+          d.doc_family,
           d.file_path,
           c.context_header,
           c.heading_path,
@@ -833,20 +845,9 @@ export async function searchAdvanced(options = {}) {
         ? 'cold'
         : 'not_requested';
 
-  // README suppression: code-specific queries should not be diluted by generated
-  // README onboarding chunks. Honour explicit `include_code_only` and default it
-  // on for the `code_specific` query class.
-  const includeCodeOnly =
-    typeof options.include_code_only === 'boolean'
-      ? options.include_code_only
-      : queryClass === 'code_specific';
-  let filteredResults = includeCodeOnly
-    ? results.filter(
-        (result) =>
-          result.family !== README_FAMILY &&
-          result.family !== GENERATED_README_FAMILY,
-      )
-    : results;
+  // The generated-README suppression is RETIRED: the corpus no longer publishes a README family, so
+  // the filter had nothing left to suppress. Every retrieved result now flows through unfiltered.
+  let filteredResults = results;
 
   // Native fallback: when the primary pipeline is empty or low-confidence,
   // run a simple substring search against the corpus as a last resort.
@@ -862,6 +863,7 @@ export async function searchAdvanced(options = {}) {
       options.databasePath,
       config.limit,
       options.client,
+      searchResult.routed_family,
     );
     filteredResults = mergeResults(filteredResults, fallbackResults);
     fallbackTriggered = true;
@@ -911,12 +913,14 @@ export async function searchAdvanced(options = {}) {
     query,
     query_class: queryClass,
     confidence: classification.confidence,
+    family: searchResult.routed_family ?? null,
+    family_fallback: searchResult.family_fallback ?? false,
+    classification_fallback: searchResult.classification_fallback ?? false,
     alpha: config.alpha,
     expand_query: config.expand_query,
     use_rerank: config.use_rerank,
     use_dense: config.use_dense,
     limit: config.limit,
-    include_code_only: includeCodeOnly,
     results: filteredResults,
     dense_state: denseState,
     rerank_state: rerankState,

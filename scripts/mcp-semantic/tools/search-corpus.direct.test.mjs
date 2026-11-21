@@ -100,12 +100,12 @@ async function createFilteredFixture() {
         VALUES
           (1, 1, 'slice filter fixture body alpha', 31, 'A2-red-tests', 2, 'A', 'red', NULL),
           (2, 1, 'slice filter fixture body beta', 30, 'A1-green', 1, 'A', 'green', NULL),
-          (3, 1, 'exact symbol fixture gamma', 26, 'A2-red-tests', 2, 'A', 'red', 'fixtureSymbol'),
+          (3, 1, 'exact symbol gamma', 18, 'A2-red-tests', 2, 'A', 'red', 'fixtureSymbol'),
           (4, 1, '${'corpuslongtoken '.repeat(200)}', 2800, 'A2-red-tests', 2, 'A', 'red', NULL);
       INSERT INTO chunks_fts (rowid, body_text) VALUES
         (1, 'slice filter fixture body alpha'),
         (2, 'slice filter fixture body beta'),
-        (3, 'exact symbol fixture gamma'),
+        (3, 'exact symbol gamma'),
         (4, '${'corpuslongtoken '.repeat(200)}');
     `);
   } finally {

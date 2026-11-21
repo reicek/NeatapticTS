@@ -78,7 +78,7 @@ describe('validate-index per-family freshness', () => {
     ).toBe(true);
   });
 
-  test('validateSemanticIndex exposes all ten families in family_fresh', async () => {
+  test('validateSemanticIndex exposes all nine families in family_fresh', async () => {
     const result = await validateSemanticIndex({
       documents: [],
       freshnessChecks: [],
@@ -88,14 +88,13 @@ describe('validate-index per-family freshness', () => {
     expect(result).toHaveProperty('family_fresh');
     expect(Object.keys(result.family_fresh).sort()).toEqual([
       'agent',
-      'benchmark',
       'completed-plan',
       'copilot-instructions',
       'demo',
       'plan',
-      'readme',
       'root-doc',
       'skill',
+      'test',
       'ts-source',
     ]);
     for (const entry of Object.values(result.family_fresh)) {
@@ -121,7 +120,7 @@ describe('validate-index per-family freshness', () => {
     const familyAssignments = new Map([
       ['src/a.ts', 'ts-source'],
       ['src/b.ts', 'ts-source'],
-      ['README.md', 'readme'],
+      ['README.md', 'root-doc'],
       ['plans/old.md', 'plan'],
       ['completed/active.md', 'completed-plan'],
     ]);
@@ -137,7 +136,7 @@ describe('validate-index per-family freshness', () => {
       'src/a.ts',
       'src/b.ts',
     ]);
-    expect(result.family_fresh['readme'].stalePaths).toEqual(['README.md']);
+    expect(result.family_fresh['root-doc'].stalePaths).toEqual(['README.md']);
     expect(result.family_fresh['plan'].stalePaths).toEqual(['plans/old.md']);
     expect(result.family_fresh['completed-plan'].stalePaths).toEqual([
       'completed/active.md',
@@ -203,11 +202,10 @@ describe('validate-index per-family freshness', () => {
     await mkdir(tempDir, { recursive: true });
     const outputPath = path.join(tempDir, 'freshness-manifest.json');
     const familyFresh = {
-      readme: { fresh: true, stalePaths: [] },
       'ts-source': { fresh: false, stalePaths: ['src/a.ts', 'src/b.ts'] },
       plan: { fresh: true, stalePaths: [] },
       demo: { fresh: true, stalePaths: [] },
-      benchmark: { fresh: true, stalePaths: [] },
+      test: { fresh: true, stalePaths: [] },
       'root-doc': { fresh: true, stalePaths: [] },
       'completed-plan': { fresh: true, stalePaths: [] },
     };

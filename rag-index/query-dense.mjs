@@ -10,7 +10,7 @@
  * @param {string}  --query <text>                 - Query text (required).
  * @param {boolean} [--dense]                      - Enable hybrid dense reranking (default: false).
  * @param {number}  [--limit <n>]                  - Maximum returned result count (default: 10).
- * @param {string}  [--family <name>]              - Restrict query to one document family.
+ * @param {string}  [--family <name>]              - Restrict query to one document family, or to a CSV family list (e.g. `plan,completed-plan`).
  * @param {string}  [--database <path>]            - Override semantic-index corpus database path.
  * @param {string}  [--model-directory <path>]     - Override local model cache directory.
  * @param {string}  [--model-id <id>]              - Override the model identifier.
@@ -41,6 +41,7 @@ import {
   sanitizeFtsQuery,
 } from '../scripts/mcp-semantic/tools/cortex-db.mjs';
 import {
+  compileFamilySetFilter,
   compileFilterToSqlAliased,
   validateFilter,
 } from './metadata-filter.mjs';
@@ -196,12 +197,11 @@ async function loadBm25Rows({
   client,
   compiledFilter,
 }) {
-  const familyFilter = family ? 'AND d.doc_family = ?' : '';
+  const familySet = compileFamilySetFilter(family);
+  const familyFilter = familySet.sql ? `AND ${familySet.sql}` : '';
   const filterSql = compiledFilter ? `AND ${compiledFilter.sql}` : '';
   const filterParams = compiledFilter ? compiledFilter.params : [];
-  const args = family
-    ? [query, family, ...filterParams, candidatePoolSize]
-    : [query, ...filterParams, candidatePoolSize];
+  const args = [query, ...familySet.params, ...filterParams, candidatePoolSize];
   const sql = `
       SELECT d.file_path, d.doc_family, c.chunk_id, c.chunk_index, c.heading_path,
       c.symbol_name, c.body_text, c.char_start, c.char_end, bm25(chunks_fts) AS score
@@ -306,26 +306,19 @@ async function loadAnnRows({
   limit,
   compiledFilter,
 }) {
-  const familyFilter = family ? 'AND d.doc_family = ?' : '';
+  const familySet = compileFamilySetFilter(family);
+  const familyFilter = familySet.sql ? `AND ${familySet.sql}` : '';
   const filterSql = compiledFilter ? `AND ${compiledFilter.sql}` : '';
   const filterParams = compiledFilter ? compiledFilter.params : [];
   const annK = Math.max(limit * 2, limit);
-  const args = family
-    ? [
-        queryEmbeddingBuffer,
-        queryEmbeddingBuffer,
-        annK,
-        modelId,
-        family,
-        ...filterParams,
-      ]
-    : [
-        queryEmbeddingBuffer,
-        queryEmbeddingBuffer,
-        annK,
-        modelId,
-        ...filterParams,
-      ];
+  const args = [
+    queryEmbeddingBuffer,
+    queryEmbeddingBuffer,
+    annK,
+    modelId,
+    ...familySet.params,
+    ...filterParams,
+  ];
 
   const sql = `
     SELECT d.file_path, d.doc_family, c.chunk_id, c.chunk_index, c.heading_path,
@@ -353,7 +346,8 @@ async function loadAnnRows({
  * Queries the `chunks.embedding` F8_BLOB column with Turso's server-side
  * `vector_distance_cos(c.embedding, vector8(?))` function, ordered by
  * ascending distance (closest first). An optional family filter restricts
- * results to one document family.
+ * results to one document family, or to the SET of families named by a CSV
+ * family list (each family is a separate BOUND parameter).
  *
  * This is the fallback used when the DiskANN ANN index is cold or missing.
  *
@@ -369,12 +363,17 @@ async function loadDenseRowsBruteForce({
   limit,
   compiledFilter,
 }) {
-  const familyFilter = family ? 'AND d.doc_family = ?' : '';
+  const familySet = compileFamilySetFilter(family);
+  const familyFilter = familySet.sql ? `AND ${familySet.sql}` : '';
   const filterSql = compiledFilter ? `AND ${compiledFilter.sql}` : '';
   const filterParams = compiledFilter ? compiledFilter.params : [];
-  const args = family
-    ? [queryEmbeddingBuffer, modelId, family, ...filterParams, limit]
-    : [queryEmbeddingBuffer, modelId, ...filterParams, limit];
+  const args = [
+    queryEmbeddingBuffer,
+    modelId,
+    ...familySet.params,
+    ...filterParams,
+    limit,
+  ];
 
   const sql = `
     SELECT d.file_path, d.doc_family, c.chunk_id, c.chunk_index, c.heading_path,
@@ -409,7 +408,7 @@ async function main() {
         '--query <text>              Query text.',
         '--dense                     Enable hybrid dense reranking.',
         '--limit <n>                 Maximum returned result count (default: 10).',
-        '--family <name>             Restrict the query to one document family.',
+        '--family <name>             Restrict the query to one document family or a CSV family list.',
         '--database <path>           Override the semantic-index corpus database path.',
         '--model-directory <path>    Override the local model cache directory.',
         '--model-id <id>             Override the model identifier.',

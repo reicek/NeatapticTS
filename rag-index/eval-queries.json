@@ -4,14 +4,14 @@
     "query": "how does NEAT crossover work",
     "class": "simple_lookup",
     "difficulty": "easy",
-    "expected_doc_families": ["readme", "plan"],
+    "expected_doc_families": ["root-doc", "plan"],
     "expected_heading_contains": "crossover",
     "expected_symbol_contains": null,
     "expected_chunk_ids": [],
     "relevance_grades": [
       {
         "heading_path_contains": "crossover",
-        "family": "readme",
+        "family": "root-doc",
         "grade": 3
       },
       {
@@ -21,7 +21,7 @@
       },
       {
         "heading_path_contains": "NEAT",
-        "family": "readme",
+        "family": "root-doc",
         "grade": 1
       }
     ],
@@ -32,7 +32,7 @@
     "query": "Network activate forward pass",
     "class": "simple_lookup",
     "difficulty": "easy",
-    "expected_doc_families": ["ts-source", "readme"],
+    "expected_doc_families": ["ts-source", "root-doc"],
     "expected_heading_contains": "activate",
     "expected_symbol_contains": "activate",
     "expected_chunk_ids": [],
@@ -44,7 +44,7 @@
       },
       {
         "heading_path_contains": "activate",
-        "family": "readme",
+        "family": "root-doc",
         "grade": 2
       }
     ],
@@ -67,7 +67,7 @@
       },
       {
         "heading_path_contains": "speciation",
-        "family": "readme",
+        "family": "root-doc",
         "grade": 2
       }
     ],
@@ -78,7 +78,7 @@
     "query": "mutation add node connection",
     "class": "simple_lookup",
     "difficulty": "easy",
-    "expected_doc_families": ["ts-source", "readme"],
+    "expected_doc_families": ["ts-source", "root-doc"],
     "expected_heading_contains": "mutation",
     "expected_symbol_contains": "mutate",
     "expected_chunk_ids": [],
@@ -124,7 +124,7 @@
     "query": "deterministic seed replay RNG state",
     "class": "simple_lookup",
     "difficulty": "easy",
-    "expected_doc_families": ["plan", "readme", "ts-source"],
+    "expected_doc_families": ["plan", "root-doc", "ts-source"],
     "expected_heading_contains": "determin",
     "expected_symbol_contains": null,
     "expected_chunk_ids": [],
@@ -136,7 +136,7 @@
       },
       {
         "heading_path_contains": "determin",
-        "family": "readme",
+        "family": "root-doc",
         "grade": 2
       }
     ],
@@ -147,7 +147,7 @@
     "query": "ONNX import constrained recurrent network",
     "class": "simple_lookup",
     "difficulty": "medium",
-    "expected_doc_families": ["plan", "readme", "ts-source"],
+    "expected_doc_families": ["plan", "root-doc", "ts-source"],
     "expected_heading_contains": "onnx",
     "expected_symbol_contains": null,
     "expected_chunk_ids": [],
@@ -159,7 +159,7 @@
       },
       {
         "heading_path_contains": "onnx",
-        "family": "readme",
+        "family": "root-doc",
         "grade": 2
       }
     ],
@@ -170,7 +170,7 @@
     "query": "adaptive mutation complexity phases",
     "class": "simple_lookup",
     "difficulty": "easy",
-    "expected_doc_families": ["ts-source", "readme"],
+    "expected_doc_families": ["ts-source", "root-doc"],
     "expected_heading_contains": "adaptive",
     "expected_symbol_contains": null,
     "expected_chunk_ids": [],
@@ -182,7 +182,7 @@
       },
       {
         "heading_path_contains": "adaptive",
-        "family": "readme",
+        "family": "root-doc",
         "grade": 2
       }
     ],
@@ -229,7 +229,7 @@
     "query": "graph surgery remove connection prune topology",
     "class": "simple_lookup",
     "difficulty": "medium",
-    "expected_doc_families": ["readme", "ts-source"],
+    "expected_doc_families": ["root-doc", "ts-source"],
     "expected_heading_contains": "topology",
     "expected_symbol_contains": null,
     "expected_chunk_ids": [],
@@ -241,7 +241,7 @@
       },
       {
         "heading_path_contains": "topology",
-        "family": "readme",
+        "family": "root-doc",
         "grade": 2
       }
     ],
@@ -275,7 +275,7 @@
     "query": "how does Network activation use the slab fast path",
     "class": "cross_boundary",
     "difficulty": "medium",
-    "expected_doc_families": ["ts-source", "readme"],
+    "expected_doc_families": ["ts-source", "root-doc"],
     "expected_heading_contains": "slab",
     "expected_symbol_contains": "activate",
     "expected_chunk_ids": [],
@@ -292,7 +292,7 @@
       },
       {
         "heading_path_contains": "slab",
-        "family": "readme",
+        "family": "root-doc",
         "grade": 1
       }
     ],
@@ -303,7 +303,7 @@
     "query": "worker pool evaluation ordered results dataset broadcast",
     "class": "cross_boundary",
     "difficulty": "medium",
-    "expected_doc_families": ["plan", "readme", "ts-source"],
+    "expected_doc_families": ["plan", "root-doc", "ts-source"],
     "expected_heading_contains": "worker",
     "expected_symbol_contains": null,
     "expected_chunk_ids": [],
@@ -315,7 +315,7 @@
       },
       {
         "heading_path_contains": "worker",
-        "family": "readme",
+        "family": "root-doc",
         "grade": 2
       },
       {
@@ -331,7 +331,7 @@
     "query": "multiobjective telemetry lineage diversity selection",
     "class": "cross_boundary",
     "difficulty": "medium",
-    "expected_doc_families": ["readme", "ts-source"],
+    "expected_doc_families": ["root-doc", "ts-source"],
     "expected_heading_contains": "telemetry",
     "expected_symbol_contains": null,
     "expected_chunk_ids": [],
@@ -348,7 +348,7 @@
       },
       {
         "heading_path_contains": "diversity",
-        "family": "readme",
+        "family": "root-doc",
         "grade": 1
       }
     ],
@@ -359,7 +359,7 @@
     "query": "browser runtime worker url packaging bundle",
     "class": "cross_boundary",
     "difficulty": "medium",
-    "expected_doc_families": ["plan", "readme"],
+    "expected_doc_families": ["plan", "root-doc"],
     "expected_heading_contains": "browser",
     "expected_symbol_contains": null,
     "expected_chunk_ids": [],
@@ -371,7 +371,7 @@
       },
       {
         "heading_path_contains": "browser",
-        "family": "readme",
+        "family": "root-doc",
         "grade": 2
       }
     ],
@@ -382,7 +382,7 @@
     "query": "BM25 semantic index freshness validation",
     "class": "cross_boundary",
     "difficulty": "medium",
-    "expected_doc_families": ["plan", "readme"],
+    "expected_doc_families": ["plan", "root-doc"],
     "expected_heading_contains": "fresh",
     "expected_symbol_contains": null,
     "expected_chunk_ids": [],
@@ -394,7 +394,7 @@
       },
       {
         "heading_path_contains": "fresh",
-        "family": "readme",
+        "family": "root-doc",
         "grade": 2
       }
     ],
@@ -405,14 +405,14 @@
     "query": "feed forward recurrent intent policy architecture",
     "class": "cross_boundary",
     "difficulty": "medium",
-    "expected_doc_families": ["readme", "ts-source"],
+    "expected_doc_families": ["root-doc", "ts-source"],
     "expected_heading_contains": "feed forward",
     "expected_symbol_contains": null,
     "expected_chunk_ids": [],
     "relevance_grades": [
       {
         "heading_path_contains": "feed forward",
-        "family": "readme",
+        "family": "root-doc",
         "grade": 3
       },
       {
@@ -428,7 +428,7 @@
     "query": "ordered batch evaluation worker pool fallback",
     "class": "cross_boundary",
     "difficulty": "medium",
-    "expected_doc_families": ["plan", "readme", "ts-source"],
+    "expected_doc_families": ["plan", "root-doc", "ts-source"],
     "expected_heading_contains": "evaluat",
     "expected_symbol_contains": null,
     "expected_chunk_ids": [],
@@ -445,7 +445,7 @@
       },
       {
         "heading_path_contains": "evaluat",
-        "family": "readme",
+        "family": "root-doc",
         "grade": 1
       }
     ],

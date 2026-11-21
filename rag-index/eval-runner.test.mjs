@@ -89,8 +89,8 @@ function makeValidQuery(overrides = {}) {
 function makeTestQueries() {
   return [
     makeValidQuery({ query_id: 'q1', query: 'Network activate', class: 'simple_lookup', expected_heading_contains: 'activate' }),
-    makeValidQuery({ query_id: 'q2', query: 'NEAT crossover', class: 'simple_lookup', expected_heading_contains: 'crossover', expected_doc_families: ['readme'] }),
-    makeValidQuery({ query_id: 'q3', query: 'genome speciation', class: 'cross_boundary', difficulty: 'medium', expected_heading_contains: 'speciation', expected_doc_families: ['readme', 'ts-source'] }),
+    makeValidQuery({ query_id: 'q2', query: 'NEAT crossover', class: 'simple_lookup', expected_heading_contains: 'crossover', expected_doc_families: ['root-doc'] }),
+    makeValidQuery({ query_id: 'q3', query: 'genome speciation', class: 'cross_boundary', difficulty: 'medium', expected_heading_contains: 'speciation', expected_doc_families: ['root-doc', 'ts-source'] }),
     makeValidQuery({ query_id: 'q4', query: 'population fitness', class: 'code_specific', expected_heading_contains: 'fitness', expected_doc_families: ['ts-source'] }),
     makeValidQuery({ query_id: 'q5', query: 'neuron mutate', class: 'plan_specific', expected_heading_contains: 'mutate', expected_doc_families: ['ts-source'] }),
   ];
@@ -240,20 +240,14 @@ describe('eval-runner', () => {
       expect(opts).toEqual({ useDense: true, useRerank: true, alpha: 0.5, limit: 5 });
     });
 
-    it('returns advanced_default options with isCodeSpecific=false', () => {
+    it('returns advanced_default options', () => {
       const opts = buildConditionOptions('advanced_default', { class: 'simple_lookup' }, {});
       expect(opts.useDense).toBe(true);
       expect(opts.useRerank).toBe(true);
       expect(opts.compact).toBe(true);
       expect(opts.read_top_result).toBe(true);
       expect(opts.auto_fallback).toBe(true);
-      expect(opts.include_code_only).toBe(false);
       expect(opts.contextBudget).toBe(4096);
-    });
-
-    it('returns advanced_default options with isCodeSpecific=true', () => {
-      const opts = buildConditionOptions('advanced_default', { class: 'code_specific' }, {});
-      expect(opts.include_code_only).toBe(true);
     });
 
     it('throws for unsupported condition', () => {
@@ -295,7 +289,7 @@ describe('eval-runner', () => {
     it('returns syntheticSearch fallback for non-code-specific class', async () => {
       const result = await resolveSearchFn('hybrid', {});
       const searchResults = await result({ class: 'simple_lookup' }, {});
-      expect(searchResults[0].family).toBe('readme');
+      expect(searchResults[0].family).toBe('root-doc');
     });
 
     it('imports real search module for non-advanced condition', async () => {

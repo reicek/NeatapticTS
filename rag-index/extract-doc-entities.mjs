@@ -1,6 +1,6 @@
 /**
  * @module extract-doc-entities
- * @description Extract document entities (plan, skill, agent, demo, benchmark) from
+ * @description Extract document entities (plan, skill, agent, demo) from
  * markdown files by parsing headings and structured content. Creates entity records
  * and `contains` edges linking parent documents to their heading sections.
  *
@@ -9,7 +9,7 @@
  * - `.github/skills/` → skill entities
  * - `.github/agents/` → agent entities (with YAML frontmatter parsing)
  * - `examples/` → demo entities
- * - `benchmarks/` → benchmark entities
+ * - the `test` family (`examples/**\/*.test.ts`, `benchmarks/**\/*.test.ts`) → demo entities
  *
  * @param {boolean} [--json] - Emit JSON output of extracted entities and edges.
  * @param {boolean} [--help] - Show help and exit.
@@ -32,7 +32,7 @@ import { repoRoot } from './init-schema.mjs';
  * Extract document entities from markdown files.
  *
  * For each document, produces:
- * 1. A parent entity (plan/skill/agent/demo/benchmark) with the correct qualified_name.
+ * 1. A parent entity (plan/skill/agent/demo) with the correct qualified_name.
  * 2. `contains` edges from the parent entity to each heading section.
  *
  * @param {object} options - Extraction options.
@@ -111,6 +111,20 @@ export async function extractDocEntities(options) {
 /**
  * Map a document family to an entity type.
  *
+ * The retired `readme` and `benchmark` families map to null, because the corpus can
+ * no longer publish them. The `test` family maps to the `demo` entity type: its
+ * members are the example and benchmark source documents, and the entity-type
+ * vocabulary is fixed by the `entities.entity_type` check constraint, which has no
+ * `test` member.
+ *
+ * The `test` family therefore shares the PROJECT-LEVEL `demo` entity of its example
+ * project: its documents create no entity of their own, and the first-wins dedup
+ * keeps one entity per project. 25 of the 339 published `test` documents are the
+ * exception: they resolve to two demo entities of their own - one for
+ * `demos/racing_curriculum/__tests__` (3 documents) and one for `demos/benchmarks`
+ * (22 documents) - because the `demo` family covers no document of those two
+ * directories.
+ *
  * @param {string} family - Document family from the corpus.
  * @returns {string | null} Entity type, or null if not a doc entity.
  */
@@ -121,7 +135,7 @@ export function mapFamilyToEntityType(family) {
     skill: 'skill',
     agent: 'agent',
     demo: 'demo',
-    benchmark: 'benchmark',
+    test: 'demo',
   };
   return familyMap[family] ?? null;
 }
@@ -135,7 +149,17 @@ export function mapFamilyToEntityType(family) {
  * | skill | `skills/<skill-name>` | `skills/coverage-guard` |
  * | agent | `agents/<agent-name>` | `agents/04-implementing` |
  * | demo | `demos/<demo-name>` | `demos/flappy-bird-lstm` |
- * | benchmark | `benchmarks/<benchmark-name>` | `benchmarks/memory-optimization` |
+ *
+ * The `demo` entity type is PROJECT-LEVEL: every document of one example project
+ * (its README, its sources and its test sources) resolves to the SAME
+ * `demos/<project>` qualified name, so the graph keeps ONE demo entity per project
+ * (the first-wins dedup by `qualified_name` in `rag-index/build-entity-graph.mjs`).
+ * The projection strips only the `examples/` prefix, so it has two exceptions among
+ * the published `test` family: `examples/racing_curriculum/__tests__` resolves to
+ * `demos/racing_curriculum/__tests__` and `benchmarks` resolves to
+ * `demos/benchmarks`, each a demo entity of its own. The retired `benchmark` entity
+ * type is no longer produced by `mapFamilyToEntityType()` and now takes the default
+ * dot-separated path.
  *
  * @param {string} filePath - Repository-relative file path.
  * @param {string} entityType - Entity type.
@@ -171,11 +195,6 @@ export function constructDocQualifiedName(filePath, entityType) {
       // examples/flappy-bird-lstm/README.md → demos/flappy-bird-lstm
       const demoDir = path.dirname(filePath).replace(/^examples\//, '');
       return `demos/${/* istanbul ignore next -- defensive: demoDir is always non-empty from path.dirname */ (demoDir || path.basename(filePath, '.md'))}`;
-    }
-    case 'benchmark': {
-      // benchmarks/memory-optimization/README.md → benchmarks/memory-optimization
-      const benchDir = path.dirname(filePath).replace(/^benchmarks\//, '');
-      return `benchmarks/${/* istanbul ignore next -- defensive: benchDir is always non-empty from path.dirname */ (benchDir || path.basename(filePath, '.md'))}`;
     }
     default:
       return filePath.replace(/\.md$/, '').replace(/\//g, '.');
@@ -384,7 +403,7 @@ export async function main() {
       },
       { family: 'completed-plan', patterns: ['plans/completed/**/*.md'] },
       { family: 'demo', patterns: ['examples/**/README.md'] },
-      { family: 'benchmark', patterns: ['benchmarks/README.md'] },
+      { family: 'test', patterns: ['examples/**/*.test.ts', 'benchmarks/**/*.test.ts'] },
     ];
 
     const documents = [];

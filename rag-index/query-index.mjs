@@ -1,7 +1,7 @@
 /**
  * @description Run a BM25 full-text search against `rag-index/data/turso-replica.sqlite` and print
  * ranked results. Accepts a positional query argument or `--query`. Optionally restricts
- * results to a single corpus family (readme, skill, agent, plan, ts-source, demo, …).
+ * results to a single corpus family (root-doc, skill, agent, plan, ts-source, demo, …).
  *
  * @param {string}  [--query <text>]   - Query text (also accepted as positional argument).
  * @param {number}  [--limit <n>]      - Maximum result count (default: 10).
@@ -83,11 +83,11 @@ async function main() {
     printHelp({
       title: 'Semantic index query',
       usage:
-        'node rag-index/query-index.mjs "Network activation" [--limit 10] [--family readme] [--json]',
+        'node rag-index/query-index.mjs "Network activation" [--limit 10] [--family root-doc] [--json]',
       options: [
         '--query <text>    Query text (alternative to positional argument)',
         '--limit <n>      Maximum result count (default: 10)',
-        '--family <name>  Restrict results to one document family (readme, skill, agent, plan, demo, ...)',
+        '--family <name>  Restrict results to one document family (root-doc, skill, agent, plan, demo, ...)',
         '--json           Emit JSON results',
         '--database <path> Path to SQLite database file (default: rag-index/data/turso-replica.sqlite)',
         '--help           Show this help',

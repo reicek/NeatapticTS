@@ -1,32 +1,19 @@
 {
-  "lastReindex": 1794441675336,
+  "lastReindex": 1795266479526,
   "updatedBy": "validate-index.mjs",
   "families": {
-    "readme": {
-      "fresh": true,
-      "stalePaths": [],
-      "lastReindex": 1794441675336,
-      "maxSyncWaitMs": 0,
-      "max_age_ms": null,
-      "gated": true
-    },
     "ts-source": {
       "fresh": true,
       "stalePaths": [],
-      "lastReindex": 1794441675336,
+      "lastReindex": 1795266479526,
       "maxSyncWaitMs": 0,
       "max_age_ms": null,
       "gated": true
     },
     "plan": {
-      "fresh": false,
-      "stalePaths": [
-        "plans/README.md",
-        "plans/Roadmap.md",
-        "plans/neatracing-voxel-racer.logs.md",
-        "plans/neatracing-voxel-racer.plans.md"
-      ],
-      "lastReindex": 1794441675336,
+      "fresh": true,
+      "stalePaths": [],
+      "lastReindex": 1795266479526,
       "maxSyncWaitMs": 60000,
       "max_age_ms": null,
       "gated": true
@@ -34,28 +21,23 @@
     "completed-plan": {
       "fresh": true,
       "stalePaths": [],
-      "lastReindex": 1794441675336,
+      "lastReindex": 1795266479526,
       "maxSyncWaitMs": 0,
       "max_age_ms": null,
       "gated": false
     },
     "demo": {
-      "fresh": false,
-      "stalePaths": [
-        "examples/neatRacing/browser-entry/browser-entry.ts",
-        "examples/neatRacing/track/road-edge.ts",
-        "examples/neatRacing/workers/simulation-worker/simulation-worker.test.ts",
-        "examples/neatRacing/workers/simulation-worker/simulation-worker.ts"
-      ],
-      "lastReindex": 1794441675336,
+      "fresh": true,
+      "stalePaths": [],
+      "lastReindex": 1795266479526,
       "maxSyncWaitMs": 0,
       "max_age_ms": null,
       "gated": true
     },
-    "benchmark": {
+    "test": {
       "fresh": true,
       "stalePaths": [],
-      "lastReindex": 1794441675336,
+      "lastReindex": 1795266479526,
       "maxSyncWaitMs": 0,
       "max_age_ms": null,
       "gated": true
@@ -63,7 +45,7 @@
     "root-doc": {
       "fresh": true,
       "stalePaths": [],
-      "lastReindex": 1794441675336,
+      "lastReindex": 1795266479526,
       "maxSyncWaitMs": 0,
       "max_age_ms": null,
       "gated": true
@@ -71,7 +53,7 @@
     "skill": {
       "fresh": true,
       "stalePaths": [],
-      "lastReindex": 1794441675336,
+      "lastReindex": 1795266479526,
       "maxSyncWaitMs": 0,
       "max_age_ms": null,
       "gated": true
@@ -79,7 +61,7 @@
     "agent": {
       "fresh": true,
       "stalePaths": [],
-      "lastReindex": 1794441675336,
+      "lastReindex": 1795266479526,
       "maxSyncWaitMs": 0,
       "max_age_ms": null,
       "gated": true
@@ -87,7 +69,7 @@
     "copilot-instructions": {
       "fresh": true,
       "stalePaths": [],
-      "lastReindex": 1794441675336,
+      "lastReindex": 1795266479526,
       "maxSyncWaitMs": 0,
       "max_age_ms": null,
       "gated": true

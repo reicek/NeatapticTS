@@ -32,7 +32,13 @@ jest.unstable_mockModule('../customization-utils.mjs', () => ({
     return {
       json: argv.includes('--json'),
       help: argv.includes('--help'),
-      plan: planArg ? planArg.slice('--plan='.length) : null,
+      // Mirror PRODUCTION `parseArgs`: when `--plan` is absent it injects a
+      // DEFAULT plan — a COMPLETED plan under plans/completed/. The gate must
+      // NOT trust that default; the mock reproduces it so the tests actually
+      // exercise the stale-default hazard.
+      plan: planArg
+        ? planArg.slice('--plan='.length)
+        : 'plans/completed/Agentic_Workflow_Architecture.plans.md',
     };
   },
 }));
@@ -63,6 +69,37 @@ const WIP_NO_EVIDENCE =
   '[WIP]\nSome plan content without validation evidence section.\n';
 const WIP_NO_MARKERS =
   '[WIP]\n## VALIDATION_EVIDENCE\nSome evidence but no specialist markers.\n';
+// CANONICAL heading form — the shape live plans carry.
+const WIP_CANONICAL_HEADING =
+  '[WIP]\n## Latest validation evidence\nimplementation-pattern-scout: APPROVE\n';
+const WIP_CANONICAL_HEADING_NO_MARKERS =
+  '[WIP]\n## Latest validation evidence\nSome evidence but no specialist markers.\n';
+const WIP_CANONICAL_HEADING_TRIVIAL =
+  '[WIP]\n## Latest validation evidence\nseverity: TRIVIAL\n';
+// A canonical heading whose body is empty carries no evidence at all.
+const WIP_CANONICAL_HEADING_EMPTY =
+  '[WIP]\n## Latest validation evidence\n## Next section\nbody\n';
+// A `###` sub-block under the canonical `##` heading stays INSIDE the
+// evidence region (the region ends at the next SAME-OR-SHALLOWER heading).
+const WIP_CANONICAL_HEADING_SUBBLOCK = [
+  '[WIP]',
+  '## Latest validation evidence',
+  '### Slice 5 evidence',
+  'specialist_review: APPROVE',
+  '## Next section',
+  'unrelated content',
+  '',
+].join('\n');
+// The canonical heading quoted inside a fenced code block is NOT a live
+// section and must not be treated as evidence.
+const WIP_HEADING_INSIDE_CODE_FENCE = [
+  '[WIP]',
+  '```md',
+  '## Latest validation evidence',
+  'specialist_review: APPROVE',
+  '```',
+  '',
+].join('\n');
 // A long multi-step plan carries one evidence block per step packet, so the
 // reviewed step's block is NOT the first one in the file.
 const WIP_TWO_EVIDENCE_SECTIONS = [
@@ -83,7 +120,22 @@ const WIP_TWO_EVIDENCE_SECTIONS = [
   '```',
   '',
 ].join('\n');
+// Two canonical sections — the reviewed one is NOT the first.
+const WIP_TWO_CANONICAL_SECTIONS = [
+  '[WIP]',
+  '## Latest validation evidence',
+  'step 14C: tsc pass',
+  '## Step 14J',
+  '## Latest validation evidence',
+  'specialist_review: APPROVE',
+  '',
+].join('\n');
 const NO_WIP = 'Completed plan with no WIP markers.\n';
+// The stale COMPLETED plan that `parseArgs` injects as its default. It only
+// carries the LEGACY token, so a gate that trusts the default reports a
+// green run that never touched the active plan.
+const STALE_DEFAULT_PLAN =
+  '[WIP]\n## VALIDATION_EVIDENCE\nimplementation-pattern-scout: APPROVE\n';
 
 // --- Tests ----------------------------------------------------------------
 describe('specialist-review gate', () => {
@@ -173,14 +225,14 @@ describe('specialist-review gate', () => {
       assert.equal(process.exitCode, 0);
     });
 
-    it('returns pass=false when no VALIDATION_EVIDENCE section', async () => {
+    it('returns pass=false when no validation evidence section', async () => {
       mockReadFileSyncFn = () => WIP_NO_EVIDENCE;
       const logs = await importGate(['--json', '--plan=plans/test.plans.md']);
       const parsed = JSON.parse(logs[0]);
       assert.equal(parsed.pass, false);
       assert.equal(
         parsed.evidence.planResults[0].reason,
-        'no VALIDATION_EVIDENCE section found',
+        'no validation evidence section found',
       );
       assert.equal(process.exitCode, 1);
     });
@@ -228,6 +280,140 @@ describe('specialist-review gate', () => {
       const parsed = JSON.parse(logs[0]);
       assert.equal(parsed.pass, false);
       assert.equal(parsed.evidence.planResults[0].reason, 'no [WIP] sections');
+    });
+  });
+
+  describe('canonical `## Latest validation evidence` heading', () => {
+    it('returns pass=true when the canonical heading carries specialist evidence', async () => {
+      mockReadFileSyncFn = () => WIP_CANONICAL_HEADING;
+      const logs = await importGate(['--json', '--plan=plans/test.plans.md']);
+      const parsed = JSON.parse(logs[0]);
+      assert.equal(parsed.pass, true);
+      assert.equal(parsed.evidence.wipPlans, 1);
+      assert.ok(parsed.evidence.planResults[0].found);
+      assert.equal(parsed.evidence.planResults[0].trivialExempt, false);
+      assert.equal(
+        parsed.evidence.planResults[0].reason,
+        'specialist review evidence found in the validation evidence section',
+      );
+      assert.equal(process.exitCode, 0);
+    });
+
+    it('returns pass=false when the canonical heading has no specialist markers', async () => {
+      mockReadFileSyncFn = () => WIP_CANONICAL_HEADING_NO_MARKERS;
+      const logs = await importGate(['--json', '--plan=plans/test.plans.md']);
+      const parsed = JSON.parse(logs[0]);
+      assert.equal(parsed.pass, false);
+      assert.equal(
+        parsed.evidence.planResults[0].reason,
+        'no specialist review evidence found',
+      );
+      assert.equal(process.exitCode, 1);
+    });
+
+    it('returns pass=true when the canonical heading carries a TRIVIAL marker', async () => {
+      mockReadFileSyncFn = () => WIP_CANONICAL_HEADING_TRIVIAL;
+      const logs = await importGate(['--json', '--plan=plans/test.plans.md']);
+      const parsed = JSON.parse(logs[0]);
+      assert.equal(parsed.pass, true);
+      assert.ok(parsed.evidence.planResults[0].found);
+      assert.equal(parsed.evidence.planResults[0].trivialExempt, true);
+      assert.equal(process.exitCode, 0);
+    });
+
+    it('treats an empty canonical heading as no validation evidence section', async () => {
+      mockReadFileSyncFn = () => WIP_CANONICAL_HEADING_EMPTY;
+      const logs = await importGate(['--json', '--plan=plans/test.plans.md']);
+      const parsed = JSON.parse(logs[0]);
+      assert.equal(parsed.pass, false);
+      assert.equal(
+        parsed.evidence.planResults[0].reason,
+        'no validation evidence section found',
+      );
+      assert.equal(process.exitCode, 1);
+    });
+
+    it('keeps `###` sub-blocks inside the canonical `##` region', async () => {
+      mockReadFileSyncFn = () => WIP_CANONICAL_HEADING_SUBBLOCK;
+      const logs = await importGate(['--json', '--plan=plans/test.plans.md']);
+      const parsed = JSON.parse(logs[0]);
+      assert.equal(parsed.pass, true);
+      assert.ok(parsed.evidence.planResults[0].found);
+      assert.equal(process.exitCode, 0);
+    });
+
+    it('ignores a canonical heading quoted inside a fenced code block', async () => {
+      mockReadFileSyncFn = () => WIP_HEADING_INSIDE_CODE_FENCE;
+      const logs = await importGate(['--json', '--plan=plans/test.plans.md']);
+      const parsed = JSON.parse(logs[0]);
+      assert.equal(parsed.pass, false);
+      assert.equal(
+        parsed.evidence.planResults[0].reason,
+        'no validation evidence section found',
+      );
+      assert.equal(process.exitCode, 1);
+    });
+
+    it('scans every canonical section, not only the first one', async () => {
+      mockReadFileSyncFn = () => WIP_TWO_CANONICAL_SECTIONS;
+      const logs = await importGate(['--json', '--plan=plans/test.plans.md']);
+      const parsed = JSON.parse(logs[0]);
+      assert.equal(parsed.pass, true);
+      assert.ok(parsed.evidence.planResults[0].found);
+      assert.equal(process.exitCode, 0);
+    });
+  });
+
+  describe('stale parseArgs default plan', () => {
+    it('ignores the parseArgs default plan when --plan is absent', async () => {
+      // `parseArgs` injects `plans/completed/Agentic_Workflow_Architecture.plans.md`
+      // as its default. The gate must NOT validate that stale artifact —
+      // it must scan the live plans/ directory instead.
+      mockReaddirSyncFn = () => ['active.plans.md'];
+      mockReadFileSyncFn = () => WIP_CANONICAL_HEADING;
+      const logs = await importGate(['--json']);
+      const parsed = JSON.parse(logs[0]);
+      assert.equal(parsed.pass, true);
+      assert.equal(parsed.evidence.wipPlans, 1);
+      assert.equal(parsed.evidence.planResults[0].plan, 'active.plans.md');
+      assert.equal(process.exitCode, 0);
+
+      const readPaths = Object.keys(mockReadFileCalls);
+      assert.ok(
+        !readPaths.some((p) => p.includes('Agentic_Workflow_Architecture')),
+        `stale default plan was read: ${readPaths.join(', ')}`,
+      );
+    });
+
+    it('reports the live plan, not the stale default, when the live plan lacks evidence', async () => {
+      mockReaddirSyncFn = () => ['active.plans.md'];
+      mockReadFileSyncFn = () => WIP_NO_EVIDENCE;
+      const logs = await importGate(['--json']);
+      const parsed = JSON.parse(logs[0]);
+      assert.equal(parsed.pass, false);
+      assert.equal(parsed.evidence.planResults[0].plan, 'active.plans.md');
+      assert.equal(
+        parsed.evidence.planResults[0].reason,
+        'no validation evidence section found',
+      );
+      assert.equal(process.exitCode, 1);
+    });
+
+    it('honors an explicit --plan over the stale default', async () => {
+      mockReaddirSyncFn = () => ['active.plans.md'];
+      mockReadFileSyncFn = (p) => {
+        if (String(p).includes('explicit')) return WIP_CANONICAL_HEADING;
+        return STALE_DEFAULT_PLAN;
+      };
+      const logs = await importGate([
+        '--json',
+        '--plan=plans/explicit.plans.md',
+      ]);
+      const parsed = JSON.parse(logs[0]);
+      assert.equal(parsed.pass, true);
+      assert.equal(parsed.evidence.wipPlans, 1);
+      assert.equal(parsed.evidence.planResults[0].plan, 'explicit.plans.md');
+      assert.equal(process.exitCode, 0);
     });
   });
 
