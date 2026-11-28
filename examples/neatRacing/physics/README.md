@@ -1,8 +1,7 @@
 # physics
 
 Race rules (laps, checkpoints, level advancement) for the neatRacing
-example (plan slice P1-S7-D; AC-024 partial; spec sections 4.1, 4.2,
-20 OQ-001/OQ-002; TP-12/TP-13).
+example (spec sections 4.1, 4.2, 20 OQ-001/OQ-002; TP-12/TP-13).
 
 Session semantics (OQ-001 resolved values as named constants, TP-13): a
 human race lasts NEATRACING_HUMAN_RACE_LAPS forward laps with an
@@ -32,10 +31,10 @@ byte-identical `JSON.stringify` states on the same runtime
 (same-runtime ordered-deterministic rung; cross-environment byte
 equality is NOT claimed).
 
-Scope notes: HUD display of laps/budget and the mode selector arrive
-with P1-S7-E; AI-mode lap floors and the promotion predicate are
-phase-2 rules and never live here. This module is the pure rules core
-the boot glue (Step 13) wires into the host loop.
+Scope notes: the HUD display of laps/budget and the mode selector live
+in the host boundary; AI-mode lap floors and the promotion predicate are
+AI-boundary rules and never live here. This module is the pure rules
+core the host loop wires into.
 
 ## physics/race-rules.ts
 
@@ -1946,7 +1945,7 @@ Returns: Angle wrapped into `[-π, π)`.
 ## physics/physics.step.service.ts
 
 Deterministic fixed-step physics step service for the neatRacing example
-(plan slice P1-S7-B; AC-023; spec Â§5.1â5.3, LD-15, TP-01/TP-02/TP-04).
+(spec sections 5.1-5.3, LD-15, TP-01/TP-02/TP-04).
 
 The simulation truth is a top-down 2D world: the car state carries world
 `x`/`y` (meters; 1 world unit = 1 meter), `heading` (radians), a
@@ -2010,7 +2009,7 @@ JSON-serialized states on the same runtime (reproducibility rung
 Level 2, ordered deterministic; cross-environment byte equality is NOT
 claimed).
 
-THE ONE SURFACE ORDER (Step 14W, AC-094 (c)): the surface the physics
+THE ONE SURFACE ORDER: the surface the physics
 integrates against is the surface the car is ON, never the surface it
 was on at the tick start. The tick resolves the surface ONCE, from the
 POST-MOVE pose (the pose the car reached in this tick), so a car that
@@ -2023,11 +2022,10 @@ surface when that surface is not the neutral one - so the published tick
 is always the tick that integrated against the surface the car is on.
 
 Scope notes: off-track/ribbon detection is wired by the surface-resolver
-consumer (P1-S7-C); per-wheel slip channels and the
-worker-level reproducibility tuple are Phase-2 concerns and deliberately
-out of scope here. `curb` shares the road longitudinal model in this
-slice; curb-specific rumble shaping arrives with the collision/
-off-track surface utils (P1-S7-C).
+consumer; per-wheel slip channels and the worker-level reproducibility
+tuple are deliberately out of scope here. `curb` shares the road
+longitudinal model; curb-specific rumble shaping belongs to the
+collision/off-track surface utils.
 
 The CAR-TO-CAR COLLISION is wired HERE (AC-090): the named seam
 `resolveLiveCarCollisions` is the ONE owner of the resolver call
@@ -2107,6 +2105,15 @@ USER-named limit - so the bound is RETIRED ENTIRELY and the ONLY
 limit out there is the USER-named off-track speed cap (the named
 `NEATRACING_PHYSICS_OFF_TRACK_SPEED_LIMIT_KMH` constant in this
 module; the off-road decel law STAYS the slowdown mechanism).
+
+THE ADVISORY CONTRACT: the
+track departure is PURELY ADVISORY - the HUD's return-to-the-track hint
+(built on the ONE published FINE classification) and the EXISTING coarse
+off-track penalty are the WHOLE response, so this seam stays the
+DELIBERATE NO-OP: there is NO containment to apply, NO auto-reset, NO
+reseat and NO teleport. The off-road band stays DRIVABLE and the
+20 km/h cap stays the slowdown mechanism, so the departure is
+MEASURED, ADVISED and PENALISED - never corrected by force.
 
 THE NO-OP CONTRACT (AC-081-WIRE-NOOP, re-contracted by the
 retirement): EVERY input is a no-op - an ABSENT geometry, an EMPTY
@@ -2344,6 +2351,29 @@ heading change per tick is `input.steer Â· STEERING_RATE Â·
 speedPercent Â· dt` (radians per tick), so steering authority grows with
 speed and a standing car does not rotate.
 
+### NEATRACING_PHYSICS_SURFACE_ROAD
+
+The PUBLISHED road-surface label: the ONE source of truth for the
+"the car sits on the ROAD core" question.
+
+The physics module OWNS the surface label union, so the road label is
+published HERE and this module's own consumers read THIS constant —
+the baseline surface a tick falls back to (`DEFAULT_SURFACE`) and the
+reach pass's neutral surface (`REACH_SURFACE`) alike.
+
+WHY the label is PUBLISHED rather than kept private: a consumer that
+needs the road label (the coarse off-track penalty path, a debug
+seam, a doc reader) reads this export instead of re-spelling the
+literal, so the surface vocabulary stays owned by the module that
+defines it and the penalty path and the HUD hint can never disagree
+about where the road ends.
+
+Example:
+
+```ts
+NEATRACING_PHYSICS_SURFACE_ROAD; // 'road'
+```
+
 ### NEATRACING_PHYSICS_TURN_RATE_REDUCTION_BAND_UNITS_PER_S
 
 The low-speed handling band (m/s) BELOW which the USER turn rate is
@@ -2475,6 +2505,10 @@ clamped, because the AI owns the full rate range (a percent may exceed
 ### PhysicsSurfaceType
 
 Surface label for one tick, matching the track slab palette (`track.slabs`).
+
+The union is the whole surface vocabulary of the simulation: `road` is
+the drivable core, `curb` is the shoulder at the track edge and `grass`
+is the open ground beyond it.
 
 ### republishSeparatedCar
 

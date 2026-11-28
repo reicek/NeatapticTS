@@ -8,8 +8,16 @@
     "PostToolUse": [
       {
         "command": "node scripts/agent-customization/hooks/post-write-reindex-hook.mjs"
+      },
+      {
+        "command": "node scripts/agent-customization/hooks/slice-usage-hook.mjs"
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "command": "node scripts/agent-customization/hooks/slice-usage-hook.mjs"
       }
     ]
   },
-  "note": "Re-registered 2026-07-31 for Phase 3 (Cortex Freshness and File-Lock Awareness). SessionStart triggers pre-dispatch freshness check; PostToolUse triggers targeted post-write reindex. The old heavy hooks (refresh-cortex-after-write.mjs, session-start-cortex-mcp-preflight.mjs) remain available as manual scripts but are no longer auto-registered."
+  "note": "Re-registered for Phase 3 (Cortex Freshness and File-Lock Awareness). SessionStart triggers pre-dispatch freshness check; PostToolUse triggers targeted post-write reindex. The old heavy hooks (refresh-cortex-after-write.mjs, session-start-cortex-mcp-preflight.mjs) remain available as manual scripts but are no longer auto-registered. The tool-execution observer (slice-usage-hook.mjs) is registered under BOTH post event keys with the SAME command and with NO matcher, so a failing tool call is never missed and no invalid pattern can silently skip the observer. The note carries NO calendar date, NO clock time and NO machine path, so the tracked manifest itself stays clean under the forbidden-value rules."
 }

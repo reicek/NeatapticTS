@@ -666,4 +666,143 @@ describe('shared-validation gate', () => {
       assert.equal(result.evidence.lintResult.stdout, '');
     });
   });
+
+  describe('scoped build and lint runners', () => {
+    it('requires the build when a changed file lives under src/', async () => {
+      const { resolveBuildScope } = await import('./shared-validation.gate.mjs');
+      const scope = resolveBuildScope(['src/foo.ts']);
+      assert.equal(scope.required, true);
+      assert.deepEqual(scope.relevantFiles, ['src/foo.ts']);
+    });
+
+    it('requires the build when a build config file changes', async () => {
+      const { resolveBuildScope } = await import('./shared-validation.gate.mjs');
+      for (const configFile of [
+        'package.json',
+        'tsconfig.json',
+        'webpack.config.js',
+      ]) {
+        assert.equal(resolveBuildScope([configFile]).required, true, configFile);
+      }
+    });
+
+    it('skips the build when no changed file can affect the build output', async () => {
+      const { resolveBuildScope } = await import('./shared-validation.gate.mjs');
+      const scope = resolveBuildScope([
+        'scripts/agent-customization/gates/shared-validation.gate.mjs',
+        'README.md',
+      ]);
+      assert.equal(scope.required, false);
+      assert.match(scope.reason, /Build skipped/);
+    });
+
+    it('scopes lint to changed files inside the npm run lint roots', async () => {
+      const { resolveLintScope } = await import('./shared-validation.gate.mjs');
+      const scope = resolveLintScope([
+        'src/foo.ts',
+        'testing/bar.ts',
+        'scripts/ignored.ts',
+        'README.md',
+      ]);
+      assert.deepEqual(scope.files, ['src/foo.ts', 'testing/bar.ts']);
+      assert.deepEqual(scope.outOfScopeFiles, [
+        'scripts/ignored.ts',
+        'README.md',
+      ]);
+    });
+
+    it('drops changed files that do not exist on disk', async () => {
+      mockExistsSync = (target) => !target.includes('missing');
+      const { resolveLintScope } = await import('./shared-validation.gate.mjs');
+      const scope = resolveLintScope(['src/foo.ts', 'src/missing.ts']);
+      assert.deepEqual(scope.files, ['src/foo.ts']);
+      assert.deepEqual(scope.missingFiles, ['src/missing.ts']);
+    });
+
+    it('ignores changed files without a lintable extension', async () => {
+      const { resolveLintScope } = await import('./shared-validation.gate.mjs');
+      const scope = resolveLintScope(['src/styles.css', 'src/foo.ts']);
+      assert.deepEqual(scope.files, ['src/foo.ts']);
+      assert.deepEqual(scope.outOfScopeFiles, ['src/styles.css']);
+    });
+
+    it('converts absolute paths to repo-relative paths', async () => {
+      const { toRepoRelative } = await import('./shared-validation.gate.mjs');
+      assert.equal(
+        toRepoRelative(path.join(REPO_ROOT, 'src', 'foo.ts')),
+        'src/foo.ts',
+      );
+      assert.equal(toRepoRelative('src/foo.ts'), 'src/foo.ts');
+      assert.equal(toRepoRelative(''), '');
+    });
+
+    it('does not spawn the build when the changed files cannot affect it', async () => {
+      const spawnCalls = [];
+      mockSpawnResult = (cmd, args) => {
+        spawnCalls.push({ cmd, args });
+        return { status: 0, stdout: '', stderr: '' };
+      };
+      const { runSharedValidationGate } =
+        await import('./shared-validation.gate.mjs');
+      const result = await runSharedValidationGate({
+        changedFiles: ['scripts/agent-customization/gates/example.gate.mjs'],
+        testRunner: async () => ({ status: 0, stdout: '', stderr: '' }),
+        lintRunner: async () => ({ status: 0, stdout: '', stderr: '' }),
+      });
+      assert.equal(result.pass, true);
+      assert.equal(result.evidence.buildResult.skipped, true);
+      assert.equal(result.evidence.buildResult.scope.required, false);
+      assert.ok(
+        !spawnCalls.some((call) => call.args?.[1] === 'build'),
+        'the build must not run when it cannot affect the build output',
+      );
+    });
+
+    it('lints only the changed files instead of the whole repository', async () => {
+      const spawnCalls = [];
+      mockSpawnResult = (cmd, args) => {
+        spawnCalls.push({ cmd, args });
+        return { status: 0, stdout: '', stderr: '' };
+      };
+      const { runSharedValidationGate } =
+        await import('./shared-validation.gate.mjs');
+      await runSharedValidationGate({
+        changedFiles: ['src/foo.ts', 'src/bar.ts'],
+        testRunner: async () => ({ status: 0, stdout: '', stderr: '' }),
+        buildRunner: async () => ({ status: 0, stdout: '', stderr: '' }),
+      });
+      const lintCall = spawnCalls.find((call) => call.cmd === 'npx');
+      assert.ok(lintCall, 'the scoped lint runner must spawn eslint');
+      assert.deepEqual(lintCall.args, [
+        'eslint',
+        'src/foo.ts',
+        'src/bar.ts',
+        '--no-warn-ignored',
+      ]);
+      assert.ok(
+        !spawnCalls.some((call) => call.cmd === 'npm' && call.args[1] === 'lint'),
+        'the unscoped npm run lint must not run',
+      );
+    });
+
+    it('runs the unscoped lint when full validation is requested', async () => {
+      const spawnCalls = [];
+      mockSpawnResult = (cmd, args) => {
+        spawnCalls.push({ cmd, args });
+        return { status: 0, stdout: '', stderr: '' };
+      };
+      const { runSharedValidationGate } =
+        await import('./shared-validation.gate.mjs');
+      await runSharedValidationGate({
+        changedFiles: ['src/foo.ts'],
+        fullValidation: true,
+        testRunner: async () => ({ status: 0, stdout: '', stderr: '' }),
+        buildRunner: async () => ({ status: 0, stdout: '', stderr: '' }),
+      });
+      assert.ok(
+        spawnCalls.some((call) => call.cmd === 'npm' && call.args[1] === 'lint'),
+        '--full-validation must run the unscoped npm run lint',
+      );
+    });
+  });
 });

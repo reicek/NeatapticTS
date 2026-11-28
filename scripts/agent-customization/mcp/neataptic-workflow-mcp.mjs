@@ -26,10 +26,18 @@
  *   C & G & H --> I[loadActivePlanContext<br/>parse WIP phase + step]
  * ```
  */
+import { existsSync, readFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
+import {
+  deleteDispatchRecord,
+  FORBIDDEN_VALUE_PATTERNS,
+  scanPersistedText,
+  writeDispatchRecord,
+} from '../../telemetry/telemetry-contract.mjs';
+import { buildReport as buildAttributionProbeReport } from '../../telemetry/probe-attribution-sources.mjs';
 import {
   normalizeTestContracts,
   parsePlanYamlBlock,
@@ -110,6 +118,117 @@ const BANNED_LIVE_FACT_KEYS = [
   'modelSnapshots',
 ];
 
+/**
+ * The repo-relative path of the transient tool-execution observation log.
+ *
+ * The observation log is the observer's artefact, not the producer's: the
+ * producer only COUNTS the observations that are already recorded, so the
+ * dispatch sequence number it writes is the start of the dispatch window.
+ *
+ * @type {string}
+ */
+const OBSERVATION_LOG_RELATIVE_PATH = 'logs/slice-ledger/tool-executions.jsonl';
+
+/**
+ * The source the delivered-token measurement is attributed to.
+ *
+ * @type {string}
+ */
+const DELIVERED_TOKEN_SOURCE = 'cortex-get-slice-context';
+
+/**
+ * What the delivered-token measurement measures: the context tokens DELIVERED
+ * to the slice, which are a different quantity from the model consumption.
+ *
+ * @type {string}
+ */
+const DELIVERED_TOKEN_MEASURES =
+  'context tokens DELIVERED to the slice, not model consumption';
+
+/**
+ * The probe signal that gates the delivered-token measurement.
+ *
+ * @type {string}
+ */
+const PROBE_SIGNAL_DELIVERED_TOKENS = 'context_tokens_delivered';
+
+/**
+ * The probe signal that carries the model-consumption unavailability reason.
+ *
+ * @type {string}
+ */
+const PROBE_SIGNAL_MODEL_CONSUMPTION = 'llm_token_consumption';
+
+/**
+ * Reason token: the probe report could not be read, or it did not report the
+ * delivered-token signal at all.
+ *
+ * @type {string}
+ */
+const REASON_PROBE_UNREADABLE = 'probe_report_unavailable';
+
+/**
+ * Reason token: the probe read the delivered-token signal and marked it
+ * unavailable, so the source does not exist on the live bytes.
+ *
+ * @type {string}
+ */
+const REASON_SOURCE_NOT_DEMONSTRATED = 'source_not_demonstrated';
+
+/**
+ * Reason token: the delivered-token count could not be measured in this call.
+ *
+ * @type {string}
+ */
+const REASON_COUNT_UNAVAILABLE = 'delivered_token_count_unavailable';
+
+/**
+ * Reason token: the model-consumption counters could not be measured.
+ *
+ * The model fields of the measurement block are always `null`, so the block
+ * carries this token unless the probe itself declares a machine-stable reason
+ * for the `llm_token_consumption` signal.
+ *
+ * @type {string}
+ */
+const REASON_MODEL_CONSUMPTION_UNAVAILABLE = 'model_consumption_unavailable';
+
+/**
+ * The shape a machine-stable reason token must have.
+ *
+ * A reason token is a short lower-case identifier, optionally split into
+ * words by `_` or `-`. Free text - a sentence, a path, a citation - never
+ * matches this shape, so it can never be copied into the persisted boundary.
+ *
+ * @type {RegExp}
+ */
+const STABLE_REASON_PATTERN = /^[a-z0-9]+(?:[_-][a-z0-9]+)*$/u;
+
+/**
+ * The maximum length of a machine-stable reason token.
+ *
+ * @type {number}
+ */
+const MAX_STABLE_REASON_LENGTH = 64;
+
+/**
+ * The shape a persisted slice identity must have.
+ *
+ * The identity is persisted, so it must be a short identifier and nothing
+ * else: no separator, no path, no date.
+ *
+ * @type {RegExp}
+ */
+const SAFE_IDENTITY_PATTERN = /^[A-Za-z0-9_][A-Za-z0-9._-]{0,63}$/u;
+
+/**
+ * The environment variable that overrides the directory the transient dispatch
+ * record is written to.
+ *
+ * @type {string}
+ */
+const DISPATCH_DIRECTORY_ENVIRONMENT_VARIABLE = 'NEATAPTIC_DISPATCH_RECORD_DIR';
+
 /* istanbul ignore next: defensive helpers for always-well-formed descriptor data */
 function ensureObject(value) {
   return value || {};
@@ -177,16 +296,22 @@ async function defaultSearchContextFn(options) {
 /**
  * Create the workflow MCP tool set.
  *
- * @param {{ planPath?: string, searchContextFn?: Function, inventoryCommandRunner?: Function }} [options] - Tool configuration.
+ * @param {{ planPath?: string, searchContextFn?: Function, inventoryCommandRunner?: Function, attributionProbeReader?: Function, dispatchRecordDirectory?: string, observationLogPath?: string }} [options] - Tool configuration.
  * @param {string} [options.planPath] - Startup plan path fallback.
  * @param {Function} [options.searchContextFn] - Injectable Cortex search_context implementation.
  * @param {Function} [options.inventoryCommandRunner] - Injectable shell runner for the customization inventory command.
+ * @param {Function} [options.attributionProbeReader] - Injectable attribution probe reader; defaults to the live probe.
+ * @param {string} [options.dispatchRecordDirectory] - Directory the transient dispatch record is written to.
+ * @param {string} [options.observationLogPath] - Path of the transient tool-execution observation log.
  * @returns {Array<{ name: string, description: string, inputSchema: Record<string, unknown>, handler: Function }>} Tool list.
  */
 export function createWorkflowTools({
   planPath,
   searchContextFn = defaultSearchContextFn,
   inventoryCommandRunner,
+  attributionProbeReader = readAttributionProbeReport,
+  dispatchRecordDirectory,
+  observationLogPath,
 } = {}) {
   const loadInventory = inventoryCommandRunner
     ? () => loadCustomizationInventory(inventoryCommandRunner)
@@ -280,10 +405,520 @@ export function createWorkflowTools({
           argumentsObject,
           planPath,
           searchContextFn,
+          {
+            attributionProbeReader,
+            dispatchRecordDirectory,
+            observationLogPath,
+          },
         );
       },
     }),
   ];
+}
+
+/**
+ * Derive the plan identifier of a plan path.
+ *
+ * The plan identifier is the plan file's name without its `.plans.md` (or
+ * `.plans`) suffix. It is never empty: the dispatch record rejects an empty
+ * `plan_id`, and an unnamed plan is still a plan.
+ *
+ * @param {string} planPath - The plan path, absolute or repo-relative.
+ * @returns {string} The plan identifier.
+ * @example
+ * derivePlanId('plans/completed/opentelemetry-slice-telemetry.plans.md');
+ * // => 'opentelemetry-slice-telemetry'
+ */
+export function derivePlanId(planPath) {
+  const baseName = path.basename(String(planPath ?? ''));
+  const withoutSuffix = baseName
+    .replace(/\.plans\.md$/u, '')
+    .replace(/\.plans$/u, '');
+  return withoutSuffix.length > 0 ? withoutSuffix : 'unknown-plan';
+}
+
+/**
+ * Find one signal entry in an attribution probe report.
+ *
+ * @param {Record<string, unknown> | null} report - The probe report.
+ * @param {string} name - The canonical signal identifier.
+ * @returns {Record<string, unknown> | null} The signal entry, or null when the report does not carry it.
+ * @example
+ * findProbeSignal(report, 'context_tokens_delivered');
+ * // => { signal: 'context_tokens_delivered', verdict: 'demonstrated', ... }
+ */
+export function findProbeSignal(report, name) {
+  if (report === null || typeof report !== 'object') {
+    return null;
+  }
+  const signals = Array.isArray(report.signals) ? report.signals : [];
+  const found = signals.find((signal) => signal?.signal === name);
+  return found ?? null;
+}
+
+/**
+ * The IN-FLIGHT promise of the memoized attribution probe report.
+ *
+ * The memo holds the promise, not the resolved report and not an "already
+ * read" flag: a second call that arrives while the probe is still walking the
+ * live tree awaits the SAME read instead of reading an empty cache, so a
+ * concurrent dispatch never degrades to `probe_report_unavailable`.
+ *
+ * @type {Promise<Record<string, unknown> | null> | null}
+ */
+let attributionProbeReportPromise = null;
+
+/**
+ * Read the attribution probe report of the live repository.
+ *
+ * The probe is the executable measurement of the attribution sources, so the
+ * producer reads its verdicts instead of asserting them. The report is read
+ * ONCE per process - the probe walks the live tree - and the IN-FLIGHT promise
+ * is memoized, so concurrent callers share one read. A failure resolves to a
+ * `null` report, so a broken probe never breaks a dispatch.
+ *
+ * An INJECTED builder bypasses the memo entirely: the memo is a property of
+ * the live probe, so an injected builder - which a test uses to exercise the
+ * failure path - must never be able to poison the process-wide cache.
+ *
+ * Both paths share ONE safe read - {@link readProbeReportSafely} - so the
+ * injected path and the memoized live path resolve a failed read to the same
+ * `null` report.
+ *
+ * @param {Function} [probeBuilder] - The probe builder to read; defaults to the live probe.
+ * @returns {Promise<Record<string, unknown> | null>} The probe report, or null when it cannot be read.
+ * @example
+ * const report = await readAttributionProbeReport();
+ * // => { schema_version: 1, report: 'attribution-sources', signals: [...] }
+ *
+ * await readAttributionProbeReport(async () => {
+ *   throw new Error('probe failed');
+ * });
+ * // => null
+ */
+export async function readAttributionProbeReport(
+  probeBuilder = buildAttributionProbeReport,
+) {
+  const usesDefaultBuilder = probeBuilder === buildAttributionProbeReport;
+  if (!usesDefaultBuilder) {
+    return await readProbeReportSafely(probeBuilder);
+  }
+  if (attributionProbeReportPromise === null) {
+    attributionProbeReportPromise = readProbeReportSafely(
+      buildAttributionProbeReport,
+    );
+  }
+  return await attributionProbeReportPromise;
+}
+
+/**
+ * Read a probe report through a builder, or resolve to `null` when the read fails.
+ *
+ * The read is the ONE place a broken probe is absorbed: a failing builder
+ * resolves to a `null` report instead of rejecting, so a broken probe never
+ * breaks a dispatch and never fails a write open. The INJECTED path and the
+ * MEMOIZED live path share this helper, so both resolve a failed read to the
+ * same `null` report.
+ *
+ * @param {Function} probeBuilder - The probe builder to read.
+ * @returns {Promise<Record<string, unknown> | null>} The probe report, or null when it cannot be read.
+ * @example
+ * await readProbeReportSafely(async () => {
+ *   throw new Error('probe failed');
+ * });
+ * // => null
+ */
+async function readProbeReportSafely(probeBuilder) {
+  try {
+    return await probeBuilder();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Count the tool-execution observations that are already recorded.
+ *
+ * The count is the START of the dispatch window: the observation log is the
+ * observer's artefact, so the producer only counts what is already there.
+ *
+ * @param {string} logPath - Path of the observation log.
+ * @returns {number} The number of recorded observations, or 0 when the log does not exist.
+ * @example
+ * countObservationLines('logs/slice-ledger/tool-executions.jsonl');
+ * // => 0
+ */
+export function countObservationLines(logPath) {
+  const target = String(logPath ?? '');
+  if (target.length === 0 || !existsSync(target)) {
+    return 0;
+  }
+  try {
+    const contents = readFileSync(target, 'utf8');
+    return contents
+      .split(/\r?\n/u)
+      .filter((line) => line.trim().length > 0).length;
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * Reduce a probe reason to a machine-stable token, or to `null`.
+ *
+ * A reason reaches the persisted boundary only when it is ALREADY a
+ * machine-stable token: a short lower-case identifier that matches
+ * {@link STABLE_REASON_PATTERN} and none of the contract's forbidden value
+ * patterns. Free text - the live probe's prose reasons are hundreds of
+ * characters long - is never copied, so the caller falls back to the stable
+ * contract token for that verdict.
+ *
+ * @param {unknown} reason - The raw reason of a probe signal.
+ * @returns {string | null} The machine-stable token, or null when the reason is free text.
+ * @example
+ * toStableReasonToken('probe-said-no');
+ * // => 'probe-said-no'
+ *
+ * toStableReasonToken('the repository has no access to the host agent model accounting');
+ * // => null
+ */
+export function toStableReasonToken(reason) {
+  if (typeof reason !== 'string') {
+    return null;
+  }
+  const trimmed = reason.trim();
+  if (trimmed.length === 0 || trimmed.length > MAX_STABLE_REASON_LENGTH) {
+    return null;
+  }
+  if (!STABLE_REASON_PATTERN.test(trimmed)) {
+    return null;
+  }
+  const isForbidden = FORBIDDEN_VALUE_PATTERNS.some((pattern) =>
+    pattern.test(trimmed),
+  );
+  return isForbidden ? null : trimmed;
+}
+
+/**
+ * Resolve the single reason slot of the measurement block.
+ *
+ * The block has ONE reason key, `unavailable_reason`, and it explains the
+ * counter's OWN availability. When the counter is UNAVAILABLE the reason
+ * explains why the DELIVERED count is unavailable - the probe could not be
+ * read, the probe marked the delivered source unavailable, or the count could
+ * not be measured in this call. When the counter is AVAILABLE the delivered
+ * count is measured and the slot carries the MODEL-consumption reason, because
+ * the model fields stay `null` and an explicit reason is required for them.
+ *
+ * @param {{ available: boolean, deliveredSignal: Record<string, unknown> | null, deliveredReason: string | null, modelReason: string | null }} params - The reason inputs.
+ * @param {boolean} params.available - Whether the delivered count is available.
+ * @param {Record<string, unknown> | null} params.deliveredSignal - The probe signal for the delivered-token source.
+ * @param {string | null} params.deliveredReason - The machine-stable reason of the delivered signal, if it has one.
+ * @param {string | null} params.modelReason - The machine-stable reason of the model-consumption signal, if it has one.
+ * @returns {string} The machine-stable reason token.
+ * @example
+ * resolveUnavailableReason({ available: true, deliveredSignal: null, deliveredReason: null, modelReason: null });
+ * // => 'model_consumption_unavailable'
+ */
+function resolveUnavailableReason({
+  available,
+  deliveredSignal,
+  deliveredReason,
+  modelReason,
+}) {
+  if (available) {
+    return modelReason ?? REASON_MODEL_CONSUMPTION_UNAVAILABLE;
+  }
+  if (!deliveredSignal) {
+    return REASON_PROBE_UNREADABLE;
+  }
+  if (deliveredSignal.verdict !== 'demonstrated') {
+    return deliveredReason ?? REASON_SOURCE_NOT_DEMONSTRATED;
+  }
+  return REASON_COUNT_UNAVAILABLE;
+}
+
+/**
+ * Build the delivered-token measurement block of the dispatch response.
+ *
+ * The block separates two quantities that are often confused: the context
+ * tokens DELIVERED to the slice, which this repository measures, and the
+ * model consumption, which this repository cannot reach. The delivered count
+ * is only available when the probe DEMONSTRATES the source, the call actually
+ * measured a count, and the count is a finite number; a measured zero is a
+ * measurement and stays `0`, while an unmeasured count is `null` and never `0`.
+ *
+ * The block carries EXACTLY the eight keys of the contract's
+ * `usage.token_usage` shape, so it can be ordered and written into the ledger
+ * block without a contract extension. Every reason it carries is a short
+ * machine-stable token: a probe reason is copied only when it is ALREADY such
+ * a token, and free text is never persisted.
+ *
+ * @param {{ tokenCount?: number, measured?: boolean, deliveredSignal?: Record<string, unknown> | null, modelSignal?: Record<string, unknown> | null }} [params] - The measurement inputs.
+ * @param {number} [params.tokenCount] - The delivered-token count of this call.
+ * @param {boolean} [params.measured] - Whether the count was actually measured in this call.
+ * @param {Record<string, unknown> | null} [params.deliveredSignal] - The probe signal for the delivered-token source.
+ * @param {Record<string, unknown> | null} [params.modelSignal] - The probe signal for the model consumption.
+ * @returns {Record<string, unknown>} The measurement block.
+ * @example
+ * buildDeliveredTokenUsage({ tokenCount: 1200, measured: true, deliveredSignal: { verdict: 'demonstrated' } });
+ * // => { available: true, source: 'cortex-get-slice-context', context_tokens_delivered: 1200, ... }
+ */
+export function buildDeliveredTokenUsage({
+  tokenCount,
+  measured,
+  deliveredSignal,
+  modelSignal,
+} = {}) {
+  const sourceIsDemonstrated = deliveredSignal?.verdict === 'demonstrated';
+  const countIsMeasured = measured === true && Number.isFinite(tokenCount);
+  const available = sourceIsDemonstrated && countIsMeasured;
+
+  const deliveredReason =
+    deliveredSignal && deliveredSignal.verdict !== 'demonstrated'
+      ? toStableReasonToken(deliveredSignal.reason)
+      : null;
+  const modelReason =
+    modelSignal && modelSignal.verdict === 'unavailable'
+      ? toStableReasonToken(modelSignal.reason)
+      : null;
+
+  return {
+    available,
+    source: DELIVERED_TOKEN_SOURCE,
+    measures: DELIVERED_TOKEN_MEASURES,
+    context_tokens_delivered: available ? tokenCount : null,
+    prompt_tokens: null,
+    completion_tokens: null,
+    total_tokens: null,
+    unavailable_reason: resolveUnavailableReason({
+      available,
+      deliveredSignal,
+      deliveredReason,
+      modelReason,
+    }),
+  };
+}
+
+/**
+ * Resolve the directory the transient dispatch record is written to.
+ *
+ * @param {string | undefined} explicitDirectory - The explicit directory override.
+ * @returns {string | undefined} The directory, or undefined when the contract default applies.
+ */
+function resolveDispatchDirectory(explicitDirectory) {
+  if (typeof explicitDirectory === 'string' && explicitDirectory.trim().length > 0) {
+    return explicitDirectory;
+  }
+  const fromEnvironment = process.env[DISPATCH_DIRECTORY_ENVIRONMENT_VARIABLE];
+  if (typeof fromEnvironment === 'string' && fromEnvironment.trim().length > 0) {
+    return fromEnvironment;
+  }
+  return undefined;
+}
+
+/**
+ * Resolve the path of the transient tool-execution observation log.
+ *
+ * @param {string | undefined} explicitPath - The explicit observation log path.
+ * @returns {string} The observation log path.
+ */
+function resolveObservationLogPath(explicitPath) {
+  if (typeof explicitPath === 'string' && explicitPath.trim().length > 0) {
+    return explicitPath;
+  }
+  return path.join(MCP_REPO_ROOT, OBSERVATION_LOG_RELATIVE_PATH);
+}
+
+/**
+ * Read the plan-declared slice identifier from a resolved descriptor.
+ *
+ * `buildDescriptorFromSlice` records the slice identifier the plan declares in
+ * `boundaryNotes.slice_id`; `buildDescriptorFromStep` does not, and a step-label
+ * match therefore carries no declared identity.
+ *
+ * The descriptor is a RESOLVED descriptor: the caller resolves it and returns
+ * early when it resolves none, so this helper only ever sees a descriptor
+ * object.
+ *
+ * @param {Record<string, unknown>} descriptor - The resolved slice descriptor.
+ * @returns {string | undefined} The declared slice identifier, or undefined when the descriptor carries none.
+ */
+function resolveDeclaredSliceId(descriptor) {
+  const notes = ensureObject(descriptor.boundaryNotes);
+  const declared = notes.slice_id;
+  return typeof declared === 'string' && declared.trim().length > 0
+    ? declared.trim()
+    : undefined;
+}
+
+/**
+ * Resolve the slice identity that is persisted in the dispatch record.
+ *
+ * The PLAN-DECLARED identity wins: the descriptor of a slice carries the
+ * `slice_id` the plan declares, and that identifier is the one the plan owns.
+ * The requested identifier is only the fallback for a descriptor that carries
+ * none - a step-label match, for instance.
+ *
+ * @param {string | undefined} declaredSliceId - The plan-declared slice identifier.
+ * @param {string | undefined} requestedSliceId - The requested slice identifier.
+ * @returns {string} The persisted slice identifier, or an empty string when neither exists.
+ */
+function resolvePersistedSliceId(declaredSliceId, requestedSliceId) {
+  const declared =
+    typeof declaredSliceId === 'string' ? declaredSliceId.trim() : '';
+  if (declared.length > 0) {
+    return declared;
+  }
+  return typeof requestedSliceId === 'string' ? requestedSliceId.trim() : '';
+}
+
+/**
+ * Tell whether one part of a persisted identity is safe to write.
+ *
+ * A safe identity part is a short identifier that matches
+ * {@link SAFE_IDENTITY_PATTERN} and none of the contract's forbidden value
+ * patterns, so a date, an absolute path or an e-mail address can never be
+ * persisted as the identity of a slice.
+ *
+ * @param {unknown} value - The identity part to test.
+ * @returns {boolean} True when the part is safe to persist.
+ */
+function isSafeIdentityPart(value) {
+  if (typeof value !== 'string' || !SAFE_IDENTITY_PATTERN.test(value)) {
+    return false;
+  }
+  return !FORBIDDEN_VALUE_PATTERNS.some((pattern) => pattern.test(value));
+}
+
+/**
+ * Tell whether a whole persisted identity is safe to write.
+ *
+ * @param {{ plan_id: string, slice_id: string }} identity - The persisted identity.
+ * @returns {boolean} True when both identity parts are safe.
+ */
+function isSafeIdentity(identity) {
+  return (
+    isSafeIdentityPart(identity.plan_id) &&
+    isSafeIdentityPart(identity.slice_id)
+  );
+}
+
+/**
+ * Sweep the written dispatch record and delete it when it violates the contract.
+ *
+ * The pre-write identity check covers the two identity fields, but the record
+ * also carries the measured count, so the WRITTEN file is swept with the
+ * contract's own scanner. A record that trips the deny-list is deleted and
+ * the dispatch reports no record at all - the write still FAILS OPEN.
+ *
+ * The read-back cannot fail: the contract helper has just written the file
+ * and returned the very path it wrote. A failed read therefore propagates to
+ * the caller, which fails OPEN and reports no record at all.
+ *
+ * @param {string} recordPath - The absolute path of the written record.
+ * @param {{ plan_id: string, slice_id: string }} identity - The persisted identity.
+ * @param {string | undefined} directory - The dispatch-record directory override.
+ * @returns {string | null} The record path, or null when the record was deleted.
+ */
+function sweepDispatchRecord(recordPath, identity, directory) {
+  const raw = readFileSync(recordPath, 'utf8');
+  if (scanPersistedText(raw).length === 0) {
+    return recordPath;
+  }
+  try {
+    deleteDispatchRecord(identity, directory ? { directory } : undefined);
+  } catch {
+    // Best-effort deletion: a record that cannot be deleted never fails the dispatch.
+  }
+  return null;
+}
+
+/**
+ * Produce the transient dispatch record of a slice.
+ *
+ * The producer is the ONE place that opens a slice: on every successful
+ * dispatch it writes the transient dispatch record through the contract
+ * helper, so the record carries the contract's five fields and nothing else.
+ * The write FAILS OPEN - a record that cannot be written never fails the
+ * dispatch - and the measurement block is returned either way.
+ *
+ * The persisted IDENTITY is the plan-declared one when the descriptor carries
+ * it, and it is validated before the write: an identity that is not a short
+ * safe identifier, or that carries a forbidden value, writes NO record at all.
+ * The written record is swept with the contract's own scanner afterwards, and
+ * a record that trips the deny-list is deleted.
+ *
+ * @param {{ planPath?: string, sliceId?: string, declaredSliceId?: string, tokenCount?: number, measured?: boolean, probeReader?: Function, dispatchRecordDirectory?: string, observationLogPath?: string }} [params] - The dispatch inputs.
+ * @param {string} [params.planPath] - The plan the slice belongs to.
+ * @param {string} [params.sliceId] - The dispatched slice identifier.
+ * @param {string} [params.declaredSliceId] - The plan-declared slice identifier of the resolved descriptor.
+ * @param {number} [params.tokenCount] - The delivered-token count of this call.
+ * @param {boolean} [params.measured] - Whether the count was actually measured in this call.
+ * @param {Function} [params.probeReader] - The attribution probe reader.
+ * @param {string} [params.dispatchRecordDirectory] - The dispatch-record directory override.
+ * @param {string} [params.observationLogPath] - The observation log path override.
+ * @returns {Promise<{ opened: boolean, path: string | null, usage: Record<string, unknown> }>} The dispatch outcome and the measurement block.
+ * @example
+ * const dispatch = await produceSliceDispatch({ planPath: 'plans/p.plans.md', sliceId: 'S-1', tokenCount: 12, measured: true });
+ * // => { opened: true, path: '...', usage: { available: true, ... } }
+ */
+export async function produceSliceDispatch({
+  planPath,
+  sliceId,
+  declaredSliceId,
+  tokenCount,
+  measured,
+  probeReader = readAttributionProbeReport,
+  dispatchRecordDirectory,
+  observationLogPath,
+} = {}) {
+  const reader =
+    typeof probeReader === 'function' ? probeReader : readAttributionProbeReport;
+
+  let report = null;
+  try {
+    report = await reader();
+  } catch {
+    report = null;
+  }
+
+  const deliveredSignal = findProbeSignal(report, PROBE_SIGNAL_DELIVERED_TOKENS);
+  const modelSignal = findProbeSignal(report, PROBE_SIGNAL_MODEL_CONSUMPTION);
+  const usage = buildDeliveredTokenUsage({
+    tokenCount,
+    measured,
+    deliveredSignal,
+    modelSignal,
+  });
+
+  const directory = resolveDispatchDirectory(dispatchRecordDirectory);
+  const dispatchSeq = countObservationLines(
+    resolveObservationLogPath(observationLogPath),
+  );
+  const identity = {
+    plan_id: derivePlanId(planPath),
+    slice_id: resolvePersistedSliceId(declaredSliceId, sliceId),
+  };
+
+  let recordPath = null;
+  if (isSafeIdentity(identity)) {
+    try {
+      recordPath = writeDispatchRecord(
+        {
+          ...identity,
+          context_tokens_delivered: usage.context_tokens_delivered,
+          dispatch_seq: dispatchSeq,
+        },
+        directory ? { directory } : undefined,
+      );
+      recordPath = sweepDispatchRecord(recordPath, identity, directory);
+    } catch {
+      recordPath = null;
+    }
+  }
+
+  return { opened: recordPath !== null, path: recordPath, usage };
 }
 
 /**
@@ -495,12 +1130,14 @@ async function loadCustomizationInventory(commandRunner) {
  * @param {Record<string, unknown>} argumentsObject - Tool call arguments.
  * @param {string | undefined} startupPlanPath - Startup plan path fallback.
  * @param {Function} [searchContextFn] - Injectable Cortex search_context implementation.
+ * @param {{ attributionProbeReader?: Function, dispatchRecordDirectory?: string, observationLogPath?: string }} telemetryOptions - The dispatch-time producer options.
  * @returns {Promise<Record<string, unknown>>} JSON-RPC tool result with `structuredContent`.
  */
 async function buildSliceContextWindow(
   argumentsObject,
   startupPlanPath,
   searchContextFn,
+  telemetryOptions,
 ) {
   const sliceId = requireString(argumentsObject.slice_id, 'slice_id');
   const effectivePlanPath = await resolveEffectivePlanPath(
@@ -540,11 +1177,23 @@ async function buildSliceContextWindow(
     effectivePlanPath,
   );
 
+  const dispatch = await produceSliceDispatch({
+    planPath: effectivePlanPath,
+    sliceId,
+    declaredSliceId: resolveDeclaredSliceId(descriptor),
+    tokenCount: ragContext.token_count,
+    measured: ragContext.token_count_measured === true,
+    probeReader: telemetryOptions.attributionProbeReader,
+    dispatchRecordDirectory: telemetryOptions.dispatchRecordDirectory,
+    observationLogPath: telemetryOptions.observationLogPath,
+  });
+
   const response = buildCompactSliceResponse(
     descriptor,
     sliceId,
     effectivePlanPath,
     ragContext,
+    dispatch.usage,
   );
 
   if (descriptor.archived === true) {
@@ -568,10 +1217,17 @@ async function buildSliceContextWindow(
  * @param {Record<string, unknown>} descriptor - Resolved slice descriptor.
  * @param {string} sliceId - Exact slice identifier requested.
  * @param {string} planPath - Repo-relative plan path used for the lookup.
- * @param {{ query?: string, text?: string, chunks?: Array<Record<string, unknown>>, token_count?: number, dense_state?: string, truncated?: boolean, follow_up_refs?: Array<Record<string, unknown>> }} [ragContext] - RAG context from Cortex.
+ * @param {{ query?: string, text?: string, chunks?: Array<Record<string, unknown>>, token_count?: number, token_count_measured?: boolean, dense_state?: string, truncated?: boolean, follow_up_refs?: Array<Record<string, unknown>> }} [ragContext] - RAG context from Cortex.
+ * @param {Record<string, unknown>} usage - The delivered-token measurement block of the dispatch.
  * @returns {Record<string, unknown>} Self-contained slice context window.
  */
-function buildCompactSliceResponse(descriptor, sliceId, planPath, ragContext) {
+function buildCompactSliceResponse(
+  descriptor,
+  sliceId,
+  planPath,
+  ragContext,
+  usage,
+) {
   /* istanbul ignore next: descriptor.boundaryNotes is always an object from descriptor builders */
   const notes = ensureObject(descriptor.boundaryNotes);
   /* istanbul ignore next: descriptor.stepMetadata is always an object from descriptor builders */
@@ -626,9 +1282,15 @@ function buildCompactSliceResponse(descriptor, sliceId, planPath, ragContext) {
     },
   };
 
+  // The measurement block is attached to the returned response but is not part
+  // of the measured payload, so its bytes are reserved from the budget the
+  // rest of the payload has to fit into.
+  const usageBytes = Buffer.byteLength(JSON.stringify({ usage }), 'utf8');
+  const reservedBudget = ENFORCEMENT_BUDGET - usageBytes;
+
   const serialized = JSON.stringify(basePayload);
-  if (Buffer.byteLength(serialized, 'utf8') <= ENFORCEMENT_BUDGET) {
-    return basePayload;
+  if (Buffer.byteLength(serialized, 'utf8') <= reservedBudget) {
+    return { ...basePayload, usage };
   }
 
   // Truncate the context text first, then instructions, to stay under the
@@ -640,21 +1302,31 @@ function buildCompactSliceResponse(descriptor, sliceId, planPath, ragContext) {
     basePayload,
     'context.text',
     contextText,
-    ENFORCEMENT_BUDGET,
+    reservedBudget,
   );
   if (trimmedContext.fits) {
-    return trimmedContext.payload;
+    return { ...trimmedContext.payload, usage };
   }
 
   const trimmedInstructions = truncateToBudget(
     trimmedContext.payload,
     'instructions',
     instructions,
-    ENFORCEMENT_BUDGET,
+    reservedBudget,
   );
-  if (trimmedInstructions.fits) {
+  const trimmedSize = Buffer.byteLength(
+    JSON.stringify(trimmedInstructions.payload),
+    'utf8',
+  );
+  // The payload could not be trimmed into the reserved budget. The reservation
+  // is released, so the slice context survives instead of being dropped
+  // entirely; the response stays inside the enforcement budget either way.
+  const fitsReservedBudget = trimmedInstructions.fits;
+  const fitsReleasedBudget = trimmedSize <= ENFORCEMENT_BUDGET;
+  if (fitsReservedBudget || fitsReleasedBudget) {
     return {
       ...trimmedInstructions.payload,
+      usage,
       truncated: true,
       fallback_message:
         'Slice context exceeded the 16 KB limit; context.text and instructions were truncated. Use cortex:load_document for the full plan or load_chunk for complete chunks.',
@@ -664,6 +1336,7 @@ function buildCompactSliceResponse(descriptor, sliceId, planPath, ragContext) {
   return {
     compact: true,
     truncated: true,
+    usage,
     fallback_message:
       'Slice context exceeded the 16 KB limit and could not be trimmed in place. Use cortex:load_document to retrieve the full plan context.',
     slice_id: sliceId,
@@ -800,7 +1473,7 @@ function buildSliceInstructions(descriptor, sliceId) {
  * @param {Record<string, unknown>} descriptor - Resolved slice descriptor.
  * @param {string} sliceId - Exact slice identifier.
  * @param {Function} [searchContextFn] - Injectable Cortex search_context implementation.
- * @returns {Promise<{ query: string, text: string, chunks: Array<Record<string, unknown>>, token_count: number, dense_state: string | null, truncated: boolean, follow_up_refs: Array<Record<string, unknown>> }>} RAG context block.
+ * @returns {Promise<{ query: string, text: string, chunks: Array<Record<string, unknown>>, token_count: number, token_count_measured: boolean, dense_state: string | null, truncated: boolean, follow_up_refs: Array<Record<string, unknown>> }>} RAG context block.
  */
 async function fetchSliceContext(
   descriptor,
@@ -864,6 +1537,8 @@ async function fetchSliceContext(
   const assembledById = new Map();
   let denseState = null;
   let tokenCount = 0;
+  let tokenCountComplete = true;
+  let ingestedResponseCount = 0;
   let truncated = false;
   /** @type {Record<string, unknown> | null} */
   let searchRef = null;
@@ -872,17 +1547,29 @@ async function fetchSliceContext(
    * Ingest a single `search_context` response, merging raw results and any
    * assembled chunks into the shared maps.
    *
+   * The delivered-token count is only MEASURED when EVERY ingested response
+   * carried a numeric `token_count`: a response without one leaves the total
+   * a lower bound, so the measurement is not measured and the persisted
+   * boundary stays `null` instead of a misleading zero.
+   *
    * @param {Record<string, unknown>} response - A single search response.
    */
   function ingestResponse(response) {
     if (!response || typeof response !== 'object') {
       return;
     }
+    ingestedResponseCount += 1;
+    const responseTokenCount = response.token_count;
+    const carriesTokenCount =
+      typeof responseTokenCount === 'number' &&
+      Number.isFinite(responseTokenCount);
+    if (!carriesTokenCount) {
+      tokenCountComplete = false;
+    }
     if (typeof response.dense_state === 'string') {
       denseState = response.dense_state;
     }
-    tokenCount +=
-      typeof response.token_count === 'number' ? response.token_count : 0;
+    tokenCount += carriesTokenCount ? responseTokenCount : 0;
     truncated = truncated || response.truncated === true;
 
     /* istanbul ignore next: response.results is always an array from well-formed search responses */
@@ -929,6 +1616,10 @@ async function fetchSliceContext(
   if (testResponse) {
     ingestResponse(testResponse);
   }
+
+  // The count is measured only when EVERY ingested response carried a numeric
+  // `token_count`; otherwise the total is a lower bound and stays unmeasured.
+  const tokenCountMeasured = tokenCountComplete && ingestedResponseCount > 0;
 
   /** @type {Array<Record<string, unknown>>} */
   let mergedResults = Array.from(resultById.values());
@@ -1165,6 +1856,7 @@ async function fetchSliceContext(
     text,
     chunks: chunks.map(({ text: _text, ...meta }) => meta),
     token_count: tokenCount,
+    token_count_measured: tokenCountMeasured,
     dense_state: denseState,
     truncated,
     follow_up_refs: followUpRefs,
@@ -1552,8 +2244,12 @@ function buildSliceQuery(descriptor, _sliceId, planPath) {
 /**
  * Return an empty (well-formed) RAG context block.
  *
+ * The context is empty because the search function was absent or threw, so the
+ * token count was NOT measured: a measured zero and an unmeasured count are
+ * different quantities, and only the second one is unavailable.
+ *
  * @param {string} query - The query that was attempted.
- * @returns {{ query: string, text: string, chunks: Array, token_count: number, dense_state: null, truncated: boolean, follow_up_refs: Array }} Empty RAG context.
+ * @returns {{ query: string, text: string, chunks: Array, token_count: number, token_count_measured: boolean, dense_state: null, truncated: boolean, follow_up_refs: Array }} Empty RAG context.
  */
 function emptyRagContext(query) {
   return {
@@ -1561,6 +2257,7 @@ function emptyRagContext(query) {
     text: '',
     chunks: [],
     token_count: 0,
+    token_count_measured: false,
     dense_state: null,
     truncated: false,
     follow_up_refs: [],

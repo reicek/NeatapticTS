@@ -121,10 +121,15 @@ const SCN_DRIFT_01_BUILD_TICKS = 180;
 const SCN_DRIFT_01_COUNTER_TICKS = 120;
 
 /**
- * The pinned pose-spring point of merge 7a (omega = 18 rad/s, zeta = 0.35).
+ * The pinned pose-spring point of merge 7a (omega = 18 rad/s, zeta =
+ * 1.206388888888889).
  *
  * The pop, the settle and the per-tick step are pinned TOGETHER at this ONE
  * point: a green pop bought with a different point is a contract violation.
+ *
+ * The damping is READ FROM THE LIVE CONSTANT, so the point FOLLOWS the
+ * re-pin of Step 30 (slice `P5-S30-damping`): the anti-teardown guard
+ * `expect(run.point).toEqual(POSE_POINT)` stays GREEN BY CONSTRUCTION.
  */
 const POSE_POINT = {
   stiffnessRadPerS2: NEATRACING_DRIFT_POSE_STIFFNESS_RAD_PER_S2,
@@ -375,6 +380,16 @@ interface DriftScenarioRun {
   point: typeof POSE_POINT;
   /** The far-side pop over the counter phase (deg). */
   popDeg: number;
+  /**
+   * The TRUE far-side OVERSHOOT over the counter phase (deg): how far the
+   * pose travels PAST the final pose on the far side.
+   *
+   * THIS IS NOT `popDeg`: `popDeg` is the TRAVEL VISIBILITY (the coded
+   * TOTAL excursion from the hold to the far extreme), while this is the
+   * PEAK law (the part BEYOND the final pose). The two diverge by roughly
+   * four times at the under-damped control point.
+   */
+  overshootDeg: number;
   /** The first counter tick after which the pose stays within 0.5 deg of the final pose. */
   settleTicks: number;
   /** The largest per-tick pose-target step over all ticks (deg). */
@@ -430,7 +445,11 @@ interface DriftScenarioRun {
  * - `poseTarget(t) = slipAngle(t) * VISUAL_YAW_GAIN_RAD + POSE_STEER_YAW_RAD * articulation(t)`
  *   with the POST-tick articulation carried in the state;
  * - `poseFinal` is the pose at the LAST Phase-B tick;
- * - `popDeg` is `max |pose(t) - poseFinal|` over the Phase-B ticks;
+ * - `popDeg` is `max |pose(t) - poseFinal|` over the Phase-B ticks (the
+ *   TRAVEL VISIBILITY - the coded TOTAL excursion);
+ * - `overshootDeg` is the TRUE far-side OVERSHOOT: how far the pose travels
+ *   PAST `poseFinal` on the far side (the side away from the hold pose),
+ *   measured over the Phase-B ticks. It is a PEAK law, not a settle law;
  * - `settleTicks` is the first Phase-B tick after which `|pose - poseFinal|`
  *   is below 0.5 deg for EVERY remaining tick;
  * - `maxStepDeg` is `max |poseTarget(t) - poseTarget(t-1)|` over ALL ticks and
@@ -529,12 +548,31 @@ const runDriftScenario = (point = POSE_POINT): DriftScenarioRun => {
   const poseFinal = lastCounterSample.pose.pose;
 
   // The far-side pop: max |pose(t) - poseFinal| over the counter phase.
+  // THIS IS THE TRAVEL VISIBILITY (the coded TOTAL excursion) - it is NOT
+  // the overshoot.
   const popDeg =
     counterSamples.reduce(
       (max, sample) => Math.max(max, Math.abs(sample.pose.pose - poseFinal)),
       0,
     ) *
     (180 / Math.PI);
+
+  // The TRUE far-side OVERSHOOT: how far the pose travels PAST the final
+  // pose on the FAR side (the side away from the hold pose). The two
+  // metrics DIVERGE by roughly four times at the under-damped control
+  // point (the coded total excursion is 8.9633 deg there, the true
+  // far-side overshoot is 2.2526 deg), so they are NAMED and MEASURED
+  // SEPARATELY. This is a PEAK law; the settle law below is a different
+  // contract and this measurement never substitutes for it.
+  const farSideSign = poseFinal >= holdSample.pose.pose ? 1 : -1;
+  const farExtremePose =
+    counterSamples.reduce(
+      (extreme, sample) =>
+        Math.max(extreme, farSideSign * sample.pose.pose),
+      farSideSign * poseFinal,
+    ) / farSideSign;
+  const overshootDeg =
+    Math.max(0, farSideSign * (farExtremePose - poseFinal)) * (180 / Math.PI);
 
   // The settle tick: the first counter tick after which the pose stays
   // within 0.5 deg of the final pose for EVERY remaining tick.
@@ -594,6 +632,7 @@ const runDriftScenario = (point = POSE_POINT): DriftScenarioRun => {
   return {
     point,
     popDeg,
+    overshootDeg,
     settleTicks,
     maxStepDeg,
     maxArticulationStepDeg,
@@ -836,10 +875,18 @@ describe('drift model constants (14N re-pinned envelope)', () => {
 
   // [RED-G1-POSE-CONSTANTS]
   it('AC-087: the pose spring carries the pinned 14N coefficients (merge 7a)', () => {
-    // omega = 18 rad/s (stiffness 324), zeta = 0.35 (damping 12.6) and the
-    // in-band articulation slew of 20 per s.
+    // omega = 18 rad/s (stiffness 324), zeta = 1.206388888888889 (damping
+    // 43.43) and the in-band articulation slew of 20 per s.
+    //
+    // RE-PINNED (Step 30, slice `P5-S30-damping`, AC-109-DAMPING-REPIN):
+    // the damping is raised from 12.6 (zeta 0.35, about 31 % first
+    // overshoot) to 43.43 (zeta 1.206388888888889, OVER-DAMPED), so the
+    // body never travels past its settled pose and never rings out. The
+    // STIFFNESS stays HELD at 324, and this pin stays an EXACT equality on
+    // the published constant - it is never widened to a range and never
+    // re-pointed at another source.
     expect(NEATRACING_DRIFT_POSE_STIFFNESS_RAD_PER_S2).toBe(324);
-    expect(NEATRACING_DRIFT_POSE_DAMPING_RAD_PER_S).toBe(12.6);
+    expect(NEATRACING_DRIFT_POSE_DAMPING_RAD_PER_S).toBe(43.43);
     expect(NEATRACING_DRIFT_POSE_ARTICULATION_SLEW_PER_S).toBe(20);
   });
 
@@ -1195,6 +1242,32 @@ describe('drift pose spring feel contract (AC-087, merge 7a)', () => {
     // halve it. Measured 2.22 deg at slew 20; the floor is 2.0 deg.
     expect(run.popDeg).toBeGreaterThanOrEqual(2.0);
     expect(Number.isFinite(run.popDeg)).toBe(true);
+  });
+
+  // [AC-109-DAMPING-OVERSHOOT]
+  it('AC-109-DAMPING: the TRUE far-side overshoot is EXACTLY 0.0000 deg at the pinned pose point', () => {
+    const run = runDriftScenario(POSE_POINT);
+
+    // THE TWO METRICS ARE NAMED AND MEASURED SEPARATELY (Step 30, slice
+    // `P5-S30-damping`, AC-109-DAMPING-REPIN clause 2a):
+    //
+    // - TRAVEL VISIBILITY is `run.popDeg` - the CODED TOTAL excursion
+    //   `max |pose(t) - poseFinal|` over the counter phase. It is what the
+    //   corpus actually measures, and its 2.0 deg floor above is
+    //   UNTOUCHED;
+    // - OVERSHOOT is `run.overshootDeg` - the TRUE far-side overshoot: how
+    //   far the pose travels PAST the final pose on the far side.
+    //
+    // At the under-damped control point (damping 12.6) the two diverge by
+    // roughly four times (8.9633 deg of travel visibility against 2.2526
+    // deg of overshoot), so the overshoot can NEVER be read off the coded
+    // metric.
+    //
+    // THE ASSERTION IS FLOAT-EXACT, NOT A TOLERANCE: the over-damped pose
+    // spring never crosses its settled pose, so the witness is a HARD
+    // zero. Jest's `toBe` IS `Object.is`, so a `-0` would fail this pin.
+    expect(run.overshootDeg).toBe(0);
+    expect(Object.is(run.overshootDeg, 0)).toBe(true);
   });
 
   // [RED-7A-SETTLE]

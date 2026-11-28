@@ -1,6 +1,6 @@
 /**
  * Deterministic fixed-step physics step service for the neatRacing example
- * (plan slice P1-S7-B; AC-023; spec Â§5.1â5.3, LD-15, TP-01/TP-02/TP-04).
+ * (spec sections 5.1-5.3, LD-15, TP-01/TP-02/TP-04).
  *
  * The simulation truth is a top-down 2D world: the car state carries world
  * `x`/`y` (meters; 1 world unit = 1 meter), `heading` (radians), a
@@ -64,7 +64,7 @@
  * Level 2, ordered deterministic; cross-environment byte equality is NOT
  * claimed).
  *
- * THE ONE SURFACE ORDER (Step 14W, AC-094 (c)): the surface the physics
+ * THE ONE SURFACE ORDER: the surface the physics
  * integrates against is the surface the car is ON, never the surface it
  * was on at the tick start. The tick resolves the surface ONCE, from the
  * POST-MOVE pose (the pose the car reached in this tick), so a car that
@@ -77,11 +77,10 @@
  * is always the tick that integrated against the surface the car is on.
  *
  * Scope notes: off-track/ribbon detection is wired by the surface-resolver
- * consumer (P1-S7-C); per-wheel slip channels and the
- * worker-level reproducibility tuple are Phase-2 concerns and deliberately
- * out of scope here. `curb` shares the road longitudinal model in this
- * slice; curb-specific rumble shaping arrives with the collision/
- * off-track surface utils (P1-S7-C).
+ * consumer; per-wheel slip channels and the worker-level reproducibility
+ * tuple are deliberately out of scope here. `curb` shares the road
+ * longitudinal model; curb-specific rumble shaping belongs to the
+ * collision/off-track surface utils.
  *
  * The CAR-TO-CAR COLLISION is wired HERE (AC-090): the named seam
  * `resolveLiveCarCollisions` is the ONE owner of the resolver call
@@ -111,8 +110,39 @@ import {
 } from './drift.model';
 import type { DriftChannelState } from './drift.model';
 
-/** Surface label for one tick, matching the track slab palette (`track.slabs`). */
+/**
+ * Surface label for one tick, matching the track slab palette (`track.slabs`).
+ *
+ * The union is the whole surface vocabulary of the simulation: `road` is
+ * the drivable core, `curb` is the shoulder at the track edge and `grass`
+ * is the open ground beyond it.
+ */
 export type PhysicsSurfaceType = 'road' | 'curb' | 'grass';
+
+/**
+ * The PUBLISHED road-surface label: the ONE source of truth for the
+ * "the car sits on the ROAD core" question.
+ *
+ * The physics module OWNS the surface label union, so the road label is
+ * published HERE and this module's own consumers read THIS constant —
+ * the baseline surface a tick falls back to (`DEFAULT_SURFACE`) and the
+ * reach pass's neutral surface (`REACH_SURFACE`) alike.
+ *
+ * WHY the label is PUBLISHED rather than kept private: a consumer that
+ * needs the road label (the coarse off-track penalty path, a debug
+ * seam, a doc reader) reads this export instead of re-spelling the
+ * literal, so the surface vocabulary stays owned by the module that
+ * defines it and the penalty path and the HUD hint can never disagree
+ * about where the road ends.
+ *
+ * @example
+ * ```ts
+ * NEATRACING_PHYSICS_SURFACE_ROAD; // 'road'
+ * ```
+ *
+ * @see PhysicsSurfaceType for the full surface union.
+ */
+export const NEATRACING_PHYSICS_SURFACE_ROAD: PhysicsSurfaceType = 'road';
 
 /**
  * Three-axis keyboard control sample applied for one fixed tick (D5: the
@@ -438,23 +468,30 @@ export const NEATRACING_PHYSICS_SPAWN_HEADING_RADIANS = 0;
 /** Spawn seed used when a caller does not provide one (deterministic). */
 export const NEATRACING_PHYSICS_DEFAULT_SPAWN_SEED = 0;
 
-/** Surface treated as the baseline when no resolver is supplied. */
-const DEFAULT_SURFACE: PhysicsSurfaceType = 'road';
+/**
+ * Surface treated as the baseline when no resolver is supplied.
+ *
+ * The baseline is the PUBLISHED road label, so every surface decision
+ * this module makes without a resolver starts from the SAME published
+ * label.
+ */
+const DEFAULT_SURFACE: PhysicsSurfaceType = NEATRACING_PHYSICS_SURFACE_ROAD;
 
 /** Off-road surface label that arms the off-road drag and passive floor. */
 const OFF_ROAD_SURFACE: PhysicsSurfaceType = 'grass';
 
 /**
- * The NEUTRAL surface of the REACH pass (Step 14W, AC-094 (c)).
+ * The NEUTRAL surface of the REACH pass (the pose a car reaches in a
+ * tick, computed before that pose's surface is resolved).
  *
  * The pose a car reaches in a tick DEPENDS on the surface (the off-road
  * law slows the car down, so the car covers a shorter distance), so the
  * reach pose is computed against this NEUTRAL surface FIRST and the
- * resolver is asked about that pose. It is the ROAD surface because the
- * road arms NO extra law: the reach must never depend on the surface it
- * is resolving.
+ * resolver is asked about that pose. It is the PUBLISHED ROAD label
+ * because the road arms NO extra law: the reach must never depend on the
+ * surface it is resolving.
  */
-const REACH_SURFACE: PhysicsSurfaceType = 'road';
+const REACH_SURFACE: PhysicsSurfaceType = NEATRACING_PHYSICS_SURFACE_ROAD;
 
 /** Standing-start longitudinal speed (m/s). */
 const INITIAL_SPEED_UNITS_PER_S = 0;
@@ -962,6 +999,15 @@ function republishSeparatedCar(car: PhysicsCarState): PhysicsCarState {
  * `NEATRACING_PHYSICS_OFF_TRACK_SPEED_LIMIT_KMH` constant in this
  * module; the off-road decel law STAYS the slowdown mechanism).
  *
+ * THE ADVISORY CONTRACT: the
+ * track departure is PURELY ADVISORY - the HUD's return-to-the-track hint
+ * (built on the ONE published FINE classification) and the EXISTING coarse
+ * off-track penalty are the WHOLE response, so this seam stays the
+ * DELIBERATE NO-OP: there is NO containment to apply, NO auto-reset, NO
+ * reseat and NO teleport. The off-road band stays DRIVABLE and the
+ * 20 km/h cap stays the slowdown mechanism, so the departure is
+ * MEASURED, ADVISED and PENALISED - never corrected by force.
+ *
  * THE NO-OP CONTRACT (AC-081-WIRE-NOOP, re-contracted by the
  * retirement): EVERY input is a no-op - an ABSENT geometry, an EMPTY
  * segment list and a FULL ribbon all leave the tick byte-identical,
@@ -986,7 +1032,8 @@ function applyTrackContainment(
   trackSegments: readonly TrackSegment[] | undefined,
 ): PhysicsCarState {
   // THE RETIRED BOUND: there is NO containment left to apply - no
-  // clamp, no reseat, no hold. The argument is received and retired
+  // clamp, no reseat, no hold, no auto-reset and no teleport (the
+  // ADVISORY contract). The argument is received and retired
   // (never read); the `void` marks the intentional non-read so the
   // unused-vars lane stays honest about the retirement instead of
   // papering over it.

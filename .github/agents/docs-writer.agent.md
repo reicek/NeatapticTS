@@ -18,7 +18,7 @@ user-invocable: false
 disable-model-invocation: false
 target: vscode
 agents: []
-skills: ['educational-docs', 'updating-js-docs', 'auditing-js-docs']
+skills: ['educational-docs', 'updating-js-docs', 'auditing-js-docs', 'prose-first-jsdoc']
 ---
 
 ## CRITICAL RULE — GIT: READ-ONLY INSPECTION ALLOWED, MUTATION BANNED

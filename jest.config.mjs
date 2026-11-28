@@ -230,6 +230,20 @@ const config = {
       testTimeout: 300000,
     },
     {
+      displayName: 'telemetry-scripts',
+      testMatch: ['**/scripts/telemetry/**/*.test.mjs'],
+      testEnvironment: 'node',
+      transform: {},
+      coverageDirectory: 'coverage/project-telemetry-scripts',
+      coverageReporters: ['lcov', 'text', 'html', 'json', 'json-summary'],
+      collectCoverageFrom: [
+        'scripts/telemetry/**/*.mjs',
+        '!scripts/telemetry/**/*.test.mjs',
+      ],
+      testPathIgnorePatterns: ['/node_modules/', '/dist/'],
+      testTimeout: 300000,
+    },
+    {
       displayName: 'mcp-semantic-scripts',
       testMatch: ['**/scripts/mcp-semantic/**/*.test.ts'],
       preset: 'ts-jest/presets/default-esm',

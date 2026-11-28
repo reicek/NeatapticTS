@@ -8,7 +8,15 @@
  * `get_slice_context` tool with an injectable `searchContextFn` mock.
  */
 import { spawn } from 'node:child_process';
-import { writeFile, unlink } from 'node:fs/promises';
+import {
+  mkdtemp,
+  readFile,
+  readdir,
+  rm,
+  writeFile,
+  unlink,
+} from 'node:fs/promises';
+import os from 'node:os';
 import path from 'node:path';
 
 const REPO_ROOT = path.resolve(__dirname, '../../../');
@@ -16,6 +24,34 @@ const SERVER_PATH = path.resolve(
   REPO_ROOT,
   'scripts/agent-customization/mcp/neataptic-workflow-mcp.mjs',
 );
+
+/**
+ * The environment variable that redirects the transient dispatch records.
+ *
+ * The dispatch producer writes a record for every successful dispatch, so the
+ * lanes of this file - including the ones that dispatch real plans - point the
+ * records at a temporary directory instead of the repository.
+ */
+const DISPATCH_RECORD_DIRECTORY_VARIABLE = 'NEATAPTIC_DISPATCH_RECORD_DIR';
+
+/** The temporary directory the dispatch records of this file are written to. */
+let fileDispatchDirectory = '';
+
+/**
+ * Redirect the transient dispatch records of this file away from the
+ * repository, before any lane runs.
+ */
+beforeAll(async () => {
+  fileDispatchDirectory = await mkdtemp(
+    path.join(os.tmpdir(), 'neataptic-dispatch-'),
+  );
+  process.env[DISPATCH_RECORD_DIRECTORY_VARIABLE] = fileDispatchDirectory;
+});
+
+afterAll(async () => {
+  delete process.env[DISPATCH_RECORD_DIRECTORY_VARIABLE];
+  await rm(fileDispatchDirectory, { recursive: true, force: true });
+});
 
 interface JsonRpcRequest {
   jsonrpc: '2.0';
@@ -70,6 +106,16 @@ interface SliceContextResult {
     dense_state: string | null;
     truncated: boolean;
     follow_up_refs: Array<Record<string, unknown>>;
+  };
+  usage?: {
+    available: boolean;
+    source: string;
+    measures: string;
+    context_tokens_delivered: number | null;
+    prompt_tokens: number | null;
+    completion_tokens: number | null;
+    total_tokens: number | null;
+    unavailable_reason: string | null;
   };
   notFound?: boolean;
   message?: string;
@@ -631,15 +677,25 @@ status: '[DONE]'
         server,
         planPath,
       })) as Record<string, unknown>;
+      /*
+       * The implementation reports a WIP phase without a WIP step as a
+       * transitional state (a note), not as a self-check issue: the plan
+       * parser only reaches the self-check when exactly one [WIP] phase
+       * exists, so an "no active WIP phase" issue can never be emitted.
+       */
       expect({
         ok: report.ok,
         issueMessages: (report.issues as Array<{ message: string }>).map(
           (issue) => issue.message,
         ),
+        noteMessages: report.notes as string[],
       }).toEqual({
-        ok: false,
-        issueMessages: expect.arrayContaining([
-          expect.stringContaining('No active WIP phase or step'),
+        ok: true,
+        issueMessages: [],
+        noteMessages: expect.arrayContaining([
+          expect.stringContaining(
+            'Active phase exists but no step is currently [WIP]',
+          ),
         ]),
       });
     } finally {
@@ -2312,10 +2368,165 @@ slices:
         truncated: result.truncated,
         hasFallbackMessage: typeof result.fallback_message === 'string',
         hasHugeGoal: result.goal === hugeGoal,
+        hasUsage: result.usage !== undefined,
+        usageAvailable: typeof (
+          result.usage as { available?: unknown } | undefined
+        )?.available,
       }).toEqual({
         truncated: true,
         hasFallbackMessage: true,
         hasHugeGoal: false,
+        hasUsage: true,
+        usageAvailable: 'boolean',
+      });
+    } finally {
+      await removeTempPlan(planPath);
+    }
+  });
+
+  it('get_slice_context keeps the slice context when the reserved budget cannot hold the payload', async () => {
+    const mod = await loadModule();
+    const slicesYaml: string[] = [];
+    for (let index = 0; index < 170; index += 1) {
+      slicesYaml.push(`  - slice_id: s-${index}`);
+      slicesYaml.push(`    title: Slice ${index}`);
+      slicesYaml.push("    status: '[DONE]'");
+    }
+    const criteriaYaml: string[] = [];
+    for (let index = 0; index < 30; index += 1) {
+      const criterionNumber = index + 1;
+      criteriaYaml.push(
+        `      - id: AC-${String(criterionNumber).padStart(3, '0')}`,
+      );
+      criteriaYaml.push(
+        `        text: 'Acceptance criterion ${criterionNumber} for testing truncation behavior with a long description'`,
+      );
+      criteriaYaml.push(
+        `        validation: 'npm test -- criterion-${criterionNumber}'`,
+      );
+    }
+    const planPath = await writeTempPlan(`
+# Test Plan
+
+## Implementation phases
+
+### Phase 1 — Test [WIP]
+
+#### Step 01: Active step [WIP]
+
+\`\`\`yaml
+phase: 1
+step: 1
+status: '[WIP]'
+slices:
+${slicesYaml.join('\n')}
+  - slice_id: reserved-budget-slice
+    title: Reserved budget slice
+    status: '[WIP]'
+    goal: 'Test the reserved budget release path'
+    acceptance_criteria:
+${criteriaYaml.join('\n')}
+\`\`\`
+
+## Validation gates
+
+- none
+`);
+    try {
+      const searchContextFn = jest.fn().mockResolvedValue({
+        context: 'A'.repeat(5000),
+        results: [],
+        token_count: 100,
+      });
+      const tools = mod.createWorkflowTools({
+        planPath,
+        searchContextFn,
+      }) as WorkflowTool[];
+      const tool = tools.find((t) => t.name === 'get_slice_context');
+      const result = (await (tool as WorkflowTool).handler({
+        slice_id: 'reserved-budget-slice',
+        plan_path: planPath,
+      })) as SliceContextResult;
+
+      expect({
+        truncated: result.truncated,
+        keptTheSliceContext:
+          result.fallback_message?.includes(
+            'context.text and instructions were truncated',
+          ) ?? false,
+        droppedTheSliceContext:
+          result.fallback_message?.includes('could not be trimmed in place') ??
+          false,
+        keptAcceptanceCriteria: result.acceptance_criteria.length,
+        hasUsage: result.usage !== undefined,
+        usageAvailable: typeof result.usage?.available,
+      }).toEqual({
+        truncated: true,
+        keptTheSliceContext: true,
+        droppedTheSliceContext: false,
+        keptAcceptanceCriteria: 30,
+        hasUsage: true,
+        usageAvailable: 'boolean',
+      });
+    } finally {
+      await removeTempPlan(planPath);
+    }
+  });
+
+  it('get_slice_context trims the context text when the rest of the payload fits the reserved budget', async () => {
+    const mod = await loadModule();
+    const contextLength = 20_000;
+    const planPath = await writeTempPlan(`
+# Test Plan
+
+## Implementation phases
+
+### Phase 1 — Test [WIP]
+
+#### Step 01: Active step [WIP]
+
+\`\`\`yaml
+phase: 1
+step: 1
+status: '[WIP]'
+slices:
+  - slice_id: context-trim-slice
+    title: Context trim slice
+    status: '[WIP]'
+    goal: 'Test the context text trimming path'
+\`\`\`
+
+## Validation gates
+
+- none
+`);
+    try {
+      const searchContextFn = jest.fn().mockResolvedValue({
+        context: 'B'.repeat(contextLength),
+        results: [],
+        token_count: 100,
+      });
+      const tools = mod.createWorkflowTools({
+        planPath,
+        searchContextFn,
+      }) as WorkflowTool[];
+      const tool = tools.find((t) => t.name === 'get_slice_context');
+      const result = (await (tool as WorkflowTool).handler({
+        slice_id: 'context-trim-slice',
+        plan_path: planPath,
+      })) as SliceContextResult;
+
+      expect({
+        contextWasTrimmed: result.context.text.length < contextLength,
+        hasUsage: result.usage !== undefined,
+        hasFallbackMessage: typeof result.fallback_message === 'string',
+        staysInsideTheBudget:
+          Buffer.byteLength(JSON.stringify(result), 'utf8') <= 16_384,
+      }).toEqual({
+        contextWasTrimmed: true,
+        hasUsage: true,
+        hasFallbackMessage: false,
+        staysInsideTheBudget: true,
       });
     } finally {
       await removeTempPlan(planPath);
@@ -2805,6 +3016,1058 @@ slices:
       } finally {
         await removeTempPlan(planPath);
       }
+    });
+  });
+
+  describe('the dispatch-time producer', () => {
+    const SLICE_ID = 'S1-producer';
+    const PRODUCER_PLAN_FILE_NAME = '__test-producer-fixture.plans.md';
+    const PLAN_CONTENT = `
+# Test Plan
+
+## Implementation phases
+
+### Phase 1 — Test [WIP]
+
+#### Step S1 — Producer step [WIP]
+
+\`\`\`yaml
+phase: 1
+step: S1
+title: 'S1: Producer step'
+slices:
+  - slice_id: ${SLICE_ID}
+    title: Producer slice
+    status: '[WIP]'
+    goal: prove the dispatch producer opens the slice exactly once
+\`\`\`
+
+## Validation gates
+
+- none
+`;
+
+    interface DispatchRecord {
+      plan_id: string;
+      slice_id: string;
+      context_tokens_delivered: number | null;
+      dispatch_seq: number;
+      started_monotonic_ns: string;
+    }
+
+    let planPath = '';
+    let planId = '';
+    let dispatchRoot = '';
+    let dispatchDirectory = '';
+    let contract: {
+      DISPATCH_RECORD_FIELDS: readonly string[];
+      scanPersistedText: (
+        text: string,
+      ) => Array<{ kind: string; key?: string; line: number }>;
+    };
+
+    /**
+     * The eight keys of the contract's `usage.token_usage` shape.
+     *
+     * The measurement block must carry EXACTLY these keys, so the lane that
+     * asserts the block's shape names them here instead of deriving them from
+     * the producer itself.
+     */
+    const TOKEN_USAGE_CONTRACT_KEYS = [
+      'available',
+      'completion_tokens',
+      'context_tokens_delivered',
+      'measures',
+      'prompt_tokens',
+      'source',
+      'total_tokens',
+      'unavailable_reason',
+    ];
+
+    /**
+     * The search fixture of the PRODUCER block.
+     *
+     * The shared fixture of the file returns no `token_count`, and the producer
+     * measures the delivered count only when EVERY ingested response carries a
+     * numeric one - so the producer lanes need their own fixture that carries
+     * a numeric count. The default count is NON-ZERO, so a delivered-count
+     * assertion stays non-vacuous; a genuinely measured zero is the only lane
+     * that asks for `0`.
+     *
+     * @param {number} [tokenCount] - The numeric token count the fixture carries.
+     * @returns {jest.Mock} The stubbed search_context implementation.
+     */
+    function makeProducerSearchContextFn(tokenCount = 4210): jest.Mock {
+      return jest.fn().mockResolvedValue({
+        dense_state: 'cold',
+        results: [],
+        token_count: tokenCount,
+      });
+    }
+
+    /**
+     * A probe reader that reports the delivered-token source as demonstrated.
+     *
+     * The stub keeps the lanes deterministic: a lane asserts the producer's
+     * OWN contract, not the verdict of the live probe.
+     *
+     * @returns {jest.Mock} The stubbed probe reader.
+     */
+    function demonstratedProbeReader(): jest.Mock {
+      return jest.fn().mockResolvedValue({
+        schema_version: 1,
+        report: 'attribution-sources',
+        signals: [
+          {
+            signal: 'context_tokens_delivered',
+            verdict: 'demonstrated',
+            owner: 'the workflow MCP (get_slice_context)',
+            measures:
+              'context tokens DELIVERED to the slice, not model consumption',
+            summary: 'the lane stubs the probe verdict',
+          },
+        ],
+      });
+    }
+
+    beforeAll(async () => {
+      /*
+       * The fixture plan is written under a deterministic file name on
+       * purpose: the persisted `plan_id` is derived from the plan file name,
+       * and a timestamped name would smuggle an epoch-millisecond literal
+       * into the persisted record.
+       */
+      planPath = path.resolve(
+        REPO_ROOT,
+        'plans',
+        PRODUCER_PLAN_FILE_NAME,
+      );
+      await writeFile(planPath, PLAN_CONTENT.trim(), 'utf-8');
+      planId = path.basename(planPath).replace(/\.plans\.md$/u, '');
+      dispatchRoot = await mkdtemp(
+        path.join(os.tmpdir(), 'neataptic-producer-'),
+      );
+      contract = (await import(
+        path.join(REPO_ROOT, 'scripts/telemetry/telemetry-contract.mjs')
+      )) as {
+        DISPATCH_RECORD_FIELDS: readonly string[];
+        scanPersistedText: (
+          text: string,
+        ) => Array<{ kind: string; key?: string; line: number }>;
+      };
+    });
+
+    beforeEach(async () => {
+      dispatchDirectory = await mkdtemp(path.join(dispatchRoot, 'lane-'));
+      process.env[DISPATCH_RECORD_DIRECTORY_VARIABLE] = dispatchDirectory;
+    });
+
+    afterEach(async () => {
+      process.env[DISPATCH_RECORD_DIRECTORY_VARIABLE] = fileDispatchDirectory;
+      await rm(dispatchDirectory, { recursive: true, force: true });
+    });
+
+    afterAll(async () => {
+      await rm(dispatchRoot, { recursive: true, force: true });
+      await removeTempPlan(planPath);
+    });
+
+    async function readDispatchRecords(): Promise<
+      Array<{ name: string; raw: string; record: DispatchRecord }>
+    > {
+      const names = (await readdir(dispatchDirectory)).sort();
+      const records: Array<{
+        name: string;
+        raw: string;
+        record: DispatchRecord;
+      }> = [];
+      for (const name of names) {
+        const raw = await readFile(path.join(dispatchDirectory, name), 'utf8');
+        records.push({ name, raw, record: JSON.parse(raw) as DispatchRecord });
+      }
+      return records;
+    }
+
+    async function dispatchSlice(options: {
+      sliceId?: string;
+      searchContextFn?: jest.Mock;
+      attributionProbeReader?: () => Promise<unknown>;
+      observationLogPath?: string;
+    }): Promise<SliceContextResult> {
+      const mod = await loadModule();
+      const tools = mod.createWorkflowTools({
+        planPath,
+        searchContextFn:
+          options.searchContextFn ?? makeProducerSearchContextFn(),
+        attributionProbeReader: options.attributionProbeReader,
+        observationLogPath: options.observationLogPath,
+      }) as WorkflowTool[];
+      const tool = tools.find((entry) => entry.name === 'get_slice_context');
+      const result = (await (tool as WorkflowTool).handler({
+        slice_id: options.sliceId ?? SLICE_ID,
+        plan_path: planPath,
+      })) as SliceContextResult;
+      return result;
+    }
+
+    it('writes exactly one dispatch record per successful call', async () => {
+      const response = await dispatchSlice({});
+      const records = await readDispatchRecords();
+      const record = records[0]?.record;
+
+      expect({
+        fileCount: records.length,
+        recordKeys: Object.keys(record ?? {}).sort(),
+        contractFields: [...contract.DISPATCH_RECORD_FIELDS].sort(),
+        plan_id: record?.plan_id,
+        slice_id: record?.slice_id,
+        dispatch_seq: record?.dispatch_seq,
+        startedIsNonEmptyString:
+          typeof record?.started_monotonic_ns === 'string' &&
+          record.started_monotonic_ns.length > 0,
+        delivered: record?.context_tokens_delivered,
+        responseTokenCount: response.context.token_count,
+      }).toEqual({
+        fileCount: 1,
+        recordKeys: [...contract.DISPATCH_RECORD_FIELDS].sort(),
+        contractFields: [...contract.DISPATCH_RECORD_FIELDS].sort(),
+        plan_id: planId,
+        slice_id: SLICE_ID,
+        dispatch_seq: 0,
+        startedIsNonEmptyString: true,
+        delivered: response.context.token_count,
+        responseTokenCount: response.context.token_count,
+      });
+    });
+
+    it('persists no forbidden field and no forbidden value', async () => {
+      await dispatchSlice({});
+      const records = await readDispatchRecords();
+      const raw = records[0]?.raw ?? '';
+
+      expect({
+        violations: contract.scanPersistedText(raw),
+        hasIsoDate: /\d{4}-\d{2}-\d{2}/u.test(raw),
+        hasEpochMillis: /\b\d{13}\b/u.test(raw),
+        hasAbsolutePath: /[A-Za-z]:[\\/]/u.test(raw),
+      }).toEqual({
+        violations: [],
+        hasIsoDate: false,
+        hasEpochMillis: false,
+        hasAbsolutePath: false,
+      });
+    });
+
+    it('writes nothing when the context could not be built', async () => {
+      const response = await dispatchSlice({ sliceId: 'UNKNOWN-SLICE' });
+      const records = await readDispatchRecords();
+
+      expect({
+        notFound: response.notFound,
+        carriesUsage: Object.prototype.hasOwnProperty.call(response, 'usage'),
+        fileCount: records.length,
+      }).toEqual({
+        notFound: true,
+        carriesUsage: false,
+        fileCount: 0,
+      });
+    });
+
+    it('reports the delivered-token boundary without inventing model consumption', async () => {
+      const response = await dispatchSlice({});
+      const records = await readDispatchRecords();
+      const record = records[0]?.record;
+      const usageBlock = response.usage;
+
+      expect({
+        available: usageBlock?.available,
+        source: usageBlock?.source,
+        measures: usageBlock?.measures,
+        delivered: usageBlock?.context_tokens_delivered,
+        responseTokenCount: response.context.token_count,
+        prompt: usageBlock?.['prompt_tokens'],
+        completion: usageBlock?.['completion_tokens'],
+        total: usageBlock?.['total_tokens'],
+        modelReason: usageBlock?.unavailable_reason,
+        recordDelivered: record?.context_tokens_delivered,
+        recordCarriesModelFields: Object.keys(record ?? {}).some((key) =>
+          ['prompt_tokens', 'completion_tokens', 'total_tokens'].includes(key),
+        ),
+      }).toEqual({
+        available: true,
+        source: 'cortex-get-slice-context',
+        measures: expect.stringContaining('DELIVERED'),
+        delivered: response.context.token_count,
+        responseTokenCount: response.context.token_count,
+        prompt: null,
+        completion: null,
+        total: null,
+        modelReason: 'model_consumption_unavailable',
+        recordDelivered: response.context.token_count,
+        recordCarriesModelFields: false,
+      });
+    });
+
+    it('never persists zero for a count it could not measure', async () => {
+      const searchContextFn = jest
+        .fn()
+        .mockRejectedValue(new Error('search unavailable'));
+      const response = await dispatchSlice({ searchContextFn });
+      const records = await readDispatchRecords();
+
+      expect({
+        delivered: records[0]?.record.context_tokens_delivered,
+        available: response.usage?.available,
+        unavailableReason: response.usage?.unavailable_reason,
+      }).toEqual({
+        delivered: null,
+        available: false,
+        unavailableReason: 'delivered_token_count_unavailable',
+      });
+    });
+
+    it('keeps a genuinely measured zero at zero', async () => {
+      const searchContextFn = makeProducerSearchContextFn(0);
+      const response = await dispatchSlice({ searchContextFn });
+      const records = await readDispatchRecords();
+
+      expect({
+        delivered: records[0]?.record.context_tokens_delivered,
+        available: response.usage?.available,
+        unavailableReason: response.usage?.unavailable_reason,
+      }).toEqual({
+        delivered: 0,
+        available: true,
+        unavailableReason: 'model_consumption_unavailable',
+      });
+    });
+
+    it('obeys the probe when it reports the delivered-token source as unavailable', async () => {
+      const attributionProbeReader = jest.fn().mockResolvedValue({
+        schema_version: 1,
+        report: 'attribution-sources',
+        signals: [
+          {
+            signal: 'context_tokens_delivered',
+            verdict: 'unavailable',
+            owner: 'the workflow MCP (get_slice_context)',
+            measures: 'context tokens DELIVERED to the slice, not model consumption',
+            summary: 'no live source computes a per-slice context-token count',
+            reason: 'probe-said-no',
+          },
+        ],
+      });
+      const response = await dispatchSlice({ attributionProbeReader });
+      const records = await readDispatchRecords();
+
+      expect({
+        delivered: records[0]?.record.context_tokens_delivered,
+        available: response.usage?.available,
+        unavailableReason: response.usage?.unavailable_reason,
+        carriesProbeReasonKey: Object.prototype.hasOwnProperty.call(
+          response.usage ?? {},
+          'probe_reason',
+        ),
+      }).toEqual({
+        delivered: null,
+        available: false,
+        unavailableReason: 'probe-said-no',
+        carriesProbeReasonKey: false,
+      });
+    });
+
+    it('never persists zero for a response without a numeric token count', async () => {
+      /*
+       * A response that carries NO numeric `token_count` leaves the delivered
+       * count a lower bound, so the count is not measured at all: the block
+       * and the record carry `null`, never `0`, and the reason says why.
+       */
+      const searchContextFn = jest.fn().mockResolvedValue({
+        dense_state: 'cold',
+        results: [],
+      });
+      const response = await dispatchSlice({
+        searchContextFn,
+        attributionProbeReader: demonstratedProbeReader(),
+      });
+      const records = await readDispatchRecords();
+
+      expect({
+        available: response.usage?.available,
+        delivered: response.usage?.context_tokens_delivered,
+        unavailableReason: response.usage?.unavailable_reason,
+        recordDelivered: records[0]?.record.context_tokens_delivered,
+        responseTokenCount: response.context.token_count,
+      }).toEqual({
+        available: false,
+        delivered: null,
+        unavailableReason: 'delivered_token_count_unavailable',
+        recordDelivered: null,
+        responseTokenCount: 0,
+      });
+    });
+
+    it('never copies a free-text probe reason into the measurement block', async () => {
+      /*
+       * The live probe reports the model-consumption verdict in prose, so the
+       * producer must fall back to the stable contract token instead of
+       * copying the sentence into the block.
+       */
+      const proseReason =
+        'the repository has no access to the host agent model accounting, so the model consumption of a slice cannot be measured from the repository bytes at all';
+      const attributionProbeReader = jest.fn().mockResolvedValue({
+        schema_version: 1,
+        report: 'attribution-sources',
+        signals: [
+          {
+            signal: 'context_tokens_delivered',
+            verdict: 'demonstrated',
+            owner: 'the workflow MCP (get_slice_context)',
+            measures:
+              'context tokens DELIVERED to the slice, not model consumption',
+            summary: 'the lane stubs the probe verdict',
+          },
+          {
+            signal: 'llm_token_consumption',
+            verdict: 'unavailable',
+            owner: 'the host agent',
+            measures: 'model tokens consumed by the host agent',
+            summary: 'the lane stubs the model verdict',
+            reason: proseReason,
+          },
+        ],
+      });
+      const response = await dispatchSlice({ attributionProbeReader });
+      const usageBlock = response.usage;
+
+      expect({
+        available: usageBlock?.available,
+        unavailableReason: usageBlock?.unavailable_reason,
+        carriesProse: JSON.stringify(response).includes(proseReason),
+        usageKeys: Object.keys(usageBlock ?? {}).sort(),
+      }).toEqual({
+        available: true,
+        unavailableReason: 'model_consumption_unavailable',
+        carriesProse: false,
+        usageKeys: TOKEN_USAGE_CONTRACT_KEYS,
+      });
+    });
+
+    it('carries a machine-stable probe reason token into the persisted reason slot', async () => {
+      /*
+       * A reason that is ALREADY a machine-stable token must be CARRIED: the
+       * token the probe declares reaches the reason slot unchanged. The
+       * drop-path fallback for this verdict is `source_not_demonstrated`, so
+       * the assertion discriminates a CARRIED token from a DROPPED one. The
+       * record keeps the five contract fields - the reason slot lives in the
+       * measurement block, never in the record.
+       */
+      const stableReason = 'probe_report_unavailable';
+      const attributionProbeReader = jest.fn().mockResolvedValue({
+        schema_version: 1,
+        report: 'attribution-sources',
+        signals: [
+          {
+            signal: 'context_tokens_delivered',
+            verdict: 'unavailable',
+            owner: 'the workflow MCP (get_slice_context)',
+            measures:
+              'context tokens DELIVERED to the slice, not model consumption',
+            summary: 'the lane stubs the probe verdict',
+            reason: stableReason,
+          },
+        ],
+      });
+      const response = await dispatchSlice({ attributionProbeReader });
+      const records = await readDispatchRecords();
+
+      expect({
+        unavailableReason: response.usage?.unavailable_reason,
+        available: response.usage?.available,
+        delivered: response.usage?.context_tokens_delivered,
+        recordDelivered: records[0]?.record.context_tokens_delivered,
+        recordKeys: Object.keys(records[0]?.record ?? {}).sort(),
+      }).toEqual({
+        unavailableReason: stableReason,
+        available: false,
+        delivered: null,
+        recordDelivered: null,
+        recordKeys: [...contract.DISPATCH_RECORD_FIELDS].sort(),
+      });
+    });
+
+    it('drops a probe reason that is not a machine-stable token', async () => {
+      /*
+       * A SHORT reason that is not a machine-stable token - a space breaks the
+       * stable shape - must be DROPPED: the stable contract token of the
+       * verdict is used instead, and the free text reaches neither the
+       * response nor the persisted record.
+       */
+      const freeTextReason = 'probe said no';
+      const attributionProbeReader = jest.fn().mockResolvedValue({
+        schema_version: 1,
+        report: 'attribution-sources',
+        signals: [
+          {
+            signal: 'context_tokens_delivered',
+            verdict: 'unavailable',
+            owner: 'the workflow MCP (get_slice_context)',
+            measures:
+              'context tokens DELIVERED to the slice, not model consumption',
+            summary: 'the lane stubs the probe verdict',
+            reason: freeTextReason,
+          },
+        ],
+      });
+      const response = await dispatchSlice({ attributionProbeReader });
+      const records = await readDispatchRecords();
+
+      expect({
+        unavailableReason: response.usage?.unavailable_reason,
+        available: response.usage?.available,
+        carriesFreeText: JSON.stringify(response).includes(freeTextReason),
+        recordCarriesFreeText: (records[0]?.raw ?? '').includes(freeTextReason),
+      }).toEqual({
+        unavailableReason: 'source_not_demonstrated',
+        available: false,
+        carriesFreeText: false,
+        recordCarriesFreeText: false,
+      });
+    });
+
+    it('rejects a date-like probe reason and persists the stable fallback', async () => {
+      /*
+       * A token-SHAPED date-like value matches the stable reason shape, so the
+       * forbidden-value check is the ONLY guard that rejects it. The value must
+       * never reach the persisted record - that is an R-3 violation and not
+       * only a coverage defect - so the stable contract token is used instead.
+       */
+      const dateLikeReason = '2026-11-27';
+      const attributionProbeReader = jest.fn().mockResolvedValue({
+        schema_version: 1,
+        report: 'attribution-sources',
+        signals: [
+          {
+            signal: 'context_tokens_delivered',
+            verdict: 'unavailable',
+            owner: 'the workflow MCP (get_slice_context)',
+            measures:
+              'context tokens DELIVERED to the slice, not model consumption',
+            summary: 'the lane stubs the probe verdict',
+            reason: dateLikeReason,
+          },
+        ],
+      });
+      const response = await dispatchSlice({ attributionProbeReader });
+      const records = await readDispatchRecords();
+
+      expect({
+        unavailableReason: response.usage?.unavailable_reason,
+        available: response.usage?.available,
+        usageCarriesDate: JSON.stringify(response.usage ?? {}).includes(
+          dateLikeReason,
+        ),
+        recordCarriesDate: (records[0]?.raw ?? '').includes(dateLikeReason),
+      }).toEqual({
+        unavailableReason: 'source_not_demonstrated',
+        available: false,
+        usageCarriesDate: false,
+        recordCarriesDate: false,
+      });
+    });
+
+    it('starts the dispatch window at the current observation count', async () => {
+      const observationLogPath = path.join(dispatchRoot, 'tool-executions.jsonl');
+      await writeFile(
+        observationLogPath,
+        ['{"tool":"read"}', '{"tool":"write"}', '{"tool":"edit"}', ''].join('\n'),
+        'utf8',
+      );
+      await dispatchSlice({ observationLogPath });
+      const records = await readDispatchRecords();
+
+      expect(records[0]?.record.dispatch_seq).toBe(3);
+    });
+
+    describe('the producer seams', () => {
+      it('names an unnamed plan with the fallback plan identifier', async () => {
+        const mod = await loadModule();
+
+        expect({
+          undefinedPath: mod.derivePlanId(undefined),
+          emptyPath: mod.derivePlanId(''),
+        }).toEqual({
+          undefinedPath: 'unknown-plan',
+          emptyPath: 'unknown-plan',
+        });
+      });
+
+      it('finds no probe signal in a report that carries none', async () => {
+        const mod = await loadModule();
+
+        expect({
+          nullReport: mod.findProbeSignal(
+            null,
+            'context_tokens_delivered',
+          ),
+          primitiveReport: mod.findProbeSignal(
+            'not-a-report',
+            'context_tokens_delivered',
+          ),
+          nonArraySignals: mod.findProbeSignal(
+            { signals: 'not-an-array' },
+            'context_tokens_delivered',
+          ),
+        }).toEqual({
+          nullReport: null,
+          primitiveReport: null,
+          nonArraySignals: null,
+        });
+      });
+
+      it('reports no probe report when the probe cannot be read', async () => {
+        const mod = await loadModule();
+
+        expect(
+          await mod.readAttributionProbeReport(async () => {
+            throw new Error('probe failed');
+          }),
+        ).toBeNull();
+      });
+
+      it('counts no observation for a missing or unreadable log', async () => {
+        const mod = await loadModule();
+
+        expect({
+          missingPath: mod.countObservationLines(undefined),
+          directoryPath: mod.countObservationLines(dispatchRoot),
+        }).toEqual({
+          missingPath: 0,
+          directoryPath: 0,
+        });
+      });
+
+      it('reports no delivered tokens when the probe report is unavailable', async () => {
+        const mod = await loadModule();
+        const usage = mod.buildDeliveredTokenUsage();
+
+        expect({
+          available: usage.available,
+          delivered: usage.context_tokens_delivered,
+          unavailableReason: usage.unavailable_reason,
+        }).toEqual({
+          available: false,
+          delivered: null,
+          unavailableReason: 'probe_report_unavailable',
+        });
+      });
+
+      it('carries no probe reason when the probe reported no reason', async () => {
+        const mod = await loadModule();
+        const usage = mod.buildDeliveredTokenUsage({
+          tokenCount: 5,
+          measured: true,
+          deliveredSignal: { verdict: 'unavailable' },
+        });
+
+        expect({
+          available: usage.available,
+          carriesProbeReasonKey: Object.prototype.hasOwnProperty.call(
+            usage,
+            'probe_reason',
+          ),
+          unavailableReason: usage.unavailable_reason,
+        }).toEqual({
+          available: false,
+          carriesProbeReasonKey: false,
+          unavailableReason: 'source_not_demonstrated',
+        });
+      });
+
+      it('carries no model reason when the model signal reported no reason', async () => {
+        const mod = await loadModule();
+        const usage = mod.buildDeliveredTokenUsage({
+          tokenCount: 5,
+          measured: true,
+          deliveredSignal: { verdict: 'demonstrated' },
+          modelSignal: { verdict: 'unavailable' },
+        });
+
+        expect({
+          available: usage.available,
+          delivered: usage.context_tokens_delivered,
+          carriesModelReasonKey: Object.prototype.hasOwnProperty.call(
+            usage,
+            'model_consumption_unavailable_reason',
+          ),
+          unavailableReason: usage.unavailable_reason,
+        }).toEqual({
+          available: true,
+          delivered: 5,
+          carriesModelReasonKey: false,
+          unavailableReason: 'model_consumption_unavailable',
+        });
+      });
+
+      it('writes the dispatch record into the explicit directory', async () => {
+        const mod = await loadModule();
+        const dispatch = await mod.produceSliceDispatch({
+          planPath: 'plans/p.plans.md',
+          sliceId: 'S-1',
+          tokenCount: 5,
+          measured: true,
+          probeReader: demonstratedProbeReader(),
+          dispatchRecordDirectory: dispatchDirectory,
+        });
+        const names = await readdir(dispatchDirectory);
+
+        expect({
+          opened: dispatch.opened,
+          recordInDirectory: names.some((name) => name.endsWith('.json')),
+          delivered: dispatch.usage.context_tokens_delivered,
+        }).toEqual({
+          opened: true,
+          recordInDirectory: true,
+          delivered: 5,
+        });
+      });
+
+      it('falls back to the contract default directory when none is configured', async () => {
+        const mod = await loadModule();
+        const previous = process.env[DISPATCH_RECORD_DIRECTORY_VARIABLE];
+        delete process.env[DISPATCH_RECORD_DIRECTORY_VARIABLE];
+        let writtenPath: string | null = null;
+        try {
+          const withoutArguments = await mod.produceSliceDispatch();
+          const dispatch = await mod.produceSliceDispatch({
+            planPath: 'plans/__ot-s1-4-default.plans.md',
+            sliceId: 'OT-S1-4-DEFAULT',
+          });
+          writtenPath = dispatch.path;
+
+          expect({
+            withoutArgumentsOpened: withoutArguments.opened,
+            withoutArgumentsPath: withoutArguments.path,
+            opened: dispatch.opened,
+            pathIsNonEmptyString:
+              typeof dispatch.path === 'string' && dispatch.path.length > 0,
+            available: dispatch.usage.available,
+            delivered: dispatch.usage.context_tokens_delivered,
+          }).toEqual({
+            withoutArgumentsOpened: false,
+            withoutArgumentsPath: null,
+            opened: true,
+            pathIsNonEmptyString: true,
+            available: false,
+            delivered: null,
+          });
+        } finally {
+          if (previous === undefined) {
+            delete process.env[DISPATCH_RECORD_DIRECTORY_VARIABLE];
+          } else {
+            process.env[DISPATCH_RECORD_DIRECTORY_VARIABLE] = previous;
+          }
+          if (writtenPath !== null) {
+            try {
+              await unlink(writtenPath);
+            } catch {
+              // Best-effort cleanup of the transient default-directory record.
+            }
+          }
+        }
+      });
+
+      it('uses the live probe reader when the injected reader is not callable', async () => {
+        const mod = await loadModule();
+        const dispatch = await mod.produceSliceDispatch({
+          planPath: 'plans/p.plans.md',
+          sliceId: 'S-2',
+          probeReader: 'not-a-function',
+          dispatchRecordDirectory: dispatchDirectory,
+        });
+        const names = await readdir(dispatchDirectory);
+
+        expect({
+          opened: dispatch.opened,
+          recordInDirectory: names.some((name) => name.endsWith('.json')),
+        }).toEqual({
+          opened: true,
+          recordInDirectory: true,
+        });
+      });
+
+      it('fails open when the probe reader throws', async () => {
+        const mod = await loadModule();
+        const dispatch = await mod.produceSliceDispatch({
+          planPath: 'plans/p.plans.md',
+          sliceId: 'S-3',
+          probeReader: async () => {
+            throw new Error('probe failed');
+          },
+          dispatchRecordDirectory: dispatchDirectory,
+        });
+
+        expect({
+          opened: dispatch.opened,
+          available: dispatch.usage.available,
+          unavailableReason: dispatch.usage.unavailable_reason,
+          delivered: dispatch.usage.context_tokens_delivered,
+        }).toEqual({
+          opened: true,
+          available: false,
+          unavailableReason: 'probe_report_unavailable',
+          delivered: null,
+        });
+      });
+
+      it('fails open with a stable reason when the injected probe builder throws', async () => {
+        /*
+         * The INJECTED builder path of the probe reader is the seam a test
+         * uses to exercise a broken probe, so it must absorb the failure the
+         * same way the memoized live path does: the report resolves to null,
+         * the dispatch still succeeds, the measurement block carries the
+         * stable `probe_report_unavailable` token and NO number - never `0` -
+         * and the free-text failure never reaches the persisted record.
+         */
+        const mod = await loadModule();
+        const freeTextFailure = 'probe exploded with a free-text diagnostic';
+        const dispatch = await mod.produceSliceDispatch({
+          planPath: 'plans/p.plans.md',
+          sliceId: 'S-7',
+          probeReader: () =>
+            mod.readAttributionProbeReport(async () => {
+              throw new Error(freeTextFailure);
+            }),
+          dispatchRecordDirectory: dispatchDirectory,
+        });
+        const names = await readdir(dispatchDirectory);
+        const raw =
+          names.length > 0
+            ? await readFile(path.join(dispatchDirectory, names[0]), 'utf8')
+            : '';
+
+        expect({
+          opened: dispatch.opened,
+          available: dispatch.usage.available,
+          unavailableReason: dispatch.usage.unavailable_reason,
+          delivered: dispatch.usage.context_tokens_delivered,
+          recordCount: names.length,
+          recordCarriesFreeText: raw.includes(freeTextFailure),
+        }).toEqual({
+          opened: true,
+          available: false,
+          unavailableReason: 'probe_report_unavailable',
+          delivered: null,
+          recordCount: 1,
+          recordCarriesFreeText: false,
+        });
+      });
+
+      it('writes no dispatch record for a slice without an identifier', async () => {
+        const mod = await loadModule();
+        const dispatch = await mod.produceSliceDispatch({
+          sliceId: undefined,
+          dispatchRecordDirectory: dispatchDirectory,
+        });
+        const names = await readdir(dispatchDirectory);
+
+        expect({
+          opened: dispatch.opened,
+          path: dispatch.path,
+          recordCount: names.length,
+        }).toEqual({
+          opened: false,
+          path: null,
+          recordCount: 0,
+        });
+      });
+
+      it('writes no dispatch record when the record directory cannot be created', async () => {
+        const mod = await loadModule();
+        const blockedDirectory = path.join(dispatchRoot, 'blocked-directory');
+        await writeFile(blockedDirectory, 'not-a-directory', 'utf8');
+        const dispatch = await mod.produceSliceDispatch({
+          planPath: 'plans/p.plans.md',
+          sliceId: 'S-4',
+          dispatchRecordDirectory: blockedDirectory,
+        });
+
+        expect({
+          opened: dispatch.opened,
+          path: dispatch.path,
+        }).toEqual({
+          opened: false,
+          path: null,
+        });
+      });
+
+      it('writes no dispatch record for an unsafe plan or slice identity', async () => {
+        const mod = await loadModule();
+        const datedPlan = await mod.produceSliceDispatch({
+          planPath: 'plans/2026-11-27-unsafe.plans.md',
+          sliceId: 'S-5',
+          probeReader: demonstratedProbeReader(),
+          dispatchRecordDirectory: dispatchDirectory,
+        });
+        const pathedSlice = await mod.produceSliceDispatch({
+          planPath: 'plans/p.plans.md',
+          sliceId: 'S/5',
+          probeReader: demonstratedProbeReader(),
+          dispatchRecordDirectory: dispatchDirectory,
+        });
+        const names = await readdir(dispatchDirectory);
+
+        expect({
+          datedPlanOpened: datedPlan.opened,
+          datedPlanPath: datedPlan.path,
+          pathedSliceOpened: pathedSlice.opened,
+          pathedSlicePath: pathedSlice.path,
+          recordCount: names.length,
+        }).toEqual({
+          datedPlanOpened: false,
+          datedPlanPath: null,
+          pathedSliceOpened: false,
+          pathedSlicePath: null,
+          recordCount: 0,
+        });
+      });
+
+      it('deletes a dispatch record that trips the deny-list sweep', async () => {
+        const mod = await loadModule();
+        const dispatch = await mod.produceSliceDispatch({
+          planPath: 'plans/p.plans.md',
+          sliceId: 'S-6',
+          tokenCount: 1764147453321,
+          measured: true,
+          probeReader: demonstratedProbeReader(),
+          dispatchRecordDirectory: dispatchDirectory,
+        });
+        const names = await readdir(dispatchDirectory);
+
+        expect({
+          opened: dispatch.opened,
+          path: dispatch.path,
+          available: dispatch.usage.available,
+          delivered: dispatch.usage.context_tokens_delivered,
+          recordCount: names.length,
+        }).toEqual({
+          opened: false,
+          path: null,
+          available: true,
+          delivered: 1764147453321,
+          recordCount: 0,
+        });
+      });
+
+      it('deletes a deny-list-violating record written to the default directory', async () => {
+        /*
+         * The directory override is OPTIONAL, so the sweep must delete a
+         * violating record in the contract default directory as well - the
+         * delete resolves the directory exactly like the write does. The SAFE
+         * control dispatch proves the default directory is writable in this
+         * configuration, so the MISSING violating record is the DELETE and not
+         * a failed write.
+         */
+        const mod = await loadModule();
+        const previous = process.env[DISPATCH_RECORD_DIRECTORY_VARIABLE];
+        delete process.env[DISPATCH_RECORD_DIRECTORY_VARIABLE];
+        const defaultDirectory = path.join(
+          REPO_ROOT,
+          'logs',
+          'slice-ledger',
+          'dispatch',
+        );
+        const transientSliceIds = [
+          'OT-S1-4-DEFAULT-SAFE',
+          'OT-S1-4-DEFAULT-SWEEP',
+        ];
+        try {
+          const control = await mod.produceSliceDispatch({
+            planPath: 'plans/__ot-s1-4-default.plans.md',
+            sliceId: 'OT-S1-4-DEFAULT-SAFE',
+            tokenCount: 42,
+            measured: true,
+            probeReader: demonstratedProbeReader(),
+          });
+          const violating = await mod.produceSliceDispatch({
+            planPath: 'plans/__ot-s1-4-default.plans.md',
+            sliceId: 'OT-S1-4-DEFAULT-SWEEP',
+            tokenCount: 1764147453321,
+            measured: true,
+            probeReader: demonstratedProbeReader(),
+          });
+          let names: string[] = [];
+          try {
+            names = await readdir(defaultDirectory);
+          } catch {
+            names = [];
+          }
+
+          expect({
+            controlOpened: control.opened,
+            controlRecordExists: names.some((name) =>
+              name.includes('OT-S1-4-DEFAULT-SAFE'),
+            ),
+            violatingOpened: violating.opened,
+            violatingPath: violating.path,
+            violatingRecordExists: names.some((name) =>
+              name.includes('OT-S1-4-DEFAULT-SWEEP'),
+            ),
+            violatingAvailable: violating.usage.available,
+            violatingDelivered: violating.usage.context_tokens_delivered,
+          }).toEqual({
+            controlOpened: true,
+            controlRecordExists: true,
+            violatingOpened: false,
+            violatingPath: null,
+            violatingRecordExists: false,
+            violatingAvailable: true,
+            violatingDelivered: 1764147453321,
+          });
+        } finally {
+          if (previous === undefined) {
+            delete process.env[DISPATCH_RECORD_DIRECTORY_VARIABLE];
+          } else {
+            process.env[DISPATCH_RECORD_DIRECTORY_VARIABLE] = previous;
+          }
+          let names: string[] = [];
+          try {
+            names = await readdir(defaultDirectory);
+          } catch {
+            names = [];
+          }
+          for (const name of names) {
+            const isTransient = transientSliceIds.some((sliceId) =>
+              name.includes(sliceId),
+            );
+            if (isTransient) {
+              try {
+                await unlink(path.join(defaultDirectory, name));
+              } catch {
+                // Best-effort cleanup of the transient default-directory records.
+              }
+            }
+          }
+        }
+      });
+
+      it('shares one probe read between concurrent callers', async () => {
+        const mod = await loadModule();
+        const [first, second] = await Promise.all([
+          mod.readAttributionProbeReport(),
+          mod.readAttributionProbeReport(),
+        ]);
+
+        expect({
+          firstIsReport: first !== null,
+          secondIsReport: second !== null,
+          sameReport: first === second,
+        }).toEqual({
+          firstIsReport: true,
+          secondIsReport: true,
+          sameReport: true,
+        });
+      });
     });
   });
 

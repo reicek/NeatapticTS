@@ -9,7 +9,7 @@
   "scripts": {
     "jest:base": "cross-env \"NODE_OPTIONS=--no-experimental-webstorage --max-old-space-size=8192\" jest --config=jest.config.mjs --testPathIgnorePatterns=.*\\.test\\.mjs$ --testPathIgnorePatterns=rag-index/.*\\.test\\.ts$ --testPathIgnorePatterns=/examples/asciiMaze/",
     "jest:esm-ts": "cross-env \"NODE_OPTIONS=--no-experimental-webstorage --max-old-space-size=8192 --experimental-vm-modules\" jest --config=jest.config.mjs --selectProjects rag-index-scripts --selectProjects analyze-trace-scripts",
-    "jest:mjs": "cross-env \"NODE_OPTIONS=--no-experimental-webstorage --max-old-space-size=8192 --experimental-vm-modules\" jest --config=jest.config.mjs --selectProjects rag-index-mjs --selectProjects mcp-semantic-mjs --selectProjects trace-scripts-mjs --selectProjects agent-customization-mjs --selectProjects build-scripts-mjs --coverageProvider=babel",
+    "jest:mjs": "cross-env \"NODE_OPTIONS=--no-experimental-webstorage --max-old-space-size=8192 --experimental-vm-modules\" jest --config=jest.config.mjs --selectProjects rag-index-mjs --selectProjects mcp-semantic-mjs --selectProjects trace-scripts-mjs --selectProjects agent-customization-mjs --selectProjects build-scripts-mjs --selectProjects telemetry-scripts --coverageProvider=babel",
     "test:ci": "cross-env \"NODE_OPTIONS=--no-experimental-webstorage --max-old-space-size=2560\" jest --config=jest.ci-key.config.mjs --no-cache --maxWorkers=4 --workerIdleMemoryLimit=1G",
     "test:src": "cross-env \"NODE_OPTIONS=--no-experimental-webstorage --max-old-space-size=2560\" jest --config=jest.config.mjs --no-cache --selectProjects default --testPathPatterns \"[\\\\/]src[\\\\/]\" --maxWorkers=4 --workerIdleMemoryLimit=1G",
     "test": "npm run jest:base -- --no-cache --coverage --collect-coverage --workerIdleMemoryLimit=1G --maxWorkers=4 --testPathIgnorePatterns=.e2e.test.ts --testPathIgnorePatterns=benchmark\\..*\\.test\\.ts$ --verbose && npm run jest:esm-ts -- --no-cache --runInBand --verbose && npm run jest:mjs -- --no-cache --runInBand --verbose",
@@ -123,7 +123,9 @@
     "docs": "npm run docs:build-scripts && node ./dist-docs/scripts/run-docs.js all",
     "lint": "eslint src/ testing/ benchmarks/ examples/",
     "lint:fix": "eslint src/ --fix",
-    "onnx:export": "npm run docs:build-scripts && node ./dist-docs/scripts/export-onnx.js"
+    "onnx:export": "npm run docs:build-scripts && node ./dist-docs/scripts/export-onnx.js",
+    "telemetry:probe-attribution": "node scripts/telemetry/probe-attribution-sources.mjs",
+    "telemetry:test": "cross-env \"NODE_OPTIONS=--no-experimental-webstorage --max-old-space-size=8192 --experimental-vm-modules\" jest --config=jest.config.mjs --selectProjects telemetry-scripts"
   },
   "exports": {
     ".": {
@@ -135,6 +137,12 @@
     "@eslint/eslintrc": "^3.3.5",
     "@eslint/js": "^10.0.1",
     "@mermaid-js/mermaid-cli": "^11.14.0",
+    "@opentelemetry/api": "^1.10.0",
+    "@opentelemetry/context-async-hooks": "^3.1.1",
+    "@opentelemetry/resources": "^3.1.1",
+    "@opentelemetry/sdk-logs": "^3.1.1",
+    "@opentelemetry/sdk-metrics": "^3.1.1",
+    "@opentelemetry/sdk-trace": "^3.1.1",
     "@types/chai": "^5.2.3",
     "@types/fs-extra": "^11.0.4",
     "@types/jest": "^30.0.0",
@@ -212,6 +220,34 @@
     "glob": "^13.0.6",
     "seedrandom": "^3.0.5",
     "undici": "^7.24.6"
+  },
+  "peerDependencies": {
+    "@opentelemetry/api": "^1.10.0",
+    "@opentelemetry/context-async-hooks": "^3.1.1",
+    "@opentelemetry/resources": "^3.1.1",
+    "@opentelemetry/sdk-logs": "^3.1.1",
+    "@opentelemetry/sdk-metrics": "^3.1.1",
+    "@opentelemetry/sdk-trace": "^3.1.1"
+  },
+  "peerDependenciesMeta": {
+    "@opentelemetry/api": {
+      "optional": true
+    },
+    "@opentelemetry/context-async-hooks": {
+      "optional": true
+    },
+    "@opentelemetry/resources": {
+      "optional": true
+    },
+    "@opentelemetry/sdk-logs": {
+      "optional": true
+    },
+    "@opentelemetry/sdk-metrics": {
+      "optional": true
+    },
+    "@opentelemetry/sdk-trace": {
+      "optional": true
+    }
   },
   "allowScripts": {
     "esbuild@0.28.1": true,

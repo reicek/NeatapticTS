@@ -149,6 +149,18 @@
       "target": "plan-sync-validation",
       "query": "I created a new plans/*.plans.md file; make sure README and Roadmap are registered with the same status.",
       "shouldTrigger": true
+    },
+    {
+      "id": "prose-first-jsdoc-positive",
+      "target": "prose-first-jsdoc",
+      "query": "The generated README renders the module file heading with no prose because the leading JSDoc block starts with @module.",
+      "shouldTrigger": true
+    },
+    {
+      "id": "prose-first-jsdoc-negative",
+      "target": "prose-first-jsdoc",
+      "query": "Add the missing @param and @returns block to this exported helper and attach a Wikipedia citation.",
+      "shouldTrigger": false
     }
   ]
 }

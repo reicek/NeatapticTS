@@ -1139,7 +1139,7 @@ position.
 
 Educational note — WHY THE NORMALISATION: the host-owned progress meter
 accumulates the along-track distance FORWARD across the loop, so a car
-that waits BEHIND the start line (the AC-105 start grid) carries a total
+that waits BEHIND the start line (the start grid) carries a total
 near the loop TAIL while a car near the loop HEAD carries a small total.
 The JavaScript percent keeps the dividend's sign, so the double modulo
 folds every total into `[0, loopLengthM)` — the loop-relative position

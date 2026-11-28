@@ -39,20 +39,36 @@ import {
   createSliceContextTool,
   createTierGraphTool,
 } from './cortex-tier-tool.mjs';
+import {
+  describeTimeoutBudgets,
+  findGatesWithoutBudget,
+  GATE_MAX_BUFFER_BYTES,
+  isTimeoutError,
+  resolveGateTimeoutMs,
+} from '../gate-timeout-budgets.mjs';
 
 const SERVER_NAME = 'neataptic_gate_mcp';
 const SERVER_VERSION = '0.1.0';
 
 /**
- * Timeout (ms) for spawning a single Tier-1 gate script from run_gate_check.
+ * Outer spawn budget (ms) for running a Tier-1 gate script.
  *
- * The FULL consolidated slice-advancement run executes shared-validation
- * (build + lint + targeted tests) and measured ~37 s end to end, which
- * exceeded the previous hard-coded 15 s and made MCP relays kill the gate
- * mid-run and surface "Gate '<id>' did not return valid JSON". 120 s mirrors
- * the per-sub-gate timeout slice-advancement itself applies to nested gates.
+ * The budget is resolved PER GATE from `gate-timeout-budgets.mjs`, which is
+ * the single source of truth shared with `slice-advancement.gate.mjs`. A
+ * single flat ceiling is wrong in both directions:
+ *
+ * - Too small: the facade kills a legitimate run, the child's stdout is
+ *   truncated or empty, and the caller sees the opaque
+ *   "Gate '<id>' did not return valid JSON" instead of the real cause. This
+ *   is the defect that made the consolidated `slice-advancement` gate
+ *   (7 sequential sub-gates, one of which runs build + lint + targeted tests)
+ *   unreportable through the relay.
+ * - Too large: a genuinely hung gate blocks the relay for the full ceiling.
+ *
+ * The consolidated gate therefore gets a budget that covers the SUM of its
+ * sub-gate budgets (its sub-gates run sequentially), while the cheap
+ * file-reading gates keep a tight ceiling so a hang is caught quickly.
  */
-const GATE_SPAWN_TIMEOUT_MS = 120_000;
 
 const TIER_1_GATES = [
   {
@@ -166,6 +182,22 @@ const GATES_DIR = path.join(
   'gates',
 );
 
+/**
+ * Detects whether a `spawnSync` call was killed by its timeout budget.
+ *
+ * Node reports a timeout through one or more of: an `ETIMEDOUT` error code
+ * (sometimes nested under `cause`), a `SIGTERM` signal, and the `killed`
+ * flag. When any of those is present the child never finished, so its
+ * stdout is truncated or empty and the failure must be reported as a
+ * timeout rather than as malformed output.
+ *
+ * @param {object} spawned - The `spawnSync` result object.
+ * @returns {boolean} True when the child was killed by the timeout budget.
+ */
+function isSpawnTimeout(spawned) {
+  return isTimeoutError(spawned);
+}
+
 // ---------------------------------------------------------------------------
 
 export function createGateTools() {
@@ -217,21 +249,38 @@ export function createGateTools() {
           }
         }
 
+        const timeoutMs = resolveGateTimeoutMs(gateId);
         const spawned = spawnSync(
           'node',
           [scriptPath, '--json', ...extraArgs],
           {
             encoding: 'utf8',
-            timeout: GATE_SPAWN_TIMEOUT_MS,
+            timeout: timeoutMs,
+            maxBuffer: GATE_MAX_BUFFER_BYTES,
             cwd: MCP_REPO_ROOT,
           },
         );
 
+        const stdout = spawned.stdout ?? '';
         try {
-          return JSON.parse(spawned.stdout);
+          return JSON.parse(stdout);
         } catch {
+          // A timeout is NOT an "invalid JSON" condition: the child was
+          // killed mid-run, so it never produced a verdict. Reporting it as
+          // invalid JSON hides the only actionable fact (the run was
+          // truncated). Detect it and say so.
+          if (isSpawnTimeout(spawned)) {
+            throw new Error(
+              `Gate '${gateId}' timed out after ${timeoutMs} ms and was killed before it produced a gate contract. ` +
+                `This is a budget-sizing failure, not a content failure. ` +
+                `Run it directly to see where it stalls: node scripts/agent-customization/gates/${gateId}.gate.mjs --json ` +
+                `(or narrow the slice / raise the budget in scripts/agent-customization/gate-timeout-budgets.mjs). ` +
+                `stderr: ${spawned.stderr?.slice(0, 300) ?? '(empty)'}`,
+            );
+          }
           throw new Error(
             `Gate '${gateId}' did not return valid JSON. ` +
+              `exit status: ${String(spawned.status)}, signal: ${String(spawned.signal)}. ` +
               `stderr: ${spawned.stderr?.slice(0, 300) ?? '(empty)'}`,
           );
         }
@@ -245,6 +294,23 @@ export function createGateTools() {
 
 export async function runGateSelfCheck({ server }) {
   const issues = [];
+
+  // Step 0: Confirm every exposed gate has an explicit timeout budget.
+  // A gate without one would silently inherit the default budget, which may
+  // be too small — the exact inversion that produced the "did not return
+  // valid JSON" failure mode.
+  const gatesWithoutBudget = findGatesWithoutBudget(
+    TIER_1_GATES.map((gateDescriptor) => gateDescriptor.id),
+  );
+  if (gatesWithoutBudget.length > 0) {
+    issues.push(
+      selfCheckError(
+        'gate-mcp',
+        `Gates without an explicit timeout budget: ${gatesWithoutBudget.join(', ')}. ` +
+          `Add them to GATE_TIMEOUT_BUDGETS in scripts/agent-customization/gate-timeout-budgets.mjs.`,
+      ),
+    );
+  }
 
   // Step 1: Confirm protocol handshake.
   const initializeResult = await invokeServerRequest(server, {
@@ -401,6 +467,12 @@ export async function main(
   { runSelfCheck = runGateSelfCheck } = {},
 ) {
   const options = parseMcpCliArgs(argv);
+
+  if (argv.includes('--print-timeout-budgets')) {
+    process.stdout.write(`${JSON.stringify(describeTimeoutBudgets(), null, 2)}\n`);
+    process.exit(0);
+    return;
+  }
 
   if (options.help) {
     printMcpUsage({

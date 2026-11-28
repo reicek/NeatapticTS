@@ -1,25 +1,23 @@
 /**
- * NeatRacing host HUD overlay — plan slice P1-S7-E (plan
- * `neatracing-voxel-racer.plans.md`, phase 1, step 12), implementing spec
- * AC-024: the speed/lap/time DOM overlay into the reserved host output
- * container plus the mode-switch control surface (spec sections 4.2,
- * 10.2, 11.2, 13.1). The cyan/magenta palette is recycled verbatim from
- * the Neatenstein host HUD (spec section 11.2 recycling inventory: "same
- * CSS tokens, cyan/magenta"), pinned here as `NEATRACING_HUD_COLOR_CYAN`
- * and `NEATRACING_HUD_COLOR_MAGENTA` (rgb() literal strings, matching the
- * Neatenstein `hud.constants.ts` precedent).
+ * NeatRacing host HUD overlay: the speed/lap/time DOM overlay into the
+ * reserved host output container plus the mode-switch control surface
+ * (spec sections 4.2, 10.2, 11.2, 13.1). The cyan/magenta palette is
+ * recycled verbatim from the Neatenstein host HUD (spec section 11.2
+ * recycling inventory: "same CSS tokens, cyan/magenta"), pinned here as
+ * `NEATRACING_HUD_COLOR_CYAN` and `NEATRACING_HUD_COLOR_MAGENTA`
+ * (rgb() literal strings, matching the Neatenstein `hud.constants.ts`
+ * precedent).
  *
- * RED -> GREEN contract: `examples/neatRacing/host/mode-selector.test.ts`
- * (the header contract of this slice) pins the display string grammar —
+ * Display contract: `examples/neatRacing/host/mode-selector.test.ts`
+ * pins the display string grammar —
  * speed = whole km/h (TP-01 physical anchor: 1 world unit = 1 meter, so
  * ~89 units/s ≈ ~320 km/h arcade feel; never a decimal part), lap =
  * `Lap c/20` clamped at `NEATRACING_HUMAN_RACE_LAPS` (a completed race
- * never displays 21/20; the selector restart contract AC-033 is
- * pre-verified by `mode-selector.ts`), and time = `M:SS.d` (unpadded
+ * never displays 21/20; the selector restart contract is pre-verified
+ * by `mode-selector.ts`), and time = `M:SS.d` (unpadded
  * minutes, zero-padded seconds, one tenths digit).
  *
- * The TRACTION READOUT (AC-088; plan slice `P1-drift-presentation-hud`)
- * is a DISPLAY of the ONE published traction severity
+ * The TRACTION READOUT is a DISPLAY of the ONE published traction severity
  * (`PhysicsCarState.tractionSeverity`, published by the physics step):
  * the HUD SHOWS the number it is handed and NEVER re-derives it, so the
  * overlay, the car pass tires and the browser debug seam can never
@@ -36,7 +34,28 @@
  * the decision is made, mirroring how `race-rules.ts` keeps its own
  * budget constants instead of importing physics timing.
  *
- * Allocation policy: `createHud` is the only DOM allocator (three labels
+ * The COUNTDOWN OVERLAY is the Flappy-style 3-2-1-GO start signal: the
+ * HUD paints the phase the RACE clock publishes (`raceState.elapsedS`,
+ * NEVER the wall clock) with the two-pass neon recipe (the glow pass
+ * behind, the crisp core on top). The phase law lives in
+ * `hud.countdown.ts` — ONE resolver, TWO consumers — so the gate never
+ * releases before the overlay shows GO. The overlay MAY paint GO up to ONE
+ * FRAME before the gate releases: the frame's throttle must ride the
+ * request BEFORE that frame's reply exists, so the gate reads the
+ * previous reply's published clock while the overlay paints the current
+ * one.
+ *
+ * The DEPARTURE HINT is an ADVISORY display of the ONE published FINE
+ * surface classification (`TrackSurfaceClassification`,
+ * published by `physics/collision.utils.ts`): the hint fires when the
+ * published classification says the car left the drivable surface (the
+ * grass BAND is still drivable, the OPEN grass is not). The law lives in
+ * `hud.departure.ts` — ONE pure resolver — and the hint CHANGES NO pose,
+ * NO speed, NO penalty and NO physics state: it is a DISPLAY, in the
+ * same spirit as the traction readout.
+ *
+ * Allocation policy: `createHud` is the only DOM allocator (the five
+ * readout labels plus the countdown overlay and the departure hint are
  * created once inside one wrapper), and `update()` performs no per-frame
  * DOM/geometry allocation beyond the unavoidable display strings passed
  * to `textContent` (zero allocations is not technically achievable for
@@ -62,11 +81,19 @@
  * content or the pinned style token strings).
  */
 
+import { type TrackSurfaceClassification } from '../physics/collision.utils';
 import {
   type RaceRulesState,
   createRaceRulesState,
   NEATRACING_HUMAN_RACE_LAPS,
 } from '../physics/race-rules';
+import {
+  NEATRACING_HUD_COUNTDOWN_CORE_COLOR,
+  NEATRACING_HUD_COUNTDOWN_GLOW_SHADOW,
+  NEATRACING_HUD_COUNTDOWN_PHASE_INFO,
+  resolveHudCountdownPhase,
+} from './hud.countdown';
+import { resolveHudDepartureHint } from './hud.departure';
 
 /** Cyan token used for the speed label, time label, and selector border. */
 export const NEATRACING_HUD_COLOR_CYAN: string = 'rgb(0, 240, 255)';
@@ -154,8 +181,68 @@ const HUD_TRACTION_PERCENT_SCALE: number = 100;
 /** Controls-hint accent color: dim slate (a non-readout affordance). */
 const HUD_HINT_LABEL_COLOR: string = 'rgb(140, 160, 175)';
 
-/** Static controls hint shown under the readouts (AC-024 discoverability). */
+/** Static controls hint shown under the readouts (discoverability). */
 const HUD_CONTROLS_HINT_TEXT: string = 'WASD / ARROWS to drive';
+
+/**
+ * The countdown overlay's positioning mode: the countdown is a viewport
+ * overlay, not a flow child of the HUD wrapper (the wrapper is the
+ * top-left readout box; the countdown floats over the track).
+ */
+const HUD_COUNTDOWN_POSITION_FIXED: string = 'fixed';
+
+/** The countdown overlay's viewport-centring offset (both axes). */
+const HUD_COUNTDOWN_CENTER_50_PERCENT: string = '50%';
+
+/** The countdown overlay's centring transform (the element is top/left anchored). */
+const HUD_COUNTDOWN_TRANSFORM_CENTER: string = 'translate(-50%, -50%)';
+
+/** The countdown overlay's font size (the start signal must read at a glance). */
+const HUD_COUNTDOWN_FONT_96PX: string = '96px';
+
+/** The countdown overlay's font weight (the bold weight of the neon recipe). */
+const HUD_COUNTDOWN_FONT_WEIGHT_700: string = '700';
+
+/** The countdown overlay's text alignment. */
+const HUD_COUNTDOWN_TEXT_ALIGN_CENTER: string = 'center';
+
+/**
+ * The countdown overlay's pointer behaviour: the host output container
+ * re-enables pointer events for its direct children, so the countdown
+ * opts out explicitly and never swallows a click on the track.
+ */
+const HUD_COUNTDOWN_POINTER_EVENTS_NONE: string = 'none';
+
+/**
+ * The departure hint's accent color: magenta (the reserved second accent
+ * of the recycled palette — the hint is a WARNING line, so it takes the
+ * accent the lap readout does not own, and the palette stays the
+ * two-token cyan/magenta set the module header pins).
+ */
+const HUD_DEPARTURE_LABEL_COLOR: string = NEATRACING_HUD_COLOR_MAGENTA;
+
+/**
+ * The departure hint's positioning mode: the hint is an OVERLAY that
+ * floats just under the readout box (the box must NOT grow and shrink
+ * as the hint comes and goes), so it is positioned instead of flowing.
+ */
+const HUD_DEPARTURE_POSITION_ABSOLUTE: string = 'absolute';
+
+/**
+ * The departure hint's offset below the readout box (the wrapper's
+ * bottom edge).
+ */
+const HUD_DEPARTURE_TOP_100_PERCENT: string = '100%';
+
+/** The departure hint's font weight (the warning must read at a glance). */
+const HUD_DEPARTURE_FONT_WEIGHT_700: string = '700';
+
+/**
+ * The departure hint's pointer behaviour: the host output container
+ * re-enables pointer events for its direct children, so the hint opts
+ * out explicitly and never swallows a click on the track.
+ */
+const HUD_DEPARTURE_POINTER_EVENTS_NONE: string = 'none';
 
 /** Human-readable host name used in the missing-container error banner. */
 const HUD_NAME: string = 'NeatRacing HUD overlay';
@@ -171,7 +258,7 @@ export interface NeatRacingHudState {
   /** Authoritative race state the lap/time readouts are derived from. */
   raceState: RaceRulesState;
   /**
-   * The PUBLISHED traction severity in [0, 1] (AC-088): how much grip
+   * The PUBLISHED traction severity in [0, 1]: how much grip
    * the tires have lost. The HUD SHOWS this number and NEVER re-derives
    * it — the physics step publishes the ONE shared scalar, so the
    * overlay, the car pass and the browser seam can never disagree.
@@ -181,9 +268,27 @@ export interface NeatRacingHudState {
    * the callers that publish no severity.
    */
   tractionSeverity?: number;
+  /**
+   * The PUBLISHED FINE surface classification: the ONE
+   * record the physics publishes for the surface under the car. The HUD
+   * reads its `isDrivable` flag to publish the ADVISORY departure hint
+   * and NEVER re-derives a surface of its own.
+   *
+   * OPTIONAL: a read model without the field publishes NO hint (the
+   * hint needs published evidence), so the classic speed/lap/time model
+   * stays valid for the callers that publish no classification.
+   */
+  surfaceClassification?: TrackSurfaceClassification;
 }
 
-/** The constructed HUD controller handed to the host shell. */
+/**
+ * The constructed HUD controller handed to the host shell.
+ *
+ * The interface exposes the overlay wrapper plus the speed, lap and time
+ * readout labels; `update` repaints every published label, including the
+ * traction readout, the controls hint, the countdown overlay and the
+ * departure hint.
+ */
 export interface NeatRacingHud {
   /** The overlay wrapper mounted inside the output container. */
   readonly container: HTMLElement;
@@ -220,7 +325,7 @@ export interface NeatRacingHud {
  *
  * @param speedUnitsPerS - Forward speed in world-units-per-second
  * (TP-01 meters/s); expected in [0, inf).
- * @returns The speed formatted as whole `km/h`, e.g. `'320'` for 89.
+ * @returns The speed formatted as whole `km/h`, e.g. `'320 km/h'` for 89.
  *
  * @example
  * ```ts
@@ -305,8 +410,8 @@ export function formatHudTime(seconds: number): string {
  * What: formats the PUBLISHED traction severity for the traction
  * readout as a whole percent (e.g. `'Traction 42%'`).
  *
- * Why: the severity is the ONE shared scalar the physics step publishes
- * (AC-088), so the HUD only CONVERTS it for display — it never
+ * Why: the severity is the ONE shared scalar the physics step publishes,
+ * so the HUD only CONVERTS it for display — it never
  * re-derives it from the speed, the slip or any other HUD input, and
  * the overlay therefore cannot disagree with the car pass tires. A
  * missing severity (the OPTIONAL read-model field) is the IDLE zero:
@@ -336,8 +441,8 @@ function formatHudTraction(tractionSeverity: number | undefined): string {
 /**
  * What: resolves the reserved host output container by id, matching the
  * Neatenstein `resolveHudContainer` precedent (`hud.dom.utils.ts`)
- * flattened into this slice per the P1-S7-E file contract (no extra
- * shared files inside the slice boundary).
+ * flattened into this module (no extra shared files inside the host
+ * boundary).
  *
  * @param outputId - Reserved host DOM id (spec section 10.2 folder
  * layout; `neatracing-hud-output` in the host shell and fixtures).
@@ -411,9 +516,83 @@ function createHudLabel(wrapper: HTMLElement, color: string): HTMLElement {
 }
 
 /**
+ * What: builds the COUNTDOWN overlay element inside the HUD wrapper —
+ * the Flappy-style 3-2-1-GO start token, painted with the two-pass neon
+ * recipe (the GLOW pass as a `text-shadow` behind, the CRISP core colour
+ * on top) and centred in the viewport.
+ *
+ * Why: the countdown is a START signal for the whole race, so it must
+ * read over the track instead of inside the top-left readout box; the
+ * element is `position: fixed` and therefore viewport-relative, while it
+ * stays a DESCENDANT of the HUD wrapper so the overlay surface keeps
+ * owning it.
+ *
+ * Why the pointer opt-out: the host output container re-enables pointer
+ * events for its direct children, so the countdown (a grandchild) would
+ * otherwise sit on top of the track and swallow clicks.
+ *
+ * @param wrapper - The HUD wrapper the countdown overlay is appended to.
+ * @returns The created countdown overlay element.
+ */
+function createHudCountdownLabel(wrapper: HTMLElement): HTMLElement {
+  const label: HTMLElement = document.createElement('div');
+  label.style.position = HUD_COUNTDOWN_POSITION_FIXED;
+  label.style.top = HUD_COUNTDOWN_CENTER_50_PERCENT;
+  label.style.left = HUD_COUNTDOWN_CENTER_50_PERCENT;
+  label.style.transform = HUD_COUNTDOWN_TRANSFORM_CENTER;
+  label.style.fontFamily = HUD_FONT_MONOSPACE;
+  label.style.fontSize = HUD_COUNTDOWN_FONT_96PX;
+  label.style.fontWeight = HUD_COUNTDOWN_FONT_WEIGHT_700;
+  label.style.textAlign = HUD_COUNTDOWN_TEXT_ALIGN_CENTER;
+  // The CRISP PASS (the solid core colour) over the GLOW PASS (the
+  // bloom behind it): the same two-pass recipe the Flappy neon pipes
+  // use, translated from the canvas API to CSS.
+  label.style.color = NEATRACING_HUD_COUNTDOWN_CORE_COLOR;
+  label.style.textShadow = NEATRACING_HUD_COUNTDOWN_GLOW_SHADOW;
+  label.style.pointerEvents = HUD_COUNTDOWN_POINTER_EVENTS_NONE;
+  wrapper.appendChild(label);
+  return label;
+}
+
+/**
+ * What: builds the DEPARTURE hint overlay element inside the HUD wrapper
+ * — the ADVISORY "return to the track" line.
+ *
+ * Why the overlay sits INSIDE the wrapper: the wrapper owns the HUD
+ * surface, so the hint is mounted with the readouts and the overlay
+ * surface keeps owning it (the countdown precedent). The hint is
+ * POSITIONED (absolute, just under the readout box) so the box never
+ * grows and shrinks while the hint comes and goes.
+ *
+ * Why the pointer opt-out: the host output container re-enables pointer
+ * events for its direct children, so the hint (a grandchild) would
+ * otherwise float over the track and swallow clicks.
+ *
+ * Why the hint starts EMPTY: an unpainted hint contributes NO HUD text,
+ * so the boot paint and every on-surface frame leave the readout box
+ * exactly as it was.
+ *
+ * @param wrapper - The HUD wrapper the departure overlay is appended to.
+ * @returns The created departure overlay element.
+ */
+function createHudDepartureLabel(wrapper: HTMLElement): HTMLElement {
+  const label: HTMLElement = document.createElement('div');
+  label.style.position = HUD_DEPARTURE_POSITION_ABSOLUTE;
+  label.style.top = HUD_DEPARTURE_TOP_100_PERCENT;
+  label.style.left = HUD_OFFSET_0PX;
+  label.style.color = HUD_DEPARTURE_LABEL_COLOR;
+  label.style.fontFamily = HUD_FONT_MONOSPACE;
+  label.style.fontSize = HUD_FONT_14PX;
+  label.style.fontWeight = HUD_DEPARTURE_FONT_WEIGHT_700;
+  label.style.pointerEvents = HUD_DEPARTURE_POINTER_EVENTS_NONE;
+  wrapper.appendChild(label);
+  return label;
+}
+
+/**
  * What: binds the HUD labels to a live `RaceRulesState` slice and
  * mounts them into the reserved host output container (spec section
- * 10.2 folder layout; AC-024). This is the only place that reads
+ * 10.2 folder layout). This is the only place that reads
  * `document` for the HUD display (the selector module resolves its own
  * container the same way, Neatenstein precedent).
  *
@@ -421,15 +600,16 @@ function createHudLabel(wrapper: HTMLElement, color: string): HTMLElement {
  * particular host DOM beyond that one hook, keeping the module portable
  * between the dev-server shell and the jsdom test fixture.
  *
- * When: called once during host boot (slice P1-S8 wires the render
- * loop's `update` call; AC-033's restart hook pre-verified by
+ * When: called once during host boot (the render loop's `update` call is
+ * wired by the host shell; the restart hook is pre-verified by
  * `createRaceModeSelector`). Throws instead of returning a null HUD so
  * boot order bugs surface immediately instead of as silent blank HUDs.
  *
  * Allocation contract: this function performs all HUD DOM allocation
- * for the page lifetime (one wrapper + four labels — speed, lap, time
- * and traction — each once); `update()` then only writes textContent
- * strings per frame.
+ * for the page lifetime (one wrapper + seven labels — speed, lap, time,
+ * traction, the controls hint, the countdown overlay and the departure
+ * hint — each once); `update()` then only writes textContent strings
+ * per frame.
  *
  * @param outputId - Reserved host DOM id; `neatracing-hud-output` in
  * the host shell and the slice fixture suite.
@@ -469,6 +649,17 @@ export function createHud(outputId: string): NeatRacingHud {
   // car is drivable or the race reads as broken on first load.
   const hintLabel: HTMLElement = createHudLabel(wrapper, HUD_HINT_LABEL_COLOR);
   hintLabel.textContent = HUD_CONTROLS_HINT_TEXT;
+  // Countdown overlay: the Flappy-style 3-2-1-GO start signal.
+  // It is repainted by `update` from the RACE clock and it is not exposed
+  // on the public controller interface (the read model is the contract,
+  // not the label element).
+  const countdownLabel: HTMLElement = createHudCountdownLabel(wrapper);
+  // Departure hint overlay (AC-107-LAW): the ADVISORY "return to the
+  // track" line. It is repainted by `update` from the PUBLISHED FINE
+  // surface classification and it is not exposed on the public
+  // controller interface (the read model is the contract, not the label
+  // element).
+  const departureLabel: HTMLElement = createHudDepartureLabel(wrapper);
 
   const hud: NeatRacingHud = {
     container: wrapper,
@@ -480,6 +671,23 @@ export function createHud(outputId: string): NeatRacingHud {
       lapLabel.textContent = formatHudLap(state.raceState.lapsCompleted);
       timeLabel.textContent = formatHudTime(state.raceState.elapsedS);
       tractionLabel.textContent = formatHudTraction(state.tractionSeverity);
+      // The countdown token comes from the RACE clock (`elapsedS`), NEVER
+      // from the wall clock, and from the SHARED phase law in
+      // `hud.countdown.ts` — the same law the host gate reads before it
+      // releases the throttle. The 'done' phase carries the empty token,
+      // which clears the overlay when the race is under way.
+      const countdownPhase = resolveHudCountdownPhase(state.raceState.elapsedS);
+      countdownLabel.textContent =
+        NEATRACING_HUD_COUNTDOWN_PHASE_INFO[countdownPhase].label;
+      // The ADVISORY departure hint comes from the ONE published FINE
+      // surface classification and from NOTHING else (no clock, no
+      // re-derived surface model): the law lives in `hud.departure.ts`.
+      // The on-surface record carries the EMPTY token, so the hint
+      // clears itself while the car drives.
+      const departureHint = resolveHudDepartureHint(
+        state.surfaceClassification,
+      );
+      departureLabel.textContent = departureHint.label;
     },
   };
 

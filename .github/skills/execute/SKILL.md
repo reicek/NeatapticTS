@@ -49,7 +49,10 @@ When invoked with `/execute @plan.md`:
 10. **Update the plan** (§13): status, evidence, next boundary.
 11. **When all steps in a phase are DONE**, dispatch `07-logging` to compress
     the phase to logs.
-12. **When the plan is complete**, update with final status + resume point.
+12. **When the plan is complete**, update with final status + resume point,
+    then archive the plan/log/research trio to `plans/completed/`, sync inbound
+    references to the archived path, and refresh the RAG index (procedure:
+    `tracker-handoff`).
 
 Pragmatic mode (if the plan declares `## Mandates`) overrides the ceremony:
 broad slices mean one dispatch per phase/step, every re-dispatch is a **fresh**
@@ -392,13 +395,17 @@ iteration <n> status=<failed|passed>` markers, counts iterations, and
      `04-implementing` instance. _(complex tier only; trivial and moderate
      slices do not invoke the convergence tracker)_
 5. **Advance**: When green gives OK, the orchestrator records
-   `VALIDATION_EVIDENCE`, updates the active plan (§13), and moves to the
+   `VALIDATION_EVIDENCE`, runs the **lean telemetry review** for the closed
+   slice over the existing ledgers only — four categories: failures,
+   unavailable data, anomalies, and optimization (procedure in
+   `tracker-handoff`) — updates the active plan (§13), and moves to the
    next step or slice. After all slices in a step pass, call
    `06-documenting` to run docs-quality checks and close the step.
 6. **Phase Compression**: When all steps in a phase are marked `[DONE]` and
-   green validation has passed, dispatch `07-logging` to compress the
-   completed phase to logs before advancing. This is mandatory, not
-   optional. Skipping phase compression is a workflow violation.
+   green validation has passed, run the **lean telemetry review** for the
+   closed phase, then dispatch `07-logging` to compress the completed phase
+   to logs before advancing. This is mandatory, not optional. Skipping phase
+   compression is a workflow violation.
 
 ### Inline Rules (stated once, apply to all tiers)
 
@@ -452,6 +459,15 @@ iteration <n> status=<failed|passed>` markers, counts iterations, and
   errors, and verify UI elements render. Mock-only Jest validation and
   `tsc` compilation are INSUFFICIENT. If no real browser smoke test was
   performed, the slice is NOT green; loop back with a `slice-fix` packet.
+
+- **Every slice and phase closure runs a lean telemetry review.** Before a
+  slice advances or a phase compresses, read the **existing** ledgers and
+  record four categories in `## Latest validation evidence`: failures,
+  unavailable data, anomalies, and optimization. Reuse the ledgers that
+  already exist — do not create a new collector, ledger, export format, or
+  subagent for this review. The fixed read-set, category mapping, and output
+  shape live in the `tracker-handoff` skill. A closure that omits the review
+  is incomplete: report `TASK_STATUS: PARTIAL` and carry the gap forward.
 
 ### Complexity Triage Flowchart
 
@@ -929,12 +945,17 @@ every subsequent dispatch.
 4. **Removals.** Any legacy/noise files deleted, listed by path.
 5. **Next boundary.** The current phase/slice the next session should
    resume from.
+6. **Telemetry review.** The four-category lean telemetry review result for
+   the closed slice or phase (failures, unavailable data, anomalies,
+   optimization), naming the evidence source per category.
 
 ### When to update
 
 - After every slice passes green (or is bypassed under pragmatic mode).
 - After every phase compresses.
 - At the end of the whole plan, so a fresh CLI session can resume.
+- After every plan write or archive move, refresh the Cortex index and confirm
+  the `cortex-index` gate reports `index_fresh: true` with empty `stalePaths`.
 
 Under pragmatic mode, the plan-update obligation is **simplified, not
 skipped** — record compactly (status + evidence + next boundary) without

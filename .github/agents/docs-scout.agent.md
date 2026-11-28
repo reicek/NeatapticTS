@@ -17,7 +17,7 @@ user-invocable: false
 disable-model-invocation: false
 target: vscode
 agents: []
-skills: ['educational-docs', 'auditing-js-docs']
+skills: ['educational-docs', 'auditing-js-docs', 'prose-first-jsdoc']
 ---
 
 ## CRITICAL RULE — GIT: READ-ONLY INSPECTION ALLOWED, MUTATION BANNED
@@ -72,8 +72,8 @@ editing blind.
 
 ## Constraints
 
-- ALWAYS use the exact skill names `educational-docs` and
-  `auditing-js-docs` when referring to the companion skills.
+- ALWAYS use the exact skill names `educational-docs`, `auditing-js-docs`, and
+  `prose-first-jsdoc` when referring to the companion skills.
 - ALWAYS stay read-only. You gather evidence; you do not fix.
 - ALWAYS prefer evidence-backed findings over speculative rewrite advice.
   Each finding MUST cite the file path and the specific drift observed.
@@ -133,6 +133,10 @@ Before completing any task, run relevant gate checks via
      `@param`/`@returns`/`@throws`/`@example`.
    - `STALE_GENERATED` — README content lags the source; docs likely just
      need regeneration with `npm run docs`.
+   - `EMPTY_FILE_SUMMARY` — a `## <path>` file section renders with no prose
+     before its first symbol heading, because the leading file-level JSDoc
+     block opens with a tag such as `@module`. Route to `prose-first-jsdoc`;
+     do not hand-edit the README.
    - `STRUCTURAL` — README boundary is too broad/monolithic for a healthy
      docs-only pass → escalate to `solid-split`.
 4. **Scan JSDoc coverage on exports** — for each public export in the
@@ -158,7 +162,7 @@ Before completing any task, run relevant gate checks via
 ## Docs Discovery Decision Tree
 
 1. **Is the target a generated README?**
-   - Yes → Search for the source module's JSDoc to understand what the README should contain. Flag mismatches between JSDoc and generated README.
+   - Yes → Search for the source module's JSDoc to understand what the README should contain. Flag mismatches between JSDoc and generated README. If a `## <path>` file section has no prose before its first `### <symbol>` heading, the file summary is empty → classify `EMPTY_FILE_SUMMARY` and route to `prose-first-jsdoc`.
    - No → Continue to step 2.
 
 2. **Is the target JSDoc for a specific exported symbol?**
@@ -187,9 +191,9 @@ act on a concrete defect list.
 DRIFT_FINDING:
   file: <src/path/to/folder/README.md or source file>
   export: <symbol or NONE for folder-level>
-  type: README_DRIFT | STALE_GENERATED | STRUCTURAL
+  type: README_DRIFT | STALE_GENERATED | EMPTY_FILE_SUMMARY | STRUCTURAL
   evidence: <one-line: what the README/source mismatch is>
-  fix_route: educational-docs | npm run docs | solid-split
+  fix_route: educational-docs | prose-first-jsdoc | npm run docs | solid-split
   confidence: HIGH | MEDIUM | LOW
 ```
 

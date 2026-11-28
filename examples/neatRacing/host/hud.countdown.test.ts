@@ -117,7 +117,18 @@ const FROZEN_NOW_MS = 1_700_000_000_000;
 /** The FIRST probe's race clock (s) - inside the '3' phase. */
 const FIRST_PROBE_ELAPSED_S = 0.1;
 
-/** The SECOND probe's race clock (s) - inside the '2' phase. */
+/**
+ * The SECOND probe's race clock (s) - inside the GO phase.
+ *
+ * THE COMMENT RE-PIN (slice `P5-S27-5`, the plan item-5 stale-comment
+ * grant): this comment used to read "inside the '2' phase", which presumes
+ * a ~1 s beat and is STALE under the published 0.3 s beat
+ * (`NEATRACING_HUD_COUNTDOWN_BEAT_S = 0.3`): the phases are three
+ * [0, 0.3), two [0.3, 0.6), one [0.6, 0.9) and go [0.9, 2.1), so 1.1 s sits
+ * inside the GO phase. The probe VALUE and the case ASSERTION are UNCHANGED
+ * (0.1 s publishes '3' and 1.1 s publishes 'GO', and the two probes still
+ * discriminate); ONLY this comment is re-pinned.
+ */
 const SECOND_PROBE_ELAPSED_S = 1.1;
 
 /** The PRE-GO race clock (s) the fake worker session publishes. */

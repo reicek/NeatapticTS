@@ -111,19 +111,24 @@ import type {
 import type { NeatRacingFrameComposerFrame } from '../host/frame-composer';
 import type { NeatRacingHudState } from '../host/hud';
 import { createHud, NEATRACING_HUD_COLOR_CYAN } from '../host/hud';
+import {
+  NEATRACING_HUD_COUNTDOWN_PHASE_INFO,
+  resolveHudCountdownPhase,
+} from '../host/hud.countdown';
 import { sampleKeyboardInput } from '../host/input';
 import type { NeatRacingKeyboardSample } from '../host/input';
 import type { NeatRacingRaceMode } from '../host/mode-selector';
 import { createRaceModeSelector } from '../host/mode-selector';
 import { createNeatRacingTrackSelector } from '../host/track.selector';
 import { NEATRACING_FIXED_TIMESTEP_SECONDS } from '../host/render-loop.utils';
-import { createTrackSurfaceResolver } from '../physics/collision.utils';
+import { createTrackSurfaceClassifier } from '../physics/collision.utils';
+import type { TrackSurfaceClassification } from '../physics/collision.utils';
 import { createRaceRulesState } from '../physics/race-rules';
 import type { RaceRulesState } from '../physics/race-rules';
-import type {
-  PhysicsCarState,
-  PhysicsSurfaceType,
+import {
+  NEATRACING_PHYSICS_SURFACE_ROAD,
 } from '../physics/physics.step.service';
+import type { PhysicsCarState } from '../physics/physics.step.service';
 import Connection from '../../../src/architecture/connection/connection';
 import {
   createNeatRacingAiModeGoalSession,
@@ -401,14 +406,11 @@ const NEATRACING_PROGRESS_CHORD_SCAN_WINDOW = 8;
  */
 const NEATRACING_PROGRESS_HALF_LOOP_FRACTION = 0.5;
 
-/**
- * The physics surface that counts as "on the road" for the host-owned
- * off-track fraction.
- *
- * The physics surface band is a three-value union (`road`, `curb`,
- * `grass`); only `road` counts as on-track for the drivability measurement.
- */
-const NEATRACING_PHYSICS_SURFACE_ROAD: PhysicsSurfaceType = 'road';
+// THE RETIRED MODULE-LOCAL ROAD LABEL (AC-107-REPIN): this file used to
+// spell the road surface HERE, which made it a SECOND source of truth for
+// the label the physics module owns and publishes. The label is read from
+// the PUBLISHED `NEATRACING_PHYSICS_SURFACE_ROAD` (the physics module) now
+// — no shim, no dual path, no deferred cleanup.
 
 /**
  * The number of dedicated BACKGROUND NGE carriers that join the AI lane.
@@ -1087,11 +1089,11 @@ export function multiplyViewProjectionInto(
 export interface NeatRacingTrackChord {
   /** The chord start point (generator x / y plane). */
   readonly startX: number;
-  /** The chord start point (generator x / y plane). */
+  /** The chord start point's generator y coordinate. */
   readonly startY: number;
   /** The chord end point (generator x / y plane). */
   readonly endX: number;
-  /** The chord end point (generator x / y plane). */
+  /** The chord end point's generator y coordinate. */
   readonly endY: number;
   /** The chord length (world units). */
   readonly lengthM: number;
@@ -1390,7 +1392,7 @@ export function resolveNeatRacingCarAlongProgressM(
  *
  * Educational note — WHY THE NORMALISATION: the host-owned progress meter
  * accumulates the along-track distance FORWARD across the loop, so a car
- * that waits BEHIND the start line (the AC-105 start grid) carries a total
+ * that waits BEHIND the start line (the start grid) carries a total
  * near the loop TAIL while a car near the loop HEAD carries a small total.
  * The JavaScript percent keeps the dividend's sign, so the double modulo
  * folds every total into `[0, loopLengthM)` — the loop-relative position
@@ -1651,11 +1653,21 @@ function startLiveDriveLoop(
   // its derived resolvers stay consistent by construction).
   let selectedTrackId: string = overlays.trackSelector.trackId;
   let trackSpec: TrackSpec = resolveTrackVariantSpec(selectedTrackId);
-  let surfaceResolver = createTrackSurfaceResolver(trackSpec.segments);
+  // THE ONE surface probe (AC-107-REPIN): the published FINE classifier is
+  // the ONE band law, and the per-frame player-car resolve runs through
+  // THIS ONE probe. The COARSE off-track question ("is the car on the ROAD
+  // core", the penalty path) and the FINE drivable question ("is the car
+  // on a DRIVABLE surface", the ADVISORY hint) are answered by the SAME
+  // verdict: the published resolver (`createTrackSurfaceResolver`) is
+  // DEFINED as `classify(car).surface`, so the coarse label rides the
+  // verdict's `surface` member and is BYTE-IDENTICAL to the resolver's
+  // answer. ONE resolve, ONE verdict, ONE source of truth — the hint
+  // never re-derives a surface of its own.
+  let surfaceClassifier = createTrackSurfaceClassifier(trackSpec.segments);
   let chordIndex = buildNeatRacingTrackChordIndex(trackSpec.segments);
   const deriveNeatRacingSelectedTrackGeometry = (): void => {
     trackSpec = resolveTrackVariantSpec(selectedTrackId);
-    surfaceResolver = createTrackSurfaceResolver(trackSpec.segments);
+    surfaceClassifier = createTrackSurfaceClassifier(trackSpec.segments);
     chordIndex = buildNeatRacingTrackChordIndex(trackSpec.segments);
   };
 
@@ -2874,7 +2886,7 @@ function startLiveDriveLoop(
     //
     // Educational note — the WRAPPED-FORWARD comparison: the along-track
     // totals are CUMULATIVE, so a car that waits BEHIND the start line (the
-    // AC-105 start grid) carries a total near the loop TAIL while a rival
+    // start grid) carries a total near the loop TAIL while a rival
     // near the loop HEAD carries a small total — a RAW total comparison
     // would call the tail car "behind" every rival forever. The ranking
     // therefore compares the LOOP-RELATIVE positions and counts a rival as
@@ -2944,11 +2956,21 @@ function startLiveDriveLoop(
     );
   };
 
-  /** Feeds the per-frame AI-mode measurement window (mode-gated). */
+  /**
+   * Feeds the per-frame AI-mode measurement window (mode-gated).
+   *
+   * The COARSE off-track verdict is UNCHANGED (AC-107-REPIN): the frame
+   * counts as off-track when the surface label is not the road core, and
+   * the label rides the ONE per-frame verdict the frame loop resolved —
+   * so the coarse answer stays BYTE-IDENTICAL to the published
+   * resolver's answer (`createTrackSurfaceResolver` IS
+   * `classify(car).surface`).
+   */
   const accumulateAiModeGoalWindow = (
     sample: NeatRacingKeyboardSample,
     crossed: boolean,
     lapsSinceLastCrossing: number,
+    surfaceVerdict: TrackSurfaceClassification | null,
   ): void => {
     const currentGoal = goalState;
     const car = raceState.car;
@@ -2964,7 +2986,14 @@ function startLiveDriveLoop(
     }
     currentGoal.speedSum += car.speed;
     currentGoal.frameCount += 1;
-    if (surfaceResolver(car) !== NEATRACING_PHYSICS_SURFACE_ROAD) {
+    // The COARSE off-track counter (UNCHANGED semantics): only the road
+    // core counts as on-track — the curb and the grass band count as
+    // off-track. The label rides the ONE per-frame verdict, so the coarse
+    // answer is the published resolver's own answer.
+    if (
+      surfaceVerdict !== null &&
+      surfaceVerdict.surface !== NEATRACING_PHYSICS_SURFACE_ROAD
+    ) {
       currentGoal.offTrackFrameCount += 1;
     }
     currentGoal.steerSeries.push(sample.steer);
@@ -3459,6 +3488,54 @@ function startLiveDriveLoop(
   session.simSession = bootSimWorkerRound(openingBootLevel);
 
   /**
+   * Applies the HOLD-until-GO gate to the sampled per-frame input (the
+   * countdown law itself lives in `host/hud.countdown.ts`).
+   *
+   * Why: the countdown is the race's START signal, so the car must wait
+   * on the grid until the overlay says GO. The gate zeroes the sampled
+   * THROTTLE (and only the throttle — the steering, the brake and the
+   * AI turn-rate channel ride through untouched) while the countdown is
+   * in one of its three counting phases.
+   *
+   * Why the host's OWN race clock: the gate reads `raceState.rules`
+   * BEFORE the worker's reply is applied (the reply rebinds the rules
+   * LATER in the same frame), so the gate and the HUD overlay read the
+   * same race clock - but on CONSECUTIVE readings: the gate reads the
+   * PREVIOUS reply's published clock (the frame's throttle must ride the
+   * request BEFORE that frame's reply exists) and the overlay paints the
+   * CURRENT one. The gate therefore never releases before the overlay
+   * shows GO, and the overlay may paint GO up to ONE FRAME before the
+   * gate releases.
+   *
+   * Why a COPY: the AI lane publishes a REUSED per-car buffer, so the
+   * held sample must own its bytes - the seam's buffer must survive the
+   * frame untouched, and the per-frame samples must stay DISTINCT (a
+   * mutated shared bag would make every earlier frame read the post-GO
+   * throttle).
+   *
+   * @param sampled - The sampled per-frame input (the human or the AI lane).
+   * @returns The gated sample: the original object once the countdown has
+   * reached GO, a zero-throttle copy while the countdown holds.
+   */
+  const applyCountdownThrottleHold = (
+    sampled: NeatRacingKeyboardSample,
+  ): NeatRacingKeyboardSample => {
+    const countdownPhase = resolveHudCountdownPhase(raceState.rules.elapsedS);
+    if (!NEATRACING_HUD_COUNTDOWN_PHASE_INFO[countdownPhase].holdsThrottle) {
+      return sampled;
+    }
+    // COPY (the zero-allocation law): the seam publishes a REUSED buffer,
+    // so a hold across frames must own its bytes.
+    const heldSample: NeatRacingKeyboardSample = {
+      throttle: 0,
+      brake: sampled.brake,
+      steer: sampled.steer,
+      turnRatePercent: sampled.turnRatePercent,
+    };
+    return heldSample;
+  };
+
+  /**
    * Drives ONE frame through the worker protocol.
    *
    * The input samples ONCE per frame (the phase-1 cadence), the worker
@@ -3490,7 +3567,14 @@ function startLiveDriveLoop(
     // (the carrier-drive relay of the adaptation session); a null answer
     // keeps the HUMAN keyboard sample standing (LD-12 on the manual lane).
     const aiDriveSample = resolveAiLaneDriveSample();
-    const sample = aiDriveSample ?? humanSample;
+    const sampledInput = aiDriveSample ?? humanSample;
+    // The HOLD-until-GO gate: the countdown holds the sampled
+    // throttle at zero until it reaches GO. The gate reads the host's own
+    // race clock, BEFORE the worker's reply rebinds the rules below, so
+    // the gate and the HUD overlay read the SAME race clock - the gate
+    // one reply behind the overlay, because the frame's throttle must
+    // ride the request BEFORE that frame's reply exists.
+    const sample = applyCountdownThrottleHold(sampledInput);
     raceState.input = sample;
     // Step 1: one protocol frame request per drawn frame.
     const responses = simSession.handleRequest({
@@ -3530,13 +3614,24 @@ function startLiveDriveLoop(
       raceState.rules.lapsCompleted,
     );
     lapBaseline = lapAdvance.lapBaseline;
+    // THE ONE per-frame player-car surface verdict (AC-107-REPIN): the
+    // published classifier resolves the band law ONCE for this frame, and
+    // BOTH consumers read THAT verdict — the ADVISORY departure hint (its
+    // `isDrivable` flag) and the EXISTING coarse off-track penalty (its
+    // `surface` label). ONE resolve, ONE verdict, ONE source of truth.
+    let surfaceVerdict: TrackSurfaceClassification | null = null;
     // Step 4: the HUD read model updates EVERY drawn frame (the protocol
     // car 0 speed, the rules clone and the PUBLISHED severity).
     if (car !== null) {
+      surfaceVerdict = surfaceClassifier(car);
       overlays.hud.update({
         speedUnitsPerS: car.speed,
         raceState: raceState.rules,
         tractionSeverity: car.tractionSeverity,
+        // The PUBLISHED FINE surface classification is the ADVISORY
+        // departure hint's ONLY input: the HUD reads its `isDrivable`
+        // flag and never re-derives a surface of its own.
+        surfaceClassification: surfaceVerdict,
       });
     }
     // Step 5: the round adaptation tick (cadence-gated; the seam rides
@@ -3549,6 +3644,7 @@ function startLiveDriveLoop(
       sample,
       lapAdvance.crossed,
       lapAdvance.lapsSinceLastCrossing,
+      surfaceVerdict,
     );
     // Step 7: the most-forward network panel draw (mode-gated). The
     // display-only panel seam is resilience-wrapped (fix packet

@@ -376,6 +376,11 @@ export const NEATRACING_DRIFT_SLIP_RESPONSE_TAU_S = 0.045;
 /**
  * The countersteer authority (m/s^2) applied AGAINST the slide. It is an
  * ACCELERATION: it is multiplied by `dt` to yield a velocity delta (REC-4).
+ *
+ * It is also the FULL-SCALE REFERENCE of the countersteer ramp (Step 30,
+ * slice `P5-S30-damping`, AC-109-DAMPING-REPIN clause 4): the ramp
+ * reaches EXACTLY 1.0 at full lock, so this value is the authority at
+ * full lock and at full speed - and only there.
  */
 export const NEATRACING_DRIFT_COUNTERSTEER_AUTHORITY_MPS2 = 70;
 
@@ -386,8 +391,17 @@ export const NEATRACING_DRIFT_COUNTERSTEER_AUTHORITY_MPS2 = 70;
 export const NEATRACING_DRIFT_COUNTERSTEER_MIN_SLIP_RAD = 0.02;
 
 /**
- * The minimum countersteer steering magnitude (band 0.85-0.95): the in-model
+ * The KNEE of the countersteer ramp: the countersteer steering magnitude
+ * at which the authority starts to rise (band 0.85-0.95): the in-model
  * fallback for the producer-declared countersteer intent (D2.3).
+ *
+ * THE MEANING IS UNCHANGED, THE FORM IS NOT (Step 30, slice
+ * `P5-S30-damping`, AC-109-DAMPING-REPIN clause 4): this is the KNEE of
+ * the countersteer ramp - the authority is EXACTLY 0 at and below the knee
+ * and RISES FROM 0 at the knee - so the no-authority-on-a-small-steer
+ * guard is NOT weakened. The hard `|steer| >= 0.9` GATE is GONE: the knee
+ * is now carried by the ramp itself, so the authority is CONTINUOUS in the
+ * steering input instead of stepping by 63 m/s^2 across the knee.
  */
 export const NEATRACING_DRIFT_COUNTERSTEER_MIN_STEER = 0.9;
 
@@ -463,9 +477,24 @@ export const NEATRACING_DRIFT_PROXY_MIN_FRAMES = 3;
 export const NEATRACING_DRIFT_POSE_STIFFNESS_RAD_PER_S2 = 324;
 
 /**
- * The pose-spring damping (rad/s): zeta = 0.35 (about 31 % first overshoot).
+ * The pose-spring damping (rad/s): zeta = 1.206388888888889 (OVER-DAMPED).
+ *
+ * RE-PINNED (Step 30, slice `P5-S30-damping`, AC-109-DAMPING-REPIN): the
+ * damping ratio is `43.43 / (2 * sqrt(324))` = 1.206388888888889, so the
+ * visual pose spring is now OVER-DAMPED: the body NEVER travels past its
+ * settled pose (the MEASURED true far-side overshoot is EXACTLY 0.0000 deg,
+ * float-exact) and the body NEVER rings out. The stiffness (omega = 18
+ * rad/s) is HELD, so the spring's natural frequency is unchanged - only the
+ * ring-out is gone.
+ *
+ * WHY 43.43 AND NOT THE SMALLEST OVER-DAMPED VALUE: the settle time is
+ * NON-MONOTONIC in the damping ratio (the settle is a ring-out law, not a
+ * monotone decay), so the smallest over-damped value is NOT the smallest
+ * legal one: 43.42 rad/s settles in 30 ticks - the corpus floor itself,
+ * with no margin - and is rejected. The measured ladder and the five
+ * measured margins are recorded in the plan.
  */
-export const NEATRACING_DRIFT_POSE_DAMPING_RAD_PER_S = 12.6;
+export const NEATRACING_DRIFT_POSE_DAMPING_RAD_PER_S = 43.43;
 
 /**
  * The articulation amplitude (rad): the steer-yaw term of the pose target.
@@ -1061,12 +1090,63 @@ export function computeGripBudgetFactor(
 }
 
 /**
+ * The span of the countersteer ramp: the steering range ABOVE the knee.
+ *
+ * It is `1 - MIN_STEER`, so the ramp reaches EXACTLY 1.0 at full lock: the
+ * numerator and the denominator of the ramp are the SAME float, and `x / x`
+ * is exactly 1 in IEEE-754.
+ */
+const COUNTERSTEER_RAMP_SPAN = 1 - NEATRACING_DRIFT_COUNTERSTEER_MIN_STEER;
+
+/**
+ * The countersteer ramp: the fraction of the full-scale countersteer
+ * authority at a steering magnitude `s` (0 <= s <= 1).
+ *
+ * THE PINNED FORM (Step 30, slice `P5-S30-damping`, AC-109-DAMPING-REPIN
+ * clause 4a): a LINEAR ramp from the knee to full lock,
+ * `clamp((s - KNEE) / (1 - KNEE), 0, 1)`.
+ *
+ * THE FOUR PINNED PROPERTIES (each PROVED by the 1001-sample sweep
+ * recorded in the plan, never asserted here):
+ *
+ * - it is EXACTLY 0 at and below the knee (`MIN_STEER` = 0.9), so the
+ *   no-authority-on-a-small-steer guard is NOT weakened - the knee IS the
+ *   guard now, and the separate hard gate that used to carry it is GONE;
+ * - it RISES FROM 0 at the knee and is CONTINUOUS there (no jump, no
+ *   discontinuity): the 63 m/s^2 step the continuity contract measured
+ *   across the knee is gone;
+ * - it is MONOTONE NON-DECREASING in the steering magnitude;
+ * - it reaches EXACTLY 1.0 at full lock (`s` = 1), so the published
+ *   70 m/s^2 full scale is still reached at full lock - at FULL SPEED
+ *   only, because the `speedPercent` factor scales it down below that.
+ *
+ * @param steerMagnitude - The steering magnitude (0..1).
+ * @returns The ramp fraction of the full-scale authority (0..1).
+ */
+const computeCountersteerRamp = (steerMagnitude: number): number =>
+  clamp(
+    (steerMagnitude - NEATRACING_DRIFT_COUNTERSTEER_MIN_STEER) /
+      COUNTERSTEER_RAMP_SPAN,
+    0,
+    1,
+  );
+
+/**
  * D1 stage 4: the countersteer authority, applied AGAINST the slide.
  *
  * The authority is an ACCELERATION (m/s^2) toward zero: it is multiplied by
  * `dt` to yield a velocity delta. The gate is the LATCHED TURN DIRECTION
  * (never `sign(slip)`), so the countersteer can never mirror the slide, and
  * the intent magnitude gate is the in-model fallback of D2.3.
+ *
+ * THE LAW (Step 30, slice `P5-S30-damping`, AC-109-DAMPING-REPIN clause
+ * 4a): `turnSign * AUTHORITY_MPS2 * ramp(|steer|) * speedPercent`. Only the
+ * `|steer|` factor was replaced - by the PINNED ramp above - so the
+ * `speedPercent` scaling is PRESERVED VERBATIM, the sign gates (a non-zero
+ * `turnSign` and a `sign(steer)` OPPOSING it) are UNCHANGED, and the
+ * `|slip| > MIN_SLIP_RAD` gate is UNCHANGED. The hard `|steer| >= MIN_STEER`
+ * gate is REPLACED by the ramp (the knee carries it), which is what makes
+ * the authority CONTINUOUS in the steering input.
  *
  * @param committed - The committed state (the slide and the latched turn).
  * @param input - The tick input (the steer and the speed percentile).
@@ -1087,13 +1167,10 @@ export function computeCountersteerAuthority(
   if (Math.abs(slip) <= NEATRACING_DRIFT_COUNTERSTEER_MIN_SLIP_RAD) {
     return 0;
   }
-  if (Math.abs(steer) < NEATRACING_DRIFT_COUNTERSTEER_MIN_STEER) {
-    return 0;
-  }
   return (
     turnSign *
     NEATRACING_DRIFT_COUNTERSTEER_AUTHORITY_MPS2 *
-    Math.abs(steer) *
+    computeCountersteerRamp(Math.abs(steer)) *
     speedPercent
   );
 }

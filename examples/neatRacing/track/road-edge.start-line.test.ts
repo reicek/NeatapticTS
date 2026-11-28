@@ -191,7 +191,8 @@ const FULL_ROAD_WIDTH_LATERAL_M = 1.5;
  *
  * The along-track measure is the ARC LENGTH along the polyline, measured
  * FORWARD from `splineSamples[0]` (segment 0's start point - the
- * start/finish plane), so `arcM` stays in `[0, loopLength)`. NEVER the
+ * start/finish plane), so `arcM` stays in `[0, loopLength]` - the closing
+ * segment's far end lands exactly ON the loop length. NEVER the
  * segment-0 CHORD projection: the track is a closed loop, so a chord-relative
  * measure spreads the start-line tiles over the whole lap.
  *

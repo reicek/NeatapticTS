@@ -50,7 +50,7 @@ Do NOT use for non-durable tracking like scratch notes or temporary buffers. Do 
 ## Workflow Diagram
 
 ```text
-Flowchart summary: "Tracker state" → "Active or closing?"; "Active or closing?" → "Update WIP section" (Active), "Compress to DONE" (Closing); "Update WIP section" → "Refresh handoff query"; "Compress to DONE" → "Create .logs.md"; "Refresh handoff query" → "Run sync gates"; "Create .logs.md" → "Move to plans/completed/"; "Run sync gates"; "Move to plans/completed/" → "Run sync gates".
+Flowchart summary: "Tracker state" → "Active or closing?"; "Active or closing?" → "Update WIP section" (Active), "Compress to DONE" (Closing); "Update WIP section" → "Refresh handoff query"; "Compress to DONE" → "Create .logs.md"; "Refresh handoff query" → "Run sync gates"; "Create .logs.md" → "Review telemetry (4 categories)"; "Review telemetry (4 categories)" → "Move trio to plans/completed/"; "Move trio to plans/completed/" → "Sync inbound references"; "Sync inbound references" → "Refresh RAG index"; "Refresh RAG index" → "Run sync gates".
 ```
 
 ## Task Packet
@@ -65,6 +65,8 @@ Intent: <create | refresh active tracker | compress history | close and archive>
 Current state: <status marker, active frontier, known blocker if any>.
 Lane model: <single active lane | named parallel lanes>.
 History to compress: <completed sections or none>.
+Telemetry review: <slice/phase closure | not a closure pass>.
+Archive trio: <plans + logs + research targets under plans/completed/>.
 Validation: <manual only | command list>.
 Next-session goal: <what the next session should continue safely>.
 ```
@@ -72,7 +74,7 @@ Next-session goal: <what the next session should continue safely>.
 ## Quick Start Checklist
 
 1. Identify the file role: active `.plans.md`, accumulating `.logs.md`, or
-   closing archive pair.
+   closing archive trio.
 2. Confirm the tracker vocabulary uses only `[PLANNED]`, `[WIP]`, and `[DONE]`.
 3. Preserve detail only at the active frontier; compress completed history into
    short coverage notes.
@@ -80,7 +82,9 @@ Next-session goal: <what the next session should continue safely>.
    workstream is still resumable in-context.
 5. If the plan participates in flow-aware steps, run the relevant sync or gate
    command before declaring the pass finished.
-6. Summarize what changed, what remains active, and what validation evidence now
+6. Run the lean telemetry review (four categories, existing ledgers only) and
+   record the four-line result.
+7. Summarize what changed, what remains active, and what validation evidence now
    exists.
 
 ## Required Workflow
@@ -98,8 +102,13 @@ Next-session goal: <what the next session should continue safely>.
    then run the appropriate sync or gate command from the validation section
    below.
 7. If the workstream is closing, create or refresh the same-boundary `.logs.md`
-   file before moving the pair into `plans/completed/`.
-8. Record only durable evidence in the tracker summary. Do not paste long raw
+   file before moving the trio into `plans/completed/`.
+8. Run the lean telemetry review for the closed slice or phase over the existing
+   ledgers and record the four-category result in `## Latest validation
+   evidence`.
+9. If the trio moved, sync every inbound reference to the archived path and
+   refresh the Cortex index; verify freshness before reporting closure.
+10. Record only durable evidence in the tracker summary. Do not paste long raw
    command transcripts into the tracker.
 
 ## Canonical Tracker Rules
@@ -236,6 +245,49 @@ close it deliberately.
 - If there is still a real next step from the plan's own context, the plan is
   not closed yet and should stay active with a `Handoff query`.
 
+### Archive Trio Rule
+
+A closed workstream moves to `plans/completed/` as a **trio**, never as a lone
+file:
+
+| Sibling                    | Moves           | Notes                                                                                   |
+| -------------------------- | --------------- | --------------------------------------------------------------------------------------- |
+| `plans/<Plan>.plans.md`    | yes             | the tracker                                                                             |
+| `plans/<Plan>.logs.md`     | yes             | the durable done-state record                                                           |
+| `plans/<Plan>.research.md` | yes when present | research is plan-scoped; `02-researching` owns the `<PlanName>.research.md` sibling rule |
+
+Research artifacts are scoped to the plan they document, so they archive with
+it. Never leave an orphaned `.logs.md`, `.research.md`, or `.spec.md` in
+`plans/`. A plan whose siblings stayed behind is not archived — it is
+half-moved.
+
+### Reference Sync Rule
+
+After the move, every inbound reference to the old `plans/<Plan>.*` path must
+point at `plans/completed/<Plan>.*`.
+
+- Sweep `plans/`, `plans/completed/`, `docs/`, `.github/skills/`, `.github/agents/`, `README.md`, and `Roadmap.md`.
+- The plan-link extractor drops archived paths silently, so **a clean validator run is not proof of sync**. Verify by re-running the sweep and confirming zero remaining `plans/<Plan>.*` references.
+- Record the synced reference list in `VALIDATION_EVIDENCE` so a reviewer can confirm the move without re-deriving it.
+
+### Single Active WIP Rule
+
+At most one plan in `plans/` carries a top-level `**Status:** [WIP]`.
+
+- Other active plans are `[PLANNED]` or `[DONE]`.
+- When two or more are `[WIP]`, the tracker pass reports the competing lanes and leaves the surviving-lane choice to the orchestrator. Do not silently demote a lane that still has open work.
+- A `[DONE]` plan that still sits in `plans/` root is an archive candidate, not an active lane.
+
+### Immediate RAG Refresh Rule
+
+The `plan` and `completed-plan` index families are derived from `plans/**/*.md`,
+so **every tracker write or archive move re-stales the Cortex index**.
+
+- Refresh: `node rag-index/build-index.mjs`.
+- Verify: `node scripts/agent-customization/gates/cortex-index.gate.mjs --json` must report `index_fresh: true` with empty `stalePaths` for both families.
+- The `PostToolUse` reindex hook covers edit/create but **not** file moves, so the closure pass must refresh explicitly after a move.
+- A tracker write or archive without a verified refresh is not a closed workstream — report `TASK_STATUS: PARTIAL` and carry the gap forward.
+
 ### Flow-Aware Tracker Closure
 
 Tracker closure runs through the `07.tracker-closure` flow. The flow requires
@@ -259,6 +311,54 @@ When closing a tracker that was run with flow-aware phase steps:
 - Do not prepend calendar dates to tracker sections.
 - Keep section titles reusable across sessions.
 
+## Lean Telemetry Review At Closure
+
+At **every slice closure** and **every phase closure**, run a lean telemetry
+review over the **existing ledgers**. It answers four questions and nothing
+else: what failed, what was unavailable, what looked anomalous, and what is
+worth optimizing.
+
+**No new machinery.** The review reuses the ledgers that already exist. Do not
+add a collector, a new ledger file, a new export format, or a new subagent for
+this review. If a category has no source, that is a reported gap, not a reason
+to build one.
+
+### Fixed read-set
+
+| Ledger                                                        | Records it carries                                                                                                                                                                                                                        | Categories it supports                          |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| `plans/<Plan>.logs.md` — fenced yaml blocks rooted at `telemetry_ledger:` | `status`, `measurement_state`, `otel_state`, `duration_ms`, `runtime.*`, `usage.token_usage`, `usage.tool_executions`, `validation.*`                                                       | failures, unavailable data, anomalies, optimization |
+| `logs/slice-ledger/tool-executions.jsonl`                     | `seq`, `slice_id`, `session_key`, `bucket`, `outcome`                                                                                                                                                                                        | failures (`outcome: failed`), optimization (bucket mix) |
+| `logs/telemetry/{log,metric,trace}.jsonl`                     | `name`, `neat.telemetry.signal`, `duration_ms`                                                                                                                                                                                              | anomalies, unavailable data                     |
+| `logs/telemetry/settings.json`                                | `enabled`, `signals.*`, `exporter.*`                                                                                                                                                                                                        | unavailable data (signal availability posture)  |
+| `logs/telemetry/probe-attribution-sources.json`               | attribution provenance                                                                                                                                                                                                                       | anomalies (attribution gaps)                    |
+| `artifacts/*.json`                                            | gate artifacts, for example `shared-validation.json`                                                                                                                                                                                         | failures                                       |
+
+### Category mapping
+
+| Category           | Source fields                                                                                          | Interpretation                                                                     |
+| ------------------ | ------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
+| **Failures**       | `validation.failed`, `validation.results[].status`, `outcome: failed` in the slice ledger               | count and name the failing checks; a non-zero `validation.failed` is a closure defect |
+| **Unavailable data** | `measurement_state: UNAVAILABLE`, `usage.*.available: false` with a reason                            | an unavailable counter is **null, never zero** — report the reason, not a fabricated 0 |
+| **Anomalies**      | `otel_state` in `STALE \| CORRUPT \| NO-DATA`, `measurement_state: CORRUPT`, unexpected `duration_ms` | data quality faults, not task failures                                          |
+| **Optimization**   | `duration_ms`, `runtime.heap_used_bytes`, `runtime.rss_bytes`, `usage.token_usage.total_tokens`, `usage.tool_executions` counts, `bucket` distribution | signals for the next slice's tuning; findings only, no code changes here |
+
+### Output shape
+
+Record a four-line block in `## Latest validation evidence` — one line per
+category, each naming its evidence source and finding, or `none observed`:
+
+```text
+telemetry failures: validation.failed=0 (telemetry_ledger OT-V1-2)
+telemetry unavailable data: measurement_state=MEASURED; token_usage.available=false (reason: provider unsupported)
+telemetry anomalies: otel_state=NO-DATA (trace.jsonl, 9 records)
+telemetry optimization: duration_ms=1840; heap_used_bytes=41200000; bucket mix read=751 exec=706
+```
+
+- If a category has **no source at all**, record it as an explicit gap (for example `telemetry anomalies: no source — settings.json has no trace exporter configured`). Never emit silence for a missing category.
+- The review **never re-runs** code-level validation. It reads what already happened.
+- The review is required at slice closure and phase closure. A closure that omits it is incomplete — report `TASK_STATUS: PARTIAL`.
+
 ## Automation And Validation
 
 Prefer the narrowest validation that matches the tracker change. Record the
@@ -272,6 +372,9 @@ node scripts/agent-customization/validate-plan-sync.mjs --json --plan=<active-pl
 node scripts/agent-customization/gates/phase-compression.gate.mjs --json
 node scripts/agent-customization/gates/log-completion-marker.gate.mjs --json
 node scripts/agent-customization/gates/stale-wip-plans.gate.mjs --json
+node scripts/agent-customization/gates/slice-ledger.gate.mjs --json --plan=<active-plan-path>
+node rag-index/build-index.mjs
+node scripts/agent-customization/gates/cortex-index.gate.mjs --json
 ```
 
 ### Which command to use
@@ -287,6 +390,18 @@ node scripts/agent-customization/gates/stale-wip-plans.gate.mjs --json
 - Run `stale-wip-plans.gate.mjs` when a plan was closed, archived, or otherwise
   changed from active to terminal so stale top-level `[WIP]` markers do not
   survive.
+- Run `slice-ledger.gate.mjs` when a closed slice or phase owns telemetry ledger
+  blocks; it validates the `<Plan>.logs.md` companion ledger for that plan.
+- Run `node rag-index/build-index.mjs` then `cortex-index.gate.mjs --json` after
+  **any** tracker write or archive move. The `plan` and `completed-plan` families
+  must report `index_fresh: true` with empty `stalePaths`.
+
+**Descriptor-gate honesty:** `phase-compression.gate.mjs` and
+`log-completion-marker.gate.mjs` are descriptor gates. In standalone mode they
+return a healthy baseline and always pass. Their real enforcement is the
+`VALIDATION_EVIDENCE` section of the orchestrator's structured-v1 output, not
+the script exit code. Never cite a passing descriptor gate as proof that
+compression or the log marker happened — cite the observed evidence.
 
 ### Validation reporting rule
 
@@ -394,7 +509,7 @@ Execute fix-packet-<slice_id>-iteration-<n>. Load context via Cortex MCP / searc
 
 - If a closed workstream needs new work, prefer reopening intentionally rather
   than silently editing the archived pair in place.
-- Either move the pair back into `plans/` or create a new active tracker that
+- Either move the trio back into `plans/` or create a new active tracker that
   points to the archived record in `plans/completed/`.
 - Add a fresh `Handoff query`; do not reuse a stale closure-era prompt.
 
@@ -411,12 +526,19 @@ Execute fix-packet-<slice_id>-iteration-<n>. Load context via Cortex MCP / searc
   records the durable done state.
 - If the log is missing, create or refresh it before moving anything into
   `plans/completed/`.
+- If a same-boundary `.research.md` exists for the plan, it moves with the
+  tracker; leaving it behind is a half-move.
 
 ### All Phases Done But Top-Level Status Still WIP
 
 - Treat this as a closure bug, not harmless drift.
 - Fix the tracker status, refresh closure evidence, and run the
   `stale-wip-plans` gate before claiming the archive handoff is complete.
+- If another plan still holds a top-level `[WIP]`, report the competing lanes
+  instead of silently demoting either plan, then confirm the surviving lane
+  with the orchestrator.
+- After any tracker write, refresh the Cortex index and confirm the
+  `cortex-index` gate reports `index_fresh: true` with empty `stalePaths`.
 
 ### Parallel Lanes Becoming Sequential Again
 
@@ -516,8 +638,22 @@ Then ran lint, all passed
 - Do not leave a `.plans.md` file without a `Handoff query` section when the
   workstream is still active.
 - Do not mark a workstream `[DONE]` and stop before compressing the plan,
-  adding or updating the same-boundary `.logs.md` file, and moving both files
-  into `plans/completed/`.
+  adding or updating the same-boundary `.logs.md` file, moving the plan/log/research
+  trio into `plans/completed/`, syncing inbound references to the archived path,
+  and refreshing the Cortex index.
+- Do not archive a `.plans.md` while leaving its `.logs.md` or `.research.md`
+  sibling behind in `plans/`.
+- Do not assume a clean validator run proves reference sync; the plan-link
+  extractor drops archived paths silently. Verify by sweeping for remaining
+  `plans/<Plan>.*` references.
+- Do not leave more than one plan in `plans/` with a top-level `[WIP]` status.
+  Report competing lanes; do not silently demote one.
+- Do not report a tracker write or archive as closed without a verified
+  `cortex-index` freshness result.
+- Do not skip the lean telemetry review at slice or phase closure, and do not
+  introduce a new ledger, collector, or subagent to satisfy it.
+- Do not report an unavailable telemetry counter as `0`; unavailable is `null`
+  plus a reason.
 - Do not leave a stale `Handoff query` on a fully closed plan unless the user
   explicitly wants reopen guidance.
 - Do not preserve detailed historical narration when compact coverage notes are
@@ -538,5 +674,10 @@ A strong tracker update should report:
 - whether a `Handoff query` section was added, refreshed, or intentionally
   removed because the plan was terminally closed,
 - whether a same-boundary `.logs.md` file was added or refreshed,
-- whether any workflow sync or gate command passed,
-- whether the closed tracker pair now lives in `plans/completed/`.
+- the four-category lean telemetry review result (failures, unavailable data,
+  anomalies, optimization) with its evidence source per category,
+- whether the closed tracker trio now lives in `plans/completed/`,
+- whether inbound references were synced to the archived path,
+- whether the Cortex index was refreshed and verified fresh
+  (`index_fresh: true`, empty `stalePaths`),
+- whether any workflow sync or gate command passed.

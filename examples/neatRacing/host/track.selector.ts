@@ -1,15 +1,13 @@
 /**
- * NeatRacing host track selector — plan slice P4-S3-select-restart (plan
- * `neatracing-voxel-racer.plans.md`, phase 4, step 25), implementing the
- * AC-101 track-selection control over the retained mode-selector
- * notify/restart law (spec sections 4.4 and 13.5; LD-08 / LD-12): switching
- * the selection restarts the race through the host's restart carrier in
- * EITHER direction, and the selection is retained.
+ * NeatRacing host track selector — the track-selection control over the
+ * demo track catalog, built on the retained mode-selector notify/restart
+ * law: switching the selection restarts the race through the host's
+ * restart carrier in EITHER direction, and the selection is retained.
  *
  * The module carries TWO surfaces and pins their EXPORT ORDER:
  *
  * 1. `createNeatRacingTrackSelection` (FIRST) — the DOM-free selection
- *    core. The frozen RED-P4-8 contract red home
+ *    core. The track-catalog contract home
  *    (`../track/track.catalog.test.ts`) runs in the NODE environment and
  *    discovers the selection surface with a capability probe that iterates
  *    the module's exported functions in declaration order, calling each
@@ -27,11 +25,10 @@
  *    FIRST-export ordering above keeps the probe deterministic in ANY
  *    environment regardless.
  *
- * AC-101 wiring law (the browser-entry boot composition carries it): the
- * demo boots on the catalog default (`NEATRACING_DEMO_TRACK_CATALOG_DEFAULT_ID`
- * — the retirement home of the single pinned `NEATRACING_DEMO_TRACK_ID` boot
- * constant) and a switch notifies the restart hook EXACTLY once per actual
- * switch in BOTH directions with the SELECTED track id; the wiring then
+ * WIRING LAW (the browser-entry boot composition carries it): the demo
+ * boots on the catalog default (`NEATRACING_DEMO_TRACK_CATALOG_DEFAULT_ID`)
+ * and a switch notifies the restart hook EXACTLY once per actual switch
+ * in BOTH directions with the SELECTED track id; the wiring then
  * re-resolves the round's geometry THROUGH the catalog resolver
  * (`resolveTrackVariantSpec` — the sole spec-resolution path), so every
  * selected variant inherits the catalog's SIGNED left-normal lane-point
@@ -54,12 +51,23 @@
  * never pays a track generation, and `resolveTrackVariantSpec` stays the
  * SOLE spec-resolution path of the demo.
  *
+ * NEON DISCIPLINE: the native `<option>` popup is OS-rendered and IGNORES
+ * `text-shadow` and `filter`, so the neon lands on the CLOSED control —
+ * the neon CLASS hook and the two-pass neon text style both come from the
+ * ONE helper (`./hud.neon`), the single source of truth for the
+ * neatRacing neon. No neon literal is inlined here, the select keeps its
+ * id and its name, and the option loop below is untouched (the popup
+ * stays OS-rendered; no custom listbox is introduced). This select is
+ * RE-PINNED onto the SAME helper and the SAME seam as the race-mode
+ * select, so the two closed controls can never drift apart.
+ *
  * Determinism: the selection law is pure closure state mutation; the
  * overlay is mount-only — identical inputs produce identical state
  * transitions with no Math.random, no clock reads, no timers.
  */
 
 import { NEATRACING_HUD_COLOR_CYAN } from './hud';
+import { applyNeonTreatment } from './hud.neon';
 import {
   NEATRACING_DEMO_TRACK_CATALOG,
   NEATRACING_DEMO_TRACK_CATALOG_DEFAULT_ID,
@@ -110,7 +118,7 @@ const TRACK_SELECTOR_DOM_ID: string = 'neatracing-track-selector';
 export type NeatRacingTrackSwitchListener = (trackId: string) => void;
 
 /**
- * The DOM-free track-selection controller (the surface the frozen RED-P4-8
+ * The DOM-free track-selection controller (the surface the track-catalog
  * contract discovers): it switches the selection to a named catalog member
  * and notifies subscribers with the selected track id, exactly once per
  * actual switch, in either direction.
@@ -197,21 +205,21 @@ function assertCatalogMemberTrackId(
 
 /**
  * What: creates the DOM-free track-selection core (the FIRST export, per
- * the frozen capability probe's declaration-order law): a closure-held
+ * the capability probe's declaration-order law): a closure-held
  * current track id, a same-value early-exit guard, a membership guard over
  * the configured catalog, and an `onSwitch` subscription list that notifies
  * EXACTLY once per actual switch with the selected track id — never on a
  * same-value switch, in BOTH switch directions.
  *
- * Why DOM-free: the frozen RED-P4-8 contract witnesses the notify/restart
+ * Why DOM-free: the track-catalog contract witnesses the notify/restart
  * law in the NODE environment (no browser); the capability probe calls
  * this factory with the demo catalog and with `undefined`, and both shapes
  * must boot the identical law (the probe argument carries none of the
  * option fields, so both fall to the same defaults).
  *
  * When: called by the browser-entry boot composition through the overlay
- * factory, and directly by the frozen contract. Never touches the DOM, so
- * a node-environment probe always succeeds.
+ * factory, and directly by the track-catalog contract. Never touches the
+ * DOM, so a node-environment probe always succeeds.
  *
  * @param options - Optional catalog / initial-id overrides (all default to
  *   the demo catalog's own law).
@@ -222,7 +230,7 @@ function assertCatalogMemberTrackId(
  *
  * @example
  * ```ts
- * // The frozen contract probes BOTH call shapes:
+ * // The contract probes BOTH call shapes:
  * createNeatRacingTrackSelection(NEATRACING_DEMO_TRACK_CATALOG);
  * createNeatRacingTrackSelection(undefined);
  * createNeatRacingTrackSelection();
@@ -325,6 +333,10 @@ function resolveSelectorContainer(
  * policy: no per-switch DOM construction), and the option list is a VIEW
  * over the catalog — never a second source of the track list.
  *
+ * The closed control also carries the neon treatment: the neon
+ * CLASS hook and the two-pass neon text style, both read from the ONE
+ * helper (`./hud.neon`), never inlined.
+ *
  * @returns The styled, unattached `<select>` element.
  */
 function createTrackSelect(): HTMLSelectElement {
@@ -340,6 +352,13 @@ function createTrackSelect(): HTMLSelectElement {
   select.style.fontFamily = SELECT_FONT_MONOSPACE;
   select.style.fontSize = SELECT_FONT_14PX;
   select.style.padding = SELECT_PADDING_4PX_8PX;
+  // The NEON treatment: the native `<option>` popup is OS-rendered and
+  // IGNORES `text-shadow`, so the neon lands on the CLOSED control —
+  // the neon CLASS hook plus the two-pass neon text style, both read
+  // from the ONE helper (`./hud.neon`), never inlined.
+  // The SAME seam as the race-mode select, so the two closed controls
+  // always match.
+  applyNeonTreatment(select);
   for (const entry of Object.values(NEATRACING_DEMO_TRACK_CATALOG)) {
     const option: HTMLOptionElement = document.createElement('option');
     option.value = entry.id;
@@ -357,8 +376,8 @@ function createTrackSelect(): HTMLSelectElement {
  * point that both notify subscribers exactly once per actual switch and
  * never notify on same-value switches.
  *
- * Why (AC-101): the host connects `onSwitch` to the track-switch restart
- * carrier — the restart runs in BOTH directions (LD-12) on the SELECTED
+ * Why: the host connects `onSwitch` to the track-switch restart
+ * carrier — the restart runs in BOTH directions on the SELECTED
  * track and the selection is retained. Same-value picks and same-value
  * programmatic switches ride the core's same-value guard (one law, one
  * place), and programmatic switches are mirrored into the DOM control so
@@ -372,12 +391,12 @@ function createTrackSelect(): HTMLSelectElement {
  * default.
  *
  * @param outputId - Reserved host DOM id; `neatracing-hud-output` in
- * the host shell and the slice fixture suite.
+ * the host shell and the fixture suite.
  * @returns The track-selector controller (select element + selection API).
  * @throws When the output container is missing from the document. In a
  * DOM-free environment (node) the factory throws (`ReferenceError:
  * document is not defined`) BEFORE any container resolution — the exact
- * condition the frozen capability probe depends on to skip this overlay.
+ * condition the capability probe depends on to skip this overlay.
  *
  * @example
  * ```ts
@@ -396,8 +415,8 @@ export function createNeatRacingTrackSelector(
     SELECTOR_NAME,
   );
   // One core per overlay: the DOM composition drives the SAME law the
-  // frozen contract discovers — user picks ride the core's same-value
-  // guard and exactly-once notify.
+  // track-catalog contract discovers — user picks ride the core's
+  // same-value guard and exactly-once notify.
   const selection: NeatRacingTrackSelection = createNeatRacingTrackSelection();
   const select: HTMLSelectElement = createTrackSelect();
 

@@ -1,7 +1,6 @@
 /**
  * Race rules (laps, checkpoints, level advancement) for the neatRacing
- * example (plan slice P1-S7-D; AC-024 partial; spec sections 4.1, 4.2,
- * 20 OQ-001/OQ-002; TP-12/TP-13).
+ * example (spec sections 4.1, 4.2, 20 OQ-001/OQ-002; TP-12/TP-13).
  *
  * Session semantics (OQ-001 resolved values as named constants, TP-13): a
  * human race lasts NEATRACING_HUMAN_RACE_LAPS forward laps with an
@@ -31,10 +30,10 @@
  * (same-runtime ordered-deterministic rung; cross-environment byte
  * equality is NOT claimed).
  *
- * Scope notes: HUD display of laps/budget and the mode selector arrive
- * with P1-S7-E; AI-mode lap floors and the promotion predicate are
- * phase-2 rules and never live here. This module is the pure rules core
- * the boot glue (Step 13) wires into the host loop.
+ * Scope notes: the HUD display of laps/budget and the mode selector live
+ * in the host boundary; AI-mode lap floors and the promotion predicate are
+ * AI-boundary rules and never live here. This module is the pure rules
+ * core the host loop wires into.
  */
 
 /**

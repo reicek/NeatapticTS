@@ -1,26 +1,24 @@
 # host
 
-NeatRacing host HUD overlay — plan slice P1-S7-E (plan
-`neatracing-voxel-racer.plans.md`, phase 1, step 12), implementing spec
-AC-024: the speed/lap/time DOM overlay into the reserved host output
-container plus the mode-switch control surface (spec sections 4.2,
-10.2, 11.2, 13.1). The cyan/magenta palette is recycled verbatim from
-the Neatenstein host HUD (spec section 11.2 recycling inventory: "same
-CSS tokens, cyan/magenta"), pinned here as `NEATRACING_HUD_COLOR_CYAN`
-and `NEATRACING_HUD_COLOR_MAGENTA` (rgb() literal strings, matching the
-Neatenstein `hud.constants.ts` precedent).
+NeatRacing host HUD overlay: the speed/lap/time DOM overlay into the
+reserved host output container plus the mode-switch control surface
+(spec sections 4.2, 10.2, 11.2, 13.1). The cyan/magenta palette is
+recycled verbatim from the Neatenstein host HUD (spec section 11.2
+recycling inventory: "same CSS tokens, cyan/magenta"), pinned here as
+`NEATRACING_HUD_COLOR_CYAN` and `NEATRACING_HUD_COLOR_MAGENTA`
+(rgb() literal strings, matching the Neatenstein `hud.constants.ts`
+precedent).
 
-RED -> GREEN contract: `examples/neatRacing/host/mode-selector.test.ts`
-(the header contract of this slice) pins the display string grammar —
+Display contract: `examples/neatRacing/host/mode-selector.test.ts`
+pins the display string grammar —
 speed = whole km/h (TP-01 physical anchor: 1 world unit = 1 meter, so
 ~89 units/s ≈ ~320 km/h arcade feel; never a decimal part), lap =
 `Lap c/20` clamped at `NEATRACING_HUMAN_RACE_LAPS` (a completed race
-never displays 21/20; the selector restart contract AC-033 is
-pre-verified by `mode-selector.ts`), and time = `M:SS.d` (unpadded
+never displays 21/20; the selector restart contract is pre-verified
+by `mode-selector.ts`), and time = `M:SS.d` (unpadded
 minutes, zero-padded seconds, one tenths digit).
 
-The TRACTION READOUT (AC-088; plan slice `P1-drift-presentation-hud`)
-is a DISPLAY of the ONE published traction severity
+The TRACTION READOUT is a DISPLAY of the ONE published traction severity
 (`PhysicsCarState.tractionSeverity`, published by the physics step):
 the HUD SHOWS the number it is handed and NEVER re-derives it, so the
 overlay, the car pass tires and the browser debug seam can never
@@ -37,7 +35,28 @@ state — so the km/h conversion constant lives here at the seam where
 the decision is made, mirroring how `race-rules.ts` keeps its own
 budget constants instead of importing physics timing.
 
-Allocation policy: `createHud` is the only DOM allocator (three labels
+The COUNTDOWN OVERLAY is the Flappy-style 3-2-1-GO start signal: the
+HUD paints the phase the RACE clock publishes (`raceState.elapsedS`,
+NEVER the wall clock) with the two-pass neon recipe (the glow pass
+behind, the crisp core on top). The phase law lives in
+`hud.countdown.ts` — ONE resolver, TWO consumers — so the gate never
+releases before the overlay shows GO. The overlay MAY paint GO up to ONE
+FRAME before the gate releases: the frame's throttle must ride the
+request BEFORE that frame's reply exists, so the gate reads the
+previous reply's published clock while the overlay paints the current
+one.
+
+The DEPARTURE HINT is an ADVISORY display of the ONE published FINE
+surface classification (`TrackSurfaceClassification`,
+published by `physics/collision.utils.ts`): the hint fires when the
+published classification says the car left the drivable surface (the
+grass BAND is still drivable, the OPEN grass is not). The law lives in
+`hud.departure.ts` — ONE pure resolver — and the hint CHANGES NO pose,
+NO speed, NO penalty and NO physics state: it is a DISPLAY, in the
+same spirit as the traction readout.
+
+Allocation policy: `createHud` is the only DOM allocator (the five
+readout labels plus the countdown overlay and the departure hint are
 created once inside one wrapper), and `update()` performs no per-frame
 DOM/geometry allocation beyond the unavoidable display strings passed
 to `textContent` (zero allocations is not technically achievable for
@@ -74,7 +93,7 @@ createHud(
 
 What: binds the HUD labels to a live `RaceRulesState` slice and
 mounts them into the reserved host output container (spec section
-10.2 folder layout; AC-024). This is the only place that reads
+10.2 folder layout). This is the only place that reads
 `document` for the HUD display (the selector module resolves its own
 container the same way, Neatenstein precedent).
 
@@ -82,15 +101,16 @@ Why: the host shell owns the container id; the HUD never assumes a
 particular host DOM beyond that one hook, keeping the module portable
 between the dev-server shell and the jsdom test fixture.
 
-When: called once during host boot (slice P1-S8 wires the render
-loop's `update` call; AC-033's restart hook pre-verified by
+When: called once during host boot (the render loop's `update` call is
+wired by the host shell; the restart hook is pre-verified by
 `createRaceModeSelector`). Throws instead of returning a null HUD so
 boot order bugs surface immediately instead of as silent blank HUDs.
 
 Allocation contract: this function performs all HUD DOM allocation
-for the page lifetime (one wrapper + four labels — speed, lap, time
-and traction — each once); `update()` then only writes textContent
-strings per frame.
+for the page lifetime (one wrapper + seven labels — speed, lap, time,
+traction, the controls hint, the countdown overlay and the departure
+hint — each once); `update()` then only writes textContent strings
+per frame.
 
 Parameters:
 - `outputId` - Reserved host DOM id; `neatracing-hud-output` in
@@ -109,6 +129,64 @@ hud.update({
 // speedLabel.textContent === '72 km/h', lapLabel === 'Lap 1/20',
 // timeLabel === '0:00.0', traction readout === 'Traction 0%'
 ```
+
+### createHudCountdownLabel
+
+```ts
+createHudCountdownLabel(
+  wrapper: HTMLElement,
+): HTMLElement
+```
+
+What: builds the COUNTDOWN overlay element inside the HUD wrapper —
+the Flappy-style 3-2-1-GO start token, painted with the two-pass neon
+recipe (the GLOW pass as a `text-shadow` behind, the CRISP core colour
+on top) and centred in the viewport.
+
+Why: the countdown is a START signal for the whole race, so it must
+read over the track instead of inside the top-left readout box; the
+element is `position: fixed` and therefore viewport-relative, while it
+stays a DESCENDANT of the HUD wrapper so the overlay surface keeps
+owning it.
+
+Why the pointer opt-out: the host output container re-enables pointer
+events for its direct children, so the countdown (a grandchild) would
+otherwise sit on top of the track and swallow clicks.
+
+Parameters:
+- `wrapper` - The HUD wrapper the countdown overlay is appended to.
+
+Returns: The created countdown overlay element.
+
+### createHudDepartureLabel
+
+```ts
+createHudDepartureLabel(
+  wrapper: HTMLElement,
+): HTMLElement
+```
+
+What: builds the DEPARTURE hint overlay element inside the HUD wrapper
+— the ADVISORY "return to the track" line.
+
+Why the overlay sits INSIDE the wrapper: the wrapper owns the HUD
+surface, so the hint is mounted with the readouts and the overlay
+surface keeps owning it (the countdown precedent). The hint is
+POSITIONED (absolute, just under the readout box) so the box never
+grows and shrinks while the hint comes and goes.
+
+Why the pointer opt-out: the host output container re-enables pointer
+events for its direct children, so the hint (a grandchild) would
+otherwise float over the track and swallow clicks.
+
+Why the hint starts EMPTY: an unpainted hint contributes NO HUD text,
+so the boot paint and every on-surface frame leave the readout box
+exactly as it was.
+
+Parameters:
+- `wrapper` - The HUD wrapper the departure overlay is appended to.
+
+Returns: The created departure overlay element.
 
 ### createHudLabel
 
@@ -212,7 +290,7 @@ Parameters:
 - `speedUnitsPerS` - Forward speed in world-units-per-second
 (TP-01 meters/s); expected in [0, inf).
 
-Returns: The speed formatted as whole `km/h`, e.g. `'320'` for 89.
+Returns: The speed formatted as whole `km/h`, e.g. `'320 km/h'` for 89.
 
 Example:
 
@@ -270,8 +348,8 @@ formatHudTraction(
 What: formats the PUBLISHED traction severity for the traction
 readout as a whole percent (e.g. `'Traction 42%'`).
 
-Why: the severity is the ONE shared scalar the physics step publishes
-(AC-088), so the HUD only CONVERTS it for display — it never
+Why: the severity is the ONE shared scalar the physics step publishes,
+so the HUD only CONVERTS it for display — it never
 re-derives it from the speed, the slip or any other HUD input, and
 the overlay therefore cannot disagree with the car pass tires. A
 missing severity (the OPTIONAL read-model field) is the IDLE zero:
@@ -309,6 +387,11 @@ can share one import source).
 
 The constructed HUD controller handed to the host shell.
 
+The interface exposes the overlay wrapper plus the speed, lap and time
+readout labels; `update` repaints every published label, including the
+traction readout, the controls hint, the countdown overlay and the
+departure hint.
+
 ### NeatRacingHudState
 
 The race state slice the HUD reads from. Mirroring `input.ts`, this is
@@ -326,8 +409,8 @@ resolveOutputContainer(
 
 What: resolves the reserved host output container by id, matching the
 Neatenstein `resolveHudContainer` precedent (`hud.dom.utils.ts`)
-flattened into this slice per the P1-S7-E file contract (no extra
-shared files inside the slice boundary).
+flattened into this module (no extra shared files inside the host
+boundary).
 
 Parameters:
 - `outputId` - Reserved host DOM id (spec section 10.2 folder
@@ -415,57 +498,598 @@ const sample = sampleKeyboardInput({
 console.log(sample.throttle, sample.steer); // 1, 1 — forward and left
 ```
 
+## host/hud.neon.ts
+
+The NeatRacing host NEON helper — the ONE source of truth for the
+neatRacing neon treatment.
+
+WHAT: the ONE helper that owns the neatRacing neon — the neon colour
+tokens, the neon CLASS hook name and the DOM `text-shadow` builder.
+Every closed-select consumer reads the treatment from HERE, so no
+consumer inlines a neon literal and no second copy of the neon tokens
+can drift away from the first.
+
+WHY a helper module at all: the native `<option>` popup is
+OS-rendered and IGNORES `text-shadow` and `filter`, so the neon can
+only land on the CLOSED `<select>` — the control the user reads while
+the HUD is idle. Two closed selects share that treatment (the
+race-mode select and the track select), so the treatment is written
+ONCE here instead of twice in the two selector modules.
+
+THE TWO-PASS RECIPE (the house neon recipe, mirrored from
+`examples/neatRacing/host/hud.ts`): the CRISP pass paints the solid
+core colour, the GLOW pass paints the bloom BEHIND it, so the text
+reads as a light source instead of flat coloured type. The canvas
+recipe it mirrors is the Flappy two-pass neon pipe
+(`examples/flappy_bird/browser-entry/runtime/runtime.startup-preview.service.ts`),
+translated from the canvas API to CSS. The countdown overlay already
+uses the same DOM translation (`./hud.countdown.ts`); its OWN tokens
+STAY there — this helper neither refactors nor imports them, so this
+module remains a LEAF and the HUD could adopt the neon later without
+an import cycle.
+
+THE NEON HUE: the neon cyan is the CANONICAL neon cyan (`#00ffff`),
+one step brighter than the HUD's `rgb(0, 240, 255)` accent, so the
+bloom reads as a light source rather than as the flat accent colour
+and so this module owns a hue of its own instead of holding a
+value-identical copy of the HUD token.
+
+THE TREATMENT BOUNDARY — the neon lands on the closed control, and the
+OS-drawn popup stays outside the treatment:
+
+```mermaid
+flowchart LR
+    Tokens["neon tokens<br/>hue, alpha, blur"] --> Shadow["buildNeonTextShadow()"]
+    Tokens --> Core["crisp core colour"]
+    Shadow --> Apply["applyNeonTreatment(select)"]
+    Core --> Apply
+    Apply --> Hook["class hook<br/>neatracing-hud-neon"]
+    Apply --> Closed["CLOSED select text<br/>glowing core"]
+    Closed -->|"user opens the list"| Popup["native option popup<br/>OS-rendered, never glowed"]
+```
+
+DETERMINISM: this module is pure — it creates NO DOM of its own, it
+never reads a wall clock, it never consults a random source and it
+allocates nothing per frame. The same element always receives the
+same treatment.
+
+Further reading: the DOM glow pass translates the canvas recipe's
+`shadowBlur` bloom into CSS
+[`text-shadow`](https://developer.mozilla.org/en-US/docs/Web/CSS/text-shadow),
+and the lit-tube look it imitates is the one described in
+[Neon sign](https://en.wikipedia.org/wiki/Neon_sign)
+(Wikipedia contributors).
+
+### applyNeonTreatment
+
+```ts
+applyNeonTreatment(
+  element: HTMLElement,
+): void
+```
+
+What: applies the whole neon treatment to an element the CALLER
+owns — the neon CLASS hook plus the two-pass text style (the CRISP
+core colour first, then the GLOW bloom behind it).
+
+Why: the two passes must always be applied together and in the same
+order on every closed select, so the recipe lives here instead of
+being spelled out by each consumer. The element itself stays the
+consumer's: this helper creates NO DOM, queries NO DOM and owns NO
+DOM of its own.
+
+When: called once per closed select, at mount time.
+
+Parameters:
+- `element` - The closed control that carries the neon treatment.
+
+Returns: Nothing — the treatment is applied to the given element.
+
+Example:
+
+```ts
+const select: HTMLSelectElement = document.createElement('select');
+applyNeonTreatment(select);
+select.classList.contains(NEATRACING_HUD_NEON_CLASS_HOOK); // true
+```
+
+### buildNeonTextShadow
+
+```ts
+buildNeonTextShadow(): string
+```
+
+What: builds the DOM `text-shadow` that paints the GLOW PASS behind
+the crisp core colour.
+
+Why: the shadow value is derived from the neon tokens, so the closed
+selects share ONE glow and the two of them can never drift. The
+shape (`0 0 <blur> rgba(<channels>, <alpha>)`) is the DOM translation
+of the canvas bloom (`shadowBlur` plus `shadowColor`), the same
+translation the countdown overlay uses.
+
+When: called once per neon surface, at mount time, by
+`applyNeonTreatment` — never per frame.
+
+Returns: The CSS `text-shadow` value for the GLOW PASS.
+
+Example:
+
+```ts
+buildNeonTextShadow(); // '0 0 10px rgba(0, 255, 255, 0.75)'
+```
+
+### NEATRACING_HUD_NEON_CLASS_HOOK
+
+The neon CLASS hook name (the CSS hook a stylesheet, a test or a
+browser probe targets to recognise a neon surface).
+
+WHY a class and not an id: the hook marks the SURFACE that carries
+the neon treatment, and both closed selects must carry the SAME hook
+so the HUD never shows a half-neon surface.
+
+Example:
+
+```ts
+const select: HTMLSelectElement = document.createElement('select');
+select.classList.add(NEATRACING_HUD_NEON_CLASS_HOOK);
+select.classList.contains(NEATRACING_HUD_NEON_CLASS_HOOK); // true
+```
+
+### NEATRACING_HUD_NEON_CORE_COLOR
+
+The CRISP PASS colour (the solid core colour painted on top of the
+bloom).
+
+Example:
+
+```ts
+NEATRACING_HUD_NEON_CORE_COLOR; // 'rgb(0, 255, 255)'
+```
+
+### NEATRACING_HUD_NEON_GLOW_ALPHA
+
+The GLOW PASS alpha (the bloom strength).
+
+WHY 0.75: the bloom must be strong enough to read as a neon tube at
+the HUD's 14px type size, but soft enough that the crisp core colour
+stays legible on the dark overlay.
+
+Example:
+
+```ts
+NEATRACING_HUD_NEON_GLOW_ALPHA; // 0.75 — the bloom's opacity
+```
+
+### NEATRACING_HUD_NEON_GLOW_BLUR_PX
+
+The GLOW PASS blur radius in CSS pixels (the bloom radius).
+
+WHY 10px: the bloom has to outgrow the 14px type of a closed select
+without bleeding into the neighbouring HUD readouts.
+
+Example:
+
+```ts
+NEATRACING_HUD_NEON_GLOW_BLUR_PX; // 10 — the bloom radius in CSS pixels
+```
+
+### NEATRACING_HUD_NEON_GLOW_RGB
+
+The GLOW PASS colour channels (the comma-separated RGB argument list
+that `rgba()` expects).
+
+WHY the channels and not a finished colour: the CRISP pass and the
+GLOW pass share this hue, and only the bloom needs an alpha, so the
+channels are the single place the hue lives.
+
+Example:
+
+```ts
+`rgba(${NEATRACING_HUD_NEON_GLOW_RGB}, 0.75)`; // 'rgba(0, 255, 255, 0.75)'
+```
+
+## host/hud.countdown.ts
+
+The Flappy-style 3-2-1-GO countdown resolver.
+
+WHAT: ONE pure resolver over the RACE clock that publishes the
+countdown phase. The resolver is the SINGLE law behind BOTH countdown
+consumers: the HUD overlay (`host/hud.ts`) paints the phase's token and
+the host per-frame sample site (`browser-entry/browser-entry.ts`) holds
+the sampled throttle until the phase reaches GO. Two consumers, one
+law: the gate never releases before the overlay shows GO. The overlay MAY
+paint GO up to ONE FRAME before the gate releases, because the frame's
+throttle must ride BEFORE that frame's reply exists - so the gate reads
+the PREVIOUS reply's published clock while the overlay paints the
+CURRENT one.
+
+WHY the RACE clock and never the wall clock: the race clock
+(`raceState.elapsedS`) is the deterministic clock the physics publishes,
+so the countdown can never JUMP or DRIFT against the wall clock (a
+clock-skew or an NTP step cannot move a phase), a replayed race
+repaints the same countdown, and the HUD and the gate read the SAME
+clock - the gate one reply behind the overlay, because the frame's
+throttle must ride BEFORE that frame's reply exists. `Date.now()` is
+NEVER read in this module.
+
+WHY the beat is short: the countdown is a START signal, not a modal.
+The whole 3-2-1 sequence must fit inside the short window the demo's
+driven probes give the car, so the field still rolls - and still
+reaches the drift model's MIN-SPEED gate - right after GO. The beat is
+a named constant so the phase law stays readable and adjustable in ONE
+place.
+
+The phase table is the whole law, and it is a TABLE, not a branch tree:
+
+```mermaid
+flowchart LR
+    T0["race clock 0.00 s"] --> P3["three<br/>token '3'<br/>throttle held"]
+    P3 -->|"0.30 s"| P2["two<br/>token '2'<br/>throttle held"]
+    P2 -->|"0.60 s"| P1["one<br/>token '1'<br/>throttle held"]
+    P1 -->|"0.90 s"| PG["go<br/>token 'GO'<br/>throttle released"]
+    PG -->|"2.10 s"| PD["done<br/>empty token<br/>overlay cleared"]
+```
+
+The one-reply seam between the two consumers:
+
+```mermaid
+flowchart LR
+    Reply["reply n-1<br/>(published race clock)"] --> Gate["host gate<br/>zeroes the throttle"]
+    Gate --> Request["frame request n<br/>(held throttle)"]
+    Request --> ReplyN["reply n<br/>(new published race clock)"]
+    ReplyN --> Hud["HUD overlay<br/>paints the phase token"]
+```
+
+THE NEON RECIPE (the two-pass Flappy recipe lifted from
+`examples/flappy_bird/browser-entry/runtime/runtime.startup-preview.service.ts`):
+the GLOW pass (the additive bloom: the cyan shadow colour at the glow
+alpha and the glow blur) and the CRISP pass (the solid core colour on
+top of the bloom). The Flappy palette is EXAMPLE-LOCAL, and the
+countdown overlay is its OWN lane: it carries its OWN tokens — the
+canvas recipe's values, plus the DOM translation of the glow pass (the
+CSS `text-shadow` the DOM renderer paints). The shared closed-select
+helper (`./hud.neon`) serves a DIFFERENT lane (the two overlay
+`<select>` controls), so the two token families stay deliberately
+separate and neither surface borrows the other's palette.
+
+Further reading: the DOM glow pass translates the canvas recipe's
+`shadowBlur` bloom into CSS
+[`text-shadow`](https://developer.mozilla.org/en-US/docs/Web/CSS/text-shadow),
+and the canvas primitives it mirrors are
+[`shadowBlur`](https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/shadowBlur).
+
+### NEATRACING_HUD_COUNTDOWN_BEAT_S
+
+The countdown beat: the width of ONE phase in RACE-clock seconds.
+
+The beat is the countdown's contract with the demo's driven probes: the
+'3', '2' and '1' phases span three beats, so the pre-GO hold lasts
+`3 * NEATRACING_HUD_COUNTDOWN_BEAT_S` (0.9 s of race clock) and the car
+is released with a full probe window still ahead of it.
+
+WHY 0.3 s: the beat must be WIDER than a quarter second, so a probe
+that samples the countdown on a quarter-second grid visits every phase
+(a narrower beat can skip a phase between two samples), and it must be
+NARROW enough that the whole sequence stays inside the demo's driven
+window (a one-second beat would spend the probe's whole window on the
+countdown and the car would never reach the drift model's MIN-SPEED
+gate, so the published slip and traction severity would stay zero).
+
+### NEATRACING_HUD_COUNTDOWN_CORE_COLOR
+
+The CRISP PASS colour (the recipe's solid core colour, painted on top
+of the bloom).
+
+### NEATRACING_HUD_COUNTDOWN_GLOW_ALPHA
+
+The GLOW PASS alpha (the recipe's bloom strength).
+
+The DOM glow pass composites this alpha with the `GLOW_RGB` channels,
+so the rendered shadow keeps the recipe's bloom strength instead of
+the recipe's own 0.95 alpha.
+
+### NEATRACING_HUD_COUNTDOWN_GLOW_BLUR_PX
+
+The GLOW PASS blur radius in CSS pixels (the recipe's bloom radius).
+
+### NEATRACING_HUD_COUNTDOWN_GLOW_RGB
+
+The GLOW PASS colour channels (the recipe's cyan bloom colour as the
+comma-separated RGB argument list that `rgba()` expects).
+
+WHY the channels only: the Flappy recipe's bloom colour is
+`rgba(95, 255, 255, 0.95)`, but the DOM glow pass composes its OWN
+alpha (`NEATRACING_HUD_COUNTDOWN_GLOW_ALPHA`, 0.68) into the same
+colour, so this constant carries the three channels and the rendered
+shadow keeps the recipe's bloom strength.
+
+### NEATRACING_HUD_COUNTDOWN_GLOW_SHADOW
+
+The DOM translation of the GLOW PASS: the CSS `text-shadow` the DOM
+renderer paints behind the crisp core colour.
+
+### NEATRACING_HUD_COUNTDOWN_GO_BEATS
+
+The number of beats the GO phase holds before the countdown clears.
+
+GO stays on screen for four beats (1.2 s of race clock) so the start
+signal is readable at a glance; after that the phase is 'done' and the
+overlay clears the token.
+
+### NEATRACING_HUD_COUNTDOWN_PHASE_INFO
+
+The countdown phase table (the ONE law the HUD and the gate share).
+
+The table is a module-level constant, so reading a phase allocates
+nothing: the render loop reads the token and the gate reads the hold
+flag without building a per-frame object.
+
+### NeatRacingHudCountdownPhase
+
+The countdown phase the race clock publishes.
+
+The phase names are the STABLE vocabulary of the countdown law: the HUD
+paints the phase's token and the host gate reads the phase's hold flag.
+The names carry the phase SEMANTICS, never their rendered text (the
+token lives in `NEATRACING_HUD_COUNTDOWN_PHASE_INFO`).
+
+### NeatRacingHudCountdownPhaseInfo
+
+What each countdown phase renders and does.
+
+`label` is the token the HUD paints ('3', '2', '1' and 'GO'); the 'done'
+phase carries the EMPTY token, which clears the overlay. `holdsThrottle`
+is the gate law: while it is true the host sample site must publish a
+zero throttle, so the car waits for the countdown instead of driving off
+the grid before GO.
+
+### resolveHudCountdownPhase
+
+```ts
+resolveHudCountdownPhase(
+  elapsedS: number,
+): NeatRacingHudCountdownPhase
+```
+
+What: resolves the countdown phase for a race-clock reading.
+
+Why: the HUD and the host gate must apply the SAME phase law to the
+SAME race clock, so the law lives here instead of being spelled twice
+(the overlay once, the gate once). The two consumers read CONSECUTIVE
+readings of that one clock, never the same reading - the gate reads
+the PREVIOUS reply's published clock (the frame's throttle must ride
+the request BEFORE that frame's reply exists) and the overlay paints
+the CURRENT one - so the gate never releases before the overlay shows
+GO, and the overlay may paint GO up to ONE FRAME before the gate
+releases.
+
+When: called by the HUD overlay once per frame (to paint the token) and
+by the host per-frame sample site once per frame (to read the hold
+flag) — both from the SAME race clock (the gate one reply behind the
+overlay, by the reply-ordering seam).
+
+The phase windows (the beat is `NEATRACING_HUD_COUNTDOWN_BEAT_S`):
+'three' [0, beat), 'two' [beat, 2*beat), 'one' [2*beat, 3*beat),
+'go' [3*beat, (3 + GO_BEATS) * beat) and 'done' from then on. A
+negative reading is clamped to the start of the countdown, so a clock
+that has not started yet still shows '3'.
+
+Parameters:
+- `elapsedS` - The RACE clock reading in seconds (`raceState.elapsedS`).
+
+Returns: The countdown phase the reading belongs to.
+
+Example:
+
+```ts
+resolveHudCountdownPhase(0); // 'three'
+resolveHudCountdownPhase(0.4); // 'two'
+resolveHudCountdownPhase(1.1); // 'go'
+resolveHudCountdownPhase(9); // 'done'
+```
+
+## host/hud.departure.ts
+
+The ADVISORY departure resolver: the HUD's "return to the track" hint.
+
+WHAT: ONE pure resolver over the ONE published FINE surface
+classification (`TrackSurfaceClassification`, published by
+`physics/collision.utils.ts`). The resolver publishes the ADVISORY
+departure state: the car has LEFT the drivable surface when the
+published classification says the surface is not drivable.
+
+WHY the published classification and never a second surface model:
+the physics already publishes ONE FINE classification per car pose
+(the same surface family the coarse penalty path consumes), so the
+HUD reads THAT record instead of re-deriving a surface of its own. A
+second surface model would be a second law: it could disagree with the
+published one about where the drivable surface ends, and the hint
+would then fire while the car still drives on the grass apron.
+
+WHY the law reads `isDrivable` alone: the grass BAND (the apron
+between the curb and the open grass) IS drivable, so only the OPEN
+grass counts as a departure. `isRoadOnly` is deliberately NOT read:
+the curb and the grass apron are drivable surfaces, and the hint is
+about being OFF the drivable surface, not about being off the road
+core.
+
+WHY the hint is ADVISORY: it changes NO pose, NO speed, NO penalty and
+NO physics state. It is a DISPLAY of the published classification, in
+the same spirit as the traction readout: the overlay shows the
+published fact and never re-derives it, so the hint, the coarse
+penalty counter and the browser debug seam can never disagree.
+
+WHY there is no clock: the hint is a function of the published
+classification ALONE, so a replayed race repaints the same hint.
+`Date.now()` is NEVER read in this module.
+
+The hint table is the whole law, and it is a TABLE (not a branch
+tree): a module-level constant, so resolving a hint allocates
+nothing — the render loop reads the token and the HUD writes it to the
+DOM without building a per-frame object.
+
+### NEATRACING_HUD_DEPARTURE_HINT_TEXT
+
+The ADVISORY hint the HUD paints while the car is off the drivable
+surface.
+
+WHY this wording: the hint is a RETURN instruction, not a failure
+message — the car is never punished for a departure, the hint only
+tells the driver how to get back onto the road.
+
+Example:
+
+```ts
+NEATRACING_HUD_DEPARTURE_HINT_TEXT; // 'RETURN TO THE TRACK'
+```
+
+### NEATRACING_HUD_DEPARTURE_HINTS
+
+The departure hint table (the ONE law the HUD reads).
+
+The table is a module-level constant, so resolving a hint allocates
+nothing: the render loop reads the token and the HUD writes it to the
+DOM without building a per-frame object.
+
+Example:
+
+```ts
+NEATRACING_HUD_DEPARTURE_HINTS.onSurface.label; // '' (the hint paints nothing)
+NEATRACING_HUD_DEPARTURE_HINTS.departed.label;  // 'RETURN TO THE TRACK'
+```
+
+### NeatRacingHudDepartureHint
+
+What each departure state renders.
+
+`label` is the token the HUD paints (`''` clears the hint), so the
+on-surface state contributes NO HUD text at all.
+
+Example:
+
+```ts
+const hint: NeatRacingHudDepartureHint = {
+    state: 'departed',
+    label: NEATRACING_HUD_DEPARTURE_HINT_TEXT,
+};
+```
+
+### NeatRacingHudDepartureState
+
+The departure state the resolver publishes.
+
+The names are the STABLE vocabulary of the departure law: the HUD
+paints the state's token and nothing else consumes the state. The
+names carry the SEMANTICS, never the rendered text (the token lives
+in `NEATRACING_HUD_DEPARTURE_HINTS`).
+
+Example:
+
+```ts
+const state: NeatRacingHudDepartureState = 'departed';
+```
+
+### resolveHudDepartureHint
+
+```ts
+resolveHudDepartureHint(
+  classification: TrackSurfaceClassification | undefined,
+): NeatRacingHudDepartureHint
+```
+
+What: resolves the ADVISORY departure hint for a published FINE
+surface classification.
+
+Why: the hint must agree with the physics about where the drivable
+surface ends, so the law reads the ONE published classification
+(`isDrivable`) and NOTHING else — no clock, no pose, no speed, no
+re-derived surface. The grass apron (the BAND between the curb and
+the open grass) IS drivable, so only the OPEN grass counts as a
+departure.
+
+The resolver is TOTAL: it never throws and never reads a clock, so an
+absent classification is answered with the `onSurface` record rather
+than with an error.
+
+When: called by `NeatRacingHud.update` once per frame (to paint the
+hint token).
+
+Parameters:
+- `classification` - The PUBLISHED FINE surface classification for
+the car's pose; `undefined` when the read model carries no
+classification (the hint needs published evidence, so it stays off).
+
+Returns: The departure hint record for the classification: the
+`onSurface` record when the classification is absent or reports a
+drivable surface, and the `departed` record when it reports a
+non-drivable surface. The returned record is always one of the shared
+`NEATRACING_HUD_DEPARTURE_HINTS` entries.
+
+Example:
+
+```ts
+resolveHudDepartureHint({ surface: 'road', isRoadOnly: true, isDrivable: true }).label; // ''
+resolveHudDepartureHint({ surface: 'grass', isRoadOnly: false, isDrivable: false }).label; // 'RETURN TO THE TRACK'
+resolveHudDepartureHint(undefined).label; // '' (no published evidence)
+```
+
 ## host/mode-selector.ts
 
-NeatRacing host race-mode selector — plan slice P1-S7-E (plan
-`neatracing-voxel-racer.plans.md`, phase 1, step 12), implementing the
-AC-024 selector overlay ("top-right; ai, manual options; initial
-manual mode"; spec sections 4.2, 10.2, 11.2, 13.1) and serving the
-AC-033 restart-on-switch surface: `onSwitch` is the single hook the
-host shell connects to a race restart, so the "toggle the race mode"
-step is delivered as a notify contract here rather than as an owned
-restart call (spec section 4.2 keeps mode authority in the shell, not
-the selector).
+NeatRacing host race-mode selector — the closed `<select>` overlay that
+owns the race-mode CHOICE and the switch NOTIFICATION, but never the
+race itself.
 
-Phase-2 update (P2-S4-A, AC-033): the AC-033 mode half is now served
-with the Phase-2 AI goal lifecycle (`../ai/ai-mode.goals.ts`): AI mode
-runs a minimum 20-lap session and then continues until the current
-level's promotion-threshold-driven growth goal is met, and level 3
-continues until the user stops the session.
+WHAT the overlay does: it mounts a single `<select>` (the `ai` and
+`manual` options, `ai` first, pinned to the top-right of the reserved
+host output container) and keeps the current mode in a closure. Both a
+user pick and a programmatic `setMode` notify subscribers EXACTLY ONCE
+per ACTUAL switch; a same-value switch is a documented no-op, so a
+re-pick of the already-active mode can never restart a race.
 
-Structural precedent (cited in the slice contract header):
-`examples/neatenstein/browser-entry/host/hud.human-mode.utils.ts` —
-resolve the reserved container or throw; build the `<select>` once and
-style it from named constants; render both options with ai FIRST;
-keep the selected mode in a closure guarded by an early same-value
-exit; notify subscribers exactly once per actual switch (both for a
-user `change` event and a programmatic `setMode`); never rebuild DOM
-on mode change (allocation policy: only allocation is mount-time).
+WHY the restart lives elsewhere: `onSwitch` is the single hook the
+host shell connects to a race restart, so "toggle the race mode" is
+delivered as a NOTIFY CONTRACT here rather than as an owned restart
+call — the shell keeps the mode authority, and this module owns no
+race state.
 
-Boot mode (Step 14P / AC-087, the L8 mask, re-pointing the batch-108
-user-gap patch): the overlay still exposes both 'ai' and 'manual'
-options, but the INITIAL mode is 'manual'. WHY: the served page IS
-the acceptance surface (the user judges the drift on the page that
-is actually served) and the ai-mode page is never acceptable
-evidence — the AI autopilot crosses the 0.5 engage cliff on only 176
-of 7200 ticks (2.44 percent), so an AI boot masks the very slide
-the user has to judge. The 'ai' option stays SELECTABLE through the
-same switch, which still notifies its listeners and fires the
-AC-033 restart hook. Same-value switches are documented no-ops (and
-covered
-by the slice contract's jest non-call assertion) rather than silent
-restarts: the host shell must not reset a race because a user
-re-picked the already-active mode. A mode switch into AI mode makes
-the HOST shell (the P2-S4-C wiring) boot a fresh AI goal session at
-the first ladder rung (`NEATRACING_AI_MODE_START_LEVEL`,
-`../ai/ai-mode.goals.ts`); the selector itself keeps notifying exactly
-once per actual switch and owns no race state.
+THE AI-MODE LIFECYCLE this selector switches into
+(`../ai/ai-mode.goals.ts`): AI mode runs a minimum 20-lap session and
+then continues until the current level's promotion-threshold-driven
+growth goal is met; level 3 continues until the user stops the
+session. A mode switch into AI mode makes the HOST shell boot that
+fresh AI goal session at the first ladder rung
+(`NEATRACING_AI_MODE_START_LEVEL`).
 
-Cyan/magenta discipline (spec section 11.2 "same CSS tokens,
-cyan/magenta"): the border recycles `NEATRACING_HUD_COLOR_CYAN`
+BOOT MODE: the overlay still exposes both 'ai' and 'manual' options,
+but the INITIAL mode is 'manual'. WHY: the served page IS the
+acceptance surface (the user judges the driving feel on the page that
+is actually served) and the ai-mode page is never acceptable evidence
+— the AI autopilot crosses the 0.5 engage cliff on only 176 of 7200
+ticks (2.44 percent), so an AI boot masks the very slide the user has
+to judge. The 'ai' option stays SELECTABLE through the same switch,
+which still notifies its listeners and fires the restart hook.
+
+Structural precedent: `examples/neatenstein/browser-entry/host/hud.human-mode.utils.ts`
+— resolve the reserved container or throw; build the `<select>` once and
+style it from named constants; render both options with ai FIRST; keep
+the selected mode in a closure guarded by an early same-value exit;
+notify subscribers exactly once per actual switch (both for a user
+`change` event and a programmatic `setMode`); never rebuild DOM on mode
+change (allocation policy: only allocation is mount-time).
+
+Cyan/magenta discipline: the border recycles `NEATRACING_HUD_COLOR_CYAN`
 imported from './hud' (single source of truth for the tokens; the
 magenta token stays owned by hud.ts since the selector only uses the
-cyan border in this slice).
+cyan border here).
+
+NEON DISCIPLINE: the native `<option>` popup is OS-rendered and IGNORES
+`text-shadow` and `filter`, so the neon lands on the CLOSED control —
+the neon CLASS hook and the two-pass neon text style both come from the
+ONE helper (`./hud.neon`), the single source of truth for the
+neatRacing neon. No neon literal is inlined here, the select keeps its
+id and its name, and the option loop below is untouched (the popup
+stays OS-rendered; no custom listbox is introduced).
 
 Determinism section: every executor here is pure or mount-only —
 identical inputs produce identical DOM/notify behavior with no
@@ -481,12 +1105,15 @@ createModeSelect(): HTMLSelectElement
 
 What: builds the `<select>` with both race-mode options in the pinned
 order (`ai` first) and the Neatenstein top-right overlay styling from
-named constants (spec section 11.2 recycling inventory), without
-attaching it to the document yet.
+named constants, without attaching it to the document yet.
 
-Why: option order and initial value are part of the AC-024 acceptance
-contract and the DOM is built exactly once at mount (allocation
-policy: no per-switch DOM construction).
+Why: the option order and the initial value are part of the overlay's
+acceptance contract, and the DOM is built exactly once at mount
+(allocation policy: no per-switch DOM construction).
+
+The closed control also carries the neon treatment: the neon CLASS
+hook and the two-pass neon text style, both read from the ONE helper
+(`./hud.neon`).
 
 Returns: The styled, unattached `<select>` element.
 
@@ -506,19 +1133,17 @@ closure-held current mode, an `onSwitch` subscription list, and one
 subscribers exactly once per actual switch and never notify on
 same-value switches.
 
-Why (AC-033, Phase 2): the host connects `onSwitch` to a race
-restart — the restart runs in BOTH directions (LD-12) and the host
-shell (the P2-S4-C wiring) handles it, including the boot of the
-fresh AI goal session at the first ladder rung
+Why: the host connects `onSwitch` to a race restart — the restart runs
+in BOTH directions and the host shell handles it, including the boot
+of the fresh AI goal session at the first ladder rung
 (`../ai/ai-mode.goals.ts`); the hook is delivered and verified here so
 the restart wiring cannot be blocked by a missing selector surface.
-Step 14P opens the race in the 'manual' mode (the served
-page is the acceptance surface and the ai-mode page is never
-acceptable evidence — see `INITIAL_RACE_MODE`); the boot glue never
-calls `setMode`; the 'ai' option remains
-rendered
-and selectable to keep the toggle contract fully exercisable (same
-CSS tokens, cyan/magenta; option order `ai, manual` from AC-024).
+The race opens in the 'manual' mode (the served page is the acceptance
+surface and the ai-mode page is never acceptable evidence — see
+`INITIAL_RACE_MODE`); the boot glue never calls `setMode`; the 'ai'
+option remains rendered and selectable to keep the toggle contract
+fully exercisable (same CSS tokens, cyan/magenta; option order
+`ai, manual`).
 
 When: called once during host boot after the HUD mounts into the same
 reserved container id (`neatracing-hud-output`). Throws instead of
@@ -544,14 +1169,14 @@ selector.onSwitch((mode) => restartRace(mode));
 
 Initial race mode: the game page boots in MANUAL mode.
 
-WHY (Step 14P / AC-087, the L8 mask): the served page is the
+WHY (the served page is the acceptance surface): the served page is the
 acceptance surface — the user judges the drift on the page that is
 actually served — and the ai-mode page is never acceptable evidence.
 The AI autopilot only crosses the 0.5 engage cliff on 176 of 7200
 ticks (2.44 percent), so an AI boot masks the very slide the user
 has to judge. This is a BOOT DEFAULT and nothing else: the 'ai'
 option stays selectable through the mode selector and a switch still
-notifies its listeners (AC-033).
+notifies its listeners.
 
 ### NeatRacingRaceMode
 
@@ -582,13 +1207,11 @@ resolveSelectorContainer(
 
 What: resolves the reserved host output container by id, matching the
 Neatenstein `resolveHudContainer` precedent (`hud.dom.utils.ts`)
-flattened into this slice per the P1-S7-E file contract (no extra
-shared files inside the slice boundary; hud.ts keeps its own copy of
-this eight-line resolver).
+(hud.ts keeps its own copy of this eight-line resolver).
 
 Parameters:
-- `outputId` - Reserved host DOM id (spec section 10.2 folder
-layout; `neatracing-hud-output` in the host shell and fixtures).
+- `outputId` - Reserved host DOM id (`neatracing-hud-output` in the
+host shell and the fixture suite).
 - `surfaceName` - Human-readable surface name for the error body.
 
 Returns: The DOM container to append the selector into.
@@ -920,17 +1543,15 @@ Parameters:
 
 ## host/track.selector.ts
 
-NeatRacing host track selector — plan slice P4-S3-select-restart (plan
-`neatracing-voxel-racer.plans.md`, phase 4, step 25), implementing the
-AC-101 track-selection control over the retained mode-selector
-notify/restart law (spec sections 4.4 and 13.5; LD-08 / LD-12): switching
-the selection restarts the race through the host's restart carrier in
-EITHER direction, and the selection is retained.
+NeatRacing host track selector — the track-selection control over the
+demo track catalog, built on the retained mode-selector notify/restart
+law: switching the selection restarts the race through the host's
+restart carrier in EITHER direction, and the selection is retained.
 
 The module carries TWO surfaces and pins their EXPORT ORDER:
 
 1. `createNeatRacingTrackSelection` (FIRST) — the DOM-free selection
-   core. The frozen RED-P4-8 contract red home
+   core. The track-catalog contract home
    (`../track/track.catalog.test.ts`) runs in the NODE environment and
    discovers the selection surface with a capability probe that iterates
    the module's exported functions in declaration order, calling each
@@ -948,11 +1569,10 @@ The module carries TWO surfaces and pins their EXPORT ORDER:
    FIRST-export ordering above keeps the probe deterministic in ANY
    environment regardless.
 
-AC-101 wiring law (the browser-entry boot composition carries it): the
-demo boots on the catalog default (`NEATRACING_DEMO_TRACK_CATALOG_DEFAULT_ID`
-— the retirement home of the single pinned `NEATRACING_DEMO_TRACK_ID` boot
-constant) and a switch notifies the restart hook EXACTLY once per actual
-switch in BOTH directions with the SELECTED track id; the wiring then
+WIRING LAW (the browser-entry boot composition carries it): the demo
+boots on the catalog default (`NEATRACING_DEMO_TRACK_CATALOG_DEFAULT_ID`)
+and a switch notifies the restart hook EXACTLY once per actual switch
+in BOTH directions with the SELECTED track id; the wiring then
 re-resolves the round's geometry THROUGH the catalog resolver
 (`resolveTrackVariantSpec` — the sole spec-resolution path), so every
 selected variant inherits the catalog's SIGNED left-normal lane-point
@@ -974,6 +1594,16 @@ catalog resolver's error shape (unknown id + the known ids). The guard
 reads the catalog KEYS — never a generated spec — so validating a pick
 never pays a track generation, and `resolveTrackVariantSpec` stays the
 SOLE spec-resolution path of the demo.
+
+NEON DISCIPLINE: the native `<option>` popup is OS-rendered and IGNORES
+`text-shadow` and `filter`, so the neon lands on the CLOSED control —
+the neon CLASS hook and the two-pass neon text style both come from the
+ONE helper (`./hud.neon`), the single source of truth for the
+neatRacing neon. No neon literal is inlined here, the select keeps its
+id and its name, and the option loop below is untouched (the popup
+stays OS-rendered; no custom listbox is introduced). This select is
+RE-PINNED onto the SAME helper and the SAME seam as the race-mode
+select, so the two closed controls can never drift apart.
 
 Determinism: the selection law is pure closure state mutation; the
 overlay is mount-only — identical inputs produce identical state
@@ -1013,21 +1643,21 @@ createNeatRacingTrackSelection(
 ```
 
 What: creates the DOM-free track-selection core (the FIRST export, per
-the frozen capability probe's declaration-order law): a closure-held
+the capability probe's declaration-order law): a closure-held
 current track id, a same-value early-exit guard, a membership guard over
 the configured catalog, and an `onSwitch` subscription list that notifies
 EXACTLY once per actual switch with the selected track id — never on a
 same-value switch, in BOTH switch directions.
 
-Why DOM-free: the frozen RED-P4-8 contract witnesses the notify/restart
+Why DOM-free: the track-catalog contract witnesses the notify/restart
 law in the NODE environment (no browser); the capability probe calls
 this factory with the demo catalog and with `undefined`, and both shapes
 must boot the identical law (the probe argument carries none of the
 option fields, so both fall to the same defaults).
 
 When: called by the browser-entry boot composition through the overlay
-factory, and directly by the frozen contract. Never touches the DOM, so
-a node-environment probe always succeeds.
+factory, and directly by the track-catalog contract. Never touches the
+DOM, so a node-environment probe always succeeds.
 
 Parameters:
 - `options` - Optional catalog / initial-id overrides (all default to
@@ -1038,7 +1668,7 @@ Returns: The DOM-free selection controller.
 Example:
 
 ```ts
-// The frozen contract probes BOTH call shapes:
+// The contract probes BOTH call shapes:
 createNeatRacingTrackSelection(NEATRACING_DEMO_TRACK_CATALOG);
 createNeatRacingTrackSelection(undefined);
 createNeatRacingTrackSelection();
@@ -1063,8 +1693,8 @@ DOM-free core, one `change` listener plus one `setSelectedTrack` entry
 point that both notify subscribers exactly once per actual switch and
 never notify on same-value switches.
 
-Why (AC-101): the host connects `onSwitch` to the track-switch restart
-carrier — the restart runs in BOTH directions (LD-12) on the SELECTED
+Why: the host connects `onSwitch` to the track-switch restart
+carrier — the restart runs in BOTH directions on the SELECTED
 track and the selection is retained. Same-value picks and same-value
 programmatic switches ride the core's same-value guard (one law, one
 place), and programmatic switches are mirrored into the DOM control so
@@ -1079,7 +1709,7 @@ default.
 
 Parameters:
 - `outputId` - Reserved host DOM id; `neatracing-hud-output` in
-the host shell and the slice fixture suite.
+the host shell and the fixture suite.
 
 Returns: The track-selector controller (select element + selection API).
 
@@ -1110,11 +1740,15 @@ acceptance contract, the DOM is built exactly once at mount (allocation
 policy: no per-switch DOM construction), and the option list is a VIEW
 over the catalog — never a second source of the track list.
 
+The closed control also carries the neon treatment: the neon
+CLASS hook and the two-pass neon text style, both read from the ONE
+helper (`./hud.neon`), never inlined.
+
 Returns: The styled, unattached `<select>` element.
 
 ### NeatRacingTrackSelection
 
-The DOM-free track-selection controller (the surface the frozen RED-P4-8
+The DOM-free track-selection controller (the surface the track-catalog
 contract discovers): it switches the selection to a named catalog member
 and notifies subscribers with the selected track id, exactly once per
 actual switch, in either direction.

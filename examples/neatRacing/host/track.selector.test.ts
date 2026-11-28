@@ -53,6 +53,18 @@ import type {
   NeatRacingTrackSelectionOptions,
   NeatRacingTrackSwitchListener,
 } from './track.selector';
+// The ONE neon helper (AC-108, Phase 5, Step 29): the class-hook NAME and
+// the glow pass are READ FROM HERE, never re-spelled as a neon literal in
+// this test, so the witness can never drift away from the helper.
+import {
+  buildNeonTextShadow,
+  NEATRACING_HUD_NEON_CLASS_HOOK,
+} from './hud.neon';
+// The sibling closed select (the race-mode select): the witness compares
+// the track select's treatment against the REAL sibling surface instead of
+// against a copied expectation, so "the SAME treatment on BOTH closed
+// selects" is pinned end to end.
+import { createRaceModeSelector } from './mode-selector';
 
 /** Host container element id reserved for the neatRacing HUD output. */
 const HUD_OUTPUT_ID = 'neatracing-hud-output';
@@ -402,6 +414,72 @@ describe('neatRacing track selector (P4-S3-select-restart, AC-101)', () => {
         fontFamily: 'monospace',
         fontSize: '14px',
         padding: '4px 8px',
+      });
+    });
+
+    it('carries the SAME neon closed-select treatment as the race-mode select (the neon class hook + the one-helper glow, with the identity and catalog-view laws unchanged)', () => {
+      // The witness mounts the REAL track overlay through the SHARED
+      // jsdom fixture (no hand-built element, no forked DOM), so the
+      // assertions read the shipped surface exactly as the browser sees it.
+      createSelectorFixture();
+      // The race-mode select is mounted alongside so the "SAME treatment"
+      // law is witnessed against the REAL sibling closed select instead of
+      // against a copied expectation value.
+      const raceModeSelect = createRaceModeSelector(HUD_OUTPUT_ID).select;
+      const selector = createNeatRacingTrackSelector(HUD_OUTPUT_ID);
+      const trackSelect = selector.select;
+
+      const classNames = Array.from(trackSelect.classList);
+      const declaredTextShadow = trackSelect.style.textShadow.trim();
+      const raceModeTextShadow = raceModeSelect.style.textShadow.trim();
+      const options = Array.from(trackSelect.options);
+
+      expect({
+        // (1) THE NEON CLASS HOOK: read from the ONE helper (never a
+        // literal inlined in this test) and matched NAME-AGNOSTIC.
+        neonClassHookIsNeonNamed: /neon/i.test(NEATRACING_HUD_NEON_CLASS_HOOK),
+        neonClassHookPresent: classNames.includes(
+          NEATRACING_HUD_NEON_CLASS_HOOK,
+        ),
+        anyNeonClassPresent: classNames.some((name) => /neon/i.test(name)),
+        observedClassNames: classNames,
+        // (2) THE GLOW: non-empty and carrying the SAME glow pass the
+        // race-mode select carries. The expected value is READ FROM
+        // `buildNeonTextShadow()` in the ONE helper (or equivalently
+        // compared against the race-mode select) — never re-spelled as a
+        // neon literal here.
+        neonGlowDeclared: declaredTextShadow !== '',
+        expectedTextShadow: normalizeCssValue(buildNeonTextShadow()),
+        observedTextShadow: normalizeCssValue(declaredTextShadow),
+        raceModeTextShadow: normalizeCssValue(raceModeTextShadow),
+        sameShadowAsRaceMode:
+          normalizeCssValue(declaredTextShadow) ===
+          normalizeCssValue(raceModeTextShadow),
+        // (3) THE IDENTITY LAW UNCHANGED.
+        id: trackSelect.id,
+        name: trackSelect.name,
+        // (4) THE CATALOG-VIEW LAW UNCHANGED: the option values and texts
+        // are still a VIEW over `NEATRACING_DEMO_TRACK_CATALOG` (the
+        // catalog is NOT forked).
+        optionValues: options.map((option) => option.value),
+        optionTexts: options.map((option) => option.textContent),
+      }).toEqual({
+        neonClassHookIsNeonNamed: true,
+        neonClassHookPresent: true,
+        anyNeonClassPresent: true,
+        observedClassNames: expect.any(Array),
+        neonGlowDeclared: true,
+        expectedTextShadow: normalizeCssValue(buildNeonTextShadow()),
+        observedTextShadow: normalizeCssValue(buildNeonTextShadow()),
+        raceModeTextShadow: normalizeCssValue(buildNeonTextShadow()),
+        sameShadowAsRaceMode: true,
+        id: 'neatracing-track-selector',
+        name: 'neatracing-track-selector',
+        optionValues: CATALOG_TRACK_IDS.slice(),
+        optionTexts: CATALOG_TRACK_IDS.map((trackId) => {
+          const entry = NEATRACING_DEMO_TRACK_CATALOG[trackId];
+          return entry === undefined ? null : entry.displayName;
+        }),
       });
     });
 

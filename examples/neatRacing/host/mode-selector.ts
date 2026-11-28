@@ -1,53 +1,58 @@
 /**
- * NeatRacing host race-mode selector — plan slice P1-S7-E (plan
- * `neatracing-voxel-racer.plans.md`, phase 1, step 12), implementing the
- * AC-024 selector overlay ("top-right; ai, manual options; initial
- * manual mode"; spec sections 4.2, 10.2, 11.2, 13.1) and serving the
- * AC-033 restart-on-switch surface: `onSwitch` is the single hook the
- * host shell connects to a race restart, so the "toggle the race mode"
- * step is delivered as a notify contract here rather than as an owned
- * restart call (spec section 4.2 keeps mode authority in the shell, not
- * the selector).
+ * NeatRacing host race-mode selector — the closed `<select>` overlay that
+ * owns the race-mode CHOICE and the switch NOTIFICATION, but never the
+ * race itself.
  *
- * Phase-2 update (P2-S4-A, AC-033): the AC-033 mode half is now served
- * with the Phase-2 AI goal lifecycle (`../ai/ai-mode.goals.ts`): AI mode
- * runs a minimum 20-lap session and then continues until the current
- * level's promotion-threshold-driven growth goal is met, and level 3
- * continues until the user stops the session.
+ * WHAT the overlay does: it mounts a single `<select>` (the `ai` and
+ * `manual` options, `ai` first, pinned to the top-right of the reserved
+ * host output container) and keeps the current mode in a closure. Both a
+ * user pick and a programmatic `setMode` notify subscribers EXACTLY ONCE
+ * per ACTUAL switch; a same-value switch is a documented no-op, so a
+ * re-pick of the already-active mode can never restart a race.
  *
- * Structural precedent (cited in the slice contract header):
- * `examples/neatenstein/browser-entry/host/hud.human-mode.utils.ts` —
- * resolve the reserved container or throw; build the `<select>` once and
- * style it from named constants; render both options with ai FIRST;
- * keep the selected mode in a closure guarded by an early same-value
- * exit; notify subscribers exactly once per actual switch (both for a
- * user `change` event and a programmatic `setMode`); never rebuild DOM
- * on mode change (allocation policy: only allocation is mount-time).
+ * WHY the restart lives elsewhere: `onSwitch` is the single hook the
+ * host shell connects to a race restart, so "toggle the race mode" is
+ * delivered as a NOTIFY CONTRACT here rather than as an owned restart
+ * call — the shell keeps the mode authority, and this module owns no
+ * race state.
  *
- * Boot mode (Step 14P / AC-087, the L8 mask, re-pointing the batch-108
- * user-gap patch): the overlay still exposes both 'ai' and 'manual'
- * options, but the INITIAL mode is 'manual'. WHY: the served page IS
- * the acceptance surface (the user judges the drift on the page that
- * is actually served) and the ai-mode page is never acceptable
- * evidence — the AI autopilot crosses the 0.5 engage cliff on only 176
- * of 7200 ticks (2.44 percent), so an AI boot masks the very slide
- * the user has to judge. The 'ai' option stays SELECTABLE through the
- * same switch, which still notifies its listeners and fires the
- * AC-033 restart hook. Same-value switches are documented no-ops (and
- * covered
- * by the slice contract's jest non-call assertion) rather than silent
- * restarts: the host shell must not reset a race because a user
- * re-picked the already-active mode. A mode switch into AI mode makes
- * the HOST shell (the P2-S4-C wiring) boot a fresh AI goal session at
- * the first ladder rung (`NEATRACING_AI_MODE_START_LEVEL`,
- * `../ai/ai-mode.goals.ts`); the selector itself keeps notifying exactly
- * once per actual switch and owns no race state.
+ * THE AI-MODE LIFECYCLE this selector switches into
+ * (`../ai/ai-mode.goals.ts`): AI mode runs a minimum 20-lap session and
+ * then continues until the current level's promotion-threshold-driven
+ * growth goal is met; level 3 continues until the user stops the
+ * session. A mode switch into AI mode makes the HOST shell boot that
+ * fresh AI goal session at the first ladder rung
+ * (`NEATRACING_AI_MODE_START_LEVEL`).
  *
- * Cyan/magenta discipline (spec section 11.2 "same CSS tokens,
- * cyan/magenta"): the border recycles `NEATRACING_HUD_COLOR_CYAN`
+ * BOOT MODE: the overlay still exposes both 'ai' and 'manual' options,
+ * but the INITIAL mode is 'manual'. WHY: the served page IS the
+ * acceptance surface (the user judges the driving feel on the page that
+ * is actually served) and the ai-mode page is never acceptable evidence
+ * — the AI autopilot crosses the 0.5 engage cliff on only 176 of 7200
+ * ticks (2.44 percent), so an AI boot masks the very slide the user has
+ * to judge. The 'ai' option stays SELECTABLE through the same switch,
+ * which still notifies its listeners and fires the restart hook.
+ *
+ * Structural precedent: `examples/neatenstein/browser-entry/host/hud.human-mode.utils.ts`
+ * — resolve the reserved container or throw; build the `<select>` once and
+ * style it from named constants; render both options with ai FIRST; keep
+ * the selected mode in a closure guarded by an early same-value exit;
+ * notify subscribers exactly once per actual switch (both for a user
+ * `change` event and a programmatic `setMode`); never rebuild DOM on mode
+ * change (allocation policy: only allocation is mount-time).
+ *
+ * Cyan/magenta discipline: the border recycles `NEATRACING_HUD_COLOR_CYAN`
  * imported from './hud' (single source of truth for the tokens; the
  * magenta token stays owned by hud.ts since the selector only uses the
- * cyan border in this slice).
+ * cyan border here).
+ *
+ * NEON DISCIPLINE: the native `<option>` popup is OS-rendered and IGNORES
+ * `text-shadow` and `filter`, so the neon lands on the CLOSED control —
+ * the neon CLASS hook and the two-pass neon text style both come from the
+ * ONE helper (`./hud.neon`), the single source of truth for the
+ * neatRacing neon. No neon literal is inlined here, the select keeps its
+ * id and its name, and the option loop below is untouched (the popup
+ * stays OS-rendered; no custom listbox is introduced).
  *
  * Determinism section: every executor here is pure or mount-only —
  * identical inputs produce identical DOM/notify behavior with no
@@ -57,6 +62,7 @@
  */
 
 import { NEATRACING_HUD_COLOR_CYAN } from './hud';
+import { applyNeonTreatment } from './hud.neon';
 
 /** The two race modes supported by the selector overlay. */
 export type NeatRacingRaceMode = 'ai' | 'manual';
@@ -76,14 +82,14 @@ const MODE_OPTIONS: readonly NeatRacingRaceMode[] = [
 /**
  * Initial race mode: the game page boots in MANUAL mode.
  *
- * WHY (Step 14P / AC-087, the L8 mask): the served page is the
+ * WHY (the served page is the acceptance surface): the served page is the
  * acceptance surface — the user judges the drift on the page that is
  * actually served — and the ai-mode page is never acceptable evidence.
  * The AI autopilot only crosses the 0.5 engage cliff on 176 of 7200
  * ticks (2.44 percent), so an AI boot masks the very slide the user
  * has to judge. This is a BOOT DEFAULT and nothing else: the 'ai'
  * option stays selectable through the mode selector and a switch still
- * notifies its listeners (AC-033).
+ * notifies its listeners.
  */
 export const INITIAL_RACE_MODE: NeatRacingRaceMode = MODE_OPTION_MANUAL;
 
@@ -136,11 +142,12 @@ export interface NeatRacingRaceModeSelector {
    */
   setMode(next: NeatRacingRaceMode): void;
   /**
-   * Subscribes a listener to actual mode switches (AC-033 restart
-   * hook; fired exactly once per switch with the switched-to mode).
-   * Phase 2 (LD-12): the host restarts the race in BOTH directions on
-   * this notification; the boot of the fresh AI goal session that an
-   * AI-mode restart needs belongs to the host wiring slice P2-S4-C.
+   * Subscribes a listener to actual mode switches (the restart hook;
+   * fired exactly once per switch with the switched-to mode).
+   *
+   * The host restarts the race in BOTH directions on this notification;
+   * the boot of the fresh AI goal session that an AI-mode restart needs
+   * belongs to the host wiring, not to this selector.
    */
   onSwitch(listener: NeatRacingRaceModeListener): void;
 }
@@ -148,12 +155,10 @@ export interface NeatRacingRaceModeSelector {
 /**
  * What: resolves the reserved host output container by id, matching the
  * Neatenstein `resolveHudContainer` precedent (`hud.dom.utils.ts`)
- * flattened into this slice per the P1-S7-E file contract (no extra
- * shared files inside the slice boundary; hud.ts keeps its own copy of
- * this eight-line resolver).
+ * (hud.ts keeps its own copy of this eight-line resolver).
  *
- * @param outputId - Reserved host DOM id (spec section 10.2 folder
- * layout; `neatracing-hud-output` in the host shell and fixtures).
+ * @param outputId - Reserved host DOM id (`neatracing-hud-output` in the
+ * host shell and the fixture suite).
  * @param surfaceName - Human-readable surface name for the error body.
  * @returns The DOM container to append the selector into.
  * @throws When `document.getElementById(outputId)` misses (host shell
@@ -180,12 +185,15 @@ function resolveSelectorContainer(
 /**
  * What: builds the `<select>` with both race-mode options in the pinned
  * order (`ai` first) and the Neatenstein top-right overlay styling from
- * named constants (spec section 11.2 recycling inventory), without
- * attaching it to the document yet.
+ * named constants, without attaching it to the document yet.
  *
- * Why: option order and initial value are part of the AC-024 acceptance
- * contract and the DOM is built exactly once at mount (allocation
- * policy: no per-switch DOM construction).
+ * Why: the option order and the initial value are part of the overlay's
+ * acceptance contract, and the DOM is built exactly once at mount
+ * (allocation policy: no per-switch DOM construction).
+ *
+ * The closed control also carries the neon treatment: the neon CLASS
+ * hook and the two-pass neon text style, both read from the ONE helper
+ * (`./hud.neon`).
  *
  * @returns The styled, unattached `<select>` element.
  */
@@ -202,6 +210,11 @@ function createModeSelect(): HTMLSelectElement {
   select.style.fontFamily = SELECT_FONT_MONOSPACE;
   select.style.fontSize = SELECT_FONT_14PX;
   select.style.padding = SELECT_PADDING_4PX_8PX;
+  // The NEON treatment: the native `<option>` popup is OS-rendered and
+  // IGNORES `text-shadow`, so the neon lands on the CLOSED control —
+  // the neon CLASS hook plus the two-pass neon text style, both read
+  // from the ONE helper (`./hud.neon`), never inlined.
+  applyNeonTreatment(select);
   for (const mode of MODE_OPTIONS) {
     const option: HTMLOptionElement = document.createElement('option');
     option.value = mode;
@@ -220,19 +233,17 @@ function createModeSelect(): HTMLSelectElement {
  * subscribers exactly once per actual switch and never notify on
  * same-value switches.
  *
- * Why (AC-033, Phase 2): the host connects `onSwitch` to a race
- * restart — the restart runs in BOTH directions (LD-12) and the host
- * shell (the P2-S4-C wiring) handles it, including the boot of the
- * fresh AI goal session at the first ladder rung
+ * Why: the host connects `onSwitch` to a race restart — the restart runs
+ * in BOTH directions and the host shell handles it, including the boot
+ * of the fresh AI goal session at the first ladder rung
  * (`../ai/ai-mode.goals.ts`); the hook is delivered and verified here so
  * the restart wiring cannot be blocked by a missing selector surface.
- * Step 14P opens the race in the 'manual' mode (the served
- * page is the acceptance surface and the ai-mode page is never
- * acceptable evidence — see `INITIAL_RACE_MODE`); the boot glue never
- * calls `setMode`; the 'ai' option remains
- * rendered
- * and selectable to keep the toggle contract fully exercisable (same
- * CSS tokens, cyan/magenta; option order `ai, manual` from AC-024).
+ * The race opens in the 'manual' mode (the served page is the acceptance
+ * surface and the ai-mode page is never acceptable evidence — see
+ * `INITIAL_RACE_MODE`); the boot glue never calls `setMode`; the 'ai'
+ * option remains rendered and selectable to keep the toggle contract
+ * fully exercisable (same CSS tokens, cyan/magenta; option order
+ * `ai, manual`).
  *
  * When: called once during host boot after the HUD mounts into the same
  * reserved container id (`neatracing-hud-output`). Throws instead of
@@ -274,9 +285,8 @@ export function createRaceModeSelector(
     next: NeatRacingRaceMode,
   ): void => {
     // Same-value guard: re-picking the already-active mode is a
-    // documented no-op, never a silent restart. The re-baselined
-    // same-value pin (Step 14P / AC-087) exercises this branch, so no
-    // coverage exemption is needed.
+    // documented no-op, never a silent restart. This branch is
+    // domain-tested, so no coverage exemption is needed.
     if (next === mode) {
       return;
     }

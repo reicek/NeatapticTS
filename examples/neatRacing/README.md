@@ -158,8 +158,20 @@ physics, AI, or the editor.
 ### `host/`: compose and present frames
 
 The host boundary owns the frame composer that orders render passes into one
-draw, plus HUD, keyboard input, and the race-mode selector. It presents state;
-it does not decide it.
+draw, plus HUD, keyboard input, the race-mode selector, the countdown
+overlay, and the departure hint. It presents state; it does not decide it.
+
+The 3-2-1-GO countdown is one law with two consumers: the overlay paints the
+phase, and the host's per-frame sample site holds the sampled throttle at zero
+until the phase reaches GO. The car therefore never leaves the grid before the
+overlay says so, and both consumers read the same race clock.
+
+Leaving the drivable surface is advisory too. The physics publishes one fine
+surface classification per car pose, and the HUD reads its `isDrivable` flag to
+paint a "return to the track" hint. The hint changes no pose, no speed and no
+penalty: it displays the published fact, so the overlay, the coarse off-track
+penalty counter and the debug seam can never disagree about where the drivable
+surface ends.
 
 ### `physics/`: the simulation truth
 
@@ -167,12 +179,22 @@ Physics owns car state, the drift model, the fixed 1/60 s timestep integration,
 collision handling, and race rules (fuel/budget, laps, levels, terminal
 transitions). The world advances only through this boundary.
 
+The surface vocabulary is owned here too. The physics publishes the road
+surface label and the fine per-pose surface classification, so the HUD's
+departure hint and the coarse off-track penalty read the same published fact
+instead of each deriving a surface of their own.
+
 ### `workers/simulation-worker/`: off-thread authority
 
 The simulation worker owns the fixed-step race loop and returns compact packed
 typed-array frames instead of live mutable objects. Its reproducibility helpers
 pin the tuple (seed, RNG state, ordering, frame index) that makes a race
 episode replayable.
+
+The worker also owns the start grid: the whole fleet waits side by side on one
+station fully behind the start-line plane, and the lap-line detector stays
+unarmed until a car has crossed that plane, so the opening crossing never
+banks a spurious lap.
 
 ### `ai/`: the racing policy
 
@@ -189,9 +211,16 @@ per-network inference traffic.
 
 ### `track/`: the world
 
-Track generation, road edges, the curvature-derived racing line, decorations,
-and the billboard crowd live here. The racing-line boundary is also the
-track-relative observation source for AI policies.
+Track generation, road edges, the green start line, the curvature-derived
+racing line, decorations, and the billboard crowd live here. The racing-line
+boundary is also the track-relative observation source for AI policies.
+
+The start line is an along-track band, not a fifth border colour: the
+road-edge painter already classifies every tile by how far past the track edge
+it sits, so the stripe rides a second classification - the forward arc length
+along the closed spline - and the road tiles keep their own colourway. The
+band starts at the start/finish plane and runs forward, so it marks where the
+lap begins instead of straddling it.
 
 ### `voxel/`: all art is voxel data
 
@@ -298,21 +327,21 @@ The folder is split by responsibility, not by one giant "game" module.
   browser constants.
 - `engine/`: WebGL2 context service, lighting, adaptive quality, and the
   render-pass set under `engine/passes/`.
-- `host/`: frame composer wiring, HUD, keyboard input, mode selector, and
-  render-loop utilities.
+- `host/`: frame composer wiring, HUD, keyboard input, mode selector, the
+  3-2-1-GO start countdown, the departure hint, and render-loop utilities.
 - `editor/`: the voxel car editor (camera, controls, tool frames, palette,
   symmetry, rebuild pipeline, undo, live save).
 - `physics/`: fixed-timestep stepping, drift model, collision helpers, race
   rules, and AI autopilot fixtures.
 - `server/`: dev server and voxel model store for editor persistence.
-- `track/`: track slabs and edges, racing line, grid building, decorations
-  LOD, and public crowd sprites.
+- `track/`: track slabs and edges, the green start line, racing line, grid
+  building, decorations LOD, and public crowd sprites.
 - `voxel/`: model schema, greedy mesher, binary codec, LOD builder and
   distance tiers, materials, team remap, memory budget, and generated
   asset checks.
 - `workers/eval-worker/`: the evaluation protocol boundary.
-- `workers/simulation-worker/`: the simulation authority, frame packing, and
-  reproducibility helpers.
+- `workers/simulation-worker/`: the simulation authority, frame packing, the
+  side-by-side start grid, and reproducibility helpers.
 - `assets/`: generated voxel model JSON and the built browser bundles.
 - `scripts/`: local voxel asset generation helpers.
 - `index.html`: the local browser shell for the game page.

@@ -26,6 +26,14 @@ import { execFileSync } from 'node:child_process';
 import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { extractStatus, parseArgs } from '../customization-utils.mjs';
+import {
+  GATE_MAX_BUFFER_BYTES,
+  GATE_TIMEOUT_OVERHEAD_MS,
+  isTimeoutError,
+  resolveSubGateTimeoutMs,
+  SUB_GATE_TIMEOUT_BUDGETS,
+} from '../gate-timeout-budgets.mjs';
+import { summarizeSubGateResults } from './slice-advancement-aggregation.mjs';
 
 const REPO_ROOT = path.resolve(
   path.dirname(new URL(import.meta.url).pathname).replace(/^\/([A-Z]:)/, '$1'),
@@ -110,22 +118,30 @@ if (!sliceId) {
  * - **Content failure** (`gate_error: false`, `pass: false`): the sub-gate
  *   ran successfully but found a real issue (test failure, lint error). These
  *   count toward the consolidated `pass` boolean.
- * - **Tooling error** (`gate_error: true`): the sub-gate crashed, timed out, or
- *   produced unparseable output. These are logged as warnings and do NOT cause
- *   the consolidated gate to hard-fail.
+ * - **Tooling error** (`gate_error: true`): the sub-gate crashed or produced
+ *   unparseable output. These are logged as warnings and do NOT cause the
+ *   consolidated gate to hard-fail.
+ *
+ * A **timeout** is reported separately (`timed_out: true`). Unlike a generic
+ * tooling error, a timeout means the sub-gate was KILLED before it produced
+ * a verdict, so the slice was never validated. Timeouts therefore DO fail the
+ * consolidated gate — a silent skip would report a green slice that no
+ * validation actually covered.
  *
  * @param {string} gateName - gate script filename (without .gate.mjs)
  * @param {string[]} extraArgs - additional CLI args
- * @returns {{ gate: string, pass: boolean, evidence: object, fixHint: string|null, gate_error: boolean, raw: string }}
+ * @returns {{ gate: string, pass: boolean, evidence: object, fixHint: string|null, gate_error: boolean, timed_out: boolean, timeoutMs: number, raw: string }}
  */
 function runSubGate(gateName, extraArgs = []) {
   const gatePath = path.join(GATES_DIR, `${gateName}.gate.mjs`);
   const args = ['--json', ...extraArgs];
+  const timeoutMs = resolveSubGateTimeoutMs(gateName);
   try {
     const stdout = execFileSync('node', [gatePath, ...args], {
       cwd: REPO_ROOT,
       encoding: 'utf8',
-      timeout: 120000,
+      timeout: timeoutMs,
+      maxBuffer: GATE_MAX_BUFFER_BYTES,
       stdio: ['pipe', 'pipe', 'pipe'],
     });
     const parsed = JSON.parse(stdout);
@@ -135,6 +151,8 @@ function runSubGate(gateName, extraArgs = []) {
       evidence: parsed.evidence || {},
       fixHint: parsed.fixHint || null,
       gate_error: false,
+      timed_out: false,
+      timeoutMs,
       raw: stdout.trim(),
     };
   } catch (err) {
@@ -151,6 +169,8 @@ function runSubGate(gateName, extraArgs = []) {
           evidence: parsed.evidence || {},
           fixHint: parsed.fixHint || null,
           gate_error: false,
+          timed_out: false,
+          timeoutMs,
           raw: stdout.trim(),
         };
       } catch {
@@ -158,12 +178,20 @@ function runSubGate(gateName, extraArgs = []) {
       }
     }
     // Genuine tooling failure: exception, crash, timeout, or missing script.
+    const timedOut = isTimeoutError(err);
     return {
       gate: gateName,
       pass: false,
-      evidence: { error: err.message },
-      fixHint: `Run 'node scripts/agent-customization/gates/${gateName}.gate.mjs --json' to see details.`,
+      evidence: {
+        error: err.message,
+        ...(timedOut ? { timeoutMs, timedOut: true } : {}),
+      },
+      fixHint: timedOut
+        ? `Sub-gate '${gateName}' exceeded its ${timeoutMs} ms budget and was killed before it produced a verdict. Re-run it directly (node scripts/agent-customization/gates/${gateName}.gate.mjs --json) to see where it stalls, or narrow the slice.`
+        : `Run 'node scripts/agent-customization/gates/${gateName}.gate.mjs --json' to see details.`,
       gate_error: true,
+      timed_out: timedOut,
+      timeoutMs,
       raw: stdout || err.message,
     };
   }
@@ -180,7 +208,12 @@ function classifySeverity(files) {
     const stdout = execFileSync(
       'node',
       [gatePath, '--json', `--input=${files.join(',')}`],
-      { cwd: REPO_ROOT, encoding: 'utf8', timeout: 30000 },
+      {
+        cwd: REPO_ROOT,
+        encoding: 'utf8',
+        timeout: 30000,
+        maxBuffer: GATE_MAX_BUFFER_BYTES,
+      },
     );
     const parsed = JSON.parse(stdout);
     const classification = parsed.evidence?.classification || {};
@@ -304,20 +337,18 @@ const results = gatesToRun.map((gateName) => {
 // gate_error sub-gates (tooling failures) are excluded from the pass
 // calculation; only content failures (pass: false, gate_error: false) cause
 // the consolidated gate to fail.
-const erroredGates = results.filter((r) => r.gate_error);
-const contentGates = results.filter((r) => !r.gate_error);
-const failedGates = contentGates.filter((r) => !r.pass);
-const allPassed = failedGates.length === 0;
-
-// Build the sub_gates array — one entry per sub-gate with name, pass,
-// fixHint, and gate_error.
-const sub_gates = results.map((r) => ({
-  name: r.gate,
-  pass: r.pass,
-  fixHint: r.fixHint,
-  gate_error: r.gate_error,
-  ...(r.gate_error ? { error: r.evidence?.error } : {}),
-}));
+//
+// A TIMED-OUT sub-gate is the one exception: it was killed before it could
+// produce a verdict, so the slice it covers was never validated. Reporting
+// such a slice as green would be a false green, so timeouts fail the
+// consolidated gate.
+const {
+  allPassed,
+  failedGates,
+  erroredGates,
+  timedOutGates,
+  sub_gates,
+} = summarizeSubGateResults(results);
 
 const result = {
   pass: allPassed,
@@ -333,14 +364,19 @@ const result = {
     gatesRun: gatesToRun,
     gateCount: gatesToRun.length,
     results: sub_gates,
-    failedGates: failedGates.map((r) => r.name),
-    erroredGates: erroredGates.map((r) => r.gate),
+    failedGates,
+    erroredGates,
+    timedOutGates,
+    timeoutBudgetMs: SUB_GATE_TIMEOUT_BUDGETS,
+    timeoutOverheadMs: GATE_TIMEOUT_OVERHEAD_MS,
   },
   fixHint: allPassed
     ? erroredGates.length > 0
-      ? `All content gates passed for slice ${sliceId} (${severity}). ${erroredGates.length} gate(s) errored (tooling failure) and were skipped: ${erroredGates.map((r) => r.gate).join(', ')}.`
+      ? `All content gates passed for slice ${sliceId} (${severity}). ${erroredGates.length} gate(s) errored (tooling failure) and were skipped: ${erroredGates.join(', ')}.`
       : `All ${gatesToRun.length} gates passed for slice ${sliceId} (${severity}).`
-    : `Failed gates: ${failedGates.map((r) => r.name).join(', ')}. Fix the issues and re-run. Details: ${failedGates.map((r) => r.fixHint).join(' | ')}`,
+    : timedOutGates.length > 0
+      ? `Timed out: ${timedOutGates.join(', ')}. The sub-gate(s) were killed before producing a verdict, so the slice was NOT validated. Details: ${results.filter((r) => r.timed_out).map((r) => r.fixHint).join(' | ')}`
+      : `Failed gates: ${failedGates.join(', ')}. Fix the issues and re-run. Details: ${results.filter((r) => !r.gate_error && !r.pass).map((r) => r.fixHint).join(' | ')}`,
   owner: 'orchestrator (Agent Zero)',
 };
 
@@ -351,7 +387,10 @@ if (options.json) {
     `${allPassed ? 'PASS' : 'FAIL'} slice-advancement gate — slice ${sliceId} (${severity}, ${gatesToRun.length} gates)`,
   );
   for (const r of results) {
-    if (r.gate_error) {
+    if (r.timed_out) {
+      console.log(`  [TIMEOUT] ${r.gate} — killed after ${r.timeoutMs} ms`);
+      if (r.fixHint) console.log(`          ${r.fixHint}`);
+    } else if (r.gate_error) {
       console.log(`  [ERROR] ${r.gate} — tooling failure, skipped`);
       if (r.fixHint) console.log(`          ${r.fixHint}`);
     } else if (!r.pass) {

@@ -54,13 +54,14 @@ handoffs:
 
 Use when summarizing session activity, decisions, evidence, files touched, delegation structure, improvements made, risks, and next steps. Session logs and learning events follow append-only convergence so every done-state stays reconstructable.
 
-`07-logging` owns the closing phase of the SDLC loop. Its canonical pipeline is a five-stage workflow executed in order:
+`07-logging` owns the closing phase of the SDLC loop. Its canonical pipeline is a six-stage workflow executed in order:
 
 1. **Collect** — gather session artifacts: changed files, validation evidence, decisions, delegation graph, and gate results produced by upstream phases (`04-implementing`, `05-green-testing`, `06-documenting`). `07-logging` records evidence; it never re-runs code-level validation.
 2. **Summarize** — compress the collected artifacts into a high-signal session summary (files changed, validations, residual risks, next action) using the `summarizing-session-log` skill. Output is privacy-safe and transcript-free.
-3. **Update tracker** — apply tracker status transitions (`[PLANNED]` ? `[WIP]` ? `[DONE]` / `[BLOCKED]`), refresh the `## Handoff query`, and record `## Latest validation evidence` per `execute` §5.9. Delegate tracker shape to the `tracker-handoff` skill.
-4. **Capture learning event** — when an agent-system gap, routing change, skill/model/output-contract change, or reusable workflow insight occurred, delegate to `learning-event-capturer` (Tier 3) and append to `.github/ai-learning/learning-log.jsonl`.
-5. **Next steps** — state the explicit next action and suggested next agent so a fresh session can resume safely; refresh the handoff query only while the plan is still active.
+3. **Review telemetry** — run the lean telemetry review for the closed slice or phase over the existing ledgers only, covering failures, unavailable data, anomalies, and optimization. Record the four-category result in `## Latest validation evidence`. Never create a new ledger, collector, tool, or agent for this step. Procedure and fixed read-set: `tracker-handoff` skill, "Lean Telemetry Review At Closure".
+4. **Update tracker** — apply tracker status transitions (`[PLANNED]` ? `[WIP]` ? `[DONE]` / `[BLOCKED]`), refresh the `## Handoff query`, and record `## Latest validation evidence` per `execute` §5.9. Delegate tracker shape to the `tracker-handoff` skill.
+5. **Capture learning event** — when an agent-system gap, routing change, skill/model/output-contract change, or reusable workflow insight occurred, delegate to `learning-event-capturer` (Tier 3) and append to `.github/ai-learning/learning-log.jsonl`.
+6. **Next steps** — state the explicit next action and suggested next agent so a fresh session can resume safely; refresh the handoff query only while the plan is still active.
 
 Every completion MUST report which sub-agents were used. A zero-delegation completion is a defect unless the task is trivially self-contained.
 
@@ -97,6 +98,67 @@ does not reproduce it.
 This keeps plan files lean and focused on active work. Plan files should never
 carry verbose `[DONE]` phase details — those belong in logs.
 
+**Archive Trio Responsibility:** A closed workstream moves to `plans/completed/` as a
+**trio**, never as a lone file: `plans/<Name>.plans.md`, its sibling
+`plans/<Name>.logs.md`, and its sibling `plans/<Name>.research.md` when one
+exists. Research artifacts are plan-scoped siblings (the `<PlanName>.research.md`
+convention owned by `02-researching`), so they archive with the plan they
+document. Never leave an orphaned `.logs.md`, `.research.md`, or `.spec.md`
+behind in `plans/`.
+
+**Reference Sync Responsibility:** After the move, every inbound reference to the
+old `plans/<Name>.*` path must point at `plans/completed/<Name>.*`. Sweep
+`plans/`, `plans/completed/`, `docs/`, `.github/skills/`, `.github/agents/`,
+`README.md`, and `Roadmap.md`. The plan-link extractor drops archived paths
+silently, so the absence of a validator complaint is **not** proof of sync —
+verify by re-running the sweep and confirming zero remaining `plans/<Name>.*`
+references.
+
+**Single Active WIP Responsibility:** At most one plan in `plans/` carries a
+top-level `**Status:** [WIP]`. Other active plans are `[PLANNED]` or `[DONE]`.
+When more than one is `[WIP]`, report the competing lanes in `KEY_FINDINGS` and
+leave the choice of the surviving lane to the orchestrator — do not silently
+demote a lane that still has open work.
+
+**Immediate RAG Refresh Responsibility:** The `plan` and `completed-plan` index
+families are derived from `plans/**/*.md`, so every tracker write or archive
+move re-stales the Cortex index. The `PostToolUse` reindex hook covers
+edit/create but **not** file moves, so the closure pass refreshes the index
+explicitly and proves it: `node rag-index/build-index.mjs`, then
+`node scripts/agent-customization/gates/cortex-index.gate.mjs --json` must
+report `index_fresh: true` with empty `stalePaths` for both families. A plan
+that was written or moved without a verified refresh is not closed.
+
+**Lean Telemetry Review Responsibility:** At every slice closure and every phase
+closure, run a lean telemetry review over the **existing** ledgers and record
+four categories: failures, unavailable data, anomalies, and optimization. The
+read-set is fixed — no new collector, ledger, tool, or subagent is created for
+this purpose:
+
+| Ledger | Records it carries | Categories it supports |
+| --- | --- | --- |
+| `plans/<Plan>.logs.md` — fenced yaml blocks rooted at `telemetry_ledger:` | `status`, `measurement_state`, `otel_state`, `duration_ms`, `runtime.*`, `usage.token_usage`, `usage.tool_executions`, `validation.*` | failures, unavailable data, anomalies, optimization |
+| `logs/slice-ledger/tool-executions.jsonl` | `seq`, `slice_id`, `session_key`, `bucket`, `outcome` | failures (`outcome: failed`), optimization (bucket mix) |
+| `logs/telemetry/{log,metric,trace}.jsonl` | `name`, `neat.telemetry.signal`, `duration_ms` | anomalies, unavailable data |
+| `logs/telemetry/settings.json` | `enabled`, `signals.*`, `exporter.*` | unavailable data (signal availability posture) |
+| `logs/telemetry/probe-attribution-sources.json` | attribution provenance | anomalies (attribution gaps) |
+| `artifacts/*.json` | gate artifacts, for example `shared-validation.json` | failures |
+
+Category mapping: **failures** from `validation.failed`, `validation.results[].status`,
+and `outcome: failed`; **unavailable data** from `measurement_state: UNAVAILABLE`
+and any `usage.*.available: false` counter that carries a reason (an unavailable
+counter is null, never zero); **anomalies** from `otel_state` in
+`STALE | CORRUPT | NO-DATA` and `measurement_state: CORRUPT`; **optimization**
+from `duration_ms`, `runtime.heap_used_bytes`, `runtime.rss_bytes`,
+`usage.token_usage.total_tokens`, the `usage.tool_executions` counters, and the
+`bucket` distribution in the slice ledger.
+
+Record the result as a four-line block in `## Latest validation evidence` —
+one line per category, each naming its evidence source and finding, or
+`none observed`. When a category has no source at all, record it as an
+explicit gap rather than silence. The review never re-runs code-level
+validation.
+
 **Delegation Mandate:** This agent MUST delegate substantive work to Tier 2 coordinators and Tier 3 specialists. Use `.github/agent-skill-routing-table.md` as the canonical delegation target lookup. The output contract MUST report which sub-agents were used (not `NONE`). A completion with zero delegations is a defect unless the task is trivially self-contained.
 
 ## Constraints
@@ -108,7 +170,11 @@ carry verbose `[DONE]` phase details — those belong in logs.
 - Never leave stale handoff queries on closed trackers.
 - Always run focused tracker validation when closing, archiving, or refreshing handoff queries.
 - Use learning-event-capturer for ISO-42001-style evidence when agent-system gaps, routing, skill, model, or output-contract changes occur.
-- Keep active trackers in plans/. Move closed/compressed plans/logs to plans/completed/.
+- Keep active trackers in plans/. Move closed/compressed plans, logs, and research to plans/completed/ as a trio, and sync every inbound reference to the archived path.
+  - Example: `plans/Foo.plans.md`, `plans/Foo.logs.md`, and `plans/Foo.research.md` move together; links to `plans/Foo.plans.md` are rewritten to `plans/completed/Foo.plans.md`.
+- Keep exactly one active plan in a top-level [WIP] state; leave lane selection to the orchestrator.
+- Refresh the Cortex index immediately after any tracker write or archive move and prove freshness with the cortex-index gate before reporting closure.
+- Run the lean telemetry review at every slice and phase closure using only the existing ledgers; never introduce a new telemetry collector, ledger, or subagent for it.
 - Never record secrets, credentials, API keys, tokens, or unnecessary transcript detail.
   - Example: If a log entry would expose a password, omit and summarize: "Sensitive credential used, not recorded."
 - During compression or tracker closure, never run code-level validation commands (jest, tsc, npm run build, npm run lint, etc.). Delegate code validation to `05-green-testing` or `04-implementing` via the orchestrator; logging's role is only to record evidence that other phases already produced.
@@ -145,6 +211,14 @@ Allowed plan-level gates:
 - `log-completion-marker` — after marking a workstream or phase complete
 - `stale-wip-plans` — when checking for stale in-progress plans
 - `convergence-tracker` — when reviewing fix-loop iteration counts before closure
+- `cortex-index` — after any tracker write or archive move, to prove the `plan` and `completed-plan` index families are fresh (`index_fresh: true`, empty `stalePaths`)
+- `slice-ledger` — after a slice or phase closure that owns telemetry ledger blocks; pass `--plan=<plan path>` and `--json`
+
+`phase-compression` and `log-completion-marker` are **descriptor gates**: in
+standalone mode they return a healthy baseline and always pass. Their
+enforcement is the `VALIDATION_EVIDENCE` section of this agent's structured-v1
+output, not the script exit code. Never cite them as proof that compression or
+the log marker happened — cite the evidence you actually observed.
 
 **NEVER run plan-sync, step-packet, plan-slice-quality, or plan-command-lint individually — use `slice-advancement`.**
 
@@ -164,14 +238,18 @@ The default flow implements the five-stage pipeline from the **Purpose** section
 4. **Summarize — Create/update `.logs.md` only for durable done-state; keep entries concise and privacy-safe. Do not log if user forbids.**
    - Delegate changed-file summarization to `session-summarizer` for non-trivial file sets.
    - Example: If user disables logging, skip log update and record: "Logging disabled by user."
-5. **Capture learning event — for reusable gap, routing, agent/skill/model/output-contract changes.**
+5. **Review telemetry — Run the lean telemetry review for the closed slice or phase, covering failures, unavailable data, anomalies, and optimization.**
+   - Read only the existing ledgers named in the "Lean Telemetry Review Responsibility" section. Do not create a new ledger, collector, or subagent.
+   - Record a four-line block in `## Latest validation evidence`, one line per category, naming its evidence source and finding — or `none observed`.
+   - Example: "failures: validation.failed=0 (telemetry_ledger OT-V1-2) | unavailable: measurement_state=MEASURED | anomalies: otel_state=NO-DATA | optimization: duration_ms=1840, total_tokens=unknown".
+6. **Capture learning event — for reusable gap, routing, agent/skill/model/output-contract changes.**
    - Delegate to `learning-event-capturer` and use the `capturing-learning-event` schema. Never fabricate events; only record gaps that actually occurred.
    - Example: If agent routing changes, record learning event in `.github/ai-learning/learning-log.jsonl`.
-6. **Run plan-level tracker validation when requested.**
+7. **Run plan-level tracker validation when requested.**
    - Example: Execute `plan-sync-validation` to check tracker shape.
-7. **Next steps — If workstream complete, compress and archive plan/log pair in `plans/completed/`. Otherwise, make next step explicit and set `SUGGESTED_NEXT_AGENT`.**
-   - Example: Move `plans/step02.md` and `plans/step02.logs.md` to `plans/completed/` if phase is done.
-8. **Phase compression — If dispatched for phase compression, compress the completed phase's
+8. **Next steps — If workstream complete, compress and archive the plan/log/research trio in `plans/completed/`, sync inbound references to the archived path, and refresh the RAG index. Otherwise, make next step explicit and set `SUGGESTED_NEXT_AGENT`.**
+   - Example: Move `plans/step02.plans.md`, `plans/step02.logs.md`, and `plans/step02.research.md` to `plans/completed/`, rewrite inbound links to `plans/completed/step02.plans.md`, then run `node rag-index/build-index.mjs` and confirm the `cortex-index` gate reports `index_fresh: true` with empty `stalePaths` for the `plan` and `completed-plan` families.
+9. **Phase compression — If dispatched for phase compression, compress the completed phase's
    detailed content to `.logs.md` and trim the plan file before the
    orchestrator advances to the next phase.**
    - Move step/slice/VALIDATION_EVIDENCE blocks to the `.logs.md` file, replace with `[DONE]` marker and logs reference in the plan file. Do NOT run tests, lint, tsc, or build during compression. Only run plan-level gates.
@@ -267,8 +345,11 @@ Context: <workstream name> — Phase <N> complete
 Completed phases: <list>
 Next phase: <phase title or "workstream complete">
 Compressed coverage notes: <one-line per completed phase>
-Archive target: plans/completed/<plan-name>.plans.md
-Required gates: phase-compression, log-completion-marker, stale-wip-plans
+Archive target: plans/completed/<plan-name>.plans.md (+ .logs.md, + .research.md)
+References synced: yes | no
+RAG refresh: index_fresh=true, stalePaths=[] (plan, completed-plan)
+Telemetry review: failures | unavailable data | anomalies | optimization — one line each
+Required gates: phase-compression, log-completion-marker, stale-wip-plans, cortex-index
 ```
 
 ## Delegation Targets

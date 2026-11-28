@@ -712,8 +712,16 @@ THE DERIVED CLEARANCE: the value is NEVER a literal - it IS the ONE
 published car length (`NEATRACING_VOXEL_CAR_LENGTH_M`, 4.5 m), so a drift
 in the car's published size moves the grid WITH it. Measured to the
 centre, the car's NOSE stands 2.25 m upstream of the plane and its TAIL
-6.75 m upstream, so the WHOLE footprint stays behind the line and can
-never overlap the forward green band `[0, 4.0] m`.
+6.75 m upstream, so the WHOLE footprint stays behind the start-line
+plane.
+
+THE CLEARANCE IS A PROPERTY OF THE ROAD-ANCHORED SPAWN PATH: there the
+station is measured along the same closed spline the start-line band is
+painted on, so the fleet stands clear of the forward green band
+`[0, 4.0] m`. On the LEGACY CHORD path (the hand-authored fixture rings,
+whose spline does not anchor at segment 0's start) the station is
+measured BACKWARD along segment 0's chord instead, so the clearance
+there is relative to the start plane rather than to the painted band.
 
 The constant is EXPORTED so the GREEN lane can cross-check the production
 value against the RED home's test-local literal.
@@ -822,9 +830,9 @@ resolveSimWorkerArmedLapLineDetectorStep(
 ```
 
 One step of the ARMED worker lap-line detector: the phase-1 detector plus
-the PRE-PLANE arming the AC-105 behind-the-line law demands.
+the PRE-PLANE arming the behind-the-line law demands.
 
-Educational note — WHY THE ARMING EXISTS: the AC-105 start grid moves the
+Educational note — WHY THE ARMING EXISTS: the start grid moves the
 WHOLE fleet UPSTREAM of the start-line plane, so at t=0 every car sits on
 the NEGATIVE side of it. The phase-1 detector latches the side of the
 FIRST QUALIFYING SAMPLE and counts ANY sign flip, so a fleet that starts
@@ -897,7 +905,7 @@ resolveSimWorkerFleetSpawnPoses(
 
 Resolves the deterministic fleet spawn poses from the owned track.
 
-Educational note: the grid is the AC-105 START GRID - the WHOLE fleet
+Educational note: the grid is the START GRID - the WHOLE fleet
 (the player AND every rival) waits FULLY BEHIND the green start line,
 SIDE BY SIDE on ONE shared station, one distinct lane each. The
 placement is a PURE function of the track geometry and the fleet size (no
@@ -1140,7 +1148,7 @@ resolveSimWorkerSplineSpawnGrid(
 
 Lays the side-by-side grid on ONE station of the road-anchored spawn path.
 
-Educational note: the law is the AC-105 START GRID - the WHOLE fleet (the
+Educational note: the law is the START GRID - the WHOLE fleet (the
 player AND every rival) waits FULLY BEHIND the green start line, SIDE BY
 SIDE on ONE shared station, so no car starts on or above the line. The
 upstream direction of the closed-loop arc frame is the lap TAIL, so the

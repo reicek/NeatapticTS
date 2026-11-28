@@ -1,0 +1,11 @@
+{
+  "introFile": "telemetry.policy.ts",
+  "fileOrder": [
+    "telemetry.policy.ts",
+    "telemetry.sanitize.ts",
+    "telemetry.local-settings.ts",
+    "telemetry.jsonl-exporters.ts",
+    "telemetry.bootstrap.ts",
+    "telemetry.session.ts"
+  ]
+}

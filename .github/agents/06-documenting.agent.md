@@ -42,6 +42,7 @@ skills:
     'license-attribution-audit',
     'auditing-js-docs',
     'updating-js-docs',
+    'prose-first-jsdoc',
     'research-methodology',
     'execute',
     'browser-testing-harness',

@@ -1,6 +1,5 @@
 /**
- * Hexagonal neon road-edge flat-paint builder for the neatRacing example
- * (plan slice P1-road-edge-hex, Step 14C).
+ * Hexagonal neon road-edge flat-paint builder for the neatRacing example.
  *
  * The roadway floor is paved edge-to-edge with a continuous honeycomb of
  * large 2 m diameter flat hexagonal tiles. Each tile is a bright neon edge
@@ -15,9 +14,9 @@
  * matte slab below never shows through as a black outline. There are no
  * vertical pillars or side faces.
  *
- * THE START LINE IS AN ALONG-TRACK BAND: the GREEN 2-hex start line (plan
- * slice P5-S27-2, AC-104) is painted across the roadway in the EXISTING
- * green fill + edge tokens. It rides on a NEW along-track classification
+ * THE START LINE IS AN ALONG-TRACK BAND: the GREEN 2-hex start line is
+ * painted across the roadway in the EXISTING green fill + edge tokens. It
+ * rides on a NEW along-track classification
  * (`./road-edge.start-line` - the forward arc length along the published
  * closed spline polyline), so the EXPORTED `TileColorway` surface stays at
  * its FOUR members: the band tiles keep their 'road' colorway and the
